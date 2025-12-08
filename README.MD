@@ -88,7 +88,9 @@ SERVER_IP=localhost
 # Telegram Bot Configuration (Optional)
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 TELEGRAM_CHAT_ID=your_telegram_chat_id_here
-```### Настройки бота
+````
+
+### Настройки бота
 
 - **AFK Timeout:** Время бездействия до перемещения в AFK (15-45 минут)
 - **DM Notifications:** Включение/отключение личных уведомлений
@@ -164,7 +166,6 @@ TELEGRAM_CHAT_ID=your_telegram_chat_id_here
 
 Если у вас есть вопросы или проблемы, создайте issue в этом репозитории.
 
-````
 ---
 
 **🐔 Chicken Winner AFK Bot** - ваш надежный помощник для управления Discord сервером!
