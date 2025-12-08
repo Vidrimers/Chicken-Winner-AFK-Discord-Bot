@@ -10,3 +10,5 @@ serverjs.md
 replacements.txt
 * copy*.js
 *-copy*.js
+*-copy*.db
+* copy*.db
