@@ -8,3 +8,4 @@ package-lock.json
 upload.md
 serverjs.md
 replacements.txt
+* copy*.js
