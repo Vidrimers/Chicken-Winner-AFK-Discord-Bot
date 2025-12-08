@@ -119,6 +119,9 @@ const AFK_CHANNEL_ID = process.env.AFK_CHANNEL_ID;
 const DEFAULT_TIMEOUT = 15;
 const STREAM_CHANNEL_ID = process.env.STREAM_CHANNEL_ID;
 const ACHIEVEMENTS_CHANNEL_ID = process.env.ACHIEVEMENTS_CHANNEL_ID;
+const SPECIAL_USER_ID = process.env.SPECIAL_USER_ID;
+const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
+const DEFAULT_TEST_USER_ID = process.env.DEFAULT_TEST_USER_ID;
 
 // Telegram bot settings
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -671,7 +674,7 @@ const checkAchievements = async (userId, username) => {
 const checkSpecialAchievement = async () => {
   const now = new Date();
   const targetDate = new Date(2025, 11, 7, 0, 5, 0); // 7 декабря 2025, 0:05
-  const specialUserId = "232581042177966080"; // Kakashech
+  const specialUserId = process.env.SPECIAL_USER_ID; // Kakashech
 
   // Проверяем, не наступило ли время (с точностью до минуты)
   if (
@@ -2052,7 +2055,7 @@ lockedAchievements.forEach(achievementHtml => {
 });
             
             const hasSpecialAchievements = achievements.some(a => specialAchievements.hasOwnProperty(a.achievement_id));
-            const isAdmin = currentUserId === '233362585515327488';
+            const isAdmin = currentUserId === ADMIN_USER_ID;
             
             if (hasSpecialAchievements || isAdmin) {
                 html += \`
@@ -2870,9 +2873,9 @@ client.on("messageCreate", async (message) => {
   // Команда для просмотра достижений конкретного пользователя (для админа)
   if (
     content.startsWith(".!. showachievements") &&
-    message.author.id === "233362585515327488"
+    message.author.id === ADMIN_USER_ID
   ) {
-    const targetUserId = content.split(" ")[1] || "726120687349006416";
+    const targetUserId = content.split(" ")[1] || DEFAULT_TEST_USER_ID;
 
     try {
       const achievements = getUserAchievements(targetUserId);
@@ -2907,9 +2910,9 @@ client.on("messageCreate", async (message) => {
   // Команда для сброса всех достижений (для админа)
   if (
     content.startsWith(".!. resetachievements") &&
-    message.author.id === "233362585515327488"
+    message.author.id === ADMIN_USER_ID
   ) {
-    const targetUserId = content.split(" ")[1] || "726120687349006416";
+    const targetUserId = content.split(" ")[1] || DEFAULT_TEST_USER_ID;
 
     try {
       // Удаляем все достижения пользователя
@@ -2949,15 +2952,15 @@ client.on("messageCreate", async (message) => {
   // Команда для сброса конкретного достижения (для админа)
   if (
     content.startsWith(".!. resetachievement") &&
-    message.author.id === "233362585515327488"
+    message.author.id === ADMIN_USER_ID
   ) {
     const parts = content.split(" ");
     const achievementId = parts[1];
-    const targetUserId = parts[2] || "726120687349006416";
+    const targetUserId = parts[2] || DEFAULT_TEST_USER_ID;
 
     if (!achievementId) {
       await message.reply(
-        "❌ Укажите ID достижения\nПример: `.!. resetachievement first_join 726120687349006416`"
+        `❌ Укажите ID достижения\nПример: \`.!. resetachievement first_join ${DEFAULT_TEST_USER_ID}\``
       );
       return;
     }
@@ -2973,14 +2976,14 @@ client.on("messageCreate", async (message) => {
             .join("\n")}\n\n` +
           `💡 **Правильное использование:**\n` +
           `\`.!. resetachievement ACHIEVEMENT_ID USER_ID\`\n` +
-          `**Пример:** \`.!. resetachievement first_web_visit 726120687349006416\``
+          `**Пример:** \`.!. resetachievement first_web_visit ${DEFAULT_TEST_USER_ID}\``
       );
       return;
     }
 
     if (
       content === ".!. checksettings" &&
-      message.author.id === "233362585515327488"
+      message.author.id === ADMIN_USER_ID
     ) {
       const targetUserId = content.split(" ")[1] || message.author.id;
       const stats = getUserStats(targetUserId);
@@ -3038,10 +3041,7 @@ client.on("messageCreate", async (message) => {
   }
 
   // ДОБАВИТЬ ЭТУ КОМАНДУ (только для тестирования):
-  if (
-    content === ".!. checkspecial" &&
-    message.author.id === "233362585515327488"
-  ) {
+  if (content === ".!. checkspecial" && message.author.id === ADMIN_USER_ID) {
     await checkSpecialAchievement();
     await message.reply("✅ Проверка специального достижения выполнена");
     return;
