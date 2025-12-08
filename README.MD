@@ -74,11 +74,13 @@ npm start
 
 Скопируйте `.env.example` в `.env` и заполните своими значениями:
 
-```bash
+````bash
 # Discord Bot Configuration
 DISCORD_TOKEN=your_discord_bot_token_here
 GUILD_ID=your_guild_id_here
 AFK_CHANNEL_ID=your_afk_channel_id_here
+STREAM_CHANNEL_ID=your_stream_channel_id_here
+ACHIEVEMENTS_CHANNEL_ID=your_achievements_channel_id_here
 
 # Server Configuration
 SERVER_IP=localhost
@@ -86,9 +88,7 @@ SERVER_IP=localhost
 # Telegram Bot Configuration (Optional)
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 TELEGRAM_CHAT_ID=your_telegram_chat_id_here
-```
-
-### Настройки бота
+```### Настройки бота
 
 - **AFK Timeout:** Время бездействия до перемещения в AFK (15-45 минут)
 - **DM Notifications:** Включение/отключение личных уведомлений
@@ -177,3 +177,4 @@ TELEGRAM_CHAT_ID=your_telegram_chat_id_here
 ---
 
 **🐔 Chicken Winner AFK Bot** - ваш надежный помощник для управления Discord сервером!
+````
