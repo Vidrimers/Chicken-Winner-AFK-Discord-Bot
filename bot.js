@@ -759,20 +759,27 @@ app.use(express.json());
 
 // API маршруты
 app.get("/api/stats/:userId", (req, res) => {
-  const userId = req.params.userId;
-  const stats = getUserStats(userId);
-  const achievements = getUserAchievements(userId);
-  const settings = {
-    dmNotifications: getUserDMSetting(userId),
-    afkTimeout: getUserTimeout(userId),
-    achievementNotifications: getUserAchievementNotificationSetting(userId),
-  };
+  try {
+    const userId = req.params.userId;
 
-  res.json({
-    stats: stats || {},
-    achievements,
-    settings,
-  });
+    const stats = getUserStats(userId);
+
+    const achievements = getUserAchievements(userId);
+    const settings = {
+      dmNotifications: getUserDMSetting(userId),
+      afkTimeout: getUserTimeout(userId),
+      achievementNotifications: getUserAchievementNotificationSetting(userId),
+    };
+
+    res.json({
+      stats: stats || {},
+      achievements,
+      settings,
+    });
+  } catch (error) {
+    console.error("❌ Ошибка в API /api/stats:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 app.get("/api/leaderboard", (req, res) => {
@@ -1840,6 +1847,7 @@ app.get("/", (req, res) => {
 
     <script>
         let currentUserId = null;
+        const ADMIN_USER_ID = "${ADMIN_USER_ID}";
 
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -1868,7 +1876,11 @@ app.get("/", (req, res) => {
             
             try {
                 const response = await fetch(\`/api/stats/\${userId}\`);
+                if (!response.ok) {
+                    throw new Error(\`HTTP error! status: \${response.status}\`);
+                }
                 const data = await response.json();
+                console.log('Полученные данные:', data);
 
             // Отправляем посещение веб-панели
                 try {
@@ -1882,8 +1894,11 @@ app.get("/", (req, res) => {
                     console.log('Не удалось отправить данные о посещении');
                 }
                 
+                console.log('Вызываю displayUserStats...');
                 displayUserStats(data.stats);
+                console.log('Вызываю displayUserAchievements...');
                 displayUserAchievements(data.achievements);
+                console.log('Вызываю displayUserSettings...');
                 displayUserSettings(data.settings);
                 
                 document.getElementById('currentUserId').textContent = userId;
@@ -1892,6 +1907,7 @@ app.get("/", (req, res) => {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('userContent').style.display = 'block';
             } catch (error) {
+                console.error('Ошибка при загрузке данных:', error);
                 document.getElementById('loading').innerHTML = '<div class="error">Ошибка загрузки данных</div>';
                 document.getElementById('userIdDisplay').style.display = 'none';
             }
