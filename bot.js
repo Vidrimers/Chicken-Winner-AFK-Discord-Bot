@@ -1890,6 +1890,8 @@ app.get("/", (req, res) => {
                             'Content-Type': 'application/json'
                         }
                     });
+                    // Увеличиваем счётчик посещений на 1
+                    data.stats.web_visits = (data.stats.web_visits || 0) + 1;
                 } catch (error) {
                     console.log('Не удалось отправить данные о посещении');
                 }
