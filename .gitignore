@@ -12,3 +12,4 @@ replacements.txt
 *-copy*.js
 *-copy*.db
 * copy*.db
+*.db

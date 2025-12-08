@@ -2610,10 +2610,24 @@ client.on("messageCreate", async (message) => {
     await checkAndUnlockAchievement(userId, username, "first_message");
   }
 
-  // Проверяем упоминания бота
-  if (message.mentions.has(client.user)) {
-    incrementUserStat(userId, "mentions_responded");
-    await checkAchievements(userId, username);
+  // Проверяем ответ на упоминание текущего пользователя
+  // Если это ответ (reply) на сообщение, содержащее упоминание этого пользователя
+  if (message.reference) {
+    try {
+      const repliedTo = await message.channel.messages.fetch(
+        message.reference.messageId
+      );
+      // Проверяем, был ли упомянут текущий пользователь в том сообщении
+      if (repliedTo.mentions.has(userId)) {
+        incrementUserStat(userId, "mentions_responded");
+        await checkAchievements(userId, username);
+      }
+    } catch (error) {
+      console.log(
+        "Не удалось получить сообщение для проверки упоминания:",
+        error.message
+      );
+    }
   }
 
   // Проверяем достижения при отправке сообщений
