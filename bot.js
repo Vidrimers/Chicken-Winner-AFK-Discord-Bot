@@ -2694,27 +2694,64 @@ modalUnlockedAchievements.forEach(achievement => {
             });
             
             // Специальные достижения
-            const hasSpecial = achievements.some(a => specialAchievements.hasOwnProperty(a.achievement_id));
-            if (hasSpecial) {
+            const specialAchievementsFromDB = achievements.filter(a => a.emoji && a.name && a.type === 'special');
+            
+            // Добавляем best_admin если пользователь его получил
+            const bestAdminAchievement = achievements.find(a => a.achievement_id === 'best_admin');
+            if (bestAdminAchievement) {
+                specialAchievementsFromDB.push({
+                    emoji: '👑',
+                    name: 'Kakashech - Лучший админ',
+                    description: 'Лучший admin_ebaniy канала',
+                    unlocked_at: bestAdminAchievement.unlocked_at,
+                    type: 'special'
+                });
+            }
+            
+            if (specialAchievementsFromDB.length > 0) {
                 modalHtml += \`
                     <div style="grid-column: 1 / -1; margin-top: 20px; border-top: 3px solid #ffd700; padding-top: 20px;">
                         <h3 style="text-align: center; color: #ffd700; margin-bottom: 15px;">⭐ Специальные достижения ⭐</h3>
                     </div>
                 \`;
                 
-                for (const [id, achievement] of Object.entries(specialAchievements)) {
-                    const isUnlocked = unlockedIds.includes(id);
-                    if (isUnlocked) {
-                        const unlockedDate = achievements.find(a => a.achievement_id === id)?.unlocked_at;
+                specialAchievementsFromDB.forEach(achievement => {
+                    // best_admin - исключение, используем исходные стили
+                    if (achievement.name === 'Kakashech - Лучший админ') {
                         modalHtml += \`
-                            <div class="modal-achievement special-achievement">
-                                <h4>\${achievement.name} ✨</h4>
+                            <div class="modal-achievement special-achievement" style="
+                                background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); 
+                                color: #333; 
+                                border-left: 5px solid #ff6b35;
+                                box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+                                position: relative;
+                                overflow: hidden;
+                            ">
+                                <h3 style="color: #333; font-weight: bold; margin: 0 0 10px 0;">\${achievement.emoji} \${achievement.name} ✨</h3>
                                 <p style="margin: 8px 0; color: #555;">\${achievement.description}</p>
-                                <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(unlockedDate).toLocaleDateString('ru-RU')}</small>
+                                <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(achievement.unlocked_at).toLocaleDateString('ru-RU')}</small>
+                            </div>
+                        \`;
+                    } else {
+                        // Остальные специальные достижения из БД
+                        const color = achievement.color || '#FFD700';
+                        modalHtml += \`
+                            <div class="modal-achievement special-achievement" style="
+                                background: linear-gradient(135deg, \${color}22 0%, \${color}11 100%);
+                                color: #333;
+                                border-left: 5px solid \${color};
+                                box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+                                transform: scale(1.02);
+                                position: relative;
+                                overflow: hidden;
+                            ">
+                                <h3 style="color: \${color}; font-weight: bold; margin: 0 0 10px 0;">\${achievement.emoji} \${achievement.name} ✨</h3>
+                                <p style="margin: 8px 0; color: #555;">\${achievement.description}</p>
+                                <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(achievement.unlocked_at).toLocaleDateString('ru-RU')}</small>
                             </div>
                         \`;
                     }
-                }
+                });
             }
             
             if (achievements.length === 0) {
