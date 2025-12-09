@@ -615,11 +615,32 @@ const setUserAchievementNotificationSetting = (userId, enabled) => {
 
 // ===== ФУНКЦИИ СТАТИСТИКИ =====
 const initUserStats = (userId, username) => {
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO user_stats (user_id, username) 
-    VALUES (?, ?)
-  `);
-  stmt.run(userId, username);
+  // Проверяем, существует ли уже пользователь
+  const existingStmt = db.prepare(
+    "SELECT username FROM user_stats WHERE user_id = ?"
+  );
+  const existing = existingStmt.get(userId);
+
+  if (existing) {
+    // Если пользователь существует и имя - это "Web User", обновляем на реальное
+    if (
+      existing.username === "Web User" &&
+      username &&
+      username !== "Web User"
+    ) {
+      const updateStmt = db.prepare(
+        "UPDATE user_stats SET username = ? WHERE user_id = ?"
+      );
+      updateStmt.run(username, userId);
+    }
+  } else {
+    // Если пользователя нет - создаем новую запись
+    const stmt = db.prepare(`
+      INSERT INTO user_stats (user_id, username) 
+      VALUES (?, ?)
+    `);
+    stmt.run(userId, username);
+  }
 };
 
 const updateUserStats = (userId, field, value) => {
