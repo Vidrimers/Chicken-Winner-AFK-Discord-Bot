@@ -1101,10 +1101,6 @@ app.post("/api/admin/create-achievement", async (req, res) => {
               telegramMessage += `🎨 Цвет: ${color}\n`;
             }
 
-            if (points) {
-              telegramMessage += `⭐ Очков: +${points}\n`;
-            }
-
             if (specialDate) {
               const scheduledTime = new Date(specialDate);
               const now = new Date();
