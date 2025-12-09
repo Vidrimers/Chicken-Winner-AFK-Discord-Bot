@@ -132,6 +132,12 @@ try {
   );
 } catch (error) {}
 
+try {
+  db.exec(
+    `ALTER TABLE achievements ADD COLUMN notifications_sent BOOLEAN DEFAULT 0`
+  );
+} catch (error) {}
+
 const AFK_CHANNEL_ID = process.env.AFK_CHANNEL_ID;
 const DEFAULT_TIMEOUT = 15;
 const STREAM_CHANNEL_ID = process.env.STREAM_CHANNEL_ID;
@@ -336,6 +342,168 @@ const ACHIEVEMENTS = {
   },
 };
 
+// ===== ФУНКЦИЯ: ПРОВЕРКА И ОТПРАВКА ПРОПУЩЕННЫХ УВЕДОМЛЕНИЙ =====
+async function checkAndSendMissedAchievementNotifications() {
+  try {
+    console.log("🔎 Начало проверки пропущенных уведомлений о достижениях...");
+
+    // Получаем текущее время в Московском часовом поясе
+    const nowMoscowISO = getMoscowNowISO();
+
+    console.log(`📅 Московское время (UTC+3): ${nowMoscowISO}`);
+
+    // Получаем все специальные достижения с истекшей датой, для которых не отправлены уведомления
+    // Используем московское время для сравнения
+    const missedAchievements = db
+      .prepare(
+        `
+      SELECT * FROM achievements 
+      WHERE type = 'special' 
+        AND special_date IS NOT NULL
+        AND special_date <= ?
+        AND (notifications_sent = 0 OR notifications_sent IS NULL)
+    `
+      )
+      .all(nowMoscowISO);
+
+    console.log(
+      `🎯 Найдено достижений для отправки уведомлений: ${missedAchievements.length}`
+    );
+
+    if (missedAchievements.length === 0) {
+      console.log("✅ Нет пропущенных уведомлений о достижениях");
+      return;
+    }
+
+    console.log(
+      `⏰ Найдено ${missedAchievements.length} пропущенных уведомлений о достижениях`
+    );
+
+    for (const achievement of missedAchievements) {
+      try {
+        console.log(
+          `📤 Обработка достижения: ${achievement.name} для пользователя ${achievement.user_id}`
+        );
+
+        const user = await client.users
+          .fetch(achievement.user_id)
+          .catch((err) => {
+            console.log(
+              `⚠️ Не удалось получить пользователя ${achievement.user_id}: ${err.message}`
+            );
+            return null;
+          });
+        const username = user ? user.username : "Пользователь";
+
+        // Отправляем ЛС пользователю
+        if (user) {
+          try {
+            const dmMessage =
+              `🏆 **Новое достижение!**\n\n` +
+              `${achievement.emoji} **${achievement.name}**\n` +
+              `${achievement.description}\n\n` +
+              `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}`;
+
+            await user.send(dmMessage);
+            console.log(
+              `✅ ЛС отправлено пользователю ${username} за достижение "${achievement.name}"`
+            );
+          } catch (dmError) {
+            console.log(
+              `❌ Не удалось отправить ЛС пользователю ${achievement.user_id}: ${dmError.message}`
+            );
+          }
+        } else {
+          console.log(
+            `⚠️ Пользователь ${achievement.user_id} не найден в Discord`
+          );
+        }
+
+        // Отправляем в канал Discord
+        try {
+          const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
+          if (channel) {
+            const channelMessage =
+              `🏆 **Новое достижение!**\n\n` +
+              `👤 **Пользователь:** <@${achievement.user_id}>\n` +
+              `🎯 **Достижение:** ${achievement.emoji} ${achievement.name}\n` +
+              `📝 **Описание:** ${achievement.description}\n` +
+              `📅 **Время:** ${formatTime(new Date())}\n\n` +
+              `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}`;
+
+            await channel.send(channelMessage);
+            console.log(
+              `✅ Сообщение в канал отправлено за достижение "${achievement.name}"`
+            );
+          } else {
+            console.log(
+              `⚠️ Канал достижений (${ACHIEVEMENTS_CHANNEL_ID}) не найден`
+            );
+          }
+        } catch (channelError) {
+          console.log(
+            `❌ Не удалось отправить уведомление в канал: ${channelError.message}`
+          );
+        }
+
+        // Отправляем в Telegram
+        try {
+          let telegramMessage =
+            `🏆 <b>Новое специальное достижение!</b>\n` +
+            `👤 Пользователь: ${username}\n` +
+            `🎯 Достижение: ${achievement.emoji} ${achievement.name}\n` +
+            `📝 Описание: ${achievement.description}\n`;
+
+          if (achievement.color) {
+            telegramMessage += `🎨 Цвет: ${achievement.color}\n`;
+          }
+
+          telegramMessage += `✅ Доступно с: ${formatTime(
+            new Date(achievement.special_date)
+          )}\n`;
+          telegramMessage += `📅 Отправлено: ${formatTime(new Date())}`;
+
+          sendTelegramReport(telegramMessage);
+          console.log(
+            `✅ Telegram уведомление отправлено за достижение "${achievement.name}"`
+          );
+        } catch (telegramError) {
+          console.log(
+            `⚠️ Ошибка при отправке в Telegram: ${telegramError.message}`
+          );
+        }
+
+        // Отмечаем что уведомления отправлены
+        try {
+          db.prepare(
+            `UPDATE achievements SET notifications_sent = 1 WHERE achievement_id = ?`
+          ).run(achievement.achievement_id);
+          console.log(
+            `✅ Флаг notifications_sent установлен для ${achievement.achievement_id}`
+          );
+        } catch (updateErr) {
+          console.error(
+            "❌ Ошибка при обновлении флага notifications_sent:",
+            updateErr
+          );
+        }
+      } catch (notificationError) {
+        console.error(
+          `❌ Ошибка при отправке пропущенного уведомления:`,
+          notificationError
+        );
+      }
+    }
+
+    console.log("✅ Завершена проверка пропущенных уведомлений о достижениях");
+  } catch (error) {
+    console.error(
+      "❌ Критическая ошибка при проверке пропущенных уведомлений:",
+      error
+    );
+  }
+}
+
 // ===== ФУНКЦИЯ: ОТПРАВКА ОТЧЕТА В TELEGRAM =====
 async function sendTelegramReport(message) {
   try {
@@ -369,6 +537,18 @@ function formatTime(date) {
     minute: "2-digit",
     second: "2-digit",
   });
+}
+
+// Получить текущее время в московском часовом поясе (UTC+3)
+function getMoscowNow() {
+  const now = new Date();
+  const moscowOffset = 3 * 60 * 60 * 1000; // UTC+3 в миллисекундах
+  return new Date(now.getTime() + moscowOffset);
+}
+
+// Получить ISO строку москов​ского времени
+function getMoscowNowISO() {
+  return getMoscowNow().toISOString();
 }
 
 function formatDuration(seconds) {
@@ -985,15 +1165,27 @@ app.post("/api/visit/:userId", async (req, res) => {
 
 // API endpoint для создания специального достижения (админ-панель)
 app.post("/api/admin/create-achievement", async (req, res) => {
+  console.log("🔵 API /create-achievement: Начало обработки запроса");
+  console.log("📦 Body:", JSON.stringify(req.body).substring(0, 200));
+
   const { emoji, name, description, type, userId, specialDate, color } =
     req.body;
 
+  console.log(
+    `📝 Параметры: emoji=${emoji}, name=${name}, type=${type}, userId=${userId}, specialDate=${specialDate}`
+  );
+
   // Проверяем обязательные поля
   if (!emoji || !name || !description || !type || !userId) {
+    console.log("❌ Отсутствуют обязательные поля!");
     return res.status(400).json({ error: "Отсутствуют обязательные поля" });
   }
 
   try {
+    console.log(
+      `📝 API: Получен запрос на создание достижения: ${name} для пользователя ${userId}`
+    );
+
     // Проверяем что тип = 'special'
     if (type !== "special") {
       return res.status(400).json({ error: "Тип должен быть 'special'" });
@@ -1002,9 +1194,11 @@ app.post("/api/admin/create-achievement", async (req, res) => {
     // Генерируем уникальный achievement_id
     const achievementId =
       "special_" + Date.now() + "_" + Math.random().toString(36).substring(7);
+    console.log(`📝 ID достижения: ${achievementId}`);
 
     // Инициализируем пользователя если нужно
     initUserStats(userId, "Special Achievement User");
+    console.log(`✅ Пользователь инициализирован`);
 
     // Вставляем достижение в БД
     try {
@@ -1025,7 +1219,9 @@ app.post("/api/admin/create-achievement", async (req, res) => {
       );
     } catch (err) {
       console.error(`❌ Ошибка при добавлении в achievements:`, err);
+      throw err;
     }
+    console.log(`✅ Достижение добавлено в таблицу achievements`);
 
     // Добавляем достижение в user_achievements с временем разблокировки
     const unlockedTime = specialDate || new Date().toISOString();
@@ -1042,9 +1238,37 @@ app.post("/api/admin/create-achievement", async (req, res) => {
 
     // Если указана дата, планируем отправку уведомлений на это время
     if (specialDate) {
-      const targetDate = new Date(specialDate);
+      // specialDate это строка в ISO формате: "2025-12-09T07:10"
+      // Интерпретируем это как московское время
+      const targetDateStr = specialDate;
+
+      // Текущее время в UTC
       const now = new Date();
-      const delayMs = targetDate.getTime() - now.getTime();
+
+      // specialDate приходит как строка в московском времени: "2025-12-09T07:10"
+      // new Date("2025-12-09T07:10") парсит это как UTC
+      // Но это МОСКОВСКОЕ время! Поэтому нужно ДОБАВИТЬ offset (не вычитать)
+      // Если московское 07:10 = 04:10 UTC, то парсим как 07:10 UTC и добавляем 3 часа = 10:10 UTC
+      const moscowOffset = 3 * 60 * 60 * 1000;
+
+      // Парсим как UTC дату
+      const targetDateAsUTC = new Date(targetDateStr);
+      // ДОБАВЛЯЕМ московский offset чтобы получить реальное UTC время
+      // (потому что строка это московское время, а new Date() парсит как UTC)
+      const targetDateRealUTC = new Date(
+        targetDateAsUTC.getTime() + moscowOffset
+      );
+
+      const delayMs = targetDateRealUTC.getTime() - now.getTime();
+
+      console.log(`⏰ Планирование достижения "${name}":
+      - Строка в интерфейсе (Москва): ${targetDateStr}
+      - Как UTC дата (неправ.): ${targetDateAsUTC.toISOString()}
+      - Реальное UTC время: ${targetDateRealUTC.toISOString()}
+      - Текущее UTC: ${now.toISOString()}
+      - Задержка (мс): ${delayMs}
+      - Время ожидания (мин): ${Math.round(delayMs / 60000)}
+      - Будет ли setTimeout? ${delayMs > 0 ? "ДА ✅" : "НЕТ ❌"}`);
 
       if (delayMs > 0) {
         // Откладываем отправку уведомлений на указанное время
@@ -1124,52 +1348,44 @@ app.post("/api/admin/create-achievement", async (req, res) => {
               notificationError
             );
           }
+
+          // Отмечаем что уведомления отправлены
+          try {
+            db.prepare(
+              `UPDATE achievements SET notifications_sent = 1 WHERE achievement_id = ?`
+            ).run(achievementId);
+          } catch (err) {
+            console.error(
+              "Ошибка при обновлении флага notifications_sent:",
+              err
+            );
+          }
         }, delayMs);
 
         console.log(
-          `✅ Достижение "${name}" запланировано на ${targetDate.toLocaleString(
+          `✅ Достижение "${name}" запланировано на ${targetDateRealUTC.toLocaleString(
             "ru-RU"
           )}`
         );
       } else {
-        // Если дата в прошлом, отправляем уведомления сразу
-        try {
-          const user = await client.users.fetch(userId).catch(() => null);
-          const username = user ? user.username : "Пользователь";
+        // Если дата в прошлом или сейчас (delayMs <= 0)
+        // Просто отмечаем что уведомления нужно было отправить
+        // Они будут отправлены при следующей проверке пропущенных уведомлений
+        console.log(
+          `⚠️ Дата достижения "${name}" уже в прошлом (delayMs=${delayMs})`
+        );
+        console.log(`   Уведомления будут отправлены при проверке пропущенных`);
 
-          if (user) {
-            await user
-              .send(
-                `🏆 **Новое достижение!**\n\n` +
-                  `${emoji} **${name}**\n` +
-                  `${description}\n\n` +
-                  `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}`
-              )
-              .catch(() => {});
-          }
-
-          const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
-          if (channel) {
-            await channel
-              .send(
-                `🏆 **Новое достижение!**\n\n` +
-                  `👤 **Пользователь:** <@${userId}>\n` +
-                  `🎯 **Достижение:** ${emoji} ${name}\n` +
-                  `📝 **Описание:** ${description}\n` +
-                  `📅 **Время:** ${formatTime(new Date())}\n\n` +
-                  `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}`
-              )
-              .catch(() => {});
-          }
-        } catch (error) {
-          console.log("Ошибка при отправке уведомлений:", error);
-        }
+        // НЕ отправляем уведомления здесь! Пусть их отправит checkAndSendMissedAchievementNotifications()
       }
     }
 
     res.json({ success: true, achievementId });
   } catch (error) {
-    console.error("Ошибка при создании специального достижения:", error);
+    console.error("❌❌❌ ОШИБКА КРИТИЧЕСКАЯ при создании достижения:");
+    console.error("Тип ошибки:", error.constructor.name);
+    console.error("Сообщение:", error.message);
+    console.error("Stack:", error.stack);
     res.status(500).json({ error: "Ошибка при создании достижения" });
   }
 });
@@ -3828,6 +4044,29 @@ client.on("clientReady", () => {
   // Запускаем проверку специального достижения каждую минуту
   setInterval(checkSpecialAchievement, 60000);
   console.log("⏰ Запущена проверка специального достижения");
+
+  // Проверяем пропущенные уведомления о достижениях при запуске (с задержкой)
+  setTimeout(() => {
+    console.log("🔍 Проверка пропущенных уведомлений о достижениях...");
+    try {
+      checkAndSendMissedAchievementNotifications();
+      console.log("✅ Проверка завершена");
+    } catch (error) {
+      console.error("❌ Ошибка при проверке пропущенных уведомлений:", error);
+    }
+  }, 3000); // Задержка 3 секунды чтобы Discord полностью инициализировался
+
+  // Также проверяем каждые 30 секунд (более частая проверка)
+  setInterval(() => {
+    try {
+      checkAndSendMissedAchievementNotifications();
+    } catch (error) {
+      console.error(
+        "❌ Ошибка при периодической проверке пропущенных уведомлений:",
+        error
+      );
+    }
+  }, 30000);
 });
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
