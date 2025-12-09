@@ -13,3 +13,5 @@ replacements.txt
 *-copy*.db
 * copy*.db
 *.db
+
+DISCORD_OAUTH_SETUP.md
