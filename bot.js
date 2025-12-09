@@ -2510,7 +2510,9 @@ app.get("/", (req, res) => {
                     <button onclick="loadUserData()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
                 </div>
                 
-                <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; padding: 10px 20px; background-color: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer;">⭐ Создать спец. достижение</button>
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; flex: 1; padding: 10px 20px; background-color: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; height: fit-content;">⭐ Создать спец. достижение</button>
+                </div>
             </div>
             
             <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
