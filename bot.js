@@ -4,6 +4,7 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import http from "http";
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1001,6 +1002,28 @@ const checkSpecialAchievement = async () => {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Простая система сессии на основе памяти
+const sessions = new Map();
+
+// Middleware для работы с сессиями
+function getSession(req) {
+  const sessionId = req.headers.cookie?.split('sessionId=')[1]?.split(';')[0];
+  return sessionId ? sessions.get(sessionId) : null;
+}
+
+function setSession(res, userId) {
+  const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  sessions.set(sessionId, { userId, createdAt: Date.now() });
+  res.setHeader('Set-Cookie', `sessionId=${sessionId}; Path=/; Max-Age=86400; SameSite=Strict`);
+  return sessionId;
+}
+
+function clearSession(res, req) {
+  const sessionId = req.headers.cookie?.split('sessionId=')[1]?.split(';')[0];
+  if (sessionId) sessions.delete(sessionId);
+  res.setHeader('Set-Cookie', `sessionId=; Path=/; Max-Age=0`);
+}
+
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 
@@ -1508,6 +1531,92 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
   } catch (error) {
     console.error("Ошибка при удалении достижения:", error);
     res.status(500).json({ error: "Ошибка при удалении достижения" });
+  }
+});
+
+// ===== МАРШРУТЫ АВТОРИЗАЦИИ =====
+
+// Вход через Discord
+app.get("/auth/discord", (req, res) => {
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI || "http://localhost:3000/auth/discord/callback");
+  const scopes = encodeURIComponent("identify");
+  const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}`;
+  res.redirect(discordAuthUrl);
+});
+
+// Callback от Discord
+app.get("/auth/discord/callback", async (req, res) => {
+  const code = req.query.code;
+  if (!code) {
+    return res.redirect("/?error=no_code");
+  }
+
+  try {
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+    const redirectUri = process.env.DISCORD_REDIRECT_URI || "http://localhost:3000/auth/discord/callback";
+
+    // Обмениваем код на токен доступа
+    const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: "authorization_code",
+        code: code,
+        redirect_uri: redirectUri,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      return res.redirect("/?error=token_exchange_failed");
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    // Получаем информацию о пользователе
+    const userResponse = await fetch("https://discord.com/api/users/@me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!userResponse.ok) {
+      return res.redirect("/?error=user_fetch_failed");
+    }
+
+    const userData = await userResponse.json();
+    const userId = userData.id;
+    const username = userData.username;
+
+    // Инициализируем пользователя в базе данных
+    initUserStats(userId, username);
+
+    // Сохраняем сессию
+    setSession(res, userId);
+
+    // Перенаправляем на панель с загруженным профилем
+    res.redirect(`/?userId=${userId}&autoLogin=true`);
+  } catch (error) {
+    console.error("❌ Ошибка при авторизации Discord:", error);
+    res.redirect("/?error=auth_failed");
+  }
+});
+
+// Выход из системы
+app.get("/logout", (req, res) => {
+  clearSession(res, req);
+  res.redirect("/");
+});
+
+// Получить текущую сессию пользователя
+app.get("/api/session", (req, res) => {
+  const session = getSession(req);
+  if (session) {
+    res.json({ userId: session.userId });
+  } else {
+    res.json({ userId: null });
   }
 });
 
@@ -2379,9 +2488,17 @@ app.get("/", (req, res) => {
         
         <div class="content">
             <div class="user-search">
-                <input type="text" id="userIdInput" placeholder="Введи свой Discord ID">
-                <button onclick="loadUserData()">Загрузить данные</button>
-                <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; margin-left: 10px; background-color: #FFD700; color: #000; font-weight: bold;">⭐ Создать спец. достижение</button>
+                <div id="authSection" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+                    <button onclick="loginWithDiscord()" style="flex: 1; min-width: 200px; padding: 10px 20px; background: #5865F2; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🔐 Войти через Discord</button>
+                    <button id="logoutBtn" onclick="logout()" style="display: none; flex: 1; min-width: 200px; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🚪 Выход</button>
+                </div>
+                
+                <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="userIdInput" placeholder="Или введи Discord ID вручную" style="flex: 1;">
+                    <button onclick="loadUserData()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
+                </div>
+                
+                <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; width: 100%; margin-top: 10px; padding: 10px; background-color: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer;">⭐ Создать спец. достижение</button>
             </div>
             
             <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
@@ -2509,6 +2626,79 @@ app.get("/", (req, res) => {
     <script>
         let currentUserId = null;
         const ADMIN_USER_ID = "${ADMIN_USER_ID}";
+
+        // Функции для работы с авторизацией
+        function loginWithDiscord() {
+            window.location.href = '/auth/discord';
+        }
+
+        async function logout() {
+            if (confirm('Вы уверены, что хотите выйти?')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/session');
+                const data = await response.json();
+                if (data.userId) {
+                    currentUserId = data.userId;
+                    document.getElementById('logoutBtn').style.display = 'block';
+                    document.getElementById('userIdInput').style.display = 'none';
+                    // Автоматически загружаем данные авторизованного пользователя
+                    setTimeout(() => loadUserDataAuto(data.userId), 100);
+                    return true;
+                } else {
+                    document.getElementById('logoutBtn').style.display = 'none';
+                    document.getElementById('userIdInput').style.display = 'block';
+                    return false;
+                }
+            } catch (error) {
+                console.log('Ошибка при проверке авторизации:', error);
+                return false;
+            }
+        }
+
+        async function loadUserDataAuto(userId) {
+            currentUserId = userId;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('userContent').style.display = 'none';
+            document.getElementById('userIdDisplay').style.display = 'none';
+            document.getElementById('userIdInput').value = '';
+            
+            try {
+                const response = await fetch(\`/api/stats/\${userId}\`);
+                if (!response.ok) {
+                    throw new Error(\`HTTP error! status: \${response.status}\`);
+                }
+                const data = await response.json();
+                
+                try {
+                    await fetch(\`/api/visit/\${userId}\`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    data.stats.web_visits = (data.stats.web_visits || 0) + 1;
+                } catch (error) {
+                    console.log('Не удалось отправить данные о посещении');
+                }
+                
+                displayUserStats(data.stats);
+                displayUserAchievements(data.achievements, data.stats.user_id);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('userContent').style.display = 'block';
+                document.getElementById('userIdDisplay').style.display = 'block';
+                
+                if (currentUserId === ADMIN_USER_ID) {
+                    document.getElementById('createSpecialAchievementBtn').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('❌ Ошибка загрузки данных:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('loading').textContent = '❌ Ошибка загрузки данных. Проверьте ID.';
+            }
+        }
 
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -3607,6 +3797,22 @@ modalUnlockedAchievements.forEach(achievement => {
                 alert('Ошибка при удалении достижения');
             }
         }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Проверяем авторизацию и параметры URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoLogin = urlParams.get('autoLogin');
+            const userIdParam = urlParams.get('userId');
+            
+            if (autoLogin && userIdParam) {
+                // Автоматический вход через Discord
+                loadUserDataAuto(userIdParam);
+            } else {
+                // Проверяем активную сессию
+                checkAuthStatus();
+            }
+        });
 
         loadLeaderboard();
     </script>
