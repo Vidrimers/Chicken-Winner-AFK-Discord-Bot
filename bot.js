@@ -474,9 +474,21 @@ const getTopUsers = (limit = 10) => {
 
 // ===== ФУНКЦИИ ДОСТИЖЕНИЙ =====
 const checkAndUnlockAchievement = async (userId, username, achievementId) => {
+  // Проверяем, есть ли уже такое достижение
+  const checkStmt = db.prepare(`
+    SELECT * FROM user_achievements WHERE user_id = ? AND achievement_id = ?
+  `);
+  const existing = checkStmt.get(userId, achievementId);
+
+  // Если достижение уже есть, возвращаем false (не новое)
+  if (existing) {
+    return false;
+  }
+
+  // Добавляем новое достижение
   const stmt = db.prepare(`
-    INSERT OR IGNORE INTO user_achievements (user_id, achievement_id) 
-    VALUES (?, ?)
+    INSERT INTO user_achievements (user_id, achievement_id, unlocked_at) 
+    VALUES (?, ?, CURRENT_TIMESTAMP)
   `);
   const result = stmt.run(userId, achievementId);
 
@@ -950,12 +962,13 @@ app.post("/api/visit/:userId", async (req, res) => {
     // Увеличиваем счетчик посещений
     incrementUserStat(userId, "web_visits");
 
-    // Проверяем достижение за первое посещение
-    if (stats && stats.web_visits === 0) {
+    // Проверяем достижение за посещение веб-панели
+    if (stats) {
       // Получаем пользователя из Discord
       const user = await client.users.fetch(userId).catch(() => null);
       const username = user ? user.username : "Неизвестный пользователь";
 
+      // Пытаемся выдать первое посещение (если еще не получено, будет добавлено)
       await checkAndUnlockAchievement(userId, username, "first_web_visit");
     }
 
@@ -1022,12 +1035,31 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
   }
 
   try {
-    // Удаляем запись о достижении у пользователя
+    // Получаем информацию о достижении для вычисления очков
+    const achievement = ACHIEVEMENTS[achievementId];
+
+    // Удаляем запись о достижении у пользователя из user_achievements
     db.prepare(
       `
       DELETE FROM user_achievements WHERE user_id = ? AND achievement_id = ?
     `
     ).run(userId, achievementId);
+
+    // Также удаляем из таблицы achievements если это специальное достижение
+    db.prepare(
+      `
+      DELETE FROM achievements WHERE user_id = ? AND achievement_id = ?
+    `
+    ).run(userId, achievementId);
+
+    // Если это обычное достижение (из ACHIEVEMENTS), вычитаем очки
+    if (achievement && achievement.points > 0) {
+      db.prepare(
+        `
+        UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?
+      `
+      ).run(achievement.points, userId);
+    }
 
     res.json({ success: true });
   } catch (error) {
@@ -2441,8 +2473,9 @@ lockedAchievements.forEach(achievementHtml => {
             try {
                 const response = await fetch(\`/api/stats/\${userId}\`);
                 const data = await response.json();
+                const isAdmin = currentUserId === ADMIN_USER_ID;
                 
-                displayUserModal(data, username, rank, userId);
+                displayUserModal(data, username, rank, userId, isAdmin);
             } catch (error) {
                 alert('Ошибка загрузки данных пользователя');
             }
@@ -2600,7 +2633,38 @@ modalUnlockedAchievements.forEach(achievement => {
             }
         }
 
-        function displayUserModal(data, username, rank, userId) {
+        function deleteUserAchievement(userId, achievementId) {
+            if (!confirm('Вы уверены, что хотите удалить это достижение у пользователя?')) {
+                return;
+            }
+            
+            fetch('/api/admin/delete-achievement', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    userId: userId,
+                    achievementId: achievementId
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Достижение успешно удалено!');
+                    // Перезагружаем страницу
+                    location.reload();
+                } else {
+                    alert('Ошибка при удалении достижения');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Ошибка при удалении достижения');
+            });
+        }
+
+        function displayUserModal(data, username, rank, userId, isAdmin = false) {
             const achievements = data.achievements;
             const stats = data.stats;
             const unlockedIds = achievements.map(a => a.achievement_id);
@@ -2675,12 +2739,14 @@ modalUnlockedAchievements.forEach(achievement => {
                 const isUnlocked = unlockedIds.includes(id);
                 if (isUnlocked) {
                     const unlockedDate = achievements.find(a => a.achievement_id === id)?.unlocked_at;
+                    const deleteBtn = isAdmin ? \`<button onclick="deleteUserAchievement('\${userId}', '\${id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>\` : '';
                     modalUnlockedAchievements.push({
                         html: \`
                             <div class="modal-achievement">
                                 <h4>\${achievement.name} ✅</h4>
                                 <p style="margin: 8px 0; color: #666;">\${achievement.description}</p>
                                 <small>+\${achievement.points} очков • Получено: \${new Date(unlockedDate).toLocaleDateString('ru-RU')}</small>
+                                \${deleteBtn}
                             </div>
                         \`,
                         date: new Date(unlockedDate)
@@ -2718,6 +2784,7 @@ modalUnlockedAchievements.forEach(achievement => {
                 specialAchievementsFromDB.forEach(achievement => {
                     // best_admin - исключение, используем исходные стили
                     if (achievement.name === 'Kakashech - Лучший админ') {
+                        const deleteBtn = isAdmin ? \`<button onclick="deleteUserAchievement('\${userId}', 'best_admin')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>\` : '';
                         modalHtml += \`
                             <div class="modal-achievement special-achievement" style="
                                 background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); 
@@ -2730,11 +2797,13 @@ modalUnlockedAchievements.forEach(achievement => {
                                 <h3 style="color: #333; font-weight: bold; margin: 0 0 10px 0;">\${achievement.emoji} \${achievement.name} ✨</h3>
                                 <p style="margin: 8px 0; color: #555;">\${achievement.description}</p>
                                 <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(achievement.unlocked_at).toLocaleDateString('ru-RU')}</small>
+                                \${deleteBtn}
                             </div>
                         \`;
                     } else {
                         // Остальные специальные достижения из БД
                         const color = achievement.color || '#FFD700';
+                        const deleteBtn = isAdmin ? \`<button onclick="deleteUserAchievement('\${userId}', '\${achievement.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>\` : '';
                         modalHtml += \`
                             <div class="modal-achievement special-achievement" style="
                                 background: linear-gradient(135deg, \${color}22 0%, \${color}11 100%);
@@ -2748,6 +2817,7 @@ modalUnlockedAchievements.forEach(achievement => {
                                 <h3 style="color: \${color}; font-weight: bold; margin: 0 0 10px 0;">\${achievement.emoji} \${achievement.name} ✨</h3>
                                 <p style="margin: 8px 0; color: #555;">\${achievement.description}</p>
                                 <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(achievement.unlocked_at).toLocaleDateString('ru-RU')}</small>
+                                \${deleteBtn}
                             </div>
                         \`;
                     }
