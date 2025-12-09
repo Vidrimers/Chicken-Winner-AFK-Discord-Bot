@@ -1091,13 +1091,37 @@ app.post("/api/admin/create-achievement", async (req, res) => {
             }
 
             // Отправляем в Telegram
-            sendTelegramReport(
+            let telegramMessage =
               `🏆 <b>Новое специальное достижение!</b>\n` +
-                `👤 Пользователь: ${username}\n` +
-                `🎯 Достижение: ${emoji} ${name}\n` +
-                `📝 Описание: ${description}\n` +
-                `📅 Время: ${formatTime(new Date())}`
-            );
+              `👤 Пользователь: ${username}\n` +
+              `🎯 Достижение: ${emoji} ${name}\n` +
+              `📝 Описание: ${description}\n`;
+
+            if (color) {
+              telegramMessage += `🎨 Цвет: ${color}\n`;
+            }
+
+            if (points) {
+              telegramMessage += `⭐ Очков: +${points}\n`;
+            }
+
+            if (specialDate) {
+              const scheduledTime = new Date(specialDate);
+              const now = new Date();
+              if (scheduledTime > now) {
+                telegramMessage += `⏰ Планируется: ${formatTime(
+                  scheduledTime
+                )}\n`;
+              } else {
+                telegramMessage += `✅ Доступно с: ${formatTime(
+                  scheduledTime
+                )}\n`;
+              }
+            }
+
+            telegramMessage += `📅 Создано: ${formatTime(new Date())}`;
+
+            sendTelegramReport(telegramMessage);
           } catch (notificationError) {
             console.error(
               "Ошибка при отправке отложенного уведомления:",
@@ -1876,7 +1900,7 @@ app.get("/", (req, res) => {
             background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
             color: #333;
             border-left: 5px solid #ff6b35;
-            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+            // box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
             position: relative;
             overflow: hidden;
             transition: all 0.3s ease;
@@ -1906,8 +1930,7 @@ app.get("/", (req, res) => {
         }
         
         .special-achievement:hover {
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 15px 30px rgba(255, 215, 0, 0.6);
+            transform: translateY(-3px);
         }
         
         .special-achievement:hover::before {
@@ -1924,7 +1947,7 @@ app.get("/", (req, res) => {
             }
         }
         .special-achievement {
-            animation: specialGlow 3s ease-in-out infinite alternate;
+            // animation: specialGlow 3s ease-in-out infinite alternate;
         }
         
         @keyframes specialGlow {
@@ -1938,6 +1961,7 @@ app.get("/", (req, res) => {
         
         .special-achievement:hover {
             animation: none; /* Останавливаем пульсацию при наведении */
+            transform: translateY(-3px);
         }
         
         /* Стили для вкладок в модальном окне */
@@ -2528,7 +2552,7 @@ lockedAchievements.forEach(achievementHtml => {
                                 background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); 
                                 color: #333; 
                                 border-left: 5px solid #ff6b35;
-                                box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+                                // box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
                                 position: relative;
                                 overflow: visible;
                             ">
@@ -2572,8 +2596,9 @@ lockedAchievements.forEach(achievementHtml => {
                                 background: linear-gradient(135deg, \${achievement.color}22 0%, \${achievement.color}11 100%); 
                                 color: #333; 
                                 border-left: 5px solid \${achievement.color};
-                                box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
-                                transform: scale(1.02);
+                                // box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+                                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                                // transform: scale(1.02);
                                 position: relative;
                                 overflow: visible;
                             ">
@@ -3016,7 +3041,7 @@ modalUnlockedAchievements.forEach(achievement => {
                                 background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); 
                                 color: #333; 
                                 border-left: 5px solid #ff6b35;
-                                box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+                                // box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
                                 position: relative;
                                 overflow: visible;
                             ">
@@ -3035,7 +3060,8 @@ modalUnlockedAchievements.forEach(achievement => {
                                 background: linear-gradient(135deg, \${color}22 0%, \${color}11 100%);
                                 color: #333;
                                 border-left: 5px solid \${color};
-                                box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+                                // box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+                                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                                 transform: scale(1.02);
                                 position: relative;
                                 overflow: visible;
