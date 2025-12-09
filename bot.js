@@ -1007,21 +1007,25 @@ const sessions = new Map();
 
 // Middleware для работы с сессиями
 function getSession(req) {
-  const sessionId = req.headers.cookie?.split('sessionId=')[1]?.split(';')[0];
+  const sessionId = req.headers.cookie?.split("sessionId=")[1]?.split(";")[0];
   return sessionId ? sessions.get(sessionId) : null;
 }
 
 function setSession(res, userId) {
-  const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  const sessionId =
+    "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
   sessions.set(sessionId, { userId, createdAt: Date.now() });
-  res.setHeader('Set-Cookie', `sessionId=${sessionId}; Path=/; Max-Age=86400; SameSite=Strict`);
+  res.setHeader(
+    "Set-Cookie",
+    `sessionId=${sessionId}; Path=/; Max-Age=86400; SameSite=Strict`
+  );
   return sessionId;
 }
 
 function clearSession(res, req) {
-  const sessionId = req.headers.cookie?.split('sessionId=')[1]?.split(';')[0];
+  const sessionId = req.headers.cookie?.split("sessionId=")[1]?.split(";")[0];
   if (sessionId) sessions.delete(sessionId);
-  res.setHeader('Set-Cookie', `sessionId=; Path=/; Max-Age=0`);
+  res.setHeader("Set-Cookie", `sessionId=; Path=/; Max-Age=0`);
 }
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -1539,7 +1543,10 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
 // Вход через Discord
 app.get("/auth/discord", (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID;
-  const redirectUri = encodeURIComponent(process.env.DISCORD_REDIRECT_URI || "http://localhost:3000/auth/discord/callback");
+  const redirectUri = encodeURIComponent(
+    process.env.DISCORD_REDIRECT_URI ||
+      "http://localhost:3000/auth/discord/callback"
+  );
   const scopes = encodeURIComponent("identify");
   const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}`;
   res.redirect(discordAuthUrl);
@@ -1555,7 +1562,9 @@ app.get("/auth/discord/callback", async (req, res) => {
   try {
     const clientId = process.env.DISCORD_CLIENT_ID;
     const clientSecret = process.env.DISCORD_CLIENT_SECRET;
-    const redirectUri = process.env.DISCORD_REDIRECT_URI || "http://localhost:3000/auth/discord/callback";
+    const redirectUri =
+      process.env.DISCORD_REDIRECT_URI ||
+      "http://localhost:3000/auth/discord/callback";
 
     // Обмениваем код на токен доступа
     const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
@@ -2488,9 +2497,12 @@ app.get("/", (req, res) => {
         
         <div class="content">
             <div class="user-search">
-                <div id="authSection" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
-                    <button onclick="loginWithDiscord()" style="flex: 1; min-width: 200px; padding: 10px 20px; background: #5865F2; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🔐 Войти через Discord</button>
-                    <button id="logoutBtn" onclick="logout()" style="display: none; flex: 1; min-width: 200px; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🚪 Выход</button>
+                <div id="authSection" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;">
+                    <button id="loginBtn" onclick="loginWithDiscord()" style="flex: 1; min-width: 200px; padding: 10px 20px; background: #5865F2; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🔐 Войти через Discord</button>
+                    <div id="userInfoDisplay" style="display: none; flex: 1; min-width: 200px; padding: 10px 20px; background: #667eea; color: white; border-radius: 5px; font-weight: bold; font-size: 14px; text-align: center;">
+                        👤 <span id="userUsername"></span>
+                    </div>
+                    <button id="logoutBtn" onclick="logout()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🚪 Выход</button>
                 </div>
                 
                 <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 20px;">
@@ -2498,7 +2510,7 @@ app.get("/", (req, res) => {
                     <button onclick="loadUserData()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
                 </div>
                 
-                <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; width: 100%; margin-top: 10px; padding: 10px; background-color: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer;">⭐ Создать спец. достижение</button>
+                <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; padding: 10px 20px; background-color: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer;">⭐ Создать спец. достижение</button>
             </div>
             
             <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
@@ -2644,12 +2656,26 @@ app.get("/", (req, res) => {
                 const data = await response.json();
                 if (data.userId) {
                     currentUserId = data.userId;
+                    document.getElementById('loginBtn').style.display = 'none';
+                    document.getElementById('userInfoDisplay').style.display = 'block';
                     document.getElementById('logoutBtn').style.display = 'block';
                     document.getElementById('userIdInput').style.display = 'none';
+                    
+                    // Получаем username пользователя и отображаем его
+                    try {
+                        const statsResponse = await fetch(\`/api/stats/\${data.userId}\`);
+                        const statsData = await statsResponse.json();
+                        document.getElementById('userUsername').textContent = statsData.stats.username || 'Пользователь';
+                    } catch (e) {
+                        document.getElementById('userUsername').textContent = 'Пользователь';
+                    }
+                    
                     // Автоматически загружаем данные авторизованного пользователя
                     setTimeout(() => loadUserDataAuto(data.userId), 100);
                     return true;
                 } else {
+                    document.getElementById('loginBtn').style.display = 'block';
+                    document.getElementById('userInfoDisplay').style.display = 'none';
                     document.getElementById('logoutBtn').style.display = 'none';
                     document.getElementById('userIdInput').style.display = 'block';
                     return false;
@@ -2673,6 +2699,14 @@ app.get("/", (req, res) => {
                     throw new Error(\`HTTP error! status: \${response.status}\`);
                 }
                 const data = await response.json();
+                
+                // Показываем кнопку с ником и ID сразу
+                const username = data.stats.username || 'Пользователь';
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('userInfoDisplay').style.display = 'block';
+                document.getElementById('userUsername').textContent = username;
+                document.getElementById('logoutBtn').style.display = 'block';
+                document.getElementById('currentUserId').textContent = userId;
                 
                 try {
                     await fetch(\`/api/visit/\${userId}\`, {
