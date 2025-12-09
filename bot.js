@@ -1266,31 +1266,42 @@ app.post("/api/admin/create-achievement", async (req, res) => {
 
       // Текущее время в UTC
       const now = new Date();
-
-      // specialDate приходит как строка в московском времени: "2025-12-09T07:10"
-      // new Date("2025-12-09T15:00") парсит это как UTC на сервере
-      // Но это МОСКОВСКОЕ время (UTC+3)! 15:00 Москва = 12:00 UTC
-      // Поэтому нужно ВЫЧИТАТЬ offset: 15:00 UTC - 3 часа = 12:00 UTC
       const moscowOffset = 3 * 60 * 60 * 1000;
+      const nowMoscow = new Date(now.getTime() + moscowOffset);
 
-      // Парсим дату как UTC
-      const targetDateAsUTC = new Date(targetDateStr);
-      // ВЫЧИТАЕМ московский offset чтобы получить реальное UTC время
-      // (потому что строка это московское время, а new Date() парсит как UTC)
-      const targetDateRealUTC = new Date(
-        targetDateAsUTC.getTime() - moscowOffset
+      // specialDate приходит как строка: "2025-12-09T08:40"
+      // На БРАУЗЕРЕ пользователя это интерпретируется как локальное время его timezone
+      // Когда отправляется на СЕРВЕР (Node.js в UTC), new Date() возвращает UTC время
+      // Но сервер находится в UTC, поэтому число которое браузер отправил уже скорректировано!
+
+      // Пример:
+      // - Браузер в UTC+3 timezone (Moscow)
+      // - Пользователь вводит "08:40"
+      // - Браузер парсит как 08:40 в своем timezone
+      // - JSON отправляет как "2025-12-09T08:40"
+      // - На сервере new Date("2025-12-09T08:40") = уже корректное UTC время!
+
+      const targetDateUTC = new Date(targetDateStr);
+
+      // Это уже правильное UTC время, не нужно ничего вычитать/добавлять!
+      const delayMs = targetDateUTC.getTime() - now.getTime();
+
+      console.log('⏰ Планирование достижения "' + name + '":');
+      console.log("   Дата/время из интерфейса: " + targetDateStr);
+      console.log("   Текущее UTC: " + now.toISOString());
+      console.log(
+        "   Целевое UTC (уже корректное): " + targetDateUTC.toISOString()
       );
-
-      const delayMs = targetDateRealUTC.getTime() - now.getTime();
-
-      console.log(`⏰ Планирование достижения "${name}":
-      - Строка в интерфейсе (Москва): ${targetDateStr}
-      - Как UTC дата (неправ.): ${targetDateAsUTC.toISOString()}
-      - Реальное UTC время: ${targetDateRealUTC.toISOString()}
-      - Текущее UTC: ${now.toISOString()}
-      - Задержка (мс): ${delayMs}
-      - Время ожидания (мин): ${Math.round(delayMs / 60000)}
-      - Будет ли setTimeout? ${delayMs > 0 ? "ДА ✅" : "НЕТ ❌"}`);
+      console.log(
+        "   Задержка (мс): " +
+          delayMs +
+          " = " +
+          Math.round(delayMs / 60000) +
+          " минут"
+      );
+      console.log(
+        "   Будет ли setTimeout? " + (delayMs > 0 ? "ДА ✅" : "НЕТ ❌")
+      );
 
       if (delayMs > 0) {
         // Откладываем отправку уведомлений на указанное время
@@ -1385,9 +1396,10 @@ app.post("/api/admin/create-achievement", async (req, res) => {
         }, delayMs);
 
         console.log(
-          `✅ Достижение "${name}" запланировано на ${targetDateRealUTC.toLocaleString(
-            "ru-RU"
-          )}`
+          '✅ Достижение "' +
+            name +
+            '" запланировано на ' +
+            targetDateUTC.toLocaleString("ru-RU")
         );
       } else {
         // Если дата в прошлом или сейчас (delayMs <= 0)
@@ -2735,7 +2747,6 @@ lockedAchievements.forEach(achievementHtml => {
             // Для админа показываем ВСЕ спец. достижения (даже в будущем)
             // Для обычных пользователей показываем только те, у которых special_date уже наступило
             const now = new Date();
-            const moscowOffset = 3 * 60 * 60 * 1000;
             
             let userSpecialAchievements = achievements.filter(a => {
                 const isSpecial = (a.emoji && a.name && a.type === 'special') || a.achievement_id === 'best_admin';
@@ -2746,11 +2757,12 @@ lockedAchievements.forEach(achievementHtml => {
                 
                 // Если обычный пользователь - проверяем special_date
                 if (!a.special_date) return true; // Если дата не установлена, показываем
+                
+                // На браузере new Date() работает в локальном timezone пользователя
+                // Строка special_date уже содержит корректное время для браузера
+                // Поэтому просто сравниваем как есть
                 const achievementDate = new Date(a.special_date);
-                // special_date это московское время, но new Date() парсит как локальное время браузера
-                // Поэтому вычитаем offset чтобы получить UTC эквивалент московского времени
-                const utcEquivalent = new Date(achievementDate.getTime() - moscowOffset);
-                return utcEquivalent <= now;
+                return achievementDate <= now;
             });
             
             // Если админ, добавляем best_admin в список, даже если его нет в полученных
@@ -2826,15 +2838,11 @@ lockedAchievements.forEach(achievementHtml => {
                     
                     // Проверяем, получено ли достижение (special_date уже наступило)
                     const achievementDate = achievement.special_date ? new Date(achievement.special_date) : null;
-                    
-                    // Считаем московское время (UTC+3)
                     const now = new Date();
-                    const moscowOffset = 3 * 60 * 60 * 1000;
-                    // special_date это московское время, но new Date() парсит как локальное время браузера
-                    // Поэтому вычитаем offset чтобы получить UTC эквивалент московского времени
-                    const utcEquivalent = achievementDate ? new Date(achievementDate.getTime() - moscowOffset) : null;
                     
-                    const isAchievementUnlocked = !utcEquivalent || utcEquivalent <= now;
+                    // На браузере new Date() работает в локальном timezone
+                    // Просто сравниваем как есть
+                    const isAchievementUnlocked = !achievementDate || achievementDate <= now;
                     
                     if (isAchievementUnlocked) {
                         // Показываем как полученное достижение
@@ -3083,9 +3091,8 @@ modalUnlockedAchievements.forEach(achievement => {
     modalHtml += achievement.html;
 });
             
-            // Проверяем специальные достижения с учетом московского времени
+            // Проверяем специальные достижения
             const now = new Date();
-            const moscowOffset = 3 * 60 * 60 * 1000;
             
             const specialAchievementsFromDBFiltered = achievements.filter(a => {
                 const isSpecial = a.emoji && a.name && a.type === 'special';
@@ -3094,11 +3101,11 @@ modalUnlockedAchievements.forEach(achievement => {
                 // Проверяем special_date
                 if (!a.special_date) return true; // Если дата не установлена, показываем
                 
+                // На браузере new Date() работает в локальном timezone
+                // Просто сравниваем как есть
                 const achievementDate = new Date(a.special_date);
-                // special_date это московское время, но new Date() парсит как локальное время браузера
-                // Поэтому вычитаем offset чтобы получить UTC эквивалент московского времени
-                const utcEquivalent = new Date(achievementDate.getTime() - moscowOffset);
-                return utcEquivalent <= now;
+                const now = new Date();
+                return achievementDate <= now;
             });
             
             const hasSpecial = specialAchievementsFromDBFiltered.length > 0;
@@ -3278,7 +3285,6 @@ modalUnlockedAchievements.forEach(achievement => {
             // Специальные достижения берем только из полученных пользователем
             // Но только если их special_date уже наступило (или дата не установлена)
             const now = new Date();
-            const moscowOffset = 3 * 60 * 60 * 1000;
             
             const unlockedSpecial = achievements.filter(a => {
                 const isSpecial = a.emoji && a.name && a.type === 'special';
@@ -3287,11 +3293,11 @@ modalUnlockedAchievements.forEach(achievement => {
                 // Проверяем special_date
                 if (!a.special_date) return true; // Если дата не установлена, показываем
                 
+                // На браузере new Date() работает в локальном timezone
+                // Просто сравниваем как есть
                 const achievementDate = new Date(a.special_date);
-                // special_date это московское время, но new Date() парсит как локальное время браузера
-                // Поэтому вычитаем offset чтобы получить UTC эквивалент московского времени
-                const utcEquivalent = new Date(achievementDate.getTime() - moscowOffset);
-                return utcEquivalent <= now;
+                const now = new Date();
+                return achievementDate <= now;
             });
             
             // Добавляем best_admin если пользователь его получил
@@ -3516,6 +3522,10 @@ modalUnlockedAchievements.forEach(achievement => {
             }
 
             try {
+                // Пользователь вводит МОСКОВСКОЕ время
+                // Просто отправляем как есть, без конвертации
+                // На сервере будет интерпретировано как московское время
+                
                 const response = await fetch('/api/admin/create-achievement', {
                     method: 'POST',
                     headers: {
@@ -3527,7 +3537,7 @@ modalUnlockedAchievements.forEach(achievement => {
                         description,
                         type: 'special',
                         userId: targetUserId,
-                        specialDate: date + 'T' + time,
+                        specialDate: date + 'T' + time,  // "2025-12-09T23:35" (Moscow time)
                         color
                     })
                 });
