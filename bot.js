@@ -566,13 +566,15 @@ const getUserAchievements = (userId) => {
   const regularAchievements = stmt.all(userId);
 
   // Получаем специальные достижения из таблицы achievements
+  // Только те, у которых special_date уже наступило или NULL
+  const now = new Date().toISOString();
   const specialStmt = db.prepare(`
     SELECT achievement_id, emoji, name, description, color, special_date as unlocked_at, type
     FROM achievements
-    WHERE user_id = ? AND type = 'special'
+    WHERE user_id = ? AND type = 'special' AND (special_date IS NULL OR special_date <= ?)
     ORDER BY special_date DESC
   `);
-  const specialAchievements = specialStmt.all(userId);
+  const specialAchievements = specialStmt.all(userId, now);
 
   // Объединяем оба массива
   return [...regularAchievements, ...specialAchievements];
@@ -1018,6 +1020,113 @@ app.post("/api/admin/create-achievement", async (req, res) => {
       color,
       specialDate || null
     );
+
+    // Если указана дата, планируем отправку уведомлений на это время
+    if (specialDate) {
+      const targetDate = new Date(specialDate);
+      const now = new Date();
+      const delayMs = targetDate.getTime() - now.getTime();
+
+      if (delayMs > 0) {
+        // Откладываем отправку уведомлений на указанное время
+        setTimeout(async () => {
+          try {
+            const user = await client.users.fetch(userId).catch(() => null);
+            const username = user ? user.username : "Пользователь";
+
+            // Отправляем ЛС пользователю
+            if (user) {
+              try {
+                await user.send(
+                  `🏆 **Новое достижение!**\n\n` +
+                    `${emoji} **${name}**\n` +
+                    `${description}\n\n` +
+                    `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}`
+                );
+              } catch (dmError) {
+                console.log(
+                  `Не удалось отправить ЛС пользователю ${userId}: ${dmError.message}`
+                );
+              }
+            }
+
+            // Отправляем в канал Discord
+            try {
+              const channel = client.channels.cache.get(
+                ACHIEVEMENTS_CHANNEL_ID
+              );
+              if (channel) {
+                await channel.send(
+                  `🏆 **Новое достижение!**\n\n` +
+                    `👤 **Пользователь:** <@${userId}>\n` +
+                    `🎯 **Достижение:** ${emoji} ${name}\n` +
+                    `📝 **Описание:** ${description}\n` +
+                    `📅 **Время:** ${formatTime(new Date())}\n\n` +
+                    `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}`
+                );
+              }
+            } catch (channelError) {
+              console.log(
+                `Не удалось отправить уведомление в канал: ${channelError.message}`
+              );
+            }
+
+            // Отправляем в Telegram
+            sendTelegramReport(
+              `🏆 <b>Новое специальное достижение!</b>\n` +
+                `👤 Пользователь: ${username}\n` +
+                `🎯 Достижение: ${emoji} ${name}\n` +
+                `📝 Описание: ${description}\n` +
+                `📅 Время: ${formatTime(new Date())}`
+            );
+          } catch (notificationError) {
+            console.error(
+              "Ошибка при отправке отложенного уведомления:",
+              notificationError
+            );
+          }
+        }, delayMs);
+
+        console.log(
+          `✅ Достижение "${name}" запланировано на ${targetDate.toLocaleString(
+            "ru-RU"
+          )}`
+        );
+      } else {
+        // Если дата в прошлом, отправляем уведомления сразу
+        try {
+          const user = await client.users.fetch(userId).catch(() => null);
+          const username = user ? user.username : "Пользователь";
+
+          if (user) {
+            await user
+              .send(
+                `🏆 **Новое достижение!**\n\n` +
+                  `${emoji} **${name}**\n` +
+                  `${description}\n\n` +
+                  `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}`
+              )
+              .catch(() => {});
+          }
+
+          const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
+          if (channel) {
+            await channel
+              .send(
+                `🏆 **Новое достижение!**\n\n` +
+                  `👤 **Пользователь:** <@${userId}>\n` +
+                  `🎯 **Достижение:** ${emoji} ${name}\n` +
+                  `📝 **Описание:** ${description}\n` +
+                  `📅 **Время:** ${formatTime(new Date())}\n\n` +
+                  `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}`
+              )
+              .catch(() => {});
+          }
+        } catch (error) {
+          console.log("Ошибка при отправке уведомлений:", error);
+        }
+      }
+    }
 
     res.json({ success: true, achievementId });
   } catch (error) {
