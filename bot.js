@@ -403,7 +403,7 @@ async function checkAndSendMissedAchievementNotifications() {
               `🏆 **Новое достижение!**\n\n` +
               `${achievement.emoji} **${achievement.name}**\n` +
               `${achievement.description}\n\n` +
-              `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}`;
+              `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}/?userId=${achievement.user_id}&autoLogin=true`;
 
             await user.send(dmMessage);
             console.log(
@@ -430,7 +430,7 @@ async function checkAndSendMissedAchievementNotifications() {
               `🎯 **Достижение:** ${achievement.emoji} ${achievement.name}\n` +
               `📝 **Описание:** ${achievement.description}\n` +
               `📅 **Время:** ${formatTime(new Date())}\n\n` +
-              `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}`;
+              `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}/?userId=${achievement.user_id}&autoLogin=true`;
 
             await channel.send(channelMessage);
             console.log(
@@ -713,7 +713,7 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
               `+${achievement.points} очков рейтинга! 🌟\n\n` +
               `💡 Посмотреть все достижения:\n` +
               `📱 В боте: \`.!. achievements\`\n` +
-              `🌐 Веб-панель: http://${SERVER_IP}:${PORT}`
+              `🌐 Веб-панель: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
           );
         } catch (error) {
           console.log(
@@ -982,7 +982,7 @@ const checkSpecialAchievement = async () => {
                   `📝 **Описание:** Лучший admin_ebaniy канала\n` +
                   `📅 **Время:** ${formatTime(new Date())}\n` +
                   `🎂  **Поздравляем малютку с днем рождения**\n\n` +
-                  `🌐 **Посмотреть это достижение можно в веб-панели:** http://${SERVER_IP}:${PORT}`
+                  `🌐 **Посмотреть это достижение можно в веб-панели:** http://${SERVER_IP}:${PORT}/?userId=${specialUserId}&autoLogin=true`
               );
             }
           } catch (channelError) {
@@ -1344,7 +1344,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
                   `🏆 **Новое достижение!**\n\n` +
                     `${emoji} **${name}**\n` +
                     `${description}\n\n` +
-                    `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}`
+                    `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
                 );
               } catch (dmError) {
                 console.log(
@@ -1365,7 +1365,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
                     `🎯 **Достижение:** ${emoji} ${name}\n` +
                     `📝 **Описание:** ${description}\n` +
                     `📅 **Время:** ${formatTime(new Date())}\n\n` +
-                    `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}`
+                    `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
                 );
               }
             } catch (channelError) {
@@ -1605,8 +1605,8 @@ app.get("/auth/discord/callback", async (req, res) => {
     // Сохраняем сессию
     setSession(res, userId);
 
-    // Перенаправляем на панель с загруженным профилем
-    res.redirect(`/?userId=${userId}&autoLogin=true`);
+    // Перенаправляем просто на главную - сессия будет проверена там
+    res.redirect("/");
   } catch (error) {
     console.error("❌ Ошибка при авторизации Discord:", error);
     res.redirect("/?error=auth_failed");
@@ -2498,7 +2498,7 @@ app.get("/", (req, res) => {
         <div class="content">
             <div class="user-search">
                 <div id="authSection" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;">
-                    <button id="loginBtn" onclick="loginWithDiscord()" style="flex: 1; min-width: 200px; padding: 10px 20px; background: #5865F2; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🔐 Войти через Discord</button>
+                    <!-- <button id="loginBtn" onclick="loginWithDiscord()" style="flex: 1; min-width: 200px; padding: 10px 20px; background: #5865F2; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🔐 Войти через Discord</button> -->
                     <div id="userInfoDisplay" style="display: none; flex: 1; min-width: 200px; padding: 10px 20px; background: #667eea; color: white; border-radius: 5px; font-weight: bold; font-size: 14px; text-align: center;">
                         👤 <span id="userUsername"></span>
                     </div>
@@ -2506,7 +2506,7 @@ app.get("/", (req, res) => {
                 </div>
                 
                 <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <input type="text" id="userIdInput" placeholder="Или введи Discord ID вручную" style="flex: 1;">
+                    <input type="text" id="userIdInput" placeholder="Discord ID" style="flex: 1;">
                     <button onclick="loadUserData()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
                 </div>
                 
@@ -2658,25 +2658,12 @@ app.get("/", (req, res) => {
                 const data = await response.json();
                 if (data.userId) {
                     currentUserId = data.userId;
-                    document.getElementById('loginBtn').style.display = 'none';
-                    document.getElementById('userInfoDisplay').style.display = 'block';
-                    document.getElementById('logoutBtn').style.display = 'block';
-                    document.getElementById('userIdInput').style.display = 'none';
-                    
-                    // Получаем username пользователя и отображаем его
-                    try {
-                        const statsResponse = await fetch(\`/api/stats/\${data.userId}\`);
-                        const statsData = await statsResponse.json();
-                        document.getElementById('userUsername').textContent = statsData.stats.username || 'Пользователь';
-                    } catch (e) {
-                        document.getElementById('userUsername').textContent = 'Пользователь';
-                    }
-                    
-                    // Автоматически загружаем данные авторизованного пользователя
+                    // Не показываем никакие элементы авторизации
+                    // Просто загружаем данные пользователя
                     setTimeout(() => loadUserDataAuto(data.userId), 100);
                     return true;
                 } else {
-                    document.getElementById('loginBtn').style.display = 'block';
+                    // Если нет сессии, показываем только поле ввода ID
                     document.getElementById('userInfoDisplay').style.display = 'none';
                     document.getElementById('logoutBtn').style.display = 'none';
                     document.getElementById('userIdInput').style.display = 'block';
@@ -2689,6 +2676,7 @@ app.get("/", (req, res) => {
         }
 
         async function loadUserDataAuto(userId) {
+            console.log('🔵 loadUserDataAuto вызвана с userId:', userId);
             currentUserId = userId;
             document.getElementById('loading').style.display = 'block';
             document.getElementById('userContent').style.display = 'none';
@@ -2697,17 +2685,16 @@ app.get("/", (req, res) => {
             
             try {
                 const response = await fetch(\`/api/stats/\${userId}\`);
+                console.log('📡 Response status:', response.status);
                 if (!response.ok) {
                     throw new Error(\`HTTP error! status: \${response.status}\`);
                 }
                 const data = await response.json();
+                console.log('✅ Данные получены:', data);
                 
-                // Показываем кнопку с ником и ID сразу
+                // Не показываем элементы авторизации OAuth2
+                // Только показываем данные пользователя
                 const username = data.stats.username || 'Пользователь';
-                document.getElementById('loginBtn').style.display = 'none';
-                document.getElementById('userInfoDisplay').style.display = 'block';
-                document.getElementById('userUsername').textContent = username;
-                document.getElementById('logoutBtn').style.display = 'block';
                 document.getElementById('currentUserId').textContent = userId;
                 
                 try {
@@ -2721,7 +2708,7 @@ app.get("/", (req, res) => {
                 }
                 
                 displayUserStats(data.stats);
-                displayUserAchievements(data.achievements, data.stats.user_id);
+                displayUserAchievements(data.achievements);
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('userContent').style.display = 'block';
                 document.getElementById('userIdDisplay').style.display = 'block';
@@ -3836,12 +3823,22 @@ modalUnlockedAchievements.forEach(achievement => {
 
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🟢 DOMContentLoaded сработал');
+            
+            // По умолчанию показываем только поле ввода ID
+            document.getElementById('userInfoDisplay').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('userIdInput').style.display = 'block';
+            
             // Проверяем авторизацию и параметры URL
             const urlParams = new URLSearchParams(window.location.search);
             const autoLogin = urlParams.get('autoLogin');
             const userIdParam = urlParams.get('userId');
             
+            console.log('📋 URL params - autoLogin:', autoLogin, 'userId:', userIdParam);
+            
             if (autoLogin && userIdParam) {
+                console.log('🔑 Запуск autoLogin с userId:', userIdParam);
                 // Автоматический вход через Discord
                 loadUserDataAuto(userIdParam);
             } else {
@@ -3944,7 +3941,9 @@ client.on("messageCreate", async (message) => {
     }/${Object.keys(ACHIEVEMENTS).filter((id) => id !== "best_admin").length}**
 
 👤 **Твой ID:** \`${message.author.id}\`
-🌐 **Подробная статистика:** http://${SERVER_IP}:${PORT}
+🌐 **Подробная статистика:** http://${SERVER_IP}:${PORT}/?userId=${
+      message.author.id
+    }&autoLogin=true
     `);
     return;
   }
@@ -4097,7 +4096,7 @@ client.on("messageCreate", async (message) => {
 \`.!. achievements\` - посмотреть достижения
 
 👤 **Твой ID:** \`${message.author.id}\`
-🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}`
+🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}/?userId=${message.author.id}&autoLogin=true`
     );
 
     sendTelegramReport(
@@ -4164,7 +4163,7 @@ client.on("messageCreate", async (message) => {
 • Зарабатывай очки рейтинга и открывай достижения!
 
 👤 **Твой ID:** \`${message.author.id}\`
-🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}
+🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}/?userId=${message.author.id}&autoLogin=true
     `);
 
     sendTelegramReport(
