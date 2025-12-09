@@ -2716,7 +2716,7 @@ for (const [id, achievement] of Object.entries(regularAchievements)) {
     const unlockedDate = isUnlocked ? achievements.find(a => a.achievement_id === id)?.unlocked_at : null;
     
     const achievementHtml = \`
-        <div class="achievement \${isUnlocked ? '' : 'locked'}">
+        <div class="achievement \${isUnlocked ? '' : 'locked'}" data-achievement-id="\${id}">
             <h3>\${achievement.name} \${isUnlocked ? '✅' : '🔒'}</h3>
             <p>\${achievement.description}</p>
             <small>+\${achievement.points} очков\${isUnlocked ? ' • Получено: ' + new Date(unlockedDate).toLocaleDateString('ru-RU') : ''}</small>
@@ -2800,7 +2800,7 @@ lockedAchievements.forEach(achievementHtml => {
                     if (isUnlocked) {
                         // Показываем как полученное достижение
                         html += \`
-                            <div class="achievement special-achievement" style="
+                            <div class="achievement special-achievement" data-achievement-id="best_admin" style="
                                 background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); 
                                 color: #333; 
                                 border-left: 5px solid #ff6b35;
@@ -2848,7 +2848,7 @@ lockedAchievements.forEach(achievementHtml => {
                     if (isAchievementUnlocked) {
                         // Показываем как полученное достижение
                         html += \`
-                            <div class="achievement special-achievement" style="
+                            <div class="achievement special-achievement" data-achievement-id="\${achievement.achievement_id}" style="
                                 background: linear-gradient(135deg, \${achievement.color}22 0%, \${achievement.color}11 100%); 
                                 color: #333; 
                                 border-left: 5px solid \${achievement.color};
@@ -3182,9 +3182,18 @@ modalUnlockedAchievements.forEach(achievement => {
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    alert('Достижение успешно удалено!');
-                    // Перезагружаем страницу
-                    location.reload();
+                    // Находим и удаляем элемент со страницы
+                    const achievementElement = document.querySelector('[data-achievement-id="' + achievementId + '"]');
+                    if (achievementElement) {
+                        achievementElement.remove();
+                    }
+                    
+                    // Перезагружаем данные пользователя если это текущий пользователь
+                    if (userId === currentUserId) {
+                        loadUserData();
+                    }
+                    
+                    console.log('✅ Достижение успешно удалено!');
                 } else {
                     alert('Ошибка при удалении достижения');
                 }
