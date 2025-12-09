@@ -4,6 +4,7 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import http from "http";
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -74,6 +75,23 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS achievements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    achievement_id TEXT UNIQUE,
+    user_id TEXT,
+    emoji TEXT,
+    name TEXT,
+    description TEXT,
+    type TEXT DEFAULT 'special',
+    preset TEXT,
+    points INTEGER DEFAULT 0,
+    color TEXT DEFAULT '#FFD700',
+    special_date DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 // Добавляем колонки, если их нет (обратная совместимость)
 try {
   db.exec(`ALTER TABLE user_stats ADD COLUMN total_afk_time INTEGER DEFAULT 0`);
@@ -112,6 +130,12 @@ try {
 try {
   db.exec(
     `ALTER TABLE user_settings ADD COLUMN achievement_notifications BOOLEAN DEFAULT 1`
+  );
+} catch (error) {}
+
+try {
+  db.exec(
+    `ALTER TABLE achievements ADD COLUMN notifications_sent BOOLEAN DEFAULT 0`
   );
 } catch (error) {}
 
@@ -319,6 +343,168 @@ const ACHIEVEMENTS = {
   },
 };
 
+// ===== ФУНКЦИЯ: ПРОВЕРКА И ОТПРАВКА ПРОПУЩЕННЫХ УВЕДОМЛЕНИЙ =====
+async function checkAndSendMissedAchievementNotifications() {
+  try {
+    console.log("🔎 Начало проверки пропущенных уведомлений о достижениях...");
+
+    // Получаем текущее время в Московском часовом поясе
+    const nowMoscowISO = getMoscowNowISO();
+
+    console.log(`📅 Московское время (UTC+3): ${nowMoscowISO}`);
+
+    // Получаем все специальные достижения с истекшей датой, для которых не отправлены уведомления
+    // Используем московское время для сравнения
+    const missedAchievements = db
+      .prepare(
+        `
+      SELECT * FROM achievements 
+      WHERE type = 'special' 
+        AND special_date IS NOT NULL
+        AND special_date <= ?
+        AND (notifications_sent = 0 OR notifications_sent IS NULL)
+    `
+      )
+      .all(nowMoscowISO);
+
+    console.log(
+      `🎯 Найдено достижений для отправки уведомлений: ${missedAchievements.length}`
+    );
+
+    if (missedAchievements.length === 0) {
+      console.log("✅ Нет пропущенных уведомлений о достижениях");
+      return;
+    }
+
+    console.log(
+      `⏰ Найдено ${missedAchievements.length} пропущенных уведомлений о достижениях`
+    );
+
+    for (const achievement of missedAchievements) {
+      try {
+        console.log(
+          `📤 Обработка достижения: ${achievement.name} для пользователя ${achievement.user_id}`
+        );
+
+        const user = await client.users
+          .fetch(achievement.user_id)
+          .catch((err) => {
+            console.log(
+              `⚠️ Не удалось получить пользователя ${achievement.user_id}: ${err.message}`
+            );
+            return null;
+          });
+        const username = user ? user.username : "Пользователь";
+
+        // Отправляем ЛС пользователю
+        if (user) {
+          try {
+            const dmMessage =
+              `🏆 **Новое достижение!**\n\n` +
+              `${achievement.emoji} **${achievement.name}**\n` +
+              `${achievement.description}\n\n` +
+              `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}/?userId=${achievement.user_id}&autoLogin=true`;
+
+            await user.send(dmMessage);
+            console.log(
+              `✅ ЛС отправлено пользователю ${username} за достижение "${achievement.name}"`
+            );
+          } catch (dmError) {
+            console.log(
+              `❌ Не удалось отправить ЛС пользователю ${achievement.user_id}: ${dmError.message}`
+            );
+          }
+        } else {
+          console.log(
+            `⚠️ Пользователь ${achievement.user_id} не найден в Discord`
+          );
+        }
+
+        // Отправляем в канал Discord
+        try {
+          const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
+          if (channel) {
+            const channelMessage =
+              `🏆 **Новое достижение!**\n\n` +
+              `👤 **Пользователь:** <@${achievement.user_id}>\n` +
+              `🎯 **Достижение:** ${achievement.emoji} ${achievement.name}\n` +
+              `📝 **Описание:** ${achievement.description}\n` +
+              `📅 **Время:** ${formatTime(new Date())}\n\n` +
+              `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}/?userId=${achievement.user_id}&autoLogin=true`;
+
+            await channel.send(channelMessage);
+            console.log(
+              `✅ Сообщение в канал отправлено за достижение "${achievement.name}"`
+            );
+          } else {
+            console.log(
+              `⚠️ Канал достижений (${ACHIEVEMENTS_CHANNEL_ID}) не найден`
+            );
+          }
+        } catch (channelError) {
+          console.log(
+            `❌ Не удалось отправить уведомление в канал: ${channelError.message}`
+          );
+        }
+
+        // Отправляем в Telegram
+        try {
+          let telegramMessage =
+            `🏆 <b>Новое специальное достижение!</b>\n` +
+            `👤 Пользователь: ${username}\n` +
+            `🎯 Достижение: ${achievement.emoji} ${achievement.name}\n` +
+            `📝 Описание: ${achievement.description}\n`;
+
+          if (achievement.color) {
+            telegramMessage += `🎨 Цвет: ${achievement.color}\n`;
+          }
+
+          telegramMessage += `✅ Доступно с: ${formatTime(
+            new Date(achievement.special_date)
+          )}\n`;
+          telegramMessage += `📅 Отправлено: ${formatTime(new Date())}`;
+
+          sendTelegramReport(telegramMessage);
+          console.log(
+            `✅ Telegram уведомление отправлено за достижение "${achievement.name}"`
+          );
+        } catch (telegramError) {
+          console.log(
+            `⚠️ Ошибка при отправке в Telegram: ${telegramError.message}`
+          );
+        }
+
+        // Отмечаем что уведомления отправлены
+        try {
+          db.prepare(
+            `UPDATE achievements SET notifications_sent = 1 WHERE achievement_id = ?`
+          ).run(achievement.achievement_id);
+          console.log(
+            `✅ Флаг notifications_sent установлен для ${achievement.achievement_id}`
+          );
+        } catch (updateErr) {
+          console.error(
+            "❌ Ошибка при обновлении флага notifications_sent:",
+            updateErr
+          );
+        }
+      } catch (notificationError) {
+        console.error(
+          `❌ Ошибка при отправке пропущенного уведомления:`,
+          notificationError
+        );
+      }
+    }
+
+    console.log("✅ Завершена проверка пропущенных уведомлений о достижениях");
+  } catch (error) {
+    console.error(
+      "❌ Критическая ошибка при проверке пропущенных уведомлений:",
+      error
+    );
+  }
+}
+
 // ===== ФУНКЦИЯ: ОТПРАВКА ОТЧЕТА В TELEGRAM =====
 async function sendTelegramReport(message) {
   try {
@@ -352,6 +538,18 @@ function formatTime(date) {
     minute: "2-digit",
     second: "2-digit",
   });
+}
+
+// Получить текущее время в московском часовом поясе (UTC+3)
+function getMoscowNow() {
+  const now = new Date();
+  const moscowOffset = 3 * 60 * 60 * 1000; // UTC+3 в миллисекундах
+  return new Date(now.getTime() + moscowOffset);
+}
+
+// Получить ISO строку москов​ского времени
+function getMoscowNowISO() {
+  return getMoscowNow().toISOString();
 }
 
 function formatDuration(seconds) {
@@ -418,11 +616,32 @@ const setUserAchievementNotificationSetting = (userId, enabled) => {
 
 // ===== ФУНКЦИИ СТАТИСТИКИ =====
 const initUserStats = (userId, username) => {
-  const stmt = db.prepare(`
-    INSERT OR IGNORE INTO user_stats (user_id, username) 
-    VALUES (?, ?)
-  `);
-  stmt.run(userId, username);
+  // Проверяем, существует ли уже пользователь
+  const existingStmt = db.prepare(
+    "SELECT username FROM user_stats WHERE user_id = ?"
+  );
+  const existing = existingStmt.get(userId);
+
+  if (existing) {
+    // Если пользователь существует и имя - это "Web User", обновляем на реальное
+    if (
+      existing.username === "Web User" &&
+      username &&
+      username !== "Web User"
+    ) {
+      const updateStmt = db.prepare(
+        "UPDATE user_stats SET username = ? WHERE user_id = ?"
+      );
+      updateStmt.run(username, userId);
+    }
+  } else {
+    // Если пользователя нет - создаем новую запись
+    const stmt = db.prepare(`
+      INSERT INTO user_stats (user_id, username) 
+      VALUES (?, ?)
+    `);
+    stmt.run(userId, username);
+  }
 };
 
 const updateUserStats = (userId, field, value) => {
@@ -457,9 +676,21 @@ const getTopUsers = (limit = 10) => {
 
 // ===== ФУНКЦИИ ДОСТИЖЕНИЙ =====
 const checkAndUnlockAchievement = async (userId, username, achievementId) => {
+  // Проверяем, есть ли уже такое достижение
+  const checkStmt = db.prepare(`
+    SELECT * FROM user_achievements WHERE user_id = ? AND achievement_id = ?
+  `);
+  const existing = checkStmt.get(userId, achievementId);
+
+  // Если достижение уже есть, возвращаем false (не новое)
+  if (existing) {
+    return false;
+  }
+
+  // Добавляем новое достижение
   const stmt = db.prepare(`
-    INSERT OR IGNORE INTO user_achievements (user_id, achievement_id) 
-    VALUES (?, ?)
+    INSERT INTO user_achievements (user_id, achievement_id, unlocked_at) 
+    VALUES (?, ?, CURRENT_TIMESTAMP)
   `);
   const result = stmt.run(userId, achievementId);
 
@@ -482,7 +713,7 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
               `+${achievement.points} очков рейтинга! 🌟\n\n` +
               `💡 Посмотреть все достижения:\n` +
               `📱 В боте: \`.!. achievements\`\n` +
-              `🌐 Веб-панель: http://${SERVER_IP}:${PORT}`
+              `🌐 Веб-панель: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
           );
         } catch (error) {
           console.log(
@@ -527,13 +758,30 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
 };
 
 const getUserAchievements = (userId) => {
+  // Получаем обычные достижения из user_achievements
   const stmt = db.prepare(`
-    SELECT ua.*, ua.unlocked_at
+    SELECT ua.*, ua.unlocked_at, NULL as emoji, NULL as name, NULL as description, NULL as color, NULL as type
     FROM user_achievements ua
     WHERE ua.user_id = ?
     ORDER BY ua.unlocked_at DESC
   `);
-  return stmt.all(userId);
+  const regularAchievements = stmt.all(userId);
+
+  // Получаем специальные достижения из таблицы achievements
+  // ТОЛЬКО те, которые этот пользователь получил (есть в user_achievements)
+  // Возвращаем ВСЕ, даже если special_date в будущем - фильтровать будет на клиенте
+  const specialStmt = db.prepare(`
+    SELECT a.achievement_id, a.emoji, a.name, a.description, a.color, a.special_date, a.type,
+           ua.unlocked_at
+    FROM achievements a
+    INNER JOIN user_achievements ua ON a.achievement_id = ua.achievement_id AND ua.user_id = ?
+    WHERE a.type = 'special'
+    ORDER BY ua.unlocked_at DESC
+  `);
+  const specialAchievements = specialStmt.all(userId);
+
+  // Объединяем оба массива
+  return [...regularAchievements, ...specialAchievements];
 };
 
 // ===== РАСШИРЕННЫЕ ПРОВЕРКИ ДОСТИЖЕНИЙ =====
@@ -734,7 +982,7 @@ const checkSpecialAchievement = async () => {
                   `📝 **Описание:** Лучший admin_ebaniy канала\n` +
                   `📅 **Время:** ${formatTime(new Date())}\n` +
                   `🎂  **Поздравляем малютку с днем рождения**\n\n` +
-                  `🌐 **Посмотреть это достижение можно в веб-панели:** http://${SERVER_IP}:${PORT}`
+                  `🌐 **Посмотреть это достижение можно в веб-панели:** http://${SERVER_IP}:${PORT}/?userId=${specialUserId}&autoLogin=true`
               );
             }
           } catch (channelError) {
@@ -754,6 +1002,32 @@ const checkSpecialAchievement = async () => {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Простая система сессии на основе памяти
+const sessions = new Map();
+
+// Middleware для работы с сессиями
+function getSession(req) {
+  const sessionId = req.headers.cookie?.split("sessionId=")[1]?.split(";")[0];
+  return sessionId ? sessions.get(sessionId) : null;
+}
+
+function setSession(res, userId) {
+  const sessionId =
+    "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+  sessions.set(sessionId, { userId, createdAt: Date.now() });
+  res.setHeader(
+    "Set-Cookie",
+    `sessionId=${sessionId}; Path=/; Max-Age=86400; SameSite=Strict`
+  );
+  return sessionId;
+}
+
+function clearSession(res, req) {
+  const sessionId = req.headers.cookie?.split("sessionId=")[1]?.split(";")[0];
+  if (sessionId) sessions.delete(sessionId);
+  res.setHeader("Set-Cookie", `sessionId=; Path=/; Max-Age=0`);
+}
+
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.json());
 
@@ -765,6 +1039,7 @@ app.get("/api/stats/:userId", (req, res) => {
     const stats = getUserStats(userId);
 
     const achievements = getUserAchievements(userId);
+
     const settings = {
       dmNotifications: getUserDMSetting(userId),
       afkTimeout: getUserTimeout(userId),
@@ -785,6 +1060,23 @@ app.get("/api/stats/:userId", (req, res) => {
 app.get("/api/leaderboard", (req, res) => {
   const topUsers = getTopUsers(20);
   res.json(topUsers);
+});
+
+// API endpoint для получения всех специальных достижений
+app.get("/api/special-achievements", (req, res) => {
+  try {
+    const stmt = db.prepare(`
+      SELECT DISTINCT achievement_id, emoji, name, description, type, color, special_date, user_id
+      FROM achievements
+      WHERE type = 'special'
+      ORDER BY created_at DESC
+    `);
+    const specialAchievements = stmt.all();
+    res.json(specialAchievements);
+  } catch (error) {
+    console.error("Ошибка при получении специальных достижений:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 app.post("/api/settings/:userId", async (req, res) => {
@@ -903,12 +1195,13 @@ app.post("/api/visit/:userId", async (req, res) => {
     // Увеличиваем счетчик посещений
     incrementUserStat(userId, "web_visits");
 
-    // Проверяем достижение за первое посещение
-    if (stats && stats.web_visits === 0) {
+    // Проверяем достижение за посещение веб-панели
+    if (stats) {
       // Получаем пользователя из Discord
       const user = await client.users.fetch(userId).catch(() => null);
       const username = user ? user.username : "Неизвестный пользователь";
 
+      // Пытаемся выдать первое посещение (если еще не получено, будет добавлено)
       await checkAndUnlockAchievement(userId, username, "first_web_visit");
     }
 
@@ -916,6 +1209,423 @@ app.post("/api/visit/:userId", async (req, res) => {
   } catch (error) {
     console.error("Ошибка при отслеживании посещения:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// API endpoint для создания специального достижения (админ-панель)
+app.post("/api/admin/create-achievement", async (req, res) => {
+  console.log("🔵 API /create-achievement: Начало обработки запроса");
+  console.log("📦 Body:", JSON.stringify(req.body).substring(0, 200));
+
+  const { emoji, name, description, type, userId, specialDate, color } =
+    req.body;
+
+  console.log(
+    `📝 Параметры: emoji=${emoji}, name=${name}, type=${type}, userId=${userId}, specialDate=${specialDate}`
+  );
+
+  // Проверяем обязательные поля
+  if (!emoji || !name || !description || !type || !userId) {
+    console.log("❌ Отсутствуют обязательные поля!");
+    return res.status(400).json({ error: "Отсутствуют обязательные поля" });
+  }
+
+  try {
+    console.log(
+      `📝 API: Получен запрос на создание достижения: ${name} для пользователя ${userId}`
+    );
+
+    // Проверяем что тип = 'special'
+    if (type !== "special") {
+      return res.status(400).json({ error: "Тип должен быть 'special'" });
+    }
+
+    // Генерируем уникальный achievement_id
+    const achievementId =
+      "special_" + Date.now() + "_" + Math.random().toString(36).substring(7);
+    console.log(`📝 ID достижения: ${achievementId}`);
+
+    // Инициализируем пользователя если нужно
+    initUserStats(userId, "Special Achievement User");
+    console.log(`✅ Пользователь инициализирован`);
+
+    // Вставляем достижение в БД
+    try {
+      db.prepare(
+        `
+        INSERT INTO achievements (achievement_id, user_id, emoji, name, description, type, color, special_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `
+      ).run(
+        achievementId,
+        userId,
+        emoji,
+        name,
+        description,
+        type,
+        color,
+        specialDate || null
+      );
+    } catch (err) {
+      console.error(`❌ Ошибка при добавлении в achievements:`, err);
+      throw err;
+    }
+    console.log(`✅ Достижение добавлено в таблицу achievements`);
+
+    // Добавляем достижение в user_achievements с временем разблокировки
+    const unlockedTime = specialDate || new Date().toISOString();
+    try {
+      db.prepare(
+        `
+        INSERT OR IGNORE INTO user_achievements (user_id, achievement_id, unlocked_at)
+        VALUES (?, ?, ?)
+      `
+      ).run(userId, achievementId, unlockedTime);
+    } catch (err) {
+      console.error(`❌ Ошибка при добавлении в user_achievements:`, err);
+    }
+
+    // Если указана дата, планируем отправку уведомлений на это время
+    if (specialDate) {
+      // specialDate это строка в ISO формате: "2025-12-09T07:10"
+      // Интерпретируем это как московское время
+      const targetDateStr = specialDate;
+
+      // Текущее время в UTC
+      const now = new Date();
+      const moscowOffset = 3 * 60 * 60 * 1000;
+      const nowMoscow = new Date(now.getTime() + moscowOffset);
+
+      // specialDate приходит как строка: "2025-12-09T08:40"
+      // На БРАУЗЕРЕ пользователя это интерпретируется как локальное время его timezone
+      // Когда отправляется на СЕРВЕР (Node.js в UTC), new Date() возвращает UTC время
+      // Но сервер находится в UTC, поэтому число которое браузер отправил уже скорректировано!
+
+      // Пример:
+      // - Браузер в UTC+3 timezone (Moscow)
+      // - Пользователь вводит "08:40"
+      // - Браузер парсит как 08:40 в своем timezone
+      // - JSON отправляет как "2025-12-09T08:40"
+      // - На сервере new Date("2025-12-09T08:40") = уже корректное UTC время!
+
+      const targetDateUTC = new Date(targetDateStr);
+
+      // Это уже правильное UTC время, не нужно ничего вычитать/добавлять!
+      const delayMs = targetDateUTC.getTime() - now.getTime();
+
+      console.log('⏰ Планирование достижения "' + name + '":');
+      console.log("   Дата/время из интерфейса: " + targetDateStr);
+      console.log("   Текущее UTC: " + now.toISOString());
+      console.log(
+        "   Целевое UTC (уже корректное): " + targetDateUTC.toISOString()
+      );
+      console.log(
+        "   Задержка (мс): " +
+          delayMs +
+          " = " +
+          Math.round(delayMs / 60000) +
+          " минут"
+      );
+      console.log(
+        "   Будет ли setTimeout? " + (delayMs > 0 ? "ДА ✅" : "НЕТ ❌")
+      );
+
+      if (delayMs > 0) {
+        // Откладываем отправку уведомлений на указанное время
+        setTimeout(async () => {
+          try {
+            const user = await client.users.fetch(userId).catch(() => null);
+            const username = user ? user.username : "Пользователь";
+
+            // Отправляем ЛС пользователю
+            if (user) {
+              try {
+                await user.send(
+                  `🏆 **Новое достижение!**\n\n` +
+                    `${emoji} **${name}**\n` +
+                    `${description}\n\n` +
+                    `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
+                );
+              } catch (dmError) {
+                console.log(
+                  `Не удалось отправить ЛС пользователю ${userId}: ${dmError.message}`
+                );
+              }
+            }
+
+            // Отправляем в канал Discord
+            try {
+              const channel = client.channels.cache.get(
+                ACHIEVEMENTS_CHANNEL_ID
+              );
+              if (channel) {
+                await channel.send(
+                  `🏆 **Новое достижение!**\n\n` +
+                    `👤 **Пользователь:** <@${userId}>\n` +
+                    `🎯 **Достижение:** ${emoji} ${name}\n` +
+                    `📝 **Описание:** ${description}\n` +
+                    `📅 **Время:** ${formatTime(new Date())}\n\n` +
+                    `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
+                );
+              }
+            } catch (channelError) {
+              console.log(
+                `Не удалось отправить уведомление в канал: ${channelError.message}`
+              );
+            }
+
+            // Отправляем в Telegram
+            let telegramMessage =
+              `🏆 <b>Новое специальное достижение!</b>\n` +
+              `👤 Пользователь: ${username}\n` +
+              `🎯 Достижение: ${emoji} ${name}\n` +
+              `📝 Описание: ${description}\n`;
+
+            if (color) {
+              telegramMessage += `🎨 Цвет: ${color}\n`;
+            }
+
+            if (specialDate) {
+              const scheduledTime = new Date(specialDate);
+              const now = new Date();
+              if (scheduledTime > now) {
+                telegramMessage += `⏰ Планируется: ${formatTime(
+                  scheduledTime
+                )}\n`;
+              } else {
+                telegramMessage += `✅ Доступно с: ${formatTime(
+                  scheduledTime
+                )}\n`;
+              }
+            }
+
+            telegramMessage += `📅 Создано: ${formatTime(new Date())}`;
+
+            sendTelegramReport(telegramMessage);
+          } catch (notificationError) {
+            console.error(
+              "Ошибка при отправке отложенного уведомления:",
+              notificationError
+            );
+          }
+
+          // Отмечаем что уведомления отправлены
+          try {
+            db.prepare(
+              `UPDATE achievements SET notifications_sent = 1 WHERE achievement_id = ?`
+            ).run(achievementId);
+          } catch (err) {
+            console.error(
+              "Ошибка при обновлении флага notifications_sent:",
+              err
+            );
+          }
+        }, delayMs);
+
+        console.log(
+          '✅ Достижение "' +
+            name +
+            '" запланировано на ' +
+            targetDateUTC.toLocaleString("ru-RU")
+        );
+      } else {
+        // Если дата в прошлом или сейчас (delayMs <= 0)
+        // Просто отмечаем что уведомления нужно было отправить
+        // Они будут отправлены при следующей проверке пропущенных уведомлений
+        console.log(
+          `⚠️ Дата достижения "${name}" уже в прошлом (delayMs=${delayMs})`
+        );
+        console.log(`   Уведомления будут отправлены при проверке пропущенных`);
+
+        // НЕ отправляем уведомления здесь! Пусть их отправит checkAndSendMissedAchievementNotifications()
+      }
+    }
+
+    res.json({ success: true, achievementId });
+  } catch (error) {
+    console.error("❌❌❌ ОШИБКА КРИТИЧЕСКАЯ при создании достижения:");
+    console.error("Тип ошибки:", error.constructor.name);
+    console.error("Сообщение:", error.message);
+    console.error("Stack:", error.stack);
+    res.status(500).json({ error: "Ошибка при создании достижения" });
+  }
+});
+
+// API endpoint для удаления достижения у пользователя
+app.post("/api/admin/delete-achievement", async (req, res) => {
+  const { userId, achievementId } = req.body;
+
+  if (!userId || !achievementId) {
+    return res.status(400).json({ error: "Отсутствуют обязательные поля" });
+  }
+
+  try {
+    // Получаем информацию о достижении для вычисления очков
+    const achievement = ACHIEVEMENTS[achievementId];
+
+    // Если это специальное достижение, получаем его из БД
+    let achievementName = achievement ? achievement.name : achievementId;
+    let achievementPoints =
+      achievement && achievement.points > 0 ? achievement.points : 0;
+
+    if (!achievement) {
+      // Пытаемся получить из таблицы achievements (спец. достижения)
+      const specialAchievement = db
+        .prepare(
+          `
+        SELECT name, points FROM achievements WHERE achievement_id = ? AND user_id = ?
+      `
+        )
+        .get(achievementId, userId);
+
+      if (specialAchievement) {
+        achievementName = specialAchievement.name;
+        achievementPoints = specialAchievement.points || 0;
+      }
+    }
+
+    // Получаем информацию о пользователе для отчета
+    const userStats = getUserStats(userId);
+    let userName = "Неизвестный пользователь";
+    if (userStats) {
+      userName = userStats.username || "Пользователь ID: " + userId;
+    }
+
+    // Удаляем запись о достижении у пользователя из user_achievements
+    db.prepare(
+      `
+      DELETE FROM user_achievements WHERE user_id = ? AND achievement_id = ?
+    `
+    ).run(userId, achievementId);
+
+    // Также удаляем из таблицы achievements если это специальное достижение
+    db.prepare(
+      `
+      DELETE FROM achievements WHERE user_id = ? AND achievement_id = ?
+    `
+    ).run(userId, achievementId);
+
+    // Если это обычное достижение (из ACHIEVEMENTS), вычитаем очки
+    if (achievement && achievement.points > 0) {
+      db.prepare(
+        `
+        UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?
+      `
+      ).run(achievement.points, userId);
+    } else if (achievementPoints > 0) {
+      // Если это спец. достижение с очками, тоже вычитаем
+      db.prepare(
+        `
+        UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?
+      `
+      ).run(achievementPoints, userId);
+    }
+
+    // Отправляем отчет в Telegram
+    const achievementPointsText =
+      achievementPoints > 0 ? `\n⭐ Очков удалено: -${achievementPoints}` : "";
+    sendTelegramReport(
+      `🗑️ <b>Достижение удалено!</b>\n` +
+        `👤 Пользователь: ${userName}\n` +
+        `🎯 Достижение: ${achievementName}\n` +
+        `📅 Время: ${formatTime(new Date())}${achievementPointsText}`
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Ошибка при удалении достижения:", error);
+    res.status(500).json({ error: "Ошибка при удалении достижения" });
+  }
+});
+
+// ===== МАРШРУТЫ АВТОРИЗАЦИИ =====
+
+// Вход через Discord
+app.get("/auth/discord", (req, res) => {
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  const redirectUri = encodeURIComponent(
+    process.env.DISCORD_REDIRECT_URI ||
+      "http://localhost:3000/auth/discord/callback"
+  );
+  const scopes = encodeURIComponent("identify");
+  const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}`;
+  res.redirect(discordAuthUrl);
+});
+
+// Callback от Discord
+app.get("/auth/discord/callback", async (req, res) => {
+  const code = req.query.code;
+  if (!code) {
+    return res.redirect("/?error=no_code");
+  }
+
+  try {
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+    const redirectUri =
+      process.env.DISCORD_REDIRECT_URI ||
+      "http://localhost:3000/auth/discord/callback";
+
+    // Обмениваем код на токен доступа
+    const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: "authorization_code",
+        code: code,
+        redirect_uri: redirectUri,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      return res.redirect("/?error=token_exchange_failed");
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    // Получаем информацию о пользователе
+    const userResponse = await fetch("https://discord.com/api/users/@me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!userResponse.ok) {
+      return res.redirect("/?error=user_fetch_failed");
+    }
+
+    const userData = await userResponse.json();
+    const userId = userData.id;
+    const username = userData.username;
+
+    // Инициализируем пользователя в базе данных
+    initUserStats(userId, username);
+
+    // Сохраняем сессию
+    setSession(res, userId);
+
+    // Перенаправляем просто на главную - сессия будет проверена там
+    res.redirect("/");
+  } catch (error) {
+    console.error("❌ Ошибка при авторизации Discord:", error);
+    res.redirect("/?error=auth_failed");
+  }
+});
+
+// Выход из системы
+app.get("/logout", (req, res) => {
+  clearSession(res, req);
+  res.redirect("/");
+});
+
+// Получить текущую сессию пользователя
+app.get("/api/session", (req, res) => {
+  const session = getSession(req);
+  if (session) {
+    res.json({ userId: session.userId });
+  } else {
+    res.json({ userId: null });
   }
 });
 
@@ -1554,28 +2264,37 @@ app.get("/", (req, res) => {
             background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
             color: #333;
             border-left: 5px solid #ff6b35;
-            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+            // box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
             position: relative;
             overflow: hidden;
             transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .special-achievement > * {
+            pointer-events: auto;
+        }
+        
+        .special-achievement button {
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
         
         .special-achievement::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
-            transform: rotate(45deg);
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
             transition: all 0.6s ease;
             opacity: 0;
         }
         
         .special-achievement:hover {
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 15px 30px rgba(255, 215, 0, 0.6);
+            transform: translateY(-3px);
         }
         
         .special-achievement:hover::before {
@@ -1585,14 +2304,14 @@ app.get("/", (req, res) => {
         
         @keyframes shimmer {
             0% {
-                transform: translateX(-100%) rotate(45deg);
+                left: -100%;
             }
             100% {
-                transform: translateX(100%) rotate(45deg);
+                left: 100%;
             }
         }
         .special-achievement {
-            animation: specialGlow 3s ease-in-out infinite alternate;
+            // animation: specialGlow 3s ease-in-out infinite alternate;
         }
         
         @keyframes specialGlow {
@@ -1606,6 +2325,7 @@ app.get("/", (req, res) => {
         
         .special-achievement:hover {
             animation: none; /* Останавливаем пульсацию при наведении */
+            transform: translateY(-3px);
         }
         
         /* Стили для вкладок в модальном окне */
@@ -1777,8 +2497,80 @@ app.get("/", (req, res) => {
         
         <div class="content">
             <div class="user-search">
-                <input type="text" id="userIdInput" placeholder="Введи свой Discord ID">
-                <button onclick="loadUserData()">Загрузить данные</button>
+                <div id="authSection" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;">
+                    <!-- <button id="loginBtn" onclick="loginWithDiscord()" style="flex: 1; min-width: 200px; padding: 10px 20px; background: #5865F2; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🔐 Войти через Discord</button> -->
+                    <div id="userInfoDisplay" style="display: none; flex: 1; min-width: 200px; padding: 10px 20px; background: #667eea; color: white; border-radius: 5px; font-weight: bold; font-size: 14px; text-align: center;">
+                        👤 <span id="userUsername"></span>
+                    </div>
+                    <button id="logoutBtn" onclick="logout()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🚪 Выход</button>
+                </div>
+                
+                <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="userIdInput" placeholder="Discord ID" style="flex: 1;">
+                    <button onclick="loadUserData()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; flex: 1; padding: 10px 20px; background-color: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; height: fit-content;">⭐ Создать спец. достижение</button>
+                </div>
+            </div>
+            
+            <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
+            <div id="createSpecialAchievementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #FFD700; border-radius: 10px; padding: 20px; width: 90%; max-width: 600px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="color: #FFD700; margin: 0;">⭐ Создать спец. достижение</h2>
+                        <button onclick="closeCreateSpecialAchievementModal()" style="background: none; border: none; color: #FFD700; font-size: 24px; cursor: pointer;">&times;</button>
+                    </div>
+                    
+                    <form id="createSpecialAchievementForm">
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Эмодзи достижения:</label>
+                            <input type="text" id="specialAchievementEmoji" maxlength="2" placeholder="🏆" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;" oninput="updateSpecialAchievementPreview()">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Название достижения:</label>
+                            <input type="text" id="specialAchievementName" placeholder="Название" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;" oninput="updateSpecialAchievementPreview()">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Описание:</label>
+                            <textarea id="specialAchievementDescription" placeholder="Описание достижения" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px; resize: vertical; min-height: 60px;"></textarea>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Discord ID пользователя:</label>
+                            <input type="text" id="specialAchievementUserId" placeholder="123456789" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;">
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                            <div>
+                                <label style="color: #FFD700; display: block; margin-bottom: 5px;">Дата:</label>
+                                <input type="date" id="specialAchievementDate" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;">
+                            </div>
+                            <div>
+                                <label style="color: #FFD700; display: block; margin-bottom: 5px;">Время:</label>
+                                <input type="time" id="specialAchievementTime" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;">
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Цвет:</label>
+                            <input type="color" id="specialAchievementColor" value="#FFD700" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; border-radius: 5px; cursor: pointer;" oninput="updateSpecialAchievementPreview()">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Превью:</label>
+                            <div id="specialAchievementPreview" style="padding: 10px; background: #0a0a0a; border: 1px solid #FFD700; border-radius: 5px;"></div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <button type="button" onclick="createSpecialAchievement()" style="padding: 10px; background-color: #FFD700; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Создать</button>
+                            <button type="button" onclick="closeCreateSpecialAchievementModal()" style="padding: 10px; background-color: #555; color: #fff; border: none; border-radius: 5px; cursor: pointer;">Отмена</button>
+                        </div>
+                    </form>
+                </div>
             </div>
             
             <div id="userContent" style="display: none;">
@@ -1849,6 +2641,88 @@ app.get("/", (req, res) => {
         let currentUserId = null;
         const ADMIN_USER_ID = "${ADMIN_USER_ID}";
 
+        // Функции для работы с авторизацией
+        function loginWithDiscord() {
+            window.location.href = '/auth/discord';
+        }
+
+        async function logout() {
+            if (confirm('Вы уверены, что хотите выйти?')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/session');
+                const data = await response.json();
+                if (data.userId) {
+                    currentUserId = data.userId;
+                    // Не показываем никакие элементы авторизации
+                    // Просто загружаем данные пользователя
+                    setTimeout(() => loadUserDataAuto(data.userId), 100);
+                    return true;
+                } else {
+                    // Если нет сессии, показываем только поле ввода ID
+                    document.getElementById('userInfoDisplay').style.display = 'none';
+                    document.getElementById('logoutBtn').style.display = 'none';
+                    document.getElementById('userIdInput').style.display = 'block';
+                    return false;
+                }
+            } catch (error) {
+                console.log('Ошибка при проверке авторизации:', error);
+                return false;
+            }
+        }
+
+        async function loadUserDataAuto(userId) {
+            console.log('🔵 loadUserDataAuto вызвана с userId:', userId);
+            currentUserId = userId;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('userContent').style.display = 'none';
+            document.getElementById('userIdDisplay').style.display = 'none';
+            document.getElementById('userIdInput').value = '';
+            
+            try {
+                const response = await fetch(\`/api/stats/\${userId}\`);
+                console.log('📡 Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(\`HTTP error! status: \${response.status}\`);
+                }
+                const data = await response.json();
+                console.log('✅ Данные получены:', data);
+                
+                // Не показываем элементы авторизации OAuth2
+                // Только показываем данные пользователя
+                const username = data.stats.username || 'Пользователь';
+                document.getElementById('currentUserId').textContent = userId;
+                
+                try {
+                    await fetch(\`/api/visit/\${userId}\`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    data.stats.web_visits = (data.stats.web_visits || 0) + 1;
+                } catch (error) {
+                    console.log('Не удалось отправить данные о посещении');
+                }
+                
+                displayUserStats(data.stats);
+                displayUserAchievements(data.achievements);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('userContent').style.display = 'block';
+                document.getElementById('userIdDisplay').style.display = 'block';
+                
+                if (currentUserId === ADMIN_USER_ID) {
+                    document.getElementById('createSpecialAchievementBtn').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('❌ Ошибка загрузки данных:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('loading').textContent = '❌ Ошибка загрузки данных. Проверьте ID.';
+            }
+        }
+
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -1899,12 +2773,20 @@ app.get("/", (req, res) => {
                 console.log('Вызываю displayUserStats...');
                 displayUserStats(data.stats);
                 console.log('Вызываю displayUserAchievements...');
+                console.log('data.achievements перед вызовом:', data.achievements);
                 displayUserAchievements(data.achievements);
                 console.log('Вызываю displayUserSettings...');
                 displayUserSettings(data.settings);
                 
                 document.getElementById('currentUserId').textContent = userId;
                 document.getElementById('userIdDisplay').style.display = 'block';
+                
+                // Показать кнопку создания спец. достижения для админа
+                if (userId === ADMIN_USER_ID) {
+                    document.getElementById('createSpecialAchievementBtn').style.display = 'inline-block';
+                } else {
+                    document.getElementById('createSpecialAchievementBtn').style.display = 'none';
+                }
                 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('userContent').style.display = 'block';
@@ -2022,7 +2904,8 @@ app.get("/", (req, res) => {
             
             let html = '';
             
-            const unlockedRegular = achievements.filter(a => !specialAchievements.hasOwnProperty(a.achievement_id));
+            // Считаем только достижения которые есть в regularAchievements
+            const unlockedRegular = achievements.filter(a => regularAchievements.hasOwnProperty(a.achievement_id));
             const totalRegular = Object.keys(regularAchievements).length;
             
             html += \`
@@ -2046,7 +2929,7 @@ for (const [id, achievement] of Object.entries(regularAchievements)) {
     const unlockedDate = isUnlocked ? achievements.find(a => a.achievement_id === id)?.unlocked_at : null;
     
     const achievementHtml = \`
-        <div class="achievement \${isUnlocked ? '' : 'locked'}">
+        <div class="achievement \${isUnlocked ? '' : 'locked'}" data-achievement-id="\${id}">
             <h3>\${achievement.name} \${isUnlocked ? '✅' : '🔒'}</h3>
             <p>\${achievement.description}</p>
             <small>+\${achievement.points} очков\${isUnlocked ? ' • Получено: ' + new Date(unlockedDate).toLocaleDateString('ru-RU') : ''}</small>
@@ -2072,10 +2955,44 @@ lockedAchievements.forEach(achievementHtml => {
     html += achievementHtml;
 });
             
-            const hasSpecialAchievements = achievements.some(a => specialAchievements.hasOwnProperty(a.achievement_id));
+            // Получаем спец. достижения пользователя
             const isAdmin = currentUserId === ADMIN_USER_ID;
             
-            if (hasSpecialAchievements || isAdmin) {
+            // Для админа показываем ВСЕ спец. достижения (даже в будущем)
+            // Для обычных пользователей показываем только те, у которых special_date уже наступило
+            const now = new Date();
+            
+            let userSpecialAchievements = achievements.filter(a => {
+                const isSpecial = (a.emoji && a.name && a.type === 'special') || a.achievement_id === 'best_admin';
+                if (!isSpecial) return false;
+                
+                // Если админ - показываем все
+                if (isAdmin) return true;
+                
+                // Если обычный пользователь - проверяем special_date
+                if (!a.special_date) return true; // Если дата не установлена, показываем
+                
+                // На браузере new Date() работает в локальном timezone пользователя
+                // Строка special_date уже содержит корректное время для браузера
+                // Поэтому просто сравниваем как есть
+                const achievementDate = new Date(a.special_date);
+                return achievementDate <= now;
+            });
+            
+            // Если админ, добавляем best_admin в список, даже если его нет в полученных
+            if (isAdmin && !userSpecialAchievements.some(a => a.achievement_id === 'best_admin')) {
+                userSpecialAchievements.push({
+                    achievement_id: 'best_admin',
+                    unlocked_at: null,
+                    emoji: null,
+                    name: null,
+                    description: null,
+                    color: null,
+                    type: null
+                });
+            }
+            
+            if (userSpecialAchievements.length > 0 || isAdmin) {
                 html += \`
                     <div style="grid-column: 1 / -1; margin-top: 40px; border-top: 3px solid #ffd700; padding-top: 30px;">
                         <h2 style="text-align: center; color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
@@ -2083,47 +3000,143 @@ lockedAchievements.forEach(achievementHtml => {
                         </h2>
                     </div>
                 \`;
-                
-                for (const [id, achievement] of Object.entries(specialAchievements)) {
-                    const isUnlocked = unlockedIds.includes(id);
-                    const unlockedDate = isUnlocked ? achievements.find(a => a.achievement_id === id)?.unlocked_at : null;
+            }
+            
+            // Показываем достижения пользователя
+            userSpecialAchievements.forEach(achievement => {
+                // Если это best_admin из БД (стандартное спец. достижение)
+                if (achievement.achievement_id === 'best_admin' && !achievement.emoji) {
+                    const bestAdminInfo = specialAchievements.best_admin;
+                    const isUnlocked = achievement.unlocked_at !== null;
+                    const deleteBtn = isAdmin ? \`<button onclick="deleteUserAchievement('\${currentUserId}', 'best_admin')" style="padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>\` : '';
                     
                     if (isUnlocked) {
+                        // Показываем как полученное достижение
                         html += \`
-                            <div class="achievement special-achievement" style="
+                            <div class="achievement special-achievement" data-achievement-id="best_admin" style="
                                 background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); 
                                 color: #333; 
                                 border-left: 5px solid #ff6b35;
-                                box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
-                                transform: scale(1.02);
+                                // box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
                                 position: relative;
-                                overflow: hidden;
+                                overflow: visible;
                             ">
-                                <h3 style="color: #333; font-weight: bold;">\${achievement.name} ✨</h3>
-                                <p style="color: #555; margin: 10px 0;">\${achievement.description}</p>
-                                <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(unlockedDate).toLocaleDateString('ru-RU')}</small>
+                                <h3 style="color: #333; font-weight: bold;">\${bestAdminInfo.name} ✨</h3>
+                                <p style="color: #555; margin: 10px 0;">\${bestAdminInfo.description}</p>
+                                <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(achievement.unlocked_at).toLocaleDateString('ru-RU')}</small>
+                                \${deleteBtn}
                             </div>
                         \`;
-                    } else if (isAdmin) {
+                    } else {
+                        // Показываем как не полученное достижение (для админа)
                         html += \`
-                            <div class="achievement special-achievement locked" style="
-                                background: linear-gradient(135deg, #666 0%, #999 100%); 
-                                color: #ccc; 
-                                border-left: 5px solid #444;
-                                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+                            <div class="achievement special-achievement" style="
+                                background: linear-gradient(135deg, #66666622 0%, #99999911 100%); 
+                                color: #333; 
+                                border-left: 5px solid #999;
+                                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                                opacity: 0.7;
                                 position: relative;
-                                overflow: hidden;
+                                overflow: visible;
                             ">
-                                <h3 style="color: #ccc; font-weight: bold;">\${achievement.name} 🔒</h3>
-                                <p style="color: #aaa; margin: 10px 0;">\${achievement.description}</p>
-                                <small style="color: #888; font-weight: bold;">❌ Не получено</small>
+                                <h3 style="color: #999; font-weight: bold;">\${bestAdminInfo.name} 🔒</h3>
+                                <p style="color: #777; margin: 10px 0;">\${bestAdminInfo.description}</p>
+                                <small style="color: #888; font-weight: bold;">❌ Для ID: 232581042177966080</small>
+                                \${deleteBtn}
+                            </div>
+                        \`;
+                    }
+                } else if (achievement.emoji) {
+                    // Новые специальные достижения из БД с emoji
+                    const deleteBtn = isAdmin ? \`<button onclick="deleteUserAchievement('\${currentUserId}', '\${achievement.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>\` : '';
+                    
+                    // Проверяем, получено ли достижение (special_date уже наступило)
+                    const achievementDate = achievement.special_date ? new Date(achievement.special_date) : null;
+                    const now = new Date();
+                    
+                    // На браузере new Date() работает в локальном timezone
+                    // Просто сравниваем как есть
+                    const isAchievementUnlocked = !achievementDate || achievementDate <= now;
+                    
+                    if (isAchievementUnlocked) {
+                        // Показываем как полученное достижение
+                        html += \`
+                            <div class="achievement special-achievement" data-achievement-id="\${achievement.achievement_id}" style="
+                                background: linear-gradient(135deg, \${achievement.color}22 0%, \${achievement.color}11 100%); 
+                                color: #333; 
+                                border-left: 5px solid \${achievement.color};
+                                // box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+                                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                                // transform: scale(1.02);
+                                position: relative;
+                                overflow: visible;
+                            ">
+                                <h3 style="color: \${achievement.color}; font-weight: bold;">\${achievement.emoji} \${achievement.name} ✨</h3>
+                                <p style="color: #555; margin: 10px 0;">\${achievement.description}</p>
+                                <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(achievement.unlocked_at).toLocaleDateString('ru-RU')}</small>
+                                \${deleteBtn}
+                            </div>
+                        \`;
+                    } else {
+                        // Показываем как закрытое достижение (планируется на будущее)
+                        const scheduledDate = achievementDate.toLocaleDateString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                        html += \`
+                            <div class="achievement special-achievement" style="
+                                background: linear-gradient(135deg, #66666622 0%, #99999911 100%); 
+                                color: #333; 
+                                border-left: 5px solid #999;
+                                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                                opacity: 0.7;
+                                position: relative;
+                                overflow: visible;
+                            ">
+                                <h3 style="color: #999; font-weight: bold;">\${achievement.emoji} \${achievement.name} 🔒</h3>
+                                <p style="color: #777; margin: 10px 0;">\${achievement.description}</p>
+                                <small style="color: #888; font-weight: bold;">⏰ Планируется: \${scheduledDate}</small>
+                                \${deleteBtn}
                             </div>
                         \`;
                     }
                 }
-            }
+            });
             
             achievementsList.innerHTML = html;
+            
+            // Если админ - загружаем и показываем ВСЕ специальные достижения как неполученные
+            if (isAdmin) {
+                fetch('/api/special-achievements')
+                    .then(r => r.json())
+                    .then(allSpecial => {
+                        const unlockedIds = userSpecialAchievements.map(a => a.achievement_id);
+                        
+                        // Фильтруем только неполученные
+                        const unlockedOtherSpecial = allSpecial.filter(a => !unlockedIds.includes(a.achievement_id));
+                        
+                        if (unlockedOtherSpecial.length > 0) {
+                            let addHtml = '';
+                            unlockedOtherSpecial.forEach(achievement => {
+                                addHtml += \`
+                                    <div class="achievement special-achievement" style="
+                                        background: linear-gradient(135deg, #66666622 0%, #99999911 100%); 
+                                        color: #333; 
+                                        border-left: 5px solid #999;
+                                        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                                        opacity: 0.7;
+                                        position: relative;
+                                        overflow: hidden;
+                                    ">
+                                        <h3 style="color: #999; font-weight: bold;">\${achievement.emoji} \${achievement.name} 🔒</h3>
+                                        <p style="color: #777; margin: 10px 0;">\${achievement.description}</p>
+                                        <small style="color: #888; font-weight: bold;">👤 Для ID: \${achievement.user_id}</small>
+                                    </div>
+                                \`;
+                            });
+                            document.getElementById('achievementsList').innerHTML += addHtml;
+                        }
+                    })
+                    .catch(err => console.error('Ошибка загрузки специальных достижений:', err));
+            }
+
         }
 
                 function displayUserSettings(settings) {
@@ -2180,8 +3193,9 @@ lockedAchievements.forEach(achievementHtml => {
             try {
                 const response = await fetch(\`/api/stats/\${userId}\`);
                 const data = await response.json();
+                const isAdmin = currentUserId === ADMIN_USER_ID;
                 
-                displayUserModal(data, username, rank, userId);
+                displayUserModal(data, username, rank, userId, isAdmin);
             } catch (error) {
                 alert('Ошибка загрузки данных пользователя');
             }
@@ -2245,9 +3259,15 @@ lockedAchievements.forEach(achievementHtml => {
                 best_admin: { name: '👑 Kakashech - Лучший админ', description: 'Лучший admin_ebaniy канала', points: 0 }
             };
             
-            const unlockedRegular = achievements.filter(a => !specialAchievements.hasOwnProperty(a.achievement_id));
+            // Прогресс считаем только для обычных достижений, исключая специальные
+            const unlockedRegular = achievements.filter(a => {
+                // Исключаем best_admin
+                if (a.achievement_id === 'best_admin') return false;
+                // Исключаем все остальные специальные достижения (у них есть emoji и type === 'special')
+                if (a.emoji && a.type === 'special') return false;
+                return true;
+            });
             const totalRegular = Object.keys(regularAchievements).length;
-            const hasSpecial = achievements.some(a => specialAchievements.hasOwnProperty(a.achievement_id));
             
             let modalHtml = \`
                 <div class="modal" id="achievementsModal">
@@ -2292,6 +3312,25 @@ modalUnlockedAchievements.forEach(achievement => {
     modalHtml += achievement.html;
 });
             
+            // Проверяем специальные достижения
+            const now = new Date();
+            
+            const specialAchievementsFromDBFiltered = achievements.filter(a => {
+                const isSpecial = a.emoji && a.name && a.type === 'special';
+                if (!isSpecial) return false;
+                
+                // Проверяем special_date
+                if (!a.special_date) return true; // Если дата не установлена, показываем
+                
+                // На браузере new Date() работает в локальном timezone
+                // Просто сравниваем как есть
+                const achievementDate = new Date(a.special_date);
+                const now = new Date();
+                return achievementDate <= now;
+            });
+            
+            const hasSpecial = specialAchievementsFromDBFiltered.length > 0;
+            
             if (hasSpecial) {
                 modalHtml += \`
                     <div style="grid-column: 1 / -1; margin-top: 20px; border-top: 3px solid #ffd700; padding-top: 20px;">
@@ -2299,19 +3338,15 @@ modalUnlockedAchievements.forEach(achievement => {
                     </div>
                 \`;
                 
-                for (const [id, achievement] of Object.entries(specialAchievements)) {
-                    const isUnlocked = unlockedIds.includes(id);
-                    if (isUnlocked) {
-                        const unlockedDate = achievements.find(a => a.achievement_id === id)?.unlocked_at;
-                        modalHtml += \`
-                            <div class="modal-achievement special-achievement">
-                                <h4>\${achievement.name} ✨</h4>
-                                <p style="margin: 8px 0; color: #555;">\${achievement.description}</p>
-                                <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(unlockedDate).toLocaleDateString('ru-RU')}</small>
-                            </div>
-                        \`;
-                    }
-                }
+                specialAchievementsFromDBFiltered.forEach(achievement => {
+                    modalHtml += \`
+                        <div class="modal-achievement special-achievement">
+                            <h4>\${achievement.emoji} \${achievement.name} ✨</h4>
+                            <p style="margin: 8px 0; color: #555;">\${achievement.description}</p>
+                            <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(achievement.unlocked_at).toLocaleDateString('ru-RU')}</small>
+                        </div>
+                    \`;
+                });
             }
             
             if (achievements.length === 0) {
@@ -2342,7 +3377,47 @@ modalUnlockedAchievements.forEach(achievement => {
             }
         }
 
-        function displayUserModal(data, username, rank, userId) {
+        function deleteUserAchievement(userId, achievementId) {
+            if (!confirm('Вы уверены, что хотите удалить это достижение у пользователя?')) {
+                return;
+            }
+            
+            fetch('/api/admin/delete-achievement', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    userId: userId,
+                    achievementId: achievementId
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    // Находим и удаляем элемент со страницы
+                    const achievementElement = document.querySelector('[data-achievement-id="' + achievementId + '"]');
+                    if (achievementElement) {
+                        achievementElement.remove();
+                    }
+                    
+                    // Перезагружаем данные пользователя если это текущий пользователь
+                    if (userId === currentUserId) {
+                        loadUserData();
+                    }
+                    
+                    console.log('✅ Достижение успешно удалено!');
+                } else {
+                    alert('Ошибка при удалении достижения');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Ошибка при удалении достижения');
+            });
+        }
+
+        function displayUserModal(data, username, rank, userId, isAdmin = false) {
             const achievements = data.achievements;
             const stats = data.stats;
             const unlockedIds = achievements.map(a => a.achievement_id);
@@ -2383,7 +3458,7 @@ modalUnlockedAchievements.forEach(achievement => {
                 best_admin: { name: '👑 Kakashech - Лучший админ', description: 'Лучший admin_ebaniy канала', points: 0 }
             };
             
-            const unlockedRegular = achievements.filter(a => !specialAchievements.hasOwnProperty(a.achievement_id));
+            const unlockedRegular = achievements.filter(a => !specialAchievements.hasOwnProperty(a.achievement_id) && !a.emoji);
             const totalRegular = Object.keys(regularAchievements).length;
             
             let modalHtml = \`
@@ -2417,12 +3492,14 @@ modalUnlockedAchievements.forEach(achievement => {
                 const isUnlocked = unlockedIds.includes(id);
                 if (isUnlocked) {
                     const unlockedDate = achievements.find(a => a.achievement_id === id)?.unlocked_at;
+                    const deleteBtn = isAdmin ? \`<button onclick="deleteUserAchievement('\${userId}', '\${id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>\` : '';
                     modalUnlockedAchievements.push({
                         html: \`
                             <div class="modal-achievement">
                                 <h4>\${achievement.name} ✅</h4>
                                 <p style="margin: 8px 0; color: #666;">\${achievement.description}</p>
                                 <small>+\${achievement.points} очков • Получено: \${new Date(unlockedDate).toLocaleDateString('ru-RU')}</small>
+                                \${deleteBtn}
                             </div>
                         \`,
                         date: new Date(unlockedDate)
@@ -2435,28 +3512,87 @@ modalUnlockedAchievements.forEach(achievement => {
                 modalHtml += achievement.html;
             });
             
-            // Специальные достижения
-            const hasSpecial = achievements.some(a => specialAchievements.hasOwnProperty(a.achievement_id));
-            if (hasSpecial) {
+            // Специальные достижения берем только из полученных пользователем
+            // Но только если их special_date уже наступило (или дата не установлена)
+            const now = new Date();
+            
+            const unlockedSpecial = achievements.filter(a => {
+                const isSpecial = a.emoji && a.name && a.type === 'special';
+                if (!isSpecial) return false;
+                
+                // Проверяем special_date
+                if (!a.special_date) return true; // Если дата не установлена, показываем
+                
+                // На браузере new Date() работает в локальном timezone
+                // Просто сравниваем как есть
+                const achievementDate = new Date(a.special_date);
+                const now = new Date();
+                return achievementDate <= now;
+            });
+            
+            // Добавляем best_admin если пользователь его получил
+            const bestAdminAchievement = achievements.find(a => a.achievement_id === 'best_admin');
+            if (bestAdminAchievement) {
+                unlockedSpecial.push({
+                    emoji: '👑',
+                    name: 'Kakashech - Лучший админ',
+                    description: 'Лучший admin_ebaniy канала',
+                    unlocked_at: bestAdminAchievement.unlocked_at,
+                    type: 'special',
+                    achievement_id: 'best_admin'
+                });
+            }
+            
+            if (unlockedSpecial.length > 0) {
                 modalHtml += \`
                     <div style="grid-column: 1 / -1; margin-top: 20px; border-top: 3px solid #ffd700; padding-top: 20px;">
                         <h3 style="text-align: center; color: #ffd700; margin-bottom: 15px;">⭐ Специальные достижения ⭐</h3>
                     </div>
                 \`;
                 
-                for (const [id, achievement] of Object.entries(specialAchievements)) {
-                    const isUnlocked = unlockedIds.includes(id);
-                    if (isUnlocked) {
-                        const unlockedDate = achievements.find(a => a.achievement_id === id)?.unlocked_at;
+                // Показываем полученные специальные достижения
+                unlockedSpecial.forEach(achievement => {
+                    // best_admin - исключение, используем исходные стили
+                    if (achievement.name === 'Kakashech - Лучший админ') {
+                        const deleteBtn = isAdmin ? \`<button onclick="deleteUserAchievement('\${userId}', 'best_admin')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>\` : '';
                         modalHtml += \`
-                            <div class="modal-achievement special-achievement">
-                                <h4>\${achievement.name} ✨</h4>
+                            <div class="modal-achievement special-achievement" style="
+                                background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); 
+                                color: #333; 
+                                border-left: 5px solid #ff6b35;
+                                // box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+                                position: relative;
+                                overflow: visible;
+                            ">
+                                <h3 style="color: #333; font-weight: bold; margin: 0 0 10px 0;">\${achievement.emoji} \${achievement.name} ✨</h3>
                                 <p style="margin: 8px 0; color: #555;">\${achievement.description}</p>
-                                <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(unlockedDate).toLocaleDateString('ru-RU')}</small>
+                                <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(achievement.unlocked_at).toLocaleDateString('ru-RU')}</small>
+                                \${deleteBtn}
+                            </div>
+                        \`;
+                    } else {
+                        // Остальные специальные достижения из БД
+                        const color = achievement.color || '#FFD700';
+                        const deleteBtn = isAdmin ? \`<button onclick="deleteUserAchievement('\${userId}', '\${achievement.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>\` : '';
+                        modalHtml += \`
+                            <div class="modal-achievement special-achievement" style="
+                                background: linear-gradient(135deg, \${color}22 0%, \${color}11 100%);
+                                color: #333;
+                                border-left: 5px solid \${color};
+                                // box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+                                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                                transform: scale(1.02);
+                                position: relative;
+                                overflow: visible;
+                            ">
+                                <h3 style="color: \${color}; font-weight: bold; margin: 0 0 10px 0;">\${achievement.emoji} \${achievement.name} ✨</h3>
+                                <p style="margin: 8px 0; color: #555;">\${achievement.description}</p>
+                                <small style="color: #666; font-weight: bold;">🎉 Получено: \${new Date(achievement.unlocked_at).toLocaleDateString('ru-RU')}</small>
+                                \${deleteBtn}
                             </div>
                         \`;
                     }
-                }
+                });
             }
             
             if (achievements.length === 0) {
@@ -2576,6 +3712,141 @@ modalUnlockedAchievements.forEach(achievement => {
             }
         }
 
+        // ===== ФУНКЦИИ СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ =====
+        function openCreateSpecialAchievementModal() {
+            document.getElementById('createSpecialAchievementModal').style.display = 'block';
+            updateSpecialAchievementPreview();
+        }
+
+        function closeCreateSpecialAchievementModal() {
+            document.getElementById('createSpecialAchievementModal').style.display = 'none';
+        }
+
+        function updateSpecialAchievementPreview() {
+            const emoji = document.getElementById('specialAchievementEmoji').value || '🏆';
+            const name = document.getElementById('specialAchievementName').value || 'Название';
+            const color = document.getElementById('specialAchievementColor').value || '#FFD700';
+            
+            const preview = document.getElementById('specialAchievementPreview');
+            const bgGradient = 'linear-gradient(135deg, ' + color + '22, ' + color + '11)';
+            const borderColor = color;
+            
+            preview.innerHTML = '<div class="achievement-preview" style="background: ' + bgGradient + '; border-left: 4px solid ' + borderColor + ';">' +
+                '<div style="font-size: 32px;">' + emoji + '</div>' +
+                '<div style="color: ' + color + '; font-weight: bold;">' + name + '</div>' +
+                '</div>';
+        }
+
+        async function createSpecialAchievement() {
+            const emoji = document.getElementById('specialAchievementEmoji').value;
+            const name = document.getElementById('specialAchievementName').value;
+            const description = document.getElementById('specialAchievementDescription').value;
+            const targetUserId = document.getElementById('specialAchievementUserId').value;
+            const date = document.getElementById('specialAchievementDate').value;
+            const time = document.getElementById('specialAchievementTime').value;
+            const color = document.getElementById('specialAchievementColor').value;
+            
+            if (!emoji || !name || !description || !targetUserId || !date || !time || !color) {
+                alert('Заполни все обязательные поля!');
+                return;
+            }
+
+            try {
+                // Пользователь вводит МОСКОВСКОЕ время
+                // Просто отправляем как есть, без конвертации
+                // На сервере будет интерпретировано как московское время
+                
+                const response = await fetch('/api/admin/create-achievement', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        emoji,
+                        name,
+                        description,
+                        type: 'special',
+                        userId: targetUserId,
+                        specialDate: date + 'T' + time,  // "2025-12-09T23:35" (Moscow time)
+                        color
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Специальное достижение создано!');
+                    closeCreateSpecialAchievementModal();
+                    document.getElementById('createSpecialAchievementForm').reset();
+                    updateSpecialAchievementPreview();
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка: ' + error.error);
+                }
+            } catch (error) {
+                console.error('Ошибка при создании достижения:', error);
+                alert('Ошибка при создании достижения');
+            }
+        }
+
+        // Функция удаления достижения у пользователя
+        async function deleteAchievementFromUser() {
+            const userId = prompt('Введи Discord ID пользователя:');
+            if (!userId) return;
+
+            const achievementId = prompt('Введи ID достижения для удаления:');
+            if (!achievementId) return;
+
+            if (!confirm('Вы уверены? Это удалит достижение у пользователя.')) return;
+
+            try {
+                const response = await fetch('/api/admin/delete-achievement', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId,
+                        achievementId
+                    })
+                });
+
+                if (response.ok) {
+                    alert('Достижение удалено!');
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка: ' + error.error);
+                }
+            } catch (error) {
+                console.error('Ошибка при удалении достижения:', error);
+                alert('Ошибка при удалении достижения');
+            }
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🟢 DOMContentLoaded сработал');
+            
+            // По умолчанию показываем только поле ввода ID
+            document.getElementById('userInfoDisplay').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'none';
+            document.getElementById('userIdInput').style.display = 'block';
+            
+            // Проверяем авторизацию и параметры URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoLogin = urlParams.get('autoLogin');
+            const userIdParam = urlParams.get('userId');
+            
+            console.log('📋 URL params - autoLogin:', autoLogin, 'userId:', userIdParam);
+            
+            if (autoLogin && userIdParam) {
+                console.log('🔑 Запуск autoLogin с userId:', userIdParam);
+                // Автоматический вход через Discord
+                loadUserDataAuto(userIdParam);
+            } else {
+                // Проверяем активную сессию
+                checkAuthStatus();
+            }
+        });
+
         loadLeaderboard();
     </script>
 </body>
@@ -2670,7 +3941,9 @@ client.on("messageCreate", async (message) => {
     }/${Object.keys(ACHIEVEMENTS).filter((id) => id !== "best_admin").length}**
 
 👤 **Твой ID:** \`${message.author.id}\`
-🌐 **Подробная статистика:** http://${SERVER_IP}:${PORT}
+🌐 **Подробная статистика:** http://${SERVER_IP}:${PORT}/?userId=${
+      message.author.id
+    }&autoLogin=true
     `);
     return;
   }
@@ -2823,7 +4096,7 @@ client.on("messageCreate", async (message) => {
 \`.!. achievements\` - посмотреть достижения
 
 👤 **Твой ID:** \`${message.author.id}\`
-🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}`
+🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}/?userId=${message.author.id}&autoLogin=true`
     );
 
     sendTelegramReport(
@@ -2890,7 +4163,7 @@ client.on("messageCreate", async (message) => {
 • Зарабатывай очки рейтинга и открывай достижения!
 
 👤 **Твой ID:** \`${message.author.id}\`
-🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}
+🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}/?userId=${message.author.id}&autoLogin=true
     `);
 
     sendTelegramReport(
@@ -3110,6 +4383,29 @@ client.on("clientReady", () => {
   // Запускаем проверку специального достижения каждую минуту
   setInterval(checkSpecialAchievement, 60000);
   console.log("⏰ Запущена проверка специального достижения");
+
+  // Проверяем пропущенные уведомления о достижениях при запуске (с задержкой)
+  setTimeout(() => {
+    console.log("🔍 Проверка пропущенных уведомлений о достижениях...");
+    try {
+      checkAndSendMissedAchievementNotifications();
+      console.log("✅ Проверка завершена");
+    } catch (error) {
+      console.error("❌ Ошибка при проверке пропущенных уведомлений:", error);
+    }
+  }, 3000); // Задержка 3 секунды чтобы Discord полностью инициализировался
+
+  // Также проверяем каждые 30 секунд (более частая проверка)
+  setInterval(() => {
+    try {
+      checkAndSendMissedAchievementNotifications();
+    } catch (error) {
+      console.error(
+        "❌ Ошибка при периодической проверке пропущенных уведомлений:",
+        error
+      );
+    }
+  }, 30000);
 });
 
 client.on("voiceStateUpdate", async (oldState, newState) => {
