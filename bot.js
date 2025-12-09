@@ -2691,7 +2691,8 @@ app.get("/", (req, res) => {
             
             let html = '';
             
-            const unlockedRegular = achievements.filter(a => !specialAchievements.hasOwnProperty(a.achievement_id) && !a.emoji);
+            // Считаем только достижения которые есть в regularAchievements
+            const unlockedRegular = achievements.filter(a => regularAchievements.hasOwnProperty(a.achievement_id));
             const totalRegular = Object.keys(regularAchievements).length;
             
             html += \`
@@ -3045,7 +3046,14 @@ lockedAchievements.forEach(achievementHtml => {
                 best_admin: { name: '👑 Kakashech - Лучший админ', description: 'Лучший admin_ebaniy канала', points: 0 }
             };
             
-            const unlockedRegular = achievements.filter(a => !a.emoji || !a.type || a.type !== 'special');
+            // Прогресс считаем только для обычных достижений, исключая специальные
+            const unlockedRegular = achievements.filter(a => {
+                // Исключаем best_admin
+                if (a.achievement_id === 'best_admin') return false;
+                // Исключаем все остальные специальные достижения (у них есть emoji и type === 'special')
+                if (a.emoji && a.type === 'special') return false;
+                return true;
+            });
             const totalRegular = Object.keys(regularAchievements).length;
             
             let modalHtml = \`
