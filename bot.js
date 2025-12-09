@@ -991,6 +991,7 @@ app.get("/api/stats/:userId", (req, res) => {
     const stats = getUserStats(userId);
 
     const achievements = getUserAchievements(userId);
+
     const settings = {
       dmNotifications: getUserDMSetting(userId),
       afkTimeout: getUserTimeout(userId),
@@ -1246,17 +1247,17 @@ app.post("/api/admin/create-achievement", async (req, res) => {
       const now = new Date();
 
       // specialDate приходит как строка в московском времени: "2025-12-09T07:10"
-      // new Date("2025-12-09T07:10") парсит это как UTC
-      // Но это МОСКОВСКОЕ время! Поэтому нужно ДОБАВИТЬ offset (не вычитать)
-      // Если московское 07:10 = 04:10 UTC, то парсим как 07:10 UTC и добавляем 3 часа = 10:10 UTC
+      // new Date("2025-12-09T15:00") парсит это как UTC на сервере
+      // Но это МОСКОВСКОЕ время (UTC+3)! 15:00 Москва = 12:00 UTC
+      // Поэтому нужно ВЫЧИТАТЬ offset: 15:00 UTC - 3 часа = 12:00 UTC
       const moscowOffset = 3 * 60 * 60 * 1000;
 
-      // Парсим как UTC дату
+      // Парсим дату как UTC
       const targetDateAsUTC = new Date(targetDateStr);
-      // ДОБАВЛЯЕМ московский offset чтобы получить реальное UTC время
+      // ВЫЧИТАЕМ московский offset чтобы получить реальное UTC время
       // (потому что строка это московское время, а new Date() парсит как UTC)
       const targetDateRealUTC = new Date(
-        targetDateAsUTC.getTime() + moscowOffset
+        targetDateAsUTC.getTime() - moscowOffset
       );
 
       const delayMs = targetDateRealUTC.getTime() - now.getTime();
@@ -2713,6 +2714,8 @@ lockedAchievements.forEach(achievementHtml => {
             // Для админа показываем ВСЕ спец. достижения (даже в будущем)
             // Для обычных пользователей показываем только те, у которых special_date уже наступило
             const now = new Date();
+            const moscowOffset = 3 * 60 * 60 * 1000;
+            
             let userSpecialAchievements = achievements.filter(a => {
                 const isSpecial = (a.emoji && a.name && a.type === 'special') || a.achievement_id === 'best_admin';
                 if (!isSpecial) return false;
@@ -2723,7 +2726,10 @@ lockedAchievements.forEach(achievementHtml => {
                 // Если обычный пользователь - проверяем special_date
                 if (!a.special_date) return true; // Если дата не установлена, показываем
                 const achievementDate = new Date(a.special_date);
-                return achievementDate <= now;
+                // special_date это московское время, но new Date() парсит как локальное время браузера
+                // Поэтому вычитаем offset чтобы получить UTC эквивалент московского времени
+                const utcEquivalent = new Date(achievementDate.getTime() - moscowOffset);
+                return utcEquivalent <= now;
             });
             
             // Если админ, добавляем best_admin в список, даже если его нет в полученных
@@ -2799,7 +2805,15 @@ lockedAchievements.forEach(achievementHtml => {
                     
                     // Проверяем, получено ли достижение (special_date уже наступило)
                     const achievementDate = achievement.special_date ? new Date(achievement.special_date) : null;
-                    const isAchievementUnlocked = !achievementDate || achievementDate <= new Date();
+                    
+                    // Считаем московское время (UTC+3)
+                    const now = new Date();
+                    const moscowOffset = 3 * 60 * 60 * 1000;
+                    // special_date это московское время, но new Date() парсит как локальное время браузера
+                    // Поэтому вычитаем offset чтобы получить UTC эквивалент московского времени
+                    const utcEquivalent = achievementDate ? new Date(achievementDate.getTime() - moscowOffset) : null;
+                    
+                    const isAchievementUnlocked = !utcEquivalent || utcEquivalent <= now;
                     
                     if (isAchievementUnlocked) {
                         // Показываем как полученное достижение
@@ -3004,7 +3018,6 @@ lockedAchievements.forEach(achievementHtml => {
             
             const unlockedRegular = achievements.filter(a => !a.emoji || !a.type || a.type !== 'special');
             const totalRegular = Object.keys(regularAchievements).length;
-            const hasSpecial = achievements.some(a => a.emoji && a.name && a.type === 'special');
             
             let modalHtml = \`
                 <div class="modal" id="achievementsModal">
@@ -3049,6 +3062,26 @@ modalUnlockedAchievements.forEach(achievement => {
     modalHtml += achievement.html;
 });
             
+            // Проверяем специальные достижения с учетом московского времени
+            const now = new Date();
+            const moscowOffset = 3 * 60 * 60 * 1000;
+            
+            const specialAchievementsFromDBFiltered = achievements.filter(a => {
+                const isSpecial = a.emoji && a.name && a.type === 'special';
+                if (!isSpecial) return false;
+                
+                // Проверяем special_date
+                if (!a.special_date) return true; // Если дата не установлена, показываем
+                
+                const achievementDate = new Date(a.special_date);
+                // special_date это московское время, но new Date() парсит как локальное время браузера
+                // Поэтому вычитаем offset чтобы получить UTC эквивалент московского времени
+                const utcEquivalent = new Date(achievementDate.getTime() - moscowOffset);
+                return utcEquivalent <= now;
+            });
+            
+            const hasSpecial = specialAchievementsFromDBFiltered.length > 0;
+            
             if (hasSpecial) {
                 modalHtml += \`
                     <div style="grid-column: 1 / -1; margin-top: 20px; border-top: 3px solid #ffd700; padding-top: 20px;">
@@ -3056,8 +3089,7 @@ modalUnlockedAchievements.forEach(achievement => {
                     </div>
                 \`;
                 
-                const specialAchievementsFromDB = achievements.filter(a => a.emoji && a.name && a.type === 'special');
-                specialAchievementsFromDB.forEach(achievement => {
+                specialAchievementsFromDBFiltered.forEach(achievement => {
                     modalHtml += \`
                         <div class="modal-achievement special-achievement">
                             <h4>\${achievement.emoji} \${achievement.name} ✨</h4>
@@ -3222,29 +3254,47 @@ modalUnlockedAchievements.forEach(achievement => {
                 modalHtml += achievement.html;
             });
             
-            // Специальные достижения
-            const specialAchievementsFromDB = achievements.filter(a => a.emoji && a.name && a.type === 'special');
+            // Специальные достижения берем только из полученных пользователем
+            // Но только если их special_date уже наступило (или дата не установлена)
+            const now = new Date();
+            const moscowOffset = 3 * 60 * 60 * 1000;
+            
+            const unlockedSpecial = achievements.filter(a => {
+                const isSpecial = a.emoji && a.name && a.type === 'special';
+                if (!isSpecial) return false;
+                
+                // Проверяем special_date
+                if (!a.special_date) return true; // Если дата не установлена, показываем
+                
+                const achievementDate = new Date(a.special_date);
+                // special_date это московское время, но new Date() парсит как локальное время браузера
+                // Поэтому вычитаем offset чтобы получить UTC эквивалент московского времени
+                const utcEquivalent = new Date(achievementDate.getTime() - moscowOffset);
+                return utcEquivalent <= now;
+            });
             
             // Добавляем best_admin если пользователь его получил
             const bestAdminAchievement = achievements.find(a => a.achievement_id === 'best_admin');
             if (bestAdminAchievement) {
-                specialAchievementsFromDB.push({
+                unlockedSpecial.push({
                     emoji: '👑',
                     name: 'Kakashech - Лучший админ',
                     description: 'Лучший admin_ebaniy канала',
                     unlocked_at: bestAdminAchievement.unlocked_at,
-                    type: 'special'
+                    type: 'special',
+                    achievement_id: 'best_admin'
                 });
             }
             
-            if (specialAchievementsFromDB.length > 0) {
+            if (unlockedSpecial.length > 0) {
                 modalHtml += \`
                     <div style="grid-column: 1 / -1; margin-top: 20px; border-top: 3px solid #ffd700; padding-top: 20px;">
                         <h3 style="text-align: center; color: #ffd700; margin-bottom: 15px;">⭐ Специальные достижения ⭐</h3>
                     </div>
                 \`;
                 
-                specialAchievementsFromDB.forEach(achievement => {
+                // Показываем полученные специальные достижения
+                unlockedSpecial.forEach(achievement => {
                     // best_admin - исключение, используем исходные стили
                     if (achievement.name === 'Kakashech - Лучший админ') {
                         const deleteBtn = isAdmin ? \`<button onclick="deleteUserAchievement('\${userId}', 'best_admin')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>\` : '';
