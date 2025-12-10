@@ -2507,66 +2507,66 @@ app.get("/", (req, res) => {
                 
                 <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <input type="text" id="userIdInput" placeholder="Discord ID" style="flex: 1;">
-                    <button onclick="loadUserData()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
+                    <button onclick="loadUserData()" style="padding: 10px 20px; background: #a45eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
                 </div>
                 
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; flex: 1; padding: 10px 20px; background-color: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; height: fit-content;">⭐ Создать спец. достижение</button>
+                    <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; flex: 1; padding: 10px 20px; background-color: #a45eea; color: white; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; height: fit-content;">⭐ Создать спец. достижение</button>
                 </div>
             </div>
             
             <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
             <div id="createSpecialAchievementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #FFD700; border-radius: 10px; padding: 20px; width: 90%; max-width: 600px;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #a45eea; border-radius: 10px; padding: 20px; width: 90%; max-width: 600px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="color: #FFD700; margin: 0;">⭐ Создать спец. достижение</h2>
-                        <button onclick="closeCreateSpecialAchievementModal()" style="background: none; border: none; color: #FFD700; font-size: 24px; cursor: pointer;">&times;</button>
+                        <h2 style="color: white; margin: 0;">⭐ Создать спец. достижение</h2>
+                        <button onclick="closeCreateSpecialAchievementModal()" style="background: none; border: none; color: #a45eea; font-size: 24px; cursor: pointer;">&times;</button>
                     </div>
                     
                     <form id="createSpecialAchievementForm">
                         <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Эмодзи достижения:</label>
-                            <input type="text" id="specialAchievementEmoji" maxlength="2" placeholder="🏆" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;" oninput="updateSpecialAchievementPreview()">
+                            <label style="color: #a45eea; display: block; margin-bottom: 5px;">Эмодзи достижения:</label>
+                            <input type="text" id="specialAchievementEmoji" maxlength="2" placeholder="🏆" style="width: 10%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; text-align: center;" oninput="updateSpecialAchievementPreview()">
                         </div>
                         
                         <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Название достижения:</label>
-                            <input type="text" id="specialAchievementName" placeholder="Название" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;" oninput="updateSpecialAchievementPreview()">
+                            <label style="color: #a45eea; display: block; margin-bottom: 5px;">Название достижения:</label>
+                            <input type="text" id="specialAchievementName" placeholder="Название" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;" oninput="updateSpecialAchievementPreview()">
                         </div>
                         
                         <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Описание:</label>
-                            <textarea id="specialAchievementDescription" placeholder="Описание достижения" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px; resize: vertical; min-height: 60px;"></textarea>
+                            <label style="color: white;; display: block; margin-bottom: 5px;">Описание:</label>
+                            <textarea id="specialAchievementDescription" placeholder="Описание достижения" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; resize: vertical; min-height: 60px;"></textarea>
                         </div>
                         
                         <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Discord ID пользователя:</label>
-                            <input type="text" id="specialAchievementUserId" placeholder="123456789" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Discord ID пользователя:</label>
+                            <input type="text" id="specialAchievementUserId" placeholder="123456789" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;">
                         </div>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
                             <div>
-                                <label style="color: #FFD700; display: block; margin-bottom: 5px;">Дата:</label>
-                                <input type="date" id="specialAchievementDate" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;">
+                                <label style="color: white; display: block; margin-bottom: 5px;">Дата:</label>
+                                <input type="date" id="specialAchievementDate" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;">
                             </div>
                             <div>
-                                <label style="color: #FFD700; display: block; margin-bottom: 5px;">Время:</label>
-                                <input type="time" id="specialAchievementTime" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;">
+                                <label style="color: white; display: block; margin-bottom: 5px;">Время:</label>
+                                <input type="time" id="specialAchievementTime" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;">
                             </div>
                         </div>
                         
                         <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Цвет:</label>
-                            <input type="color" id="specialAchievementColor" value="#FFD700" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; border-radius: 5px; cursor: pointer;" oninput="updateSpecialAchievementPreview()">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Цвет:</label>
+                            <input type="color" id="specialAchievementColor" value="#a45eea" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px; cursor: pointer;" oninput="updateSpecialAchievementPreview()">
                         </div>
                         
                         <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Превью:</label>
-                            <div id="specialAchievementPreview" style="padding: 10px; background: #0a0a0a; border: 1px solid #FFD700; border-radius: 5px;"></div>
+                            <label style="color: white; display: block; margin-bottom: 5px;">Превью:</label>
+                            <div id="specialAchievementPreview" style="padding: 10px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px;"></div>
                         </div>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <button type="button" onclick="createSpecialAchievement()" style="padding: 10px; background-color: #FFD700; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Создать</button>
+                            <button type="button" onclick="createSpecialAchievement()" style="padding: 10px; background-color: #a45eea; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Создать</button>
                             <button type="button" onclick="closeCreateSpecialAchievementModal()" style="padding: 10px; background-color: #555; color: #fff; border: none; border-radius: 5px; cursor: pointer;">Отмена</button>
                         </div>
                     </form>
@@ -3677,8 +3677,13 @@ modalUnlockedAchievements.forEach(achievement => {
 
         document.addEventListener('click', function(event) {
             const modal = document.getElementById('achievementsModal');
+            const createModal = document.getElementById('createSpecialAchievementModal');
+            
             if (modal && event.target === modal) {
                 closeModal();
+            }
+            if (createModal && event.target === createModal) {
+                closeCreateSpecialAchievementModal();
             }
         });
 
@@ -3715,11 +3720,13 @@ modalUnlockedAchievements.forEach(achievement => {
         // ===== ФУНКЦИИ СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ =====
         function openCreateSpecialAchievementModal() {
             document.getElementById('createSpecialAchievementModal').style.display = 'block';
+            document.body.classList.add('modal-open');
             updateSpecialAchievementPreview();
         }
 
         function closeCreateSpecialAchievementModal() {
             document.getElementById('createSpecialAchievementModal').style.display = 'none';
+            document.body.classList.remove('modal-open');
         }
 
         function updateSpecialAchievementPreview() {
