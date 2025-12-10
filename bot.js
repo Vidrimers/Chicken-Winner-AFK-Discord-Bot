@@ -1981,6 +1981,8 @@ app.get("/", (req, res) => {
             .user-search button {
                 width: 100%;
                 max-width: 200px;
+                width: auto;
+                max-width: 100%;
             }
             
             .tabs {
@@ -2143,6 +2145,12 @@ app.get("/", (req, res) => {
             .rank {
                 font-size: 1rem;
             }
+        }
+
+        @media screen and (max-width: 400px) {
+        #manualInputSection{
+            flex-direction: column;
+        }
         }
 
         /* Адаптация для очень маленьких экранов */
@@ -2507,17 +2515,17 @@ app.get("/", (req, res) => {
                 
                 <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <input type="text" id="userIdInput" placeholder="Discord ID" style="flex: 1;">
-                    <button onclick="loadUserData()" style="padding: 10px 20px; background: #a45eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
+                    <button onclick="loadUserData()" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
                 </div>
                 
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; flex: 1; padding: 10px 20px; background-color: #a45eea; color: white; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; height: fit-content;">⭐ Создать спец. достижение</button>
+                    <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; flex: 1; padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">⭐ Создать спец. достижение</button>
                 </div>
             </div>
             
             <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
             <div id="createSpecialAchievementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #a45eea; border-radius: 10px; padding: 20px; width: 90%; max-width: 600px;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #a45eea; border-radius: 10px; padding: 20px; width: 90%; max-width: 600px; height: 80vh; overflow: auto; scrollbar-width: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 style="color: white; margin: 0;">⭐ Создать спец. достижение</h2>
                         <button onclick="closeCreateSpecialAchievementModal()" style="background: none; border: none; color: #a45eea; font-size: 24px; cursor: pointer;">&times;</button>
