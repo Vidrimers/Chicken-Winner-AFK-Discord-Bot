@@ -59,6 +59,7 @@ db.exec(`
     user_id TEXT,
     achievement_id TEXT,
     unlocked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    manually_deleted BOOLEAN DEFAULT 0,
     UNIQUE(user_id, achievement_id)
   )
 `);
@@ -136,6 +137,12 @@ try {
 try {
   db.exec(
     `ALTER TABLE achievements ADD COLUMN notifications_sent BOOLEAN DEFAULT 0`
+  );
+} catch (error) {}
+
+try {
+  db.exec(
+    `ALTER TABLE user_achievements ADD COLUMN manually_deleted BOOLEAN DEFAULT 0`
   );
 } catch (error) {}
 
@@ -678,104 +685,131 @@ const getTopUsers = (limit = 10) => {
 const checkAndUnlockAchievement = async (userId, username, achievementId) => {
   // Проверяем, есть ли уже такое достижение
   const checkStmt = db.prepare(`
-    SELECT * FROM user_achievements WHERE user_id = ? AND achievement_id = ?
+    SELECT * FROM user_achievements 
+    WHERE user_id = ? AND achievement_id = ?
   `);
   const existing = checkStmt.get(userId, achievementId);
 
-  // Если достижение уже есть, возвращаем false (не новое)
-  if (existing) {
+  // Если достижение уже разблокировано (и не удалено) - не добавляем снова
+  if (existing && !existing.manually_deleted) {
+    console.log(`⏭️ Достижение ${achievementId} уже есть у пользователя ${username}`);
     return false;
   }
+  
+  console.log(`✅ Добавляем новое достижение ${achievementId} пользователю ${username}`);
+  
+  // Если достижение было удалено (manually_deleted = 1), обновляем флаг и время
+  // Иначе добавляем новое достижение
+  if (existing && existing.manually_deleted) {
+    console.log(`♻️ Восстанавливаем удаленное достижение ${achievementId}`);
+    db.prepare(`
+      UPDATE user_achievements 
+      SET manually_deleted = 0, unlocked_at = CURRENT_TIMESTAMP
+      WHERE user_id = ? AND achievement_id = ?
+    `).run(userId, achievementId);
+  } else {
+    const stmt = db.prepare(`
+      INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, manually_deleted) 
+      VALUES (?, ?, CURRENT_TIMESTAMP, 0)
+    `);
+    stmt.run(userId, achievementId);
+  }
 
-  // Добавляем новое достижение
-  const stmt = db.prepare(`
-    INSERT INTO user_achievements (user_id, achievement_id, unlocked_at) 
-    VALUES (?, ?, CURRENT_TIMESTAMP)
-  `);
-  const result = stmt.run(userId, achievementId);
+  // Получаем достижение для отправки уведомлений
+  const achievement = ACHIEVEMENTS[achievementId];
+  console.log(`🔍 Ищем в ACHIEVEMENTS[${achievementId}]:`, achievement ? "✅ НАЙДЕНО" : "❌ НЕ НАЙДЕНО");
+  
+  if (achievement) {
+    console.log(`📤 Отправляем уведомления для достижения: ${achievement.name}`);
+    
+    // Всегда добавляем очки
+    incrementUserStat(userId, "rank_points", achievement.points);
 
-  if (result.changes > 0) {
-    const achievement = ACHIEVEMENTS[achievementId];
-    if (achievement) {
-      // Добавляем очки
-      incrementUserStat(userId, "rank_points", achievement.points);
-
-      // Отправляем уведомление (проверяем настройки)
-      const member = client.users.cache.get(userId);
-      const achievementNotificationsEnabled =
-        getUserAchievementNotificationSetting(userId);
-      if (member && achievementNotificationsEnabled) {
-        try {
-          await member.send(
-            `🏆 **Достижение разблокировано!**\n\n` +
-              `${achievement.name}\n` +
-              `${achievement.description}\n` +
-              `+${achievement.points} очков рейтинга! 🌟\n\n` +
-              `💡 Посмотреть все достижения:\n` +
-              `📱 В боте: \`.!. achievements\`\n` +
-              `🌐 Веб-панель: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
-          );
-        } catch (error) {
-          console.log(
-            `Не удалось отправить уведомление о достижении пользователю ${username}`
-          );
-        }
-      }
-
-      // Отправляем в Telegram
-      sendTelegramReport(
-        `🏆 <b>Новое достижение!</b>\n` +
-          `👤 Пользователь: ${username}\n` +
-          `🎯 Достижение: ${achievement.name}\n` +
-          `📝 Описание: ${achievement.description}\n` +
-          `⭐ Очки: +${achievement.points}\n` +
-          `📅 Время: ${formatTime(new Date())}`
-      );
-
-      // Отправляем уведомление в канал Discord
+    // Отправляем уведомление (проверяем настройки)
+    const member = client.users.cache.get(userId);
+    const achievementNotificationsEnabled =
+      getUserAchievementNotificationSetting(userId);
+    
+    console.log(`👤 Member: ${member ? member.username : "НЕ НАЙДЕН"}, Уведомления: ${achievementNotificationsEnabled}`);
+    
+    if (member && achievementNotificationsEnabled) {
       try {
-        const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
-        if (channel) {
-          await channel.send(
-            `🏆 **Новое достижение!**\n\n` +
-              `👤 **Пользователь:** <@${userId}> (${username})\n` +
-              `🎯 **Достижение:** ${achievement.name}\n` +
-              `📝 **Описание:** ${achievement.description}\n` +
-              `⭐ **Очки:** +${achievement.points}\n` +
-              `📅 **Время:** ${formatTime(new Date())}`
-          );
-        }
+        const messageText = `🏆 **Новое достижение!**\n\n` +
+          `${achievement.name}\n` +
+          `${achievement.description}\n` +
+          `+${achievement.points} очков рейтинга! 🌟\n\n`;
+
+        await member.send(
+          messageText +
+            `💡 Посмотреть все достижения:\n` +
+            `📱 В боте: \`.!. achievements\`\n` +
+            `🌐 Веб-панель: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
+        );
+        console.log(`✅ ЛС отправлено пользователю ${username}`);
       } catch (error) {
         console.log(
-          `Не удалось отправить уведомление о достижении в канал: ${error.message}`
+          `❌ Не удалось отправить уведомление о достижении пользователю ${username}: ${error.message}`
         );
       }
-
-      return true;
     }
+
+    // Отправляем в Telegram
+    const telegramText = `🏆 <b>Новое достижение!</b>\n` +
+      `👤 Пользователь: ${username}\n` +
+      `🎯 Достижение: ${achievement.name}\n` +
+      `📝 Описание: ${achievement.description}\n` +
+      `⭐ Очки: +${achievement.points}\n` +
+      `📅 Время: ${formatTime(new Date())}`;
+
+    sendTelegramReport(telegramText);
+    console.log(`✅ Telegram отправлен`);
+
+    // Отправляем уведомление в канал Discord
+    try {
+      const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
+      console.log(`📢 Канал достижений: ${channel ? channel.name : "НЕ НАЙДЕН"}`);
+      if (channel) {
+        const discordText = `🏆 **Новое достижение!**\n\n` +
+          `👤 **Пользователь:** <@${userId}> (${username})\n` +
+          `🎯 **Достижение:** ${achievement.name}\n` +
+          `📝 **Описание:** ${achievement.description}\n` +
+          `⭐ **Очки:** +${achievement.points}\n` +
+          `📅 **Время:** ${formatTime(new Date())}`;
+
+        await channel.send(discordText);
+        console.log(`✅ Сообщение в канал отправлено`);
+      }
+    } catch (error) {
+      console.log(
+        `❌ Не удалось отправить уведомление о достижении в канал: ${error.message}`
+      );
+    }
+
+    return true;
+  } else {
+    console.log(`❌ Достижение ${achievementId} не найдено в ACHIEVEMENTS!`);
   }
   return false;
 };
 
 const getUserAchievements = (userId) => {
-  // Получаем обычные достижения из user_achievements
+  // Получаем обычные достижения из user_achievements (исключаем удаленные)
   const stmt = db.prepare(`
     SELECT ua.*, ua.unlocked_at, NULL as emoji, NULL as name, NULL as description, NULL as color, NULL as type
     FROM user_achievements ua
-    WHERE ua.user_id = ?
+    WHERE ua.user_id = ? AND (ua.manually_deleted = 0 OR ua.manually_deleted IS NULL)
     ORDER BY ua.unlocked_at DESC
   `);
   const regularAchievements = stmt.all(userId);
 
   // Получаем специальные достижения из таблицы achievements
-  // ТОЛЬКО те, которые этот пользователь получил (есть в user_achievements)
-  // Возвращаем ВСЕ, даже если special_date в будущем - фильтровать будет на клиенте
+  // ТОЛЬКО те, которые этот пользователь получил (есть в user_achievements и не удалены)
   const specialStmt = db.prepare(`
     SELECT a.achievement_id, a.emoji, a.name, a.description, a.color, a.special_date, a.type,
            ua.unlocked_at
     FROM achievements a
     INNER JOIN user_achievements ua ON a.achievement_id = ua.achievement_id AND ua.user_id = ?
-    WHERE a.type = 'special'
+    WHERE a.type = 'special' AND (ua.manually_deleted = 0 OR ua.manually_deleted IS NULL)
     ORDER BY ua.unlocked_at DESC
   `);
   const specialAchievements = specialStmt.all(userId);
@@ -1491,35 +1525,40 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
       userName = userStats.username || "Пользователь ID: " + userId;
     }
 
-    // Удаляем запись о достижении у пользователя из user_achievements
-    db.prepare(
-      `
-      DELETE FROM user_achievements WHERE user_id = ? AND achievement_id = ?
-    `
-    ).run(userId, achievementId);
+    // Проверяем, есть ли запись о достижении в user_achievements
+    const existingAchievement = db
+      .prepare(
+        `SELECT id FROM user_achievements WHERE user_id = ? AND achievement_id = ?`
+      )
+      .get(userId, achievementId);
+
+    if (existingAchievement) {
+      // Помечаем достижение как вручную удаленное (флаг manually_deleted = 1)
+      // Это позволит пользователю получить достижение снова по условиям
+      db.prepare(
+        `UPDATE user_achievements SET manually_deleted = 1 WHERE user_id = ? AND achievement_id = ?`
+      ).run(userId, achievementId);
+      console.log(`🗑️ Достижение ${achievementId} помечено как удаленное (manually_deleted = 1)`);
+
+      // Если это обычное достижение (из ACHIEVEMENTS), вычитаем очки
+      if (achievement && achievement.points > 0) {
+        db.prepare(
+          `UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?`
+        ).run(achievement.points, userId);
+        console.log(`💔 Вычтено ${achievement.points} очков`);
+      } else if (achievementPoints > 0) {
+        // Если это спец. достижение с очками, тоже вычитаем
+        db.prepare(
+          `UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?`
+        ).run(achievementPoints, userId);
+        console.log(`💔 Вычтено ${achievementPoints} очков`);
+      }
+    }
 
     // Также удаляем из таблицы achievements если это специальное достижение
     db.prepare(
-      `
-      DELETE FROM achievements WHERE user_id = ? AND achievement_id = ?
-    `
+      `DELETE FROM achievements WHERE user_id = ? AND achievement_id = ?`
     ).run(userId, achievementId);
-
-    // Если это обычное достижение (из ACHIEVEMENTS), вычитаем очки
-    if (achievement && achievement.points > 0) {
-      db.prepare(
-        `
-        UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?
-      `
-      ).run(achievement.points, userId);
-    } else if (achievementPoints > 0) {
-      // Если это спец. достижение с очками, тоже вычитаем
-      db.prepare(
-        `
-        UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?
-      `
-      ).run(achievementPoints, userId);
-    }
 
     // Отправляем отчет в Telegram
     const achievementPointsText =
@@ -1528,7 +1567,8 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
       `🗑️ <b>Достижение удалено!</b>\n` +
         `👤 Пользователь: ${userName}\n` +
         `🎯 Достижение: ${achievementName}\n` +
-        `📅 Время: ${formatTime(new Date())}${achievementPointsText}`
+        `📅 Время: ${formatTime(new Date())}${achievementPointsText}\n` +
+        `✅ Пользователь может получить его заново`
     );
 
     res.json({ success: true });
@@ -1981,6 +2021,8 @@ app.get("/", (req, res) => {
             .user-search button {
                 width: 100%;
                 max-width: 200px;
+                width: auto;
+                max-width: 100%;
             }
             
             .tabs {
@@ -2058,7 +2100,7 @@ app.get("/", (req, res) => {
             }
             
             .header h1 {
-                font-size: 1.8rem;
+                font-size: 1.6rem;
                 margin-bottom: 8px;
             }
             
@@ -2143,6 +2185,23 @@ app.get("/", (req, res) => {
             .rank {
                 font-size: 1rem;
             }
+        }
+
+        @media screen and (max-width: 400px) {
+          
+        #manualInputSection{
+            flex-direction: column;
+        }
+        .SpecialAchievementForm-title{
+        font-size: 17px;
+        }
+        .SpecialAchievementForm-group{
+            flex-direction: column;
+            gap: 15px;
+            }
+        #specialAchievementUserId{
+        text-align: left !important;
+        }
         }
 
         /* Адаптация для очень маленьких экранов */
@@ -2507,66 +2566,70 @@ app.get("/", (req, res) => {
                 
                 <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <input type="text" id="userIdInput" placeholder="Discord ID" style="flex: 1;">
-                    <button onclick="loadUserData()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
+                    <button onclick="loadUserData()" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
                 </div>
                 
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; flex: 1; padding: 10px 20px; background-color: #FFD700; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; height: fit-content;">⭐ Создать спец. достижение</button>
+                    <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; flex: 1; padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">⭐ Создать спец. достижение</button>
                 </div>
             </div>
             
             <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
             <div id="createSpecialAchievementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #FFD700; border-radius: 10px; padding: 20px; width: 90%; max-width: 600px;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #a45eea; border-radius: 10px; padding: 20px; width: 90%; max-width: 600px; height: 80vh; overflow: auto; scrollbar-width: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="color: #FFD700; margin: 0;">⭐ Создать спец. достижение</h2>
-                        <button onclick="closeCreateSpecialAchievementModal()" style="background: none; border: none; color: #FFD700; font-size: 24px; cursor: pointer;">&times;</button>
+                        <h2 class="SpecialAchievementForm-title" style="color: white; margin: 0 auto;">⭐ Создать спец. достижение</h2>
+                        <button onclick="closeCreateSpecialAchievementModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
                     </div>
                     
                     <form id="createSpecialAchievementForm">
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Эмодзи достижения:</label>
-                            <input type="text" id="specialAchievementEmoji" maxlength="2" placeholder="🏆" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;" oninput="updateSpecialAchievementPreview()">
+                        <div class="SpecialAchievementForm-group" style="display: flex;justify-content: space-evenly;margin-bottom: 15px;">
+        <div style="display: flex;flex-direction: column;">
+                            <label style="color: white; display: block; margin-bottom: 5px;text-align: center;">Эмодзи достижения:</label>
+                            <input type="text" id="specialAchievementEmoji" maxlength="2" placeholder="🏆" style="width: 30%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; text-align: center;margin: 0 auto;" oninput="updateSpecialAchievementPreview()">
                         </div>
                         
                         <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Название достижения:</label>
-                            <input type="text" id="specialAchievementName" placeholder="Название" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;" oninput="updateSpecialAchievementPreview()">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Discord ID пользователя:</label>
+                            <input type="text" id="specialAchievementUserId" placeholder="123456789" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; text-align:center;">
+                        </div>
+    </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Название достижения:</label>
+                            <input type="text" id="specialAchievementName" placeholder="Название" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;" oninput="updateSpecialAchievementPreview()">
                         </div>
                         
                         <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Описание:</label>
-                            <textarea id="specialAchievementDescription" placeholder="Описание достижения" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px; resize: vertical; min-height: 60px;"></textarea>
+                            <label style="color: white;; display: block; margin-bottom: 5px;">Описание:</label>
+                            <textarea id="specialAchievementDescription" placeholder="Описание достижения" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; resize: vertical; min-height: 60px;"></textarea>
                         </div>
                         
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Discord ID пользователя:</label>
-                            <input type="text" id="specialAchievementUserId" placeholder="123456789" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;">
-                        </div>
+                        
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
                             <div>
-                                <label style="color: #FFD700; display: block; margin-bottom: 5px;">Дата:</label>
-                                <input type="date" id="specialAchievementDate" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;">
+                                <label style="color: white; display: block; margin-bottom: 5px;">Дата:</label>
+                                <input type="date" id="specialAchievementDate" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;">
                             </div>
                             <div>
-                                <label style="color: #FFD700; display: block; margin-bottom: 5px;">Время:</label>
-                                <input type="time" id="specialAchievementTime" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; color: #FFD700; border-radius: 5px;">
+                                <label style="color: white; display: block; margin-bottom: 5px;">Время:</label>
+                                <input type="time" id="specialAchievementTime" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;">
                             </div>
                         </div>
                         
                         <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Цвет:</label>
-                            <input type="color" id="specialAchievementColor" value="#FFD700" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #FFD700; border-radius: 5px; cursor: pointer;" oninput="updateSpecialAchievementPreview()">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Цвет:</label>
+                            <input type="color" id="specialAchievementColor" value="#a45eea" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px; cursor: pointer;" oninput="updateSpecialAchievementPreview()">
                         </div>
                         
                         <div style="margin-bottom: 15px;">
-                            <label style="color: #FFD700; display: block; margin-bottom: 5px;">Превью:</label>
-                            <div id="specialAchievementPreview" style="padding: 10px; background: #0a0a0a; border: 1px solid #FFD700; border-radius: 5px;"></div>
+                            <label style="color: white; display: block; margin-bottom: 5px;">Превью:</label>
+                            <div id="specialAchievementPreview" style="padding: 10px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px;"></div>
                         </div>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <button type="button" onclick="createSpecialAchievement()" style="padding: 10px; background-color: #FFD700; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Создать</button>
+                            <button type="button" onclick="createSpecialAchievement()" style="padding: 10px; background-color: #a45eea; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Создать</button>
                             <button type="button" onclick="closeCreateSpecialAchievementModal()" style="padding: 10px; background-color: #555; color: #fff; border: none; border-radius: 5px; cursor: pointer;">Отмена</button>
                         </div>
                     </form>
@@ -3677,8 +3740,13 @@ modalUnlockedAchievements.forEach(achievement => {
 
         document.addEventListener('click', function(event) {
             const modal = document.getElementById('achievementsModal');
+            const createModal = document.getElementById('createSpecialAchievementModal');
+            
             if (modal && event.target === modal) {
                 closeModal();
+            }
+            if (createModal && event.target === createModal) {
+                closeCreateSpecialAchievementModal();
             }
         });
 
@@ -3715,11 +3783,13 @@ modalUnlockedAchievements.forEach(achievement => {
         // ===== ФУНКЦИИ СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ =====
         function openCreateSpecialAchievementModal() {
             document.getElementById('createSpecialAchievementModal').style.display = 'block';
+            document.body.classList.add('modal-open');
             updateSpecialAchievementPreview();
         }
 
         function closeCreateSpecialAchievementModal() {
             document.getElementById('createSpecialAchievementModal').style.display = 'none';
+            document.body.classList.remove('modal-open');
         }
 
         function updateSpecialAchievementPreview() {
