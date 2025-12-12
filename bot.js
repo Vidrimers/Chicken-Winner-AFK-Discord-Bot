@@ -59,6 +59,7 @@ db.exec(`
     user_id TEXT,
     achievement_id TEXT,
     unlocked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    manually_deleted BOOLEAN DEFAULT 0,
     UNIQUE(user_id, achievement_id)
   )
 `);
@@ -136,6 +137,12 @@ try {
 try {
   db.exec(
     `ALTER TABLE achievements ADD COLUMN notifications_sent BOOLEAN DEFAULT 0`
+  );
+} catch (error) {}
+
+try {
+  db.exec(
+    `ALTER TABLE user_achievements ADD COLUMN manually_deleted BOOLEAN DEFAULT 0`
   );
 } catch (error) {}
 
@@ -678,104 +685,131 @@ const getTopUsers = (limit = 10) => {
 const checkAndUnlockAchievement = async (userId, username, achievementId) => {
   // Проверяем, есть ли уже такое достижение
   const checkStmt = db.prepare(`
-    SELECT * FROM user_achievements WHERE user_id = ? AND achievement_id = ?
+    SELECT * FROM user_achievements 
+    WHERE user_id = ? AND achievement_id = ?
   `);
   const existing = checkStmt.get(userId, achievementId);
 
-  // Если достижение уже есть, возвращаем false (не новое)
-  if (existing) {
+  // Если достижение уже разблокировано (и не удалено) - не добавляем снова
+  if (existing && !existing.manually_deleted) {
+    console.log(`⏭️ Достижение ${achievementId} уже есть у пользователя ${username}`);
     return false;
   }
+  
+  console.log(`✅ Добавляем новое достижение ${achievementId} пользователю ${username}`);
+  
+  // Если достижение было удалено (manually_deleted = 1), обновляем флаг и время
+  // Иначе добавляем новое достижение
+  if (existing && existing.manually_deleted) {
+    console.log(`♻️ Восстанавливаем удаленное достижение ${achievementId}`);
+    db.prepare(`
+      UPDATE user_achievements 
+      SET manually_deleted = 0, unlocked_at = CURRENT_TIMESTAMP
+      WHERE user_id = ? AND achievement_id = ?
+    `).run(userId, achievementId);
+  } else {
+    const stmt = db.prepare(`
+      INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, manually_deleted) 
+      VALUES (?, ?, CURRENT_TIMESTAMP, 0)
+    `);
+    stmt.run(userId, achievementId);
+  }
 
-  // Добавляем новое достижение
-  const stmt = db.prepare(`
-    INSERT INTO user_achievements (user_id, achievement_id, unlocked_at) 
-    VALUES (?, ?, CURRENT_TIMESTAMP)
-  `);
-  const result = stmt.run(userId, achievementId);
+  // Получаем достижение для отправки уведомлений
+  const achievement = ACHIEVEMENTS[achievementId];
+  console.log(`🔍 Ищем в ACHIEVEMENTS[${achievementId}]:`, achievement ? "✅ НАЙДЕНО" : "❌ НЕ НАЙДЕНО");
+  
+  if (achievement) {
+    console.log(`📤 Отправляем уведомления для достижения: ${achievement.name}`);
+    
+    // Всегда добавляем очки
+    incrementUserStat(userId, "rank_points", achievement.points);
 
-  if (result.changes > 0) {
-    const achievement = ACHIEVEMENTS[achievementId];
-    if (achievement) {
-      // Добавляем очки
-      incrementUserStat(userId, "rank_points", achievement.points);
-
-      // Отправляем уведомление (проверяем настройки)
-      const member = client.users.cache.get(userId);
-      const achievementNotificationsEnabled =
-        getUserAchievementNotificationSetting(userId);
-      if (member && achievementNotificationsEnabled) {
-        try {
-          await member.send(
-            `🏆 **Достижение разблокировано!**\n\n` +
-              `${achievement.name}\n` +
-              `${achievement.description}\n` +
-              `+${achievement.points} очков рейтинга! 🌟\n\n` +
-              `💡 Посмотреть все достижения:\n` +
-              `📱 В боте: \`.!. achievements\`\n` +
-              `🌐 Веб-панель: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
-          );
-        } catch (error) {
-          console.log(
-            `Не удалось отправить уведомление о достижении пользователю ${username}`
-          );
-        }
-      }
-
-      // Отправляем в Telegram
-      sendTelegramReport(
-        `🏆 <b>Новое достижение!</b>\n` +
-          `👤 Пользователь: ${username}\n` +
-          `🎯 Достижение: ${achievement.name}\n` +
-          `📝 Описание: ${achievement.description}\n` +
-          `⭐ Очки: +${achievement.points}\n` +
-          `📅 Время: ${formatTime(new Date())}`
-      );
-
-      // Отправляем уведомление в канал Discord
+    // Отправляем уведомление (проверяем настройки)
+    const member = client.users.cache.get(userId);
+    const achievementNotificationsEnabled =
+      getUserAchievementNotificationSetting(userId);
+    
+    console.log(`👤 Member: ${member ? member.username : "НЕ НАЙДЕН"}, Уведомления: ${achievementNotificationsEnabled}`);
+    
+    if (member && achievementNotificationsEnabled) {
       try {
-        const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
-        if (channel) {
-          await channel.send(
-            `🏆 **Новое достижение!**\n\n` +
-              `👤 **Пользователь:** <@${userId}> (${username})\n` +
-              `🎯 **Достижение:** ${achievement.name}\n` +
-              `📝 **Описание:** ${achievement.description}\n` +
-              `⭐ **Очки:** +${achievement.points}\n` +
-              `📅 **Время:** ${formatTime(new Date())}`
-          );
-        }
+        const messageText = `🏆 **Новое достижение!**\n\n` +
+          `${achievement.name}\n` +
+          `${achievement.description}\n` +
+          `+${achievement.points} очков рейтинга! 🌟\n\n`;
+
+        await member.send(
+          messageText +
+            `💡 Посмотреть все достижения:\n` +
+            `📱 В боте: \`.!. achievements\`\n` +
+            `🌐 Веб-панель: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
+        );
+        console.log(`✅ ЛС отправлено пользователю ${username}`);
       } catch (error) {
         console.log(
-          `Не удалось отправить уведомление о достижении в канал: ${error.message}`
+          `❌ Не удалось отправить уведомление о достижении пользователю ${username}: ${error.message}`
         );
       }
-
-      return true;
     }
+
+    // Отправляем в Telegram
+    const telegramText = `🏆 <b>Новое достижение!</b>\n` +
+      `👤 Пользователь: ${username}\n` +
+      `🎯 Достижение: ${achievement.name}\n` +
+      `📝 Описание: ${achievement.description}\n` +
+      `⭐ Очки: +${achievement.points}\n` +
+      `📅 Время: ${formatTime(new Date())}`;
+
+    sendTelegramReport(telegramText);
+    console.log(`✅ Telegram отправлен`);
+
+    // Отправляем уведомление в канал Discord
+    try {
+      const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
+      console.log(`📢 Канал достижений: ${channel ? channel.name : "НЕ НАЙДЕН"}`);
+      if (channel) {
+        const discordText = `🏆 **Новое достижение!**\n\n` +
+          `👤 **Пользователь:** <@${userId}> (${username})\n` +
+          `🎯 **Достижение:** ${achievement.name}\n` +
+          `📝 **Описание:** ${achievement.description}\n` +
+          `⭐ **Очки:** +${achievement.points}\n` +
+          `📅 **Время:** ${formatTime(new Date())}`;
+
+        await channel.send(discordText);
+        console.log(`✅ Сообщение в канал отправлено`);
+      }
+    } catch (error) {
+      console.log(
+        `❌ Не удалось отправить уведомление о достижении в канал: ${error.message}`
+      );
+    }
+
+    return true;
+  } else {
+    console.log(`❌ Достижение ${achievementId} не найдено в ACHIEVEMENTS!`);
   }
   return false;
 };
 
 const getUserAchievements = (userId) => {
-  // Получаем обычные достижения из user_achievements
+  // Получаем обычные достижения из user_achievements (исключаем удаленные)
   const stmt = db.prepare(`
     SELECT ua.*, ua.unlocked_at, NULL as emoji, NULL as name, NULL as description, NULL as color, NULL as type
     FROM user_achievements ua
-    WHERE ua.user_id = ?
+    WHERE ua.user_id = ? AND (ua.manually_deleted = 0 OR ua.manually_deleted IS NULL)
     ORDER BY ua.unlocked_at DESC
   `);
   const regularAchievements = stmt.all(userId);
 
   // Получаем специальные достижения из таблицы achievements
-  // ТОЛЬКО те, которые этот пользователь получил (есть в user_achievements)
-  // Возвращаем ВСЕ, даже если special_date в будущем - фильтровать будет на клиенте
+  // ТОЛЬКО те, которые этот пользователь получил (есть в user_achievements и не удалены)
   const specialStmt = db.prepare(`
     SELECT a.achievement_id, a.emoji, a.name, a.description, a.color, a.special_date, a.type,
            ua.unlocked_at
     FROM achievements a
     INNER JOIN user_achievements ua ON a.achievement_id = ua.achievement_id AND ua.user_id = ?
-    WHERE a.type = 'special'
+    WHERE a.type = 'special' AND (ua.manually_deleted = 0 OR ua.manually_deleted IS NULL)
     ORDER BY ua.unlocked_at DESC
   `);
   const specialAchievements = specialStmt.all(userId);
@@ -1491,35 +1525,40 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
       userName = userStats.username || "Пользователь ID: " + userId;
     }
 
-    // Удаляем запись о достижении у пользователя из user_achievements
-    db.prepare(
-      `
-      DELETE FROM user_achievements WHERE user_id = ? AND achievement_id = ?
-    `
-    ).run(userId, achievementId);
+    // Проверяем, есть ли запись о достижении в user_achievements
+    const existingAchievement = db
+      .prepare(
+        `SELECT id FROM user_achievements WHERE user_id = ? AND achievement_id = ?`
+      )
+      .get(userId, achievementId);
+
+    if (existingAchievement) {
+      // Помечаем достижение как вручную удаленное (флаг manually_deleted = 1)
+      // Это позволит пользователю получить достижение снова по условиям
+      db.prepare(
+        `UPDATE user_achievements SET manually_deleted = 1 WHERE user_id = ? AND achievement_id = ?`
+      ).run(userId, achievementId);
+      console.log(`🗑️ Достижение ${achievementId} помечено как удаленное (manually_deleted = 1)`);
+
+      // Если это обычное достижение (из ACHIEVEMENTS), вычитаем очки
+      if (achievement && achievement.points > 0) {
+        db.prepare(
+          `UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?`
+        ).run(achievement.points, userId);
+        console.log(`💔 Вычтено ${achievement.points} очков`);
+      } else if (achievementPoints > 0) {
+        // Если это спец. достижение с очками, тоже вычитаем
+        db.prepare(
+          `UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?`
+        ).run(achievementPoints, userId);
+        console.log(`💔 Вычтено ${achievementPoints} очков`);
+      }
+    }
 
     // Также удаляем из таблицы achievements если это специальное достижение
     db.prepare(
-      `
-      DELETE FROM achievements WHERE user_id = ? AND achievement_id = ?
-    `
+      `DELETE FROM achievements WHERE user_id = ? AND achievement_id = ?`
     ).run(userId, achievementId);
-
-    // Если это обычное достижение (из ACHIEVEMENTS), вычитаем очки
-    if (achievement && achievement.points > 0) {
-      db.prepare(
-        `
-        UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?
-      `
-      ).run(achievement.points, userId);
-    } else if (achievementPoints > 0) {
-      // Если это спец. достижение с очками, тоже вычитаем
-      db.prepare(
-        `
-        UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?
-      `
-      ).run(achievementPoints, userId);
-    }
 
     // Отправляем отчет в Telegram
     const achievementPointsText =
@@ -1528,7 +1567,8 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
       `🗑️ <b>Достижение удалено!</b>\n` +
         `👤 Пользователь: ${userName}\n` +
         `🎯 Достижение: ${achievementName}\n` +
-        `📅 Время: ${formatTime(new Date())}${achievementPointsText}`
+        `📅 Время: ${formatTime(new Date())}${achievementPointsText}\n` +
+        `✅ Пользователь может получить его заново`
     );
 
     res.json({ success: true });
