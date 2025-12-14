@@ -2649,6 +2649,7 @@ app.get("/", (req, res) => {
                 <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <input type="text" id="userIdInput" placeholder="Discord ID" style="flex: 1;">
                     <button onclick="loadUserData()" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
+                    <button id="clearBtn" onclick="clearSavedUserId()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">❌ Выход</button>
                 </div>
                 
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
@@ -2798,12 +2799,31 @@ app.get("/", (req, res) => {
             }
         }
 
+        // ===== ФУНКЦИИ ДЛЯ РАБОТЫ С localStorage =====
+        function loadSavedUserId() {
+            const savedUserId = localStorage.getItem('afkBotUserId');
+            if (savedUserId) {
+                console.log('💾 Загружаю сохраненный userId:', savedUserId);
+                return savedUserId;
+            }
+            return null;
+        }
+
+        function clearSavedUserId() {
+            localStorage.removeItem('afkBotUserId');
+            console.log('🗑️ Сохраненный userId очищен');
+            document.getElementById('userIdInput').value = '';
+            location.reload();
+        }
+
         async function checkAuthStatus() {
             try {
                 const response = await fetch('/api/session');
                 const data = await response.json();
                 if (data.userId) {
                     currentUserId = data.userId;
+                    // Сохраняем в localStorage
+                    localStorage.setItem('afkBotUserId', data.userId);
                     // Не показываем никакие элементы авторизации
                     // Просто загружаем данные пользователя
                     setTimeout(() => loadUserDataAuto(data.userId), 100);
@@ -2824,10 +2844,13 @@ app.get("/", (req, res) => {
         async function loadUserDataAuto(userId) {
             console.log('🔵 loadUserDataAuto вызвана с userId:', userId);
             currentUserId = userId;
+            // ✅ Сохраняем userId в localStorage
+            localStorage.setItem('afkBotUserId', userId);
             document.getElementById('loading').style.display = 'block';
             document.getElementById('userContent').style.display = 'none';
             document.getElementById('userIdDisplay').style.display = 'none';
-            document.getElementById('userIdInput').value = '';
+            // ✅ Вместо очистки, показываем ID в поле ввода
+            document.getElementById('userIdInput').value = userId;
             
             try {
                 const response = await fetch(\`/api/stats/\${userId}\`);
@@ -2858,6 +2881,9 @@ app.get("/", (req, res) => {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('userContent').style.display = 'block';
                 document.getElementById('userIdDisplay').style.display = 'block';
+                
+                // ✅ Показываем кнопку выхода
+                document.getElementById('clearBtn').style.display = 'block';
                 
                 if (currentUserId === ADMIN_USER_ID) {
                     document.getElementById('createSpecialAchievementBtn').style.display = 'block';
@@ -2895,6 +2921,8 @@ app.get("/", (req, res) => {
             if (!userId) return;
             
             currentUserId = userId;
+            // ✅ Сохраняем userId в localStorage
+            localStorage.setItem('afkBotUserId', userId);
             document.getElementById('loading').style.display = 'block';
             document.getElementById('userContent').style.display = 'none';
             document.getElementById('userIdDisplay').style.display = 'none';
@@ -2931,6 +2959,9 @@ app.get("/", (req, res) => {
                 
                 document.getElementById('currentUserId').textContent = userId;
                 document.getElementById('userIdDisplay').style.display = 'block';
+                
+                // ✅ Показываем кнопку выхода
+                document.getElementById('clearBtn').style.display = 'block';
                 
                 // Показать кнопку создания спец. достижения для админа
                 if (userId === ADMIN_USER_ID) {
@@ -4021,7 +4052,16 @@ modalUnlockedAchievements.forEach(achievement => {
                 loadUserDataAuto(userIdParam);
             } else {
                 // Проверяем активную сессию
-                checkAuthStatus();
+                const authOk = await checkAuthStatus();
+                
+                // ✅ Если нет активной сессии, загружаем сохраненный userId
+                if (!authOk) {
+                    const savedUserId = loadSavedUserId();
+                    if (savedUserId) {
+                        console.log('📱 Автоматически загружаю сохраненного пользователя:', savedUserId);
+                        setTimeout(() => loadUserDataAuto(savedUserId), 500);
+                    }
+                }
             }
         });
 
@@ -4067,7 +4107,13 @@ client.on("messageCreate", async (message) => {
         message.reference.messageId
       );
       // Проверяем, был ли упомянут текущий пользователь в том сообщении
-      if (repliedTo.mentions.has(userId)) {
+      // Также проверяем, содержит ли исходное сообщение User ID в формате <@userId>
+      const userMentioned =
+        repliedTo.mentions.has(userId) ||
+        repliedTo.content.includes(`<@${userId}>`) ||
+        repliedTo.content.includes(`<@!${userId}>`);
+
+      if (userMentioned) {
         incrementUserStat(userId, "mentions_responded");
         await checkAchievements(userId, username);
       }
