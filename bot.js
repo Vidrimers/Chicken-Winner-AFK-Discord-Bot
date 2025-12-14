@@ -1204,7 +1204,7 @@ app.post("/api/settings/:userId", async (req, res) => {
 
     if (
       afkTimeout !== undefined &&
-      [15, 30, 45].includes(afkTimeout) &&
+      [10, 15, 30, 45].includes(afkTimeout) &&
       afkTimeout !== currentTimeout
     ) {
       setUserTimeout(userId, afkTimeout);
@@ -1252,6 +1252,16 @@ app.post("/api/settings/:userId", async (req, res) => {
         const timeoutValue =
           afkTimeout !== undefined ? afkTimeout : currentTimeout;
 
+        // Формируем правильное отображение времени
+        let timeoutDisplay;
+        if (timeoutValue < 15) {
+          // Это секунды
+          timeoutDisplay = timeoutValue + " секунд";
+        } else {
+          // Это минуты
+          timeoutDisplay = timeoutValue + " минут";
+        }
+
         const achievementStatus =
           achievementNotifications !== undefined
             ? achievementNotifications
@@ -1266,7 +1276,7 @@ app.post("/api/settings/:userId", async (req, res) => {
             `👤 Пользователь: ${username}\n` +
             `🆔 ID: <code>${userId}</code>\n` +
             `📩 ЛС уведомления: ${dmStatus}\n` +
-            `⏱️ Таймер AFK: ${timeoutValue} минут\n` +
+            `⏱️ Таймер AFK: ${timeoutDisplay}\n` +
             `🏆 Уведомления о достижениях: ${achievementStatus}\n` +
             `📅 Время: ${formatTime(new Date())}`
         );
@@ -2741,6 +2751,7 @@ app.get("/", (req, res) => {
                                                 <div class="form-group">
                             <label>⏰ Время до AFK:</label>
                             <select id="afkTimeout">
+                                <option value="10" class="admin-option" style="display: none;">10 секунд</option>
                                 <option value="15">15 минут</option>
                                 <option value="30">30 минут</option>
                                 <option value="45">45 минут</option>
@@ -2850,6 +2861,11 @@ app.get("/", (req, res) => {
                 
                 if (currentUserId === ADMIN_USER_ID) {
                     document.getElementById('createSpecialAchievementBtn').style.display = 'block';
+                    
+                    // Показываем админ-опции для времени AFK
+                    document.querySelectorAll('.admin-option').forEach(option => {
+                        option.style.display = 'block';
+                    });
                 }
             } catch (error) {
                 console.error('❌ Ошибка загрузки данных:', error);
@@ -2919,6 +2935,11 @@ app.get("/", (req, res) => {
                 // Показать кнопку создания спец. достижения для админа
                 if (userId === ADMIN_USER_ID) {
                     document.getElementById('createSpecialAchievementBtn').style.display = 'inline-block';
+                    
+                    // Показываем админ-опции для времени AFK
+                    document.querySelectorAll('.admin-option').forEach(option => {
+                        option.style.display = 'block';
+                    });
                 } else {
                     document.getElementById('createSpecialAchievementBtn').style.display = 'none';
                 }
@@ -4781,6 +4802,16 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       const userTimeout = getUserTimeout(userId);
       const dmEnabled = getUserDMSetting(userId);
 
+      // Формируем правильное отображение времени
+      let timeoutDisplay;
+      if (userTimeout < 15) {
+        // Это секунды
+        timeoutDisplay = userTimeout + " секунд";
+      } else {
+        // Это минуты
+        timeoutDisplay = userTimeout + " минут";
+      }
+
       console.log(`🎙️❌ ${username} отключил микрофон`);
       clearInactivityTimer(userId);
       startInactivityTimer(member, newState.guild);
@@ -4794,7 +4825,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
           `📺 Канал: ${newState.channel.name}\n` +
-          `⏱️ Запущен таймер на: ${userTimeout} минут\n` +
+          `⏱️ Запущен таймер на: ${timeoutDisplay}\n` +
           `📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}\n` +
           `📅 Время: ${formatTime(new Date())}`
       );
@@ -4802,7 +4833,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       if (dmEnabled) {
         await member
           .send(
-            `🎙️❌ Похоже ты решил побыть AFK, раз отключил микрофон, через ${userTimeout} минут ты окажешься в токсичном канале, подумай об этом\n\n💡 Чтобы отключить эти уведомления, напиши \`.!.\` на сервере`
+            `🎙️❌ Похоже ты решил побыть AFK, раз отключил микрофон, через ${timeoutDisplay} ты окажешься в токсичном канале, подумай об этом\n\n💡 Чтобы отключить эти уведомления, напиши \`.!.\` на сервере`
           )
           .catch(() => {
             console.log(`❌ Не удалось отправить ЛС пользователю ${username}`);
@@ -4911,8 +4942,21 @@ function startInactivityTimer(member, guild) {
   const userId = member.id;
   const username = member.user.username;
   const userTimeout = getUserTimeout(userId);
-  const timeoutMs = userTimeout * 60 * 1000;
 
+  // Если значение меньше 15, то это секунды (админ опции: 10, 60), иначе минуты
+  let timeoutMs;
+  let timeoutDisplay;
+
+  if (userTimeout < 15) {
+    // Это секунды
+    timeoutMs = userTimeout * 1000;
+    timeoutDisplay = userTimeout + " секунд";
+  } else {
+    // Это минуты
+    timeoutMs = userTimeout * 60 * 1000;
+    timeoutDisplay = userTimeout + " минут";
+  }
+  console.log(`⏰ Таймер неактивности для ${username}: ${timeoutDisplay}`);
   console.log(`🔍 Поиск AFK канала с ID: ${AFK_CHANNEL_ID}`);
 
   const AFK_CHANNEL = guild.channels.cache.get(AFK_CHANNEL_ID);
@@ -4932,12 +4976,20 @@ function startInactivityTimer(member, guild) {
 
   const timeoutId = setTimeout(async () => {
     try {
+      console.log(
+        `⏳ Проверяем пользователя ${username} (ID: ${userId}) через ${timeoutDisplay}`
+      );
       const currentMember = guild.members.cache.get(userId);
 
       if (currentMember && currentMember.voice.channel) {
+        console.log(
+          `🎤 ${username} все еще в канале: ${currentMember.voice.channel.name}`
+        );
+        console.log(`🎙️ selfMute: ${currentMember.voice.selfMute}`);
+
         if (!currentMember.voice.selfMute) {
           console.log(
-            `🎙️ ${username} включил микрофон, отменяем перемещение в AFK`
+            `🎙️ ${username} включил микрофон или микрофон не отключен, отменяем перемещение в AFK`
           );
           return;
         }
@@ -4962,7 +5014,7 @@ function startInactivityTimer(member, guild) {
         await checkAchievements(userId, username);
 
         console.log(
-          `⏰ ${username} переемещен в AFK за неактивность (${userTimeout} мин)`
+          `⏰ ${username} переемещен в AFK за неактивность (${timeoutDisplay})`
         );
 
         const dmEnabled = getUserDMSetting(userId);
@@ -4972,7 +5024,7 @@ function startInactivityTimer(member, guild) {
             `🆔 ID: <code>${userId}</code>\n` +
             `📺 Из канала: ${originalChannelName}\n` +
             `📺 В канал: ${AFK_CHANNEL.name}\n` +
-            `⏱️ Неактивен: ${userTimeout} минут\n` +
+            `⏱️ Неактивен: ${timeoutDisplay}\n` +
             `📩 ЛС уведомления: ${
               dmEnabled ? "✅ включены" : "❌ отключены"
             }\n` +
@@ -4982,10 +5034,14 @@ function startInactivityTimer(member, guild) {
         if (dmEnabled) {
           await currentMember
             .send(
-              `⏰ Ты был неактивен ${userTimeout} минут, малютка, и был перемещен откисать в токсичный канал.\n\n💡 Чтобы изменить настройки, напиши \`.!.\` на сервере`
+              `⏰ Ты был неактивен ${timeoutDisplay}, малютка, и был перемещен откисать в токсичный канал.\n\n💡 Чтобы изменить настройки, напиши \`.!.\` на сервере`
             )
             .catch(() => {});
         }
+      } else {
+        console.log(
+          `❌ ${username} не найден в голосовых каналах или покинул канал`
+        );
       }
     } catch (error) {
       console.error("❌ Ошибка при перемещении в AFK:", error);
