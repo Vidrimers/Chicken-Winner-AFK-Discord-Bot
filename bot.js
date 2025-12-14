@@ -292,6 +292,18 @@ const ACHIEVEMENTS = {
     id: "chatty_user",
     name: "💬 Болтун",
     description: "Отправил 500+ сообщений в текстовых каналах",
+    points: 75,
+  },
+  flooter: {
+    id: "flooter",
+    name: "💬 Флудер",
+    description: "Отправил 750+ сообщений в текстовых каналах",
+    points: 100,
+  },
+  linguist: {
+    id: "linguist",
+    name: "💬 Лингвист",
+    description: "Отправил 1000+ сообщений в текстовых каналах",
     points: 150,
   },
   session_master: {
@@ -299,6 +311,24 @@ const ACHIEVEMENTS = {
     name: "🎯 Мастер сессий",
     description: "Участвовал в 100+ голосовых сессиях",
     points: 75,
+  },
+  frequent_guest: {
+    id: "frequent_guest",
+    name: "🎯 Частый гость",
+    description: "Участвовал в 200+ голосовых сессиях",
+    points: 150,
+  },
+  permanent_resident: {
+    id: "permanent_resident",
+    name: "🎯 Постоянный житель",
+    description: "Участвовал в 500+ голосовых сессиях",
+    points: 350,
+  },
+  session_lord: {
+    id: "session_lord",
+    name: "🎯 Властелин сессий",
+    description: "Участвовал в 1000+ голосовых сессиях",
+    points: 1000,
   },
   mention_responder: {
     id: "mention_responder",
@@ -692,21 +722,27 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
 
   // Если достижение уже разблокировано (и не удалено) - не добавляем снова
   if (existing && !existing.manually_deleted) {
-    console.log(`⏭️ Достижение ${achievementId} уже есть у пользователя ${username}`);
+    console.log(
+      `⏭️ Достижение ${achievementId} уже есть у пользователя ${username}`
+    );
     return false;
   }
-  
-  console.log(`✅ Добавляем новое достижение ${achievementId} пользователю ${username}`);
-  
+
+  console.log(
+    `✅ Добавляем новое достижение ${achievementId} пользователю ${username}`
+  );
+
   // Если достижение было удалено (manually_deleted = 1), обновляем флаг и время
   // Иначе добавляем новое достижение
   if (existing && existing.manually_deleted) {
     console.log(`♻️ Восстанавливаем удаленное достижение ${achievementId}`);
-    db.prepare(`
+    db.prepare(
+      `
       UPDATE user_achievements 
       SET manually_deleted = 0, unlocked_at = CURRENT_TIMESTAMP
       WHERE user_id = ? AND achievement_id = ?
-    `).run(userId, achievementId);
+    `
+    ).run(userId, achievementId);
   } else {
     const stmt = db.prepare(`
       INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, manually_deleted) 
@@ -717,11 +753,16 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
 
   // Получаем достижение для отправки уведомлений
   const achievement = ACHIEVEMENTS[achievementId];
-  console.log(`🔍 Ищем в ACHIEVEMENTS[${achievementId}]:`, achievement ? "✅ НАЙДЕНО" : "❌ НЕ НАЙДЕНО");
-  
+  console.log(
+    `🔍 Ищем в ACHIEVEMENTS[${achievementId}]:`,
+    achievement ? "✅ НАЙДЕНО" : "❌ НЕ НАЙДЕНО"
+  );
+
   if (achievement) {
-    console.log(`📤 Отправляем уведомления для достижения: ${achievement.name}`);
-    
+    console.log(
+      `📤 Отправляем уведомления для достижения: ${achievement.name}`
+    );
+
     // Всегда добавляем очки
     incrementUserStat(userId, "rank_points", achievement.points);
 
@@ -729,12 +770,17 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
     const member = client.users.cache.get(userId);
     const achievementNotificationsEnabled =
       getUserAchievementNotificationSetting(userId);
-    
-    console.log(`👤 Member: ${member ? member.username : "НЕ НАЙДЕН"}, Уведомления: ${achievementNotificationsEnabled}`);
-    
+
+    console.log(
+      `👤 Member: ${
+        member ? member.username : "НЕ НАЙДЕН"
+      }, Уведомления: ${achievementNotificationsEnabled}`
+    );
+
     if (member && achievementNotificationsEnabled) {
       try {
-        const messageText = `🏆 **Новое достижение!**\n\n` +
+        const messageText =
+          `🏆 **Новое достижение!**\n\n` +
           `${achievement.name}\n` +
           `${achievement.description}\n` +
           `+${achievement.points} очков рейтинга! 🌟\n\n`;
@@ -754,7 +800,8 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
     }
 
     // Отправляем в Telegram
-    const telegramText = `🏆 <b>Новое достижение!</b>\n` +
+    const telegramText =
+      `🏆 <b>Новое достижение!</b>\n` +
       `👤 Пользователь: ${username}\n` +
       `🎯 Достижение: ${achievement.name}\n` +
       `📝 Описание: ${achievement.description}\n` +
@@ -767,9 +814,12 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
     // Отправляем уведомление в канал Discord
     try {
       const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
-      console.log(`📢 Канал достижений: ${channel ? channel.name : "НЕ НАЙДЕН"}`);
+      console.log(
+        `📢 Канал достижений: ${channel ? channel.name : "НЕ НАЙДЕН"}`
+      );
       if (channel) {
-        const discordText = `🏆 **Новое достижение!**\n\n` +
+        const discordText =
+          `🏆 **Новое достижение!**\n\n` +
           `👤 **Пользователь:** <@${userId}> (${username})\n` +
           `🎯 **Достижение:** ${achievement.name}\n` +
           `📝 **Описание:** ${achievement.description}\n` +
@@ -888,6 +938,14 @@ const checkAchievements = async (userId, username) => {
     await checkAndUnlockAchievement(userId, username, "chatty_user");
   }
 
+  if (stats.messages_sent >= 750) {
+    await checkAndUnlockAchievement(userId, username, "flooter");
+  }
+
+  if (stats.messages_sent >= 1000) {
+    await checkAndUnlockAchievement(userId, username, "linguist");
+  }
+
   // Первое сообщение
   if (stats.messages_sent >= 1) {
     await checkAndUnlockAchievement(userId, username, "first_message");
@@ -904,6 +962,18 @@ const checkAchievements = async (userId, username) => {
 
   if (stats.total_sessions >= 100) {
     await checkAndUnlockAchievement(userId, username, "session_master");
+  }
+
+  if (stats.total_sessions >= 200) {
+    await checkAndUnlockAchievement(userId, username, "frequent_guest");
+  }
+
+  if (stats.total_sessions >= 500) {
+    await checkAndUnlockAchievement(userId, username, "permanent_resident");
+  }
+
+  if (stats.total_sessions >= 1000) {
+    await checkAndUnlockAchievement(userId, username, "session_lord");
   }
 
   // Упоминания
@@ -1134,7 +1204,7 @@ app.post("/api/settings/:userId", async (req, res) => {
 
     if (
       afkTimeout !== undefined &&
-      [15, 30, 45].includes(afkTimeout) &&
+      [10, 15, 30, 45].includes(afkTimeout) &&
       afkTimeout !== currentTimeout
     ) {
       setUserTimeout(userId, afkTimeout);
@@ -1182,6 +1252,16 @@ app.post("/api/settings/:userId", async (req, res) => {
         const timeoutValue =
           afkTimeout !== undefined ? afkTimeout : currentTimeout;
 
+        // Формируем правильное отображение времени
+        let timeoutDisplay;
+        if (timeoutValue < 15) {
+          // Это секунды
+          timeoutDisplay = timeoutValue + " секунд";
+        } else {
+          // Это минуты
+          timeoutDisplay = timeoutValue + " минут";
+        }
+
         const achievementStatus =
           achievementNotifications !== undefined
             ? achievementNotifications
@@ -1196,7 +1276,7 @@ app.post("/api/settings/:userId", async (req, res) => {
             `👤 Пользователь: ${username}\n` +
             `🆔 ID: <code>${userId}</code>\n` +
             `📩 ЛС уведомления: ${dmStatus}\n` +
-            `⏱️ Таймер AFK: ${timeoutValue} минут\n` +
+            `⏱️ Таймер AFK: ${timeoutDisplay}\n` +
             `🏆 Уведомления о достижениях: ${achievementStatus}\n` +
             `📅 Время: ${formatTime(new Date())}`
         );
@@ -1538,7 +1618,9 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
       db.prepare(
         `UPDATE user_achievements SET manually_deleted = 1 WHERE user_id = ? AND achievement_id = ?`
       ).run(userId, achievementId);
-      console.log(`🗑️ Достижение ${achievementId} помечено как удаленное (manually_deleted = 1)`);
+      console.log(
+        `🗑️ Достижение ${achievementId} помечено как удаленное (manually_deleted = 1)`
+      );
 
       // Если это обычное достижение (из ACHIEVEMENTS), вычитаем очки
       if (achievement && achievement.points > 0) {
@@ -2669,6 +2751,7 @@ app.get("/", (req, res) => {
                                                 <div class="form-group">
                             <label>⏰ Время до AFK:</label>
                             <select id="afkTimeout">
+                                <option value="10" class="admin-option" style="display: none;">10 секунд</option>
                                 <option value="15">15 минут</option>
                                 <option value="30">30 минут</option>
                                 <option value="45">45 минут</option>
@@ -2778,6 +2861,11 @@ app.get("/", (req, res) => {
                 
                 if (currentUserId === ADMIN_USER_ID) {
                     document.getElementById('createSpecialAchievementBtn').style.display = 'block';
+                    
+                    // Показываем админ-опции для времени AFK
+                    document.querySelectorAll('.admin-option').forEach(option => {
+                        option.style.display = 'block';
+                    });
                 }
             } catch (error) {
                 console.error('❌ Ошибка загрузки данных:', error);
@@ -2847,6 +2935,11 @@ app.get("/", (req, res) => {
                 // Показать кнопку создания спец. достижения для админа
                 if (userId === ADMIN_USER_ID) {
                     document.getElementById('createSpecialAchievementBtn').style.display = 'inline-block';
+                    
+                    // Показываем админ-опции для времени AFK
+                    document.querySelectorAll('.admin-option').forEach(option => {
+                        option.style.display = 'block';
+                    });
                 } else {
                     document.getElementById('createSpecialAchievementBtn').style.display = 'none';
                 }
@@ -2940,10 +3033,15 @@ app.get("/", (req, res) => {
                 voice_addict: { name: '🎧 Заболтал до сотки', description: 'Провел 100+ часов в голосовых каналах', points: 100 },
                 voice_god: { name: '🎧 Звезда эфира', description: 'Провел 1000+ часов в голосовых каналах', points: 1000 },
                 chatty_beginner: { name: '💬 Разговорчивый новичок', description: 'Отправил 200+ сообщений в текстовых каналах', points: 25 },
-                chatty_user: { name: '💬 Болтун', description: 'Отправил 500+ сообщений в текстовых каналах', points: 150 },
+                chatty_user: { name: '💬 Болтун', description: 'Отправил 500+ сообщений в текстовых каналах', points: 75 },
+                flooter: { name: '💬 Флудер', description: 'Отправил 750+ сообщений в текстовых каналах', points: 100 },
+                linguist: { name: '💬 Лингвист', description: 'Отправил 1000+ сообщений в текстовых каналах', points: 150 },
                 session_beginner: { name: '🎯 Начинающий участник', description: 'Участвовал в 10+ голосовых сессиях', points: 15 },
                 session_veteran: { name: '🎯 Опытный участник', description: 'Участвовал в 50+ голосовых сессиях', points: 40 },
                 session_master: { name: '🎯 Мастер сессий', description: 'Участвовал в 100+ голосовых сессиях', points: 75 },
+                frequent_guest: { name: '🎯 Частый гость', description: 'Участвовал в 200+ голосовых сессиях', points: 150 },
+                permanent_resident: { name: '🎯 Постоянный житель', description: 'Участвовал в 500+ голосовых сессиях', points: 350 },
+                session_lord: { name: '🎯 Властелин сессий', description: 'Участвовал в 1000+ голосовых сессиях', points: 1000 },
                 afk_beginner: { name: '😴 AFK новичок', description: 'Перемещен в AFK 10 раз', points: 10 },
                 afk_veteran: { name: '😴 AFK ветеран', description: 'Перемещен в AFK 50 раз', points: 50 },
                 afk_master: { name: '😴 AFK Специалист', description: 'Перемещен в AFK 100 раз', points: 100 },
@@ -3297,10 +3395,15 @@ lockedAchievements.forEach(achievementHtml => {
                 voice_addict: { name: '🎧 Заболтал до сотки', description: 'Провел 100+ часов в голосовых каналах', points: 100 },
                 voice_god: { name: '🎧 Звезда эфира', description: 'Провел 1000+ часов в голосовых каналах', points: 1000 },
                 chatty_beginner: { name: '💬 Разговорчивый новичок', description: 'Отправил 200+ сообщений в текстовых каналах', points: 25 },
-                chatty_user: { name: '💬 Болтун', description: 'Отправил 500+ сообщений в текстовых каналах', points: 150 },
+                chatty_user: { name: '💬 Болтун', description: 'Отправил 500+ сообщений в текстовых каналах', points: 75 },
+                flooter: { name: '💬 Флудер', description: 'Отправил 750+ сообщений в текстовых каналах', points: 100 },
+                linguist: { name: '💬 Лингвист', description: 'Отправил 1000+ сообщений в текстовых каналах', points: 150 },
                 session_beginner: { name: '🎯 Начинающий участник', description: 'Участвовал в 10+ голосовых сессиях', points: 15 },
                 session_veteran: { name: '🎯 Опытный участник', description: 'Участвовал в 50+ голосовых сессиях', points: 40 },
                 session_master: { name: '🎯 Мастер сессий', description: 'Участвовал в 100+ голосовых сессиях', points: 75 },
+                frequent_guest: { name: '🎯 Частый гость', description: 'Участвовал в 200+ голосовых сессиях', points: 150 },
+                permanent_resident: { name: '🎯 Постоянный житель', description: 'Участвовал в 500+ голосовых сессиях', points: 350 },
+                session_lord: { name: '🎯 Властелин сессий', description: 'Участвовал в 1000+ голосовых сессиях', points: 1000 },
                 afk_beginner: { name: '😴 AFK новичок', description: 'Перемещен в AFK 10 раз', points: 10 },
                 afk_veteran: { name: '😴 AFK ветеран', description: 'Перемещен в AFK 50 раз', points: 50 },
                 afk_master: { name: '😴 AFK Специалист', description: 'Перемещен в AFK 100 раз', points: 100 },
@@ -3496,10 +3599,15 @@ modalUnlockedAchievements.forEach(achievement => {
                 voice_addict: { name: '🎧 Заболтал до сотки', description: 'Провел 100+ часов в голосовых каналах', points: 100 },
                 voice_god: { name: '🎧 Звезда эфира', description: 'Провел 1000+ часов в голосовых каналах', points: 1000 },
                 chatty_beginner: { name: '💬 Разговорчивый новичок', description: 'Отправил 200+ сообщений в текстовых каналах', points: 25 },
-                chatty_user: { name: '💬 Болтун', description: 'Отправил 500+ сообщений в текстовых каналах', points: 150 },
+                chatty_user: { name: '💬 Болтун', description: 'Отправил 500+ сообщений в текстовых каналах', points: 75 },
+                flooter: { name: '💬 Флудер', description: 'Отправил 750+ сообщений в текстовых каналах', points: 100 },
+                linguist: { name: '💬 Лингвист', description: 'Отправил 1000+ сообщений в текстовых каналах', points: 150 },
                 session_beginner: { name: '🎯 Начинающий участник', description: 'Участвовал в 10+ голосовых сессиях', points: 15 },
                 session_veteran: { name: '🎯 Опытный участник', description: 'Участвовал в 50+ голосовых сессиях', points: 40 },
                 session_master: { name: '🎯 Мастер сессий', description: 'Участвовал в 100+ голосовых сессиях', points: 75 },
+                frequent_guest: { name: '🎯 Частый гость', description: 'Участвовал в 200+ голосовых сессиях', points: 150 },
+                permanent_resident: { name: '🎯 Постоянный житель', description: 'Участвовал в 500+ голосовых сессиях', points: 350 },
+                session_lord: { name: '🎯 Властелин сессий', description: 'Участвовал в 1000+ голосовых сессиях', points: 1000 },
                 afk_beginner: { name: '😴 AFK новичок', description: 'Перемещен в AFK 10 раз', points: 10 },
                 afk_veteran: { name: '😴 AFK ветеран', description: 'Перемещен в AFK 50 раз', points: 50 },
                 afk_master: { name: '😴 AFK Специалист', description: 'Перемещен в AFK 100 раз', points: 100 },
@@ -4515,6 +4623,18 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       // Обновляем статистику
       incrementUserStat(userId, "total_sessions");
 
+      // ✅ Проверяем если пользователь зашел сразу в AFK канал
+      if (newState.channel.id === AFK_CHANNEL_ID) {
+        // Это значит он зашел в AFK сам (без таймера)
+        // Увеличиваем счетчик AFK перемещений
+        incrementUserStat(userId, "total_afk_moves");
+
+        // Записываем время начала AFK
+        userAFKStartTimes.set(userId, Date.now());
+
+        console.log(`😴 ${username} зашел в AFK канал сам`);
+      }
+
       // Отслеживаем время в стрим-канале
       if (newState.channel.id === STREAM_CHANNEL_ID) {
         userStreamJoinTimes.set(userId, Date.now());
@@ -4545,6 +4665,18 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     // ===== ПОЛЬЗОВАТЕЛЬ ПОКИНУЛ ГОЛОСОВОЙ КАНАЛ =====
     if (oldState.channel && !newState.channel) {
       console.log(`👋 ${username} покинул голосовой канал`);
+
+      // ✅ Проверяем если он был в AFK канале и добавляем AFK время
+      if (oldState.channel.id === AFK_CHANNEL_ID) {
+        const afkStartTime = userAFKStartTimes.get(userId);
+        if (afkStartTime) {
+          const afkDuration = Math.floor((Date.now() - afkStartTime) / 1000);
+          incrementUserStat(userId, "total_afk_time", afkDuration);
+          console.log(
+            `⏱️ AFK время добавлено при выходе: ${formatDuration(afkDuration)}`
+          );
+        }
+      }
 
       // Обновляем статистику времени в голосовых каналах
       const joinTime = userJoinTimes.get(userId);
@@ -4602,6 +4734,32 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
         `🔄 ${username} переместился из ${oldState.channel.name} в ${newState.channel.name}`
       );
 
+      // ✅ Учитываем AFK время при переходе ИЗ AFK в другой канал
+      if (oldState.channel.id === AFK_CHANNEL_ID) {
+        const afkStartTime = userAFKStartTimes.get(userId);
+        if (afkStartTime) {
+          const afkDuration = Math.floor((Date.now() - afkStartTime) / 1000);
+          incrementUserStat(userId, "total_afk_time", afkDuration);
+          userAFKStartTimes.delete(userId);
+          console.log(
+            `⏱️ AFK время добавлено при переходе: ${formatDuration(
+              afkDuration
+            )}`
+          );
+        }
+      }
+
+      // ✅ Если новый канал это AFK - начинаем отсчет
+      if (newState.channel.id === AFK_CHANNEL_ID) {
+        // Это значит он переместился в AFK сам (без таймера)
+        incrementUserStat(userId, "total_afk_moves");
+        userAFKStartTimes.set(userId, Date.now());
+        console.log(`😴 ${username} переместился в AFK канал сам`);
+      } else {
+        // Если переходит в другой канал (не AFK), удаляем отсчет
+        userAFKStartTimes.delete(userId);
+      }
+
       sendTelegramReport(
         `🔄 <b>Пользователь переместился между каналами</b>\n` +
           `👤 Пользователь: ${username}\n` +
@@ -4644,6 +4802,16 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       const userTimeout = getUserTimeout(userId);
       const dmEnabled = getUserDMSetting(userId);
 
+      // Формируем правильное отображение времени
+      let timeoutDisplay;
+      if (userTimeout < 15) {
+        // Это секунды
+        timeoutDisplay = userTimeout + " секунд";
+      } else {
+        // Это минуты
+        timeoutDisplay = userTimeout + " минут";
+      }
+
       console.log(`🎙️❌ ${username} отключил микрофон`);
       clearInactivityTimer(userId);
       startInactivityTimer(member, newState.guild);
@@ -4657,7 +4825,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
           `📺 Канал: ${newState.channel.name}\n` +
-          `⏱️ Запущен таймер на: ${userTimeout} минут\n` +
+          `⏱️ Запущен таймер на: ${timeoutDisplay}\n` +
           `📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}\n` +
           `📅 Время: ${formatTime(new Date())}`
       );
@@ -4665,7 +4833,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       if (dmEnabled) {
         await member
           .send(
-            `🎙️❌ Похоже ты решил побыть AFK, раз отключил микрофон, через ${userTimeout} минут ты окажешься в токсичном канале, подумай об этом\n\n💡 Чтобы отключить эти уведомления, напиши \`.!.\` на сервере`
+            `🎙️❌ Похоже ты решил побыть AFK, раз отключил микрофон, через ${timeoutDisplay} ты окажешься в токсичном канале, подумай об этом\n\n💡 Чтобы отключить эти уведомления, напиши \`.!.\` на сервере`
           )
           .catch(() => {
             console.log(`❌ Не удалось отправить ЛС пользователю ${username}`);
@@ -4774,8 +4942,21 @@ function startInactivityTimer(member, guild) {
   const userId = member.id;
   const username = member.user.username;
   const userTimeout = getUserTimeout(userId);
-  const timeoutMs = userTimeout * 60 * 1000;
 
+  // Если значение меньше 15, то это секунды (админ опции: 10, 60), иначе минуты
+  let timeoutMs;
+  let timeoutDisplay;
+
+  if (userTimeout < 15) {
+    // Это секунды
+    timeoutMs = userTimeout * 1000;
+    timeoutDisplay = userTimeout + " секунд";
+  } else {
+    // Это минуты
+    timeoutMs = userTimeout * 60 * 1000;
+    timeoutDisplay = userTimeout + " минут";
+  }
+  console.log(`⏰ Таймер неактивности для ${username}: ${timeoutDisplay}`);
   console.log(`🔍 Поиск AFK канала с ID: ${AFK_CHANNEL_ID}`);
 
   const AFK_CHANNEL = guild.channels.cache.get(AFK_CHANNEL_ID);
@@ -4795,12 +4976,20 @@ function startInactivityTimer(member, guild) {
 
   const timeoutId = setTimeout(async () => {
     try {
+      console.log(
+        `⏳ Проверяем пользователя ${username} (ID: ${userId}) через ${timeoutDisplay}`
+      );
       const currentMember = guild.members.cache.get(userId);
 
       if (currentMember && currentMember.voice.channel) {
+        console.log(
+          `🎤 ${username} все еще в канале: ${currentMember.voice.channel.name}`
+        );
+        console.log(`🎙️ selfMute: ${currentMember.voice.selfMute}`);
+
         if (!currentMember.voice.selfMute) {
           console.log(
-            `🎙️ ${username} включил микрофон, отменяем перемещение в AFK`
+            `🎙️ ${username} включил микрофон или микрофон не отключен, отменяем перемещение в AFK`
           );
           return;
         }
@@ -4825,7 +5014,7 @@ function startInactivityTimer(member, guild) {
         await checkAchievements(userId, username);
 
         console.log(
-          `⏰ ${username} переемещен в AFK за неактивность (${userTimeout} мин)`
+          `⏰ ${username} переемещен в AFK за неактивность (${timeoutDisplay})`
         );
 
         const dmEnabled = getUserDMSetting(userId);
@@ -4835,7 +5024,7 @@ function startInactivityTimer(member, guild) {
             `🆔 ID: <code>${userId}</code>\n` +
             `📺 Из канала: ${originalChannelName}\n` +
             `📺 В канал: ${AFK_CHANNEL.name}\n` +
-            `⏱️ Неактивен: ${userTimeout} минут\n` +
+            `⏱️ Неактивен: ${timeoutDisplay}\n` +
             `📩 ЛС уведомления: ${
               dmEnabled ? "✅ включены" : "❌ отключены"
             }\n` +
@@ -4845,10 +5034,14 @@ function startInactivityTimer(member, guild) {
         if (dmEnabled) {
           await currentMember
             .send(
-              `⏰ Ты был неактивен ${userTimeout} минут, малютка, и был перемещен откисать в токсичный канал.\n\n💡 Чтобы изменить настройки, напиши \`.!.\` на сервере`
+              `⏰ Ты был неактивен ${timeoutDisplay}, малютка, и был перемещен откисать в токсичный канал.\n\n💡 Чтобы изменить настройки, напиши \`.!.\` на сервере`
             )
             .catch(() => {});
         }
+      } else {
+        console.log(
+          `❌ ${username} не найден в голосовых каналах или покинул канал`
+        );
       }
     } catch (error) {
       console.error("❌ Ошибка при перемещении в AFK:", error);
