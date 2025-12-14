@@ -4067,7 +4067,13 @@ client.on("messageCreate", async (message) => {
         message.reference.messageId
       );
       // Проверяем, был ли упомянут текущий пользователь в том сообщении
-      if (repliedTo.mentions.has(userId)) {
+      // Также проверяем, содержит ли исходное сообщение User ID в формате <@userId>
+      const userMentioned = 
+        repliedTo.mentions.has(userId) || 
+        repliedTo.content.includes(`<@${userId}>`) ||
+        repliedTo.content.includes(`<@!${userId}>`);
+      
+      if (userMentioned) {
         incrementUserStat(userId, "mentions_responded");
         await checkAchievements(userId, username);
       }
