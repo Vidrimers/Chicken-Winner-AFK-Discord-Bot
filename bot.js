@@ -312,6 +312,24 @@ const ACHIEVEMENTS = {
     description: "Участвовал в 100+ голосовых сессиях",
     points: 75,
   },
+  frequent_guest: {
+    id: "frequent_guest",
+    name: "🎯 Частый гость",
+    description: "Участвовал в 200+ голосовых сессиях",
+    points: 150,
+  },
+  permanent_resident: {
+    id: "permanent_resident",
+    name: "🎯 Постоянный житель",
+    description: "Участвовал в 500+ голосовых сессиях",
+    points: 350,
+  },
+  session_lord: {
+    id: "session_lord",
+    name: "🎯 Властелин сессий",
+    description: "Участвовал в 1000+ голосовых сессиях",
+    points: 1000,
+  },
   mention_responder: {
     id: "mention_responder",
     name: "📢 Отзывчивый",
@@ -944,6 +962,18 @@ const checkAchievements = async (userId, username) => {
 
   if (stats.total_sessions >= 100) {
     await checkAndUnlockAchievement(userId, username, "session_master");
+  }
+
+  if (stats.total_sessions >= 200) {
+    await checkAndUnlockAchievement(userId, username, "frequent_guest");
+  }
+
+  if (stats.total_sessions >= 500) {
+    await checkAndUnlockAchievement(userId, username, "permanent_resident");
+  }
+
+  if (stats.total_sessions >= 1000) {
+    await checkAndUnlockAchievement(userId, username, "session_lord");
   }
 
   // Упоминания
@@ -2988,6 +3018,9 @@ app.get("/", (req, res) => {
                 session_beginner: { name: '🎯 Начинающий участник', description: 'Участвовал в 10+ голосовых сессиях', points: 15 },
                 session_veteran: { name: '🎯 Опытный участник', description: 'Участвовал в 50+ голосовых сессиях', points: 40 },
                 session_master: { name: '🎯 Мастер сессий', description: 'Участвовал в 100+ голосовых сессиях', points: 75 },
+                frequent_guest: { name: '🎯 Частый гость', description: 'Участвовал в 200+ голосовых сессиях', points: 150 },
+                permanent_resident: { name: '🎯 Постоянный житель', description: 'Участвовал в 500+ голосовых сессиях', points: 350 },
+                session_lord: { name: '🎯 Властелин сессий', description: 'Участвовал в 1000+ голосовых сессиях', points: 1000 },
                 afk_beginner: { name: '😴 AFK новичок', description: 'Перемещен в AFK 10 раз', points: 10 },
                 afk_veteran: { name: '😴 AFK ветеран', description: 'Перемещен в AFK 50 раз', points: 50 },
                 afk_master: { name: '😴 AFK Специалист', description: 'Перемещен в AFK 100 раз', points: 100 },
@@ -3347,6 +3380,9 @@ lockedAchievements.forEach(achievementHtml => {
                 session_beginner: { name: '🎯 Начинающий участник', description: 'Участвовал в 10+ голосовых сессиях', points: 15 },
                 session_veteran: { name: '🎯 Опытный участник', description: 'Участвовал в 50+ голосовых сессиях', points: 40 },
                 session_master: { name: '🎯 Мастер сессий', description: 'Участвовал в 100+ голосовых сессиях', points: 75 },
+                frequent_guest: { name: '🎯 Частый гость', description: 'Участвовал в 200+ голосовых сессиях', points: 150 },
+                permanent_resident: { name: '🎯 Постоянный житель', description: 'Участвовал в 500+ голосовых сессиях', points: 350 },
+                session_lord: { name: '🎯 Властелин сессий', description: 'Участвовал в 1000+ голосовых сессиях', points: 1000 },
                 afk_beginner: { name: '😴 AFK новичок', description: 'Перемещен в AFK 10 раз', points: 10 },
                 afk_veteran: { name: '😴 AFK ветеран', description: 'Перемещен в AFK 50 раз', points: 50 },
                 afk_master: { name: '😴 AFK Специалист', description: 'Перемещен в AFK 100 раз', points: 100 },
@@ -3548,6 +3584,9 @@ modalUnlockedAchievements.forEach(achievement => {
                 session_beginner: { name: '🎯 Начинающий участник', description: 'Участвовал в 10+ голосовых сессиях', points: 15 },
                 session_veteran: { name: '🎯 Опытный участник', description: 'Участвовал в 50+ голосовых сессиях', points: 40 },
                 session_master: { name: '🎯 Мастер сессий', description: 'Участвовал в 100+ голосовых сессиях', points: 75 },
+                frequent_guest: { name: '🎯 Частый гость', description: 'Участвовал в 200+ голосовых сессиях', points: 150 },
+                permanent_resident: { name: '🎯 Постоянный житель', description: 'Участвовал в 500+ голосовых сессиях', points: 350 },
+                session_lord: { name: '🎯 Властелин сессий', description: 'Участвовал в 1000+ голосовых сессиях', points: 1000 },
                 afk_beginner: { name: '😴 AFK новичок', description: 'Перемещен в AFK 10 раз', points: 10 },
                 afk_veteran: { name: '😴 AFK ветеран', description: 'Перемещен в AFK 50 раз', points: 50 },
                 afk_master: { name: '😴 AFK Специалист', description: 'Перемещен в AFK 100 раз', points: 100 },
