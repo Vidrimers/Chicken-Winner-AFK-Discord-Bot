@@ -4602,6 +4602,18 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       // Обновляем статистику
       incrementUserStat(userId, "total_sessions");
 
+      // ✅ Проверяем если пользователь зашел сразу в AFK канал
+      if (newState.channel.id === AFK_CHANNEL_ID) {
+        // Это значит он зашел в AFK сам (без таймера)
+        // Увеличиваем счетчик AFK перемещений
+        incrementUserStat(userId, "total_afk_moves");
+
+        // Записываем время начала AFK
+        userAFKStartTimes.set(userId, Date.now());
+
+        console.log(`😴 ${username} зашел в AFK канал сам`);
+      }
+
       // Отслеживаем время в стрим-канале
       if (newState.channel.id === STREAM_CHANNEL_ID) {
         userStreamJoinTimes.set(userId, Date.now());
@@ -4632,6 +4644,18 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     // ===== ПОЛЬЗОВАТЕЛЬ ПОКИНУЛ ГОЛОСОВОЙ КАНАЛ =====
     if (oldState.channel && !newState.channel) {
       console.log(`👋 ${username} покинул голосовой канал`);
+
+      // ✅ Проверяем если он был в AFK канале и добавляем AFK время
+      if (oldState.channel.id === AFK_CHANNEL_ID) {
+        const afkStartTime = userAFKStartTimes.get(userId);
+        if (afkStartTime) {
+          const afkDuration = Math.floor((Date.now() - afkStartTime) / 1000);
+          incrementUserStat(userId, "total_afk_time", afkDuration);
+          console.log(
+            `⏱️ AFK время добавлено при выходе: ${formatDuration(afkDuration)}`
+          );
+        }
+      }
 
       // Обновляем статистику времени в голосовых каналах
       const joinTime = userJoinTimes.get(userId);
@@ -4688,6 +4712,32 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       console.log(
         `🔄 ${username} переместился из ${oldState.channel.name} в ${newState.channel.name}`
       );
+
+      // ✅ Учитываем AFK время при переходе ИЗ AFK в другой канал
+      if (oldState.channel.id === AFK_CHANNEL_ID) {
+        const afkStartTime = userAFKStartTimes.get(userId);
+        if (afkStartTime) {
+          const afkDuration = Math.floor((Date.now() - afkStartTime) / 1000);
+          incrementUserStat(userId, "total_afk_time", afkDuration);
+          userAFKStartTimes.delete(userId);
+          console.log(
+            `⏱️ AFK время добавлено при переходе: ${formatDuration(
+              afkDuration
+            )}`
+          );
+        }
+      }
+
+      // ✅ Если новый канал это AFK - начинаем отсчет
+      if (newState.channel.id === AFK_CHANNEL_ID) {
+        // Это значит он переместился в AFK сам (без таймера)
+        incrementUserStat(userId, "total_afk_moves");
+        userAFKStartTimes.set(userId, Date.now());
+        console.log(`😴 ${username} переместился в AFK канал сам`);
+      } else {
+        // Если переходит в другой канал (не AFK), удаляем отсчет
+        userAFKStartTimes.delete(userId);
+      }
 
       sendTelegramReport(
         `🔄 <b>Пользователь переместился между каналами</b>\n` +
