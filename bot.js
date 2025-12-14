@@ -692,21 +692,27 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
 
   // Если достижение уже разблокировано (и не удалено) - не добавляем снова
   if (existing && !existing.manually_deleted) {
-    console.log(`⏭️ Достижение ${achievementId} уже есть у пользователя ${username}`);
+    console.log(
+      `⏭️ Достижение ${achievementId} уже есть у пользователя ${username}`
+    );
     return false;
   }
-  
-  console.log(`✅ Добавляем новое достижение ${achievementId} пользователю ${username}`);
-  
+
+  console.log(
+    `✅ Добавляем новое достижение ${achievementId} пользователю ${username}`
+  );
+
   // Если достижение было удалено (manually_deleted = 1), обновляем флаг и время
   // Иначе добавляем новое достижение
   if (existing && existing.manually_deleted) {
     console.log(`♻️ Восстанавливаем удаленное достижение ${achievementId}`);
-    db.prepare(`
+    db.prepare(
+      `
       UPDATE user_achievements 
       SET manually_deleted = 0, unlocked_at = CURRENT_TIMESTAMP
       WHERE user_id = ? AND achievement_id = ?
-    `).run(userId, achievementId);
+    `
+    ).run(userId, achievementId);
   } else {
     const stmt = db.prepare(`
       INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, manually_deleted) 
@@ -717,11 +723,16 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
 
   // Получаем достижение для отправки уведомлений
   const achievement = ACHIEVEMENTS[achievementId];
-  console.log(`🔍 Ищем в ACHIEVEMENTS[${achievementId}]:`, achievement ? "✅ НАЙДЕНО" : "❌ НЕ НАЙДЕНО");
-  
+  console.log(
+    `🔍 Ищем в ACHIEVEMENTS[${achievementId}]:`,
+    achievement ? "✅ НАЙДЕНО" : "❌ НЕ НАЙДЕНО"
+  );
+
   if (achievement) {
-    console.log(`📤 Отправляем уведомления для достижения: ${achievement.name}`);
-    
+    console.log(
+      `📤 Отправляем уведомления для достижения: ${achievement.name}`
+    );
+
     // Всегда добавляем очки
     incrementUserStat(userId, "rank_points", achievement.points);
 
@@ -729,12 +740,17 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
     const member = client.users.cache.get(userId);
     const achievementNotificationsEnabled =
       getUserAchievementNotificationSetting(userId);
-    
-    console.log(`👤 Member: ${member ? member.username : "НЕ НАЙДЕН"}, Уведомления: ${achievementNotificationsEnabled}`);
-    
+
+    console.log(
+      `👤 Member: ${
+        member ? member.username : "НЕ НАЙДЕН"
+      }, Уведомления: ${achievementNotificationsEnabled}`
+    );
+
     if (member && achievementNotificationsEnabled) {
       try {
-        const messageText = `🏆 **Новое достижение!**\n\n` +
+        const messageText =
+          `🏆 **Новое достижение!**\n\n` +
           `${achievement.name}\n` +
           `${achievement.description}\n` +
           `+${achievement.points} очков рейтинга! 🌟\n\n`;
@@ -754,7 +770,8 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
     }
 
     // Отправляем в Telegram
-    const telegramText = `🏆 <b>Новое достижение!</b>\n` +
+    const telegramText =
+      `🏆 <b>Новое достижение!</b>\n` +
       `👤 Пользователь: ${username}\n` +
       `🎯 Достижение: ${achievement.name}\n` +
       `📝 Описание: ${achievement.description}\n` +
@@ -767,9 +784,12 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
     // Отправляем уведомление в канал Discord
     try {
       const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
-      console.log(`📢 Канал достижений: ${channel ? channel.name : "НЕ НАЙДЕН"}`);
+      console.log(
+        `📢 Канал достижений: ${channel ? channel.name : "НЕ НАЙДЕН"}`
+      );
       if (channel) {
-        const discordText = `🏆 **Новое достижение!**\n\n` +
+        const discordText =
+          `🏆 **Новое достижение!**\n\n` +
           `👤 **Пользователь:** <@${userId}> (${username})\n` +
           `🎯 **Достижение:** ${achievement.name}\n` +
           `📝 **Описание:** ${achievement.description}\n` +
@@ -1538,7 +1558,9 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
       db.prepare(
         `UPDATE user_achievements SET manually_deleted = 1 WHERE user_id = ? AND achievement_id = ?`
       ).run(userId, achievementId);
-      console.log(`🗑️ Достижение ${achievementId} помечено как удаленное (manually_deleted = 1)`);
+      console.log(
+        `🗑️ Достижение ${achievementId} помечено как удаленное (manually_deleted = 1)`
+      );
 
       // Если это обычное достижение (из ACHIEVEMENTS), вычитаем очки
       if (achievement && achievement.points > 0) {
