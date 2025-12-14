@@ -2649,7 +2649,7 @@ app.get("/", (req, res) => {
                 <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <input type="text" id="userIdInput" placeholder="Discord ID" style="flex: 1;">
                     <button onclick="loadUserData()" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
-                    <button id="clearBtn" onclick="clearSavedUserId()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">❌ Выход</button>
+                    <button id="clearBtn" onclick="clearSavedUserId()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Выход</button>
                 </div>
                 
                 <div style="display: flex; gap: 10px; margin-bottom: 20px;">
