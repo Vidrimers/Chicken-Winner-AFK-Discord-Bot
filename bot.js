@@ -129,6 +129,23 @@ try {
 } catch (error) {}
 
 try {
+  db.exec(`ALTER TABLE user_stats ADD COLUMN longest_session_date DATETIME`);
+} catch (error) {}
+
+try {
+  db.exec(`
+    UPDATE user_stats 
+    SET longest_session_date = last_activity 
+    WHERE longest_session > 0 AND longest_session_date IS NULL
+  `);
+  console.log("✅ Миграция: заполнены даты для существующих longest_session");
+} catch (error) {
+  console.log(
+    "ℹ️ Миграция longest_session_date уже выполнена или таблица пуста"
+  );
+}
+
+try {
   db.exec(
     `ALTER TABLE user_settings ADD COLUMN achievement_notifications BOOLEAN DEFAULT 1`
   );
@@ -1918,6 +1935,9 @@ app.get("/", (req, res) => {
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             box-shadow: 0 0.3rem 1rem rgba(192, 192, 192, 0.1);
             background: #f093db;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         
         .stat-number { 
@@ -2302,6 +2322,7 @@ app.get("/", (req, res) => {
             
             .stat-card {
                 padding: 12px 8px;
+                
             }
             
             .stat-number {
@@ -2510,6 +2531,9 @@ app.get("/", (req, res) => {
             border-radius: 10px;
             text-align: center;
             border-left: 4px solid #667eea;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         
         .modal .stats-grid .stat-value {
@@ -2993,6 +3017,13 @@ app.get("/", (req, res) => {
             const streamHours = Math.floor((stats.stream_channel_time || 0) / 3600);
             const streamMinutes = Math.floor(((stats.stream_channel_time || 0) % 3600) / 60);
             
+            // Форматируем дату самой длинной сессии
+            let longestSessionDate = '';
+            if (stats.longest_session_date) {
+                const date = new Date(stats.longest_session_date);
+                longestSessionDate = '<br><span style="font-size:0.4em;">' + date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'}) + '</span>';
+            }
+            
             statsGrid.innerHTML = \`
                 <div class="stat-card">
                     <div class="stat-number">\${stats.total_sessions || 0}</div>
@@ -3015,7 +3046,7 @@ app.get("/", (req, res) => {
                     <div class="stat-label">Очки рейтинга</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">\${Math.floor((stats.longest_session || 0) / 3600)}ч \${Math.floor(((stats.longest_session || 0) % 3600) / 60)}м</div>
+                    <div class="stat-number" style="line-height: 1em;">\${Math.floor((stats.longest_session || 0) / 3600)}ч \${Math.floor(((stats.longest_session || 0) % 3600) / 60)}м\${longestSessionDate}</div>
                     <div class="stat-label">Самая длинная сессия</div>
                 </div>
                 <div class="stat-card">
@@ -3835,7 +3866,7 @@ modalUnlockedAchievements.forEach(achievement => {
                                         <div class="stat-label">Очки рейтинга</div>
                                     </div>
                                     <div class="stat-item">
-                                        <div class="stat-value">\${Math.floor((stats.longest_session || 0) / 3600)}ч \${Math.floor(((stats.longest_session || 0) % 3600) / 60)}м</div>
+                                        <div class="stat-value">\${Math.floor((stats.longest_session || 0) / 3600)}ч \${Math.floor(((stats.longest_session || 0) % 3600) / 60)}м\${stats.longest_session_date ? '<br><span style="font-size:0.55em;color:#999;">' + new Date(stats.longest_session_date).toLocaleDateString('ru-RU') + ' ' + new Date(stats.longest_session_date).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'}) + '</span>' : ''}</div>
                                         <div class="stat-label">Самая длинная сессия</div>
                                     </div>
                                     <div class="stat-item">
@@ -4737,6 +4768,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           sessionDuration > (currentStats.longest_session || 0)
         ) {
           updateUserStats(userId, "longest_session", sessionDuration);
+          // Обновляем дату самой длинной сессии
+          const stmt = db.prepare(`
+            UPDATE user_stats SET longest_session_date = CURRENT_TIMESTAMP
+            WHERE user_id = ?
+          `);
+          stmt.run(userId);
         }
 
         // Проверяем достижения
