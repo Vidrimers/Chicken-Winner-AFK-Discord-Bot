@@ -2007,7 +2007,7 @@ app.get("/", (req, res) => {
         .leaderboard-item:hover::after {
             content: "👆 Жмакни, чтобы посмотреть достижения";
             position: absolute;
-            right: 10px;
+            left: 15%;
             top: 50%;
             transform: translateY(-50%);
             font-size: 12px;
@@ -3386,19 +3386,22 @@ lockedAchievements.forEach(achievementHtml => {
                 leaderboard.forEach((user, index) => {
                     const hours = Math.floor(user.total_voice_time / 3600);
                     const minutes = Math.floor((user.total_voice_time % 3600) / 60);
+                    const isAdmin = currentUserId === ADMIN_USER_ID;
+                    const userId = user.user_id.replace(/"/g, '&quot;');
+                    const userName = (user.username || 'Пользователь').replace(/"/g, '&quot;');
+                    const deleteBtn = isAdmin ? '<button onclick="deleteUserFromDB(&#34;' + userId + '&#34;, &#34;' + userName + '&#34;)" style="margin-left: 10px; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;z-index: 999;">🗑️ Удалить</button>' : '';
                     
-                    html += \`
-                        <div class="leaderboard-item" onclick="showUserModal('\${user.user_id}', '\${user.username || 'Неизвестный пользователь'}', \${index + 1})" style="cursor: pointer;">
-                            <div>
-                                <span class="rank">#\${index + 1}</span>
-                                <strong>\${user.username || 'Неизвестный пользователь'}</strong>
-                            </div>
-                            <div>
-                                <span>\${hours}ч \${minutes}м</span>
-                                <small style="margin-left: 10px; color: #666;">(\${user.rank_points || 0} очков)</small>
-                            </div>
-                        </div>
-                    \`;
+                    html += '<div class="leaderboard-item" onclick="showUserModal(&#34;' + userId + '&#34;, &#34;' + (user.username || 'Неизвестный пользователь').replace(/"/g, '&quot;') + '&#34;, ' + (index + 1) + ')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">' +
+                        '<div>' +
+                            '<span class="rank">#' + (index + 1) + '</span>' +
+                            '<strong>' + (user.username || 'Неизвестный пользователь') + '</strong>' +
+                        '</div>' +
+                        '<div style="display: flex; align-items: center;">' +
+                            '<span>' + hours + 'ч ' + minutes + 'м</span>' +
+                            '<small style="margin-left: 10px; color: #666;">(' + (user.rank_points || 0) + ' очков)</small>' +
+                            deleteBtn +
+                        '</div>' +
+                    '</div>';
                 });
                 
                 leaderboardList.innerHTML = html;
