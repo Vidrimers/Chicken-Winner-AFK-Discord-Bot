@@ -129,6 +129,30 @@ try {
 } catch (error) {}
 
 try {
+  db.exec(`ALTER TABLE user_stats ADD COLUMN longest_session_date DATETIME`);
+} catch (error) {}
+
+try {
+  db.exec(`
+    UPDATE user_stats 
+    SET longest_session_date = (
+      SELECT leave_time 
+      FROM voice_sessions 
+      WHERE user_id = user_stats.user_id 
+      AND duration = user_stats.longest_session
+      ORDER BY leave_time DESC
+      LIMIT 1
+    )
+    WHERE longest_session > 0 AND longest_session_date IS NULL
+  `);
+  console.log("✅ Миграция: заполнены корректные даты для longest_session");
+} catch (error) {
+  console.log(
+    "ℹ️ Миграция longest_session_date уже выполнена или таблица voice_sessions пуста"
+  );
+}
+
+try {
   db.exec(
     `ALTER TABLE user_settings ADD COLUMN achievement_notifications BOOLEAN DEFAULT 1`
   );
@@ -1660,6 +1684,102 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
   }
 });
 
+// ===== УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ =====
+app.post("/api/admin/delete-user", async (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "Отсутствует userId" });
+  }
+
+  try {
+    // Получаем информацию о пользователе для отчета
+    const userStats = getUserStats(userId);
+    const userName = userStats
+      ? userStats.username || "Пользователь ID: " + userId
+      : "Пользователь ID: " + userId;
+
+    // Удаляем пользователя из всех таблиц
+    db.prepare("DELETE FROM user_stats WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM user_settings WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM user_achievements WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM voice_sessions WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM achievements WHERE user_id = ?").run(userId);
+
+    console.log(
+      "🗑️ Пользователь " + userId + " (" + userName + ") полностью удален из БД"
+    );
+
+    // Отправляем уведомление в Telegram
+    fetch(
+      "https://api.telegram.org/bot" +
+        process.env.TELEGRAM_BOT_TOKEN +
+        "/sendMessage",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: process.env.TELEGRAM_CHAT_ID,
+          text:
+            "🗑️ <b>ПОЛЬЗОВАТЕЛЬ УДАЛЕН ИЗ БД</b>\n\n" +
+            "ID: <code>" +
+            userId +
+            "</code>\n" +
+            "Имя: " +
+            userName +
+            "\n" +
+            "Время: " +
+            new Date().toLocaleString("ru-RU"),
+          parse_mode: "HTML",
+        }),
+      }
+    ).catch((err) =>
+      console.log("Ошибка отправки уведомления в Telegram:", err)
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Ошибка при удалении пользователя:", error);
+    res.status(500).json({ error: "Ошибка при удалении пользователя" });
+  }
+});
+
+// ===== ПОПЫТКА НЕСАНКЦИОНИРОВАННОГО ДОСТУПА =====
+app.post("/api/unauthorized-access", async (req, res) => {
+  const { attemptedId, timestamp } = req.body;
+
+  try {
+    // Отправляем уведомление в Telegram
+    fetch(
+      "https://api.telegram.org/bot" +
+        process.env.TELEGRAM_BOT_TOKEN +
+        "/sendMessage",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: process.env.TELEGRAM_CHAT_ID,
+          text:
+            "⚠️ <b>ПОПЫТКА НЕСАНКЦИОНИРОВАННОГО ДОСТУПА!</b>\n\n" +
+            "Кто-то попытался зайти по прямому ADMIN_USER_ID: <code>" +
+            attemptedId +
+            "</code>\n" +
+            "Время: " +
+            timestamp,
+          parse_mode: "HTML",
+        }),
+      }
+    ).catch((err) =>
+      console.log("Ошибка отправки уведомления в Telegram:", err)
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Ошибка при обработке попытки доступа:", error);
+    res.status(500).json({ error: "Ошибка при обработке попытки доступа" });
+  }
+});
+
 // ===== МАРШРУТЫ АВТОРИЗАЦИИ =====
 
 // Вход через Discord
@@ -1918,6 +2038,9 @@ app.get("/", (req, res) => {
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             box-shadow: 0 0.3rem 1rem rgba(192, 192, 192, 0.1);
             background: #f093db;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         
         .stat-number { 
@@ -1980,7 +2103,7 @@ app.get("/", (req, res) => {
         .leaderboard-item:hover::after {
             content: "👆 Жмакни, чтобы посмотреть достижения";
             position: absolute;
-            right: 10px;
+            left: 15%;
             top: 50%;
             transform: translateY(-50%);
             font-size: 12px;
@@ -2302,6 +2425,7 @@ app.get("/", (req, res) => {
             
             .stat-card {
                 padding: 12px 8px;
+                
             }
             
             .stat-number {
@@ -2510,6 +2634,9 @@ app.get("/", (req, res) => {
             border-radius: 10px;
             text-align: center;
             border-left: 4px solid #667eea;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         
         .modal .stats-grid .stat-value {
@@ -2786,7 +2913,8 @@ app.get("/", (req, res) => {
 
     <script>
         let currentUserId = null;
-        const ADMIN_USER_ID = "${ADMIN_USER_ID}";
+        const ADMIN_USER_ID = "${process.env.ADMIN_USER_ID}";
+        const ADMIN_LOGIN = "${process.env.ADMIN_LOGIN}";
 
         // Функции для работы с авторизацией
         function loginWithDiscord() {
@@ -2900,6 +3028,34 @@ app.get("/", (req, res) => {
             }
         }
 
+        function deleteUserFromDB(userId, username) {
+            event.stopPropagation();
+            const confirmed = confirm('⚠️ Вы уверены что хотите полностью удалить пользователя "' + username + '" из базы данных?' + String.fromCharCode(10) + String.fromCharCode(10) + 'Это действие необратимо и удалит:' + String.fromCharCode(10) + '- Все статистики' + String.fromCharCode(10) + '- Все достижения' + String.fromCharCode(10) + '- Все сессии' + String.fromCharCode(10) + '- Все настройки');
+            
+            if (!confirmed) {
+                return;
+            }
+            
+            fetch('/api/admin/delete-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: userId })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Пользователь "' + username + '" полностью удален из БД!');
+                    loadLeaderboard();
+                } else {
+                    alert('❌ Ошибка: ' + (data.message || 'Не удалось удалить пользователя'));
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при удалении пользователя:', error);
+                alert('❌ Ошибка при удалении пользователя');
+            });
+        }
+
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -2917,8 +3073,29 @@ app.get("/", (req, res) => {
         }
 
         async function loadUserData() {
-            const userId = document.getElementById('userIdInput').value.trim();
+            let userId = document.getElementById('userIdInput').value.trim();
             if (!userId) return;
+            
+            // ✅ Проверка: если введен ADMIN_LOGIN, заменяем на ADMIN_USER_ID
+            if (userId === ADMIN_LOGIN) {
+                userId = ADMIN_USER_ID;
+                console.log('✅ Админ вошел по логину, используем ADMIN_USER_ID');
+            } else if (userId === ADMIN_USER_ID) {
+                // ❌ БЛОКИРОВКА: Прямой вход по ADMIN_USER_ID запрещен!
+                alert('❌ Это же не твой ID, зайка, куда ты собрался?');
+                
+                // Отправляем уведомление в Telegram
+                fetch('/api/unauthorized-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        attemptedId: ADMIN_USER_ID,
+                        timestamp: new Date().toLocaleString('ru-RU')
+                    })
+                }).catch(err => console.log('Ошибка отправки уведомления'));
+                
+                return;
+            }
             
             currentUserId = userId;
             // ✅ Сохраняем userId в localStorage
@@ -2993,6 +3170,13 @@ app.get("/", (req, res) => {
             const streamHours = Math.floor((stats.stream_channel_time || 0) / 3600);
             const streamMinutes = Math.floor(((stats.stream_channel_time || 0) % 3600) / 60);
             
+            // Форматируем дату самой длинной сессии
+            let longestSessionDate = '';
+            if (stats.longest_session_date) {
+                const date = new Date(stats.longest_session_date);
+                longestSessionDate = '<br><span style="font-size:0.4em;">' + date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'}) + '</span>';
+            }
+            
             statsGrid.innerHTML = \`
                 <div class="stat-card">
                     <div class="stat-number">\${stats.total_sessions || 0}</div>
@@ -3015,7 +3199,7 @@ app.get("/", (req, res) => {
                     <div class="stat-label">Очки рейтинга</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">\${Math.floor((stats.longest_session || 0) / 3600)}ч \${Math.floor(((stats.longest_session || 0) % 3600) / 60)}м</div>
+                    <div class="stat-number" style="line-height: 1em;">\${Math.floor((stats.longest_session || 0) / 3600)}ч \${Math.floor(((stats.longest_session || 0) % 3600) / 60)}м\${longestSessionDate}</div>
                     <div class="stat-label">Самая длинная сессия</div>
                 </div>
                 <div class="stat-card">
@@ -3348,19 +3532,22 @@ lockedAchievements.forEach(achievementHtml => {
                 leaderboard.forEach((user, index) => {
                     const hours = Math.floor(user.total_voice_time / 3600);
                     const minutes = Math.floor((user.total_voice_time % 3600) / 60);
+                    const isAdmin = currentUserId === ADMIN_USER_ID;
+                    const userId = user.user_id.replace(/"/g, '&quot;');
+                    const userName = (user.username || 'Пользователь').replace(/"/g, '&quot;');
+                    const deleteBtn = isAdmin ? '<button onclick="deleteUserFromDB(&#34;' + userId + '&#34;, &#34;' + userName + '&#34;)" style="margin-left: 10px; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>' : '';
                     
-                    html += \`
-                        <div class="leaderboard-item" onclick="showUserModal('\${user.user_id}', '\${user.username || 'Неизвестный пользователь'}', \${index + 1})" style="cursor: pointer;">
-                            <div>
-                                <span class="rank">#\${index + 1}</span>
-                                <strong>\${user.username || 'Неизвестный пользователь'}</strong>
-                            </div>
-                            <div>
-                                <span>\${hours}ч \${minutes}м</span>
-                                <small style="margin-left: 10px; color: #666;">(\${user.rank_points || 0} очков)</small>
-                            </div>
-                        </div>
-                    \`;
+                    html += '<div class="leaderboard-item" onclick="showUserModal(&#34;' + userId + '&#34;, &#34;' + (user.username || 'Неизвестный пользователь').replace(/"/g, '&quot;') + '&#34;, ' + (index + 1) + ')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">' +
+                        '<div>' +
+                            '<span class="rank">#' + (index + 1) + '</span>' +
+                            '<strong>' + (user.username || 'Неизвестный пользователь') + '</strong>' +
+                        '</div>' +
+                        '<div style="display: flex; align-items: center;">' +
+                            '<span>' + hours + 'ч ' + minutes + 'м</span>' +
+                            '<small style="margin-left: 10px; color: #666;">(' + (user.rank_points || 0) + ' очков)</small>' +
+                            deleteBtn +
+                        '</div>' +
+                    '</div>';
                 });
                 
                 leaderboardList.innerHTML = html;
@@ -3835,7 +4022,7 @@ modalUnlockedAchievements.forEach(achievement => {
                                         <div class="stat-label">Очки рейтинга</div>
                                     </div>
                                     <div class="stat-item">
-                                        <div class="stat-value">\${Math.floor((stats.longest_session || 0) / 3600)}ч \${Math.floor(((stats.longest_session || 0) % 3600) / 60)}м</div>
+                                        <div class="stat-value">\${Math.floor((stats.longest_session || 0) / 3600)}ч \${Math.floor(((stats.longest_session || 0) % 3600) / 60)}м\${stats.longest_session_date ? '<br><span style="font-size:0.55em;color:#999;">' + new Date(stats.longest_session_date).toLocaleDateString('ru-RU') + ' ' + new Date(stats.longest_session_date).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'}) + '</span>' : ''}</div>
                                         <div class="stat-label">Самая длинная сессия</div>
                                     </div>
                                     <div class="stat-item">
@@ -4737,6 +4924,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           sessionDuration > (currentStats.longest_session || 0)
         ) {
           updateUserStats(userId, "longest_session", sessionDuration);
+          // Обновляем дату самой длинной сессии
+          const stmt = db.prepare(`
+            UPDATE user_stats SET longest_session_date = CURRENT_TIMESTAMP
+            WHERE user_id = ?
+          `);
+          stmt.run(userId);
         }
 
         // Проверяем достижения
