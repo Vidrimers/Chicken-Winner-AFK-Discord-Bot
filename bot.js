@@ -1744,6 +1744,42 @@ app.post("/api/admin/delete-user", async (req, res) => {
   }
 });
 
+// ===== ПОПЫТКА НЕСАНКЦИОНИРОВАННОГО ДОСТУПА =====
+app.post("/api/unauthorized-access", async (req, res) => {
+  const { attemptedId, timestamp } = req.body;
+
+  try {
+    // Отправляем уведомление в Telegram
+    fetch(
+      "https://api.telegram.org/bot" +
+        process.env.TELEGRAM_BOT_TOKEN +
+        "/sendMessage",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: process.env.TELEGRAM_CHAT_ID,
+          text:
+            "⚠️ <b>ПОПЫТКА НЕСАНКЦИОНИРОВАННОГО ДОСТУПА!</b>\n\n" +
+            "Кто-то попытался зайти по прямому ADMIN_USER_ID: <code>" +
+            attemptedId +
+            "</code>\n" +
+            "Время: " +
+            timestamp,
+          parse_mode: "HTML",
+        }),
+      }
+    ).catch((err) =>
+      console.log("Ошибка отправки уведомления в Telegram:", err)
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Ошибка при обработке попытки доступа:", error);
+    res.status(500).json({ error: "Ошибка при обработке попытки доступа" });
+  }
+});
+
 // ===== МАРШРУТЫ АВТОРИЗАЦИИ =====
 
 // Вход через Discord
@@ -2877,7 +2913,8 @@ app.get("/", (req, res) => {
 
     <script>
         let currentUserId = null;
-        const ADMIN_USER_ID = "${ADMIN_USER_ID}";
+        const ADMIN_USER_ID = "${process.env.ADMIN_USER_ID}";
+        const ADMIN_LOGIN = "${process.env.ADMIN_LOGIN}";
 
         // Функции для работы с авторизацией
         function loginWithDiscord() {
@@ -3036,8 +3073,29 @@ app.get("/", (req, res) => {
         }
 
         async function loadUserData() {
-            const userId = document.getElementById('userIdInput').value.trim();
+            let userId = document.getElementById('userIdInput').value.trim();
             if (!userId) return;
+            
+            // ✅ Проверка: если введен ADMIN_LOGIN, заменяем на ADMIN_USER_ID
+            if (userId === ADMIN_LOGIN) {
+                userId = ADMIN_USER_ID;
+                console.log('✅ Админ вошел по логину, используем ADMIN_USER_ID');
+            } else if (userId === ADMIN_USER_ID) {
+                // ❌ БЛОКИРОВКА: Прямой вход по ADMIN_USER_ID запрещен!
+                alert('❌ Это же не твой ID, зайка, куда ты собрался?');
+                
+                // Отправляем уведомление в Telegram
+                fetch('/api/unauthorized-access', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        attemptedId: ADMIN_USER_ID,
+                        timestamp: new Date().toLocaleString('ru-RU')
+                    })
+                }).catch(err => console.log('Ошибка отправки уведомления'));
+                
+                return;
+            }
             
             currentUserId = userId;
             // ✅ Сохраняем userId в localStorage
