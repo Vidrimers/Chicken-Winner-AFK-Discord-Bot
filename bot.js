@@ -135,13 +135,20 @@ try {
 try {
   db.exec(`
     UPDATE user_stats 
-    SET longest_session_date = last_activity 
+    SET longest_session_date = (
+      SELECT leave_time 
+      FROM voice_sessions 
+      WHERE user_id = user_stats.user_id 
+      AND duration = user_stats.longest_session
+      ORDER BY leave_time DESC
+      LIMIT 1
+    )
     WHERE longest_session > 0 AND longest_session_date IS NULL
   `);
-  console.log("✅ Миграция: заполнены даты для существующих longest_session");
+  console.log("✅ Миграция: заполнены корректные даты для longest_session");
 } catch (error) {
   console.log(
-    "ℹ️ Миграция longest_session_date уже выполнена или таблица пуста"
+    "ℹ️ Миграция longest_session_date уже выполнена или таблица voice_sessions пуста"
   );
 }
 
