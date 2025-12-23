@@ -1695,35 +1695,52 @@ app.post("/api/admin/delete-user", async (req, res) => {
   try {
     // Получаем информацию о пользователе для отчета
     const userStats = getUserStats(userId);
-    const userName = userStats ? (userStats.username || 'Пользователь ID: ' + userId) : 'Пользователь ID: ' + userId;
+    const userName = userStats
+      ? userStats.username || "Пользователь ID: " + userId
+      : "Пользователь ID: " + userId;
 
     // Удаляем пользователя из всех таблиц
-    db.prepare('DELETE FROM user_stats WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM user_settings WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM user_achievements WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM voice_sessions WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM achievements WHERE user_id = ?').run(userId);
+    db.prepare("DELETE FROM user_stats WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM user_settings WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM user_achievements WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM voice_sessions WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM achievements WHERE user_id = ?").run(userId);
 
-    console.log('🗑️ Пользователь ' + userId + ' (' + userName + ') полностью удален из БД');
+    console.log(
+      "🗑️ Пользователь " + userId + " (" + userName + ") полностью удален из БД"
+    );
 
     // Отправляем уведомление в Telegram
-    fetch('https://api.telegram.org/bot' + process.env.TELEGRAM_BOT_TOKEN + '/sendMessage', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: process.env.TELEGRAM_CHAT_ID,
-        text: '🗑️ <b>ПОЛЬЗОВАТЕЛЬ УДАЛЕН ИЗ БД</b>\n\n' +
-              'ID: <code>' + userId + '</code>\n' +
-              'Имя: ' + userName + '\n' +
-              'Время: ' + new Date().toLocaleString('ru-RU'),
-        parse_mode: 'HTML'
-      })
-    }).catch(err => console.log('Ошибка отправки уведомления в Telegram:', err));
+    fetch(
+      "https://api.telegram.org/bot" +
+        process.env.TELEGRAM_BOT_TOKEN +
+        "/sendMessage",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: process.env.TELEGRAM_CHAT_ID,
+          text:
+            "🗑️ <b>ПОЛЬЗОВАТЕЛЬ УДАЛЕН ИЗ БД</b>\n\n" +
+            "ID: <code>" +
+            userId +
+            "</code>\n" +
+            "Имя: " +
+            userName +
+            "\n" +
+            "Время: " +
+            new Date().toLocaleString("ru-RU"),
+          parse_mode: "HTML",
+        }),
+      }
+    ).catch((err) =>
+      console.log("Ошибка отправки уведомления в Telegram:", err)
+    );
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Ошибка при удалении пользователя:', error);
-    res.status(500).json({ error: 'Ошибка при удалении пользователя' });
+    console.error("Ошибка при удалении пользователя:", error);
+    res.status(500).json({ error: "Ошибка при удалении пользователя" });
   }
 });
 
