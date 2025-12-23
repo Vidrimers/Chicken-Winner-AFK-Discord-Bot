@@ -1684,6 +1684,49 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
   }
 });
 
+// ===== УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ =====
+app.post("/api/admin/delete-user", async (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "Отсутствует userId" });
+  }
+
+  try {
+    // Получаем информацию о пользователе для отчета
+    const userStats = getUserStats(userId);
+    const userName = userStats ? (userStats.username || 'Пользователь ID: ' + userId) : 'Пользователь ID: ' + userId;
+
+    // Удаляем пользователя из всех таблиц
+    db.prepare('DELETE FROM user_stats WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM user_settings WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM user_achievements WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM voice_sessions WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM achievements WHERE user_id = ?').run(userId);
+
+    console.log('🗑️ Пользователь ' + userId + ' (' + userName + ') полностью удален из БД');
+
+    // Отправляем уведомление в Telegram
+    fetch('https://api.telegram.org/bot' + process.env.TELEGRAM_BOT_TOKEN + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: process.env.TELEGRAM_CHAT_ID,
+        text: '🗑️ <b>ПОЛЬЗОВАТЕЛЬ УДАЛЕН ИЗ БД</b>\n\n' +
+              'ID: <code>' + userId + '</code>\n' +
+              'Имя: ' + userName + '\n' +
+              'Время: ' + new Date().toLocaleString('ru-RU'),
+        parse_mode: 'HTML'
+      })
+    }).catch(err => console.log('Ошибка отправки уведомления в Telegram:', err));
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка при удалении пользователя:', error);
+    res.status(500).json({ error: 'Ошибка при удалении пользователя' });
+  }
+});
+
 // ===== МАРШРУТЫ АВТОРИЗАЦИИ =====
 
 // Вход через Discord
@@ -2931,6 +2974,34 @@ app.get("/", (req, res) => {
             }
         }
 
+        function deleteUserFromDB(userId, username) {
+            event.stopPropagation();
+            const confirmed = confirm('⚠️ Вы уверены что хотите полностью удалить пользователя "' + username + '" из базы данных?' + String.fromCharCode(10) + String.fromCharCode(10) + 'Это действие необратимо и удалит:' + String.fromCharCode(10) + '- Все статистики' + String.fromCharCode(10) + '- Все достижения' + String.fromCharCode(10) + '- Все сессии' + String.fromCharCode(10) + '- Все настройки');
+            
+            if (!confirmed) {
+                return;
+            }
+            
+            fetch('/api/admin/delete-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: userId })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Пользователь "' + username + '" полностью удален из БД!');
+                    loadLeaderboard();
+                } else {
+                    alert('❌ Ошибка: ' + (data.message || 'Не удалось удалить пользователя'));
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при удалении пользователя:', error);
+                alert('❌ Ошибка при удалении пользователя');
+            });
+        }
+
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -3389,7 +3460,7 @@ lockedAchievements.forEach(achievementHtml => {
                     const isAdmin = currentUserId === ADMIN_USER_ID;
                     const userId = user.user_id.replace(/"/g, '&quot;');
                     const userName = (user.username || 'Пользователь').replace(/"/g, '&quot;');
-                    const deleteBtn = isAdmin ? '<button onclick="deleteUserFromDB(&#34;' + userId + '&#34;, &#34;' + userName + '&#34;)" style="margin-left: 10px; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;z-index: 999;">🗑️ Удалить</button>' : '';
+                    const deleteBtn = isAdmin ? '<button onclick="deleteUserFromDB(&#34;' + userId + '&#34;, &#34;' + userName + '&#34;)" style="margin-left: 10px; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>' : '';
                     
                     html += '<div class="leaderboard-item" onclick="showUserModal(&#34;' + userId + '&#34;, &#34;' + (user.username || 'Неизвестный пользователь').replace(/"/g, '&quot;') + '&#34;, ' + (index + 1) + ')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">' +
                         '<div>' +
