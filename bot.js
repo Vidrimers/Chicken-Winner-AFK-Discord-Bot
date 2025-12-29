@@ -461,7 +461,7 @@ async function checkAndSendMissedAchievementNotifications() {
         if (user) {
           try {
             const dmMessage =
-              `🏆 **Новое достижение!**\n\n` +
+              `\n\n🏆 **Новое достижение!**\n\n` +
               `${achievement.emoji} **${achievement.name}**\n` +
               `${achievement.description}\n\n` +
               `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}/?userId=${achievement.user_id}&autoLogin=true`;
@@ -486,7 +486,7 @@ async function checkAndSendMissedAchievementNotifications() {
           const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
           if (channel) {
             const channelMessage =
-              `🏆 **Новое достижение!**\n\n` +
+              `\n\n🏆 **Новое достижение!**\n\n` +
               `👤 **Пользователь:** <@${achievement.user_id}>\n` +
               `🎯 **Достижение:** ${achievement.emoji} ${achievement.name}\n` +
               `📝 **Описание:** ${achievement.description}\n` +
