@@ -547,3 +547,99 @@ async function backupDatabase() {
         alert('Ошибка при создании бэкапа базы данных');
     }
 }
+
+// Функции для управления пользователями
+async function openUsersModal() {
+    document.getElementById('usersModal').style.display = 'block';
+    document.body.classList.add('modal-open');
+    await loadAllUsers();
+}
+
+function closeUsersModal() {
+    document.getElementById('usersModal').style.display = 'none';
+    document.body.classList.remove('modal-open');
+}
+
+function closeUsersModalOnOutsideClick(event) {
+    if (event.target.id === 'usersModal') {
+        closeUsersModal();
+    }
+}
+
+async function loadAllUsers() {
+    try {
+        const response = await fetch('/api/admin/users');
+        if (!response.ok) {
+            throw new Error('Ошибка загрузки пользователей');
+        }
+        
+        const users = await response.json();
+        displayUsers(users);
+    } catch (error) {
+        console.error('Ошибка при загрузке пользователей:', error);
+        document.getElementById('usersList').innerHTML = '<p style="color: #ff4444; text-align: center;">Ошибка загрузки пользователей</p>';
+    }
+}
+
+function displayUsers(users) {
+    const usersList = document.getElementById('usersList');
+    
+    if (users.length === 0) {
+        usersList.innerHTML = '<p style="color: #999; text-align: center;">Нет пользователей</p>';
+        return;
+    }
+    
+    let html = '';
+    users.forEach(user => {
+        const isAdmin = user.user_id === window.CONFIG.ADMIN_USER_ID;
+        const deleteBtn = isAdmin 
+            ? '<span style="color: #999; font-size: 12px;">Админ</span>'
+            : `<button onclick="deleteUser('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>`;
+        
+        html += `
+            <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333;">
+                <div>
+                    <div style="color: white; font-weight: bold; margin-bottom: 5px;">👤 ${user.username}</div>
+                    <div style="color: #999; font-size: 12px;">ID: ${user.user_id}</div>
+                    <div style="color: #667eea; font-size: 12px; margin-top: 5px;">
+                        📊 Сессий: ${user.total_sessions || 0} | 
+                        ⏱️ Время: ${Math.floor((user.total_voice_time || 0) / 3600)}ч | 
+                        ⭐ Очки: ${user.rank_points || 0}
+                    </div>
+                </div>
+                <div>
+                    ${deleteBtn}
+                </div>
+            </div>
+        `;
+    });
+    
+    usersList.innerHTML = html;
+}
+
+async function deleteUser(userId, username) {
+    const confirmed = confirm('⚠️ Вы уверены что хотите полностью удалить пользователя "' + username + '" из базы данных?' + String.fromCharCode(10) + String.fromCharCode(10) + 'Это действие необратимо и удалит:' + String.fromCharCode(10) + '- Все статистики' + String.fromCharCode(10) + '- Все достижения' + String.fromCharCode(10) + '- Все сессии' + String.fromCharCode(10) + '- Все настройки');
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/admin/delete-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+        });
+        
+        if (response.ok) {
+            console.log('✅ Пользователь удален');
+            await loadAllUsers(); // Перезагружаем список
+        } else {
+            const error = await response.json();
+            alert('Ошибка при удалении пользователя: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Ошибка при удалении пользователя:', error);
+        alert('Ошибка при удалении пользователя');
+    }
+}

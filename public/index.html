@@ -147,6 +147,20 @@
                 </div>
             </div>
             
+            <!-- МОДАЛЬНОЕ ОКНО УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ -->
+            <div id="usersModal" onclick="closeUsersModalOnOutsideClick(event)" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
+                <div onclick="event.stopPropagation()" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #667eea; border-radius: 10px; padding: 20px; width: 90%; max-width: 800px; max-height: 80vh; overflow: auto; scrollbar-width: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="color: white; margin: 0;">👥 Управление пользователями</h2>
+                        <button onclick="closeUsersModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
+                    </div>
+                    
+                    <div id="usersList" style="display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Список пользователей будет загружен здесь -->
+                    </div>
+                </div>
+            </div>
+            
             <div id="userContent" style="display: none;">
                 <div class="tabs">
                     <div class="tab active" onclick="switchTab('stats')">📊 Статистика</div>
@@ -247,6 +261,10 @@
                             <button id="backupDatabaseBtn" onclick="backupDatabase()" class="admin-btn">
                                 <span class="admin-btn-icon">💾</span>
                                 <span class="admin-btn-text">Бэкап БД</span>
+                            </button>
+                            <button id="manageUsersBtn" onclick="openUsersModal()" class="admin-btn">
+                                <span class="admin-btn-icon">👥</span>
+                                <span class="admin-btn-text">Пользователи</span>
                             </button>
                         </div>
                     </div>

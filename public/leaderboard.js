@@ -9,10 +9,7 @@ async function loadLeaderboard() {
         leaderboard.forEach((user, index) => {
             const hours = Math.floor(user.total_voice_time / 3600);
             const minutes = Math.floor((user.total_voice_time % 3600) / 60);
-            const isAdmin = window.currentUserId === window.CONFIG.ADMIN_USER_ID;
             const userId = user.user_id.replace(/"/g, '&quot;');
-            const userName = (user.username || 'Пользователь').replace(/"/g, '&quot;');
-            const deleteBtn = isAdmin ? '<button onclick="deleteUserFromDB(&#34;' + userId + '&#34;, &#34;' + userName + '&#34;)" style="margin-left: 10px; padding: 5px 10px; background: #ff4444; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>' : '';
             
             html += '<div class="leaderboard-item" onclick="showUserModal(&#34;' + userId + '&#34;, &#34;' + (user.username || 'Неизвестный пользователь').replace(/"/g, '&quot;') + '&#34;, ' + (index + 1) + ')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">' +
                 '<div>' +
@@ -22,7 +19,6 @@ async function loadLeaderboard() {
                 '<div style="display: flex; align-items: center;">' +
                     '<span>' + hours + 'ч ' + minutes + 'м</span>' +
                     '<small style="margin-left: 10px; color: #666;">(' + (user.rank_points || 0) + ' очков)</small>' +
-                    deleteBtn +
                 '</div>' +
             '</div>';
         });

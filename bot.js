@@ -1176,6 +1176,22 @@ app.get("/api/leaderboard", (req, res) => {
   res.json(topUsers);
 });
 
+// API endpoint для получения всех пользователей (для админа)
+app.get("/api/admin/users", (req, res) => {
+  try {
+    const stmt = db.prepare(`
+      SELECT user_id, username, total_sessions, total_voice_time, rank_points
+      FROM user_stats
+      ORDER BY username ASC
+    `);
+    const users = stmt.all();
+    res.json(users);
+  } catch (error) {
+    console.error("❌ Ошибка при получении пользователей:", error);
+    res.status(500).json({ error: "Ошибка при получении пользователей" });
+  }
+});
+
 // API endpoint для получения всех специальных достижений
 app.get("/api/special-achievements", (req, res) => {
   try {
