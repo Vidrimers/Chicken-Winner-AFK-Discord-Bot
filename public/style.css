@@ -414,6 +414,39 @@ body.modal-open {
     transform: translateY(0);
 }
 
+/* Стили для карточки выхода */
+.logout-card {
+    border: 2px solid #ff4444;
+}
+
+.logout-card:hover {
+    border-color: #ff4444;
+    box-shadow: 0 8px 25px rgba(255, 68, 68, 0.2);
+}
+
+.logout-btn {
+    width: 100%;
+    padding: 12px 15px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 68, 68, 0.3);
+}
+
+.logout-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 68, 68, 0.4);
+}
+
+.logout-btn:active {
+    transform: translateY(0);
+}
+
 .loading { 
     text-align: center; 
     padding: 50px; 
