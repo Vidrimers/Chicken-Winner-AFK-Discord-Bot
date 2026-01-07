@@ -496,7 +496,7 @@ async function checkAndSendMissedAchievementNotifications() {
               `🎯 **Достижение:** ${achievement.emoji} ${achievement.name}\n` +
               `📝 **Описание:** ${achievement.description}\n` +
               `📅 **Время:** ${formatTime(new Date())}\n\n` +
-              `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}/?userId=${achievement.user_id}&autoLogin=true`;
+              `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}`;
 
             await channel.send(channelMessage);
             console.log(
@@ -1078,7 +1078,7 @@ const checkSpecialAchievement = async () => {
                   `📝 **Описание:** Лучший admin_ebaniy канала\n` +
                   `📅 **Время:** ${formatTime(new Date())}\n` +
                   `🎂  **Поздравляем малютку с днем рождения**\n\n` +
-                  `🌐 **Посмотреть это достижение можно в веб-панели:** http://${SERVER_IP}:${PORT}/?userId=${specialUserId}&autoLogin=true`
+                  `🌐 **Посмотреть это достижение можно в веб-панели:** http://${SERVER_IP}:${PORT}`
               );
             }
           } catch (channelError) {
@@ -1468,7 +1468,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
                     `🎯 **Достижение:** ${emoji} ${name}\n` +
                     `📝 **Описание:** ${description}\n` +
                     `📅 **Время:** ${formatTime(new Date())}\n\n` +
-                    `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
+                    `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}`
                 );
               }
             } catch (channelError) {
@@ -1874,9 +1874,7 @@ client.on("messageCreate", async (message) => {
     }/${Object.keys(ACHIEVEMENTS).filter((id) => id !== "best_admin").length}**
 
 👤 **Твой ID:** \`${message.author.id}\`
-🌐 **Подробная статистика:** http://${SERVER_IP}:${PORT}/?userId=${
-      message.author.id
-    }&autoLogin=true
+🌐 **Подробная статистика:** http://${SERVER_IP}:${PORT}
     `);
     return;
   }
@@ -2016,7 +2014,7 @@ client.on("messageCreate", async (message) => {
 \`.!. achievements\` - посмотреть достижения
 
 👤 **Твой ID:** \`${message.author.id}\`
-🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}/?userId=${message.author.id}&autoLogin=true`
+🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}`
     );
 
     await sendTelegramReport(
@@ -2079,7 +2077,7 @@ client.on("messageCreate", async (message) => {
 • Зарабатывай очки рейтинга и открывай достижения!
 
 👤 **Твой ID:** \`${message.author.id}\`
-🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}/?userId=${message.author.id}&autoLogin=true
+🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}
     `);
 
     await sendTelegramReport(
