@@ -200,7 +200,7 @@ async function loadUserDataAuto(userId) {
         document.getElementById('clearBtn').style.display = 'block';
         
         if (window.currentUserId === window.CONFIG.ADMIN_USER_ID) {
-            document.getElementById('createSpecialAchievementBtn').style.display = 'block';
+            document.getElementById('adminPanel').style.display = 'block';
             document.querySelectorAll('.admin-option').forEach(option => {
                 option.style.display = 'block';
             });
@@ -325,13 +325,13 @@ async function loadUserData() {
         document.getElementById('clearBtn').style.display = 'block';
         
         if (userId === window.CONFIG.ADMIN_USER_ID) {
-            document.getElementById('createSpecialAchievementBtn').style.display = 'inline-block';
+            document.getElementById('adminPanel').style.display = 'block';
             
             document.querySelectorAll('.admin-option').forEach(option => {
                 option.style.display = 'block';
             });
         } else {
-            document.getElementById('createSpecialAchievementBtn').style.display = 'none';
+            document.getElementById('adminPanel').style.display = 'none';
         }
         
         document.getElementById('loading').style.display = 'none';

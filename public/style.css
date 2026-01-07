@@ -447,6 +447,94 @@ body.modal-open {
     transform: translateY(0);
 }
 
+/* Стили для админ-панели */
+.admin-panel {
+    margin-top: 40px;
+    /* background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px;
+    padding: 0;
+    box-shadow: 0 8px 30px rgba(255, 215, 0, 0.3);
+    border: 3px solid #ffa500;
+    overflow: hidden;
+}
+
+.admin-panel-header {
+    /* background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); */
+    color: white;
+    padding: 20px;
+    text-align: center;
+    border-bottom: 3px solid #ffa500;
+}
+
+.admin-panel-header h2 {
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.admin-panel-header p {
+    font-size: 0.95rem;
+    opacity: 0.95;
+    margin: 0;
+}
+
+.admin-panel-content {
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.admin-btn {
+    background: white;
+    border: 3px solid #ff6b35;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.admin-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
+    border-color: #ff6b35;
+    background: #fff9f0;
+}
+
+.admin-btn:active {
+    transform: translateY(-1px);
+}
+
+.admin-btn-icon {
+    font-size: 2.5rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.admin-btn-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    flex: 1;
+}
+
+.admin-btn-text strong {
+    font-size: 1.2rem;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.admin-btn-text small {
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: normal;
+}
+
 .loading { 
     text-align: center; 
     padding: 50px; 

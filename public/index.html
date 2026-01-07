@@ -38,10 +38,6 @@
                     <button onclick="loadUserData()" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
                     <button id="clearBtn" onclick="clearSavedUserId()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Выход</button>
                 </div>
-                
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; flex: 1; padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">⭐ Создать спец. достижение</button>
-                </div>
             </div>
             
             <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
@@ -176,6 +172,23 @@
                         </div>
                         
                         <button class="save-settings-btn" onclick="saveSettings()">💾 Сохранить настройки</button>
+                    </div>
+                    
+                    <!-- Админ-панель -->
+                    <div id="adminPanel" class="admin-panel" style="display: none;">
+                        <div class="admin-panel-header">
+                            <h2>👑 Админ-панель</h2>
+                            <p>Специальные функции для администратора</p>
+                        </div>
+                        <div class="admin-panel-content">
+                            <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" class="admin-btn">
+                                <span class="admin-btn-icon">⭐</span>
+                                <span class="admin-btn-text">
+                                    <strong>Создать специальное достижение</strong>
+                                    <small>Выдать уникальное достижение пользователю</small>
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
