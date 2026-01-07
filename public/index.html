@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AFK Bot - Панель управления</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/media.css">
+    <script src="/app.js" defer></script>
+    <script src="/achievements.js" defer></script>
+    <script src="/leaderboard.js" defer></script>
+    <script src="/special-achievements.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Chicken Winner AFK Bot</h1>
+            
+            <p>Статистика, рейтинг и достижения</p>
+            
+            <div class="user-id-display" id="userIdDisplay">
+                <h3>👤 ID пользователя:</h3>
+                <span class="user-id" id="currentUserId"></span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="user-search">
+                <div id="authSection" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;">
+                    <div id="userInfoDisplay" style="display: none; flex: 1; min-width: 200px; padding: 10px 20px; background: #667eea; color: white; border-radius: 5px; font-weight: bold; font-size: 14px; text-align: center;">
+                        👤 <span id="userUsername"></span>
+                    </div>
+                    <button id="logoutBtn" onclick="logout()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🚪 Выход</button>
+                </div>
+                
+                <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="userIdInput" placeholder="Discord ID" style="flex: 1;">
+                    <button onclick="loadUserData()" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
+                    <button id="clearBtn" onclick="clearSavedUserId()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Выход</button>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" style="display: none; flex: 1; padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">⭐ Создать спец. достижение</button>
+                </div>
+            </div>
+            
+            <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
+            <div id="createSpecialAchievementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #a45eea; border-radius: 10px; padding: 20px; width: 90%; max-width: 600px; height: 80vh; overflow: auto; scrollbar-width: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 class="SpecialAchievementForm-title" style="color: white; margin: 0 auto;">⭐ Создать спец. достижение</h2>
+                        <button onclick="closeCreateSpecialAchievementModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
+                    </div>
+                    
+                    <form id="createSpecialAchievementForm">
+                        <div class="SpecialAchievementForm-group" style="display: flex;justify-content: space-evenly;margin-bottom: 15px;">
+        <div style="display: flex;flex-direction: column;">
+                            <label style="color: white; display: block; margin-bottom: 5px;text-align: center;">Эмодзи достижения:</label>
+                            <input type="text" id="specialAchievementEmoji" maxlength="2" placeholder="🏆" style="width: 30%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; text-align: center;margin: 0 auto;" oninput="updateSpecialAchievementPreview()">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Discord ID пользователя:</label>
+                            <input type="text" id="specialAchievementUserId" placeholder="123456789" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; text-align:center;">
+                        </div>
+    </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Название достижения:</label>
+                            <input type="text" id="specialAchievementName" placeholder="Название" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;" oninput="updateSpecialAchievementPreview()">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: white;; display: block; margin-bottom: 5px;">Описание:</label>
+                            <textarea id="specialAchievementDescription" placeholder="Описание достижения" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; resize: vertical; min-height: 60px;"></textarea>
+                        </div>
+                        
+                        
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                            <div>
+                                <label style="color: white; display: block; margin-bottom: 5px;">Дата:</label>
+                                <input type="date" id="specialAchievementDate" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;">
+                            </div>
+                            <div>
+                                <label style="color: white; display: block; margin-bottom: 5px;">Время:</label>
+                                <input type="time" id="specialAchievementTime" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;">
+                            </div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Цвет:</label>
+                            <input type="color" id="specialAchievementColor" value="#a45eea" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px; cursor: pointer;" oninput="updateSpecialAchievementPreview()">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Превью:</label>
+                            <div id="specialAchievementPreview" style="padding: 10px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px;"></div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <button type="button" onclick="createSpecialAchievement()" style="padding: 10px; background-color: #a45eea; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Создать</button>
+                            <button type="button" onclick="closeCreateSpecialAchievementModal()" style="padding: 10px; background-color: #555; color: #fff; border: none; border-radius: 5px; cursor: pointer;">Отмена</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="userContent" style="display: none;">
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('stats')">📊 Статистика</div>
+                    <div class="tab" onclick="switchTab('achievements')">🏆 Достижения</div>
+                    <div class="tab" onclick="switchTab('settings')">⚙️ Настройки</div>
+                    <div class="tab" onclick="switchTab('leaderboard')">🏅 Рейтинг</div>
+                </div>
+                
+                <div id="stats" class="tab-content active">
+                    <div class="stats-grid" id="statsGrid">
+                        <!-- Статистика будет загружена здесь -->
+                    </div>
+                </div>
+                
+                <div id="achievements" class="tab-content">
+                    <div class="achievements" id="achievementsList">
+                        <!-- Достижения будут загружены здесь -->
+                    </div>
+                </div>
+                
+                <div id="settings" class="tab-content">
+                    <div class="settings-form">
+                        <div class="form-group">
+                            <label>📩 ЛС уведомления:</label>
+                            <select id="dmNotifications">
+                                <option value="true">✅ Включены</option>
+                                <option value="false">❌ Отключены</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>⏰ Время до AFK:</label>
+                            <select id="afkTimeout">
+                                <option value="10" class="admin-option" style="display: none;">10 секунд</option>
+                                <option value="15">15 минут</option>
+                                <option value="30">30 минут</option>
+                                <option value="45">45 минут</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>🏆 Уведомления о достижениях:</label>
+                            <select id="achievementNotifications">
+                                <option value="true">✅ Включены</option>
+                                <option value="false">❌ Отключены</option>
+                            </select>
+                        </div>
+                        
+                        <button class="save-btn" onclick="saveSettings()">Сохранить настройки</button>
+                    </div>
+                </div>
+                
+                <div id="leaderboard" class="tab-content">
+                    <div class="leaderboard" id="leaderboardList">
+                        <!-- Рейтинг будет загружен здесь -->
+                    </div>
+                </div>
+            </div>
+            
+            <div id="loading" class="loading">
+                Введи свой Discord ID для загрузки данных, малютка...
+            </div>
+        </div>
+    </div>
+</body>
+</html>

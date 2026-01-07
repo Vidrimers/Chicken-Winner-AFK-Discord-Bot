@@ -1,0 +1,357 @@
+/* DESKTOP FIRST - Адаптация для планшетов */
+@media screen and (max-width: 1024px) {
+    .container {
+        margin: 0 10px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .achievements {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Адаптация для маленьких планшетов */
+@media screen and (max-width: 768px) {
+    body {
+        padding: 10px;
+        font-size: 14px;
+    }
+    
+    .header {
+        padding: 20px;
+    }
+    
+    .header h1 {
+        font-size: 2rem;
+    }
+    
+    .header p {
+        font-size: 1rem;
+    }
+    
+    .content {
+        padding: 20px;
+    }
+    
+    .user-search {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .user-search input {
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .user-search button {
+        width: 100%;
+        max-width: 200px;
+        width: auto;
+        max-width: 100%;
+    }
+    
+    .tabs {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 5px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .tab {
+        padding: 12px 15px;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 20px 15px;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        word-break: break-word;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+    }
+    
+    .achievement {
+        padding: 15px;
+    }
+    
+    .leaderboard-item {
+        padding: 12px 15px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .leaderboard-item:hover::after {
+        content: "👆 Нажмите для достижений";
+        font-size: 11px;
+        right: 5px;
+        padding: 3px 6px;
+    }
+    
+    .settings-form {
+        padding: 20px;
+    }
+    
+    .save-btn {
+        width: 100%;
+    }
+}
+
+/* Адаптация для мобильных телефонов */
+@media screen and (max-width: 480px) {
+    body {
+        padding: 5px;
+    }
+    
+    .container {
+        border-radius: 10px;
+        margin: 0;
+    }
+    
+    .header {
+        padding: 15px;
+    }
+    
+    .header h1 {
+        font-size: 1.6rem;
+        margin-bottom: 8px;
+    }
+    
+    .header p {
+        font-size: 0.9rem;
+    }
+    
+    .user-id-display {
+        padding: 10px;
+        margin: 15px 0;
+    }
+    
+    .user-id-display h3 {
+        font-size: 1rem;
+    }
+    
+    .user-id-display .user-id {
+        font-size: 0.9rem;
+        padding: 6px 10px;
+        word-break: break-all;
+    }
+    
+    .content {
+        padding: 15px;
+    }
+    
+    .tabs {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2px;
+    }
+    
+    .tab {
+        padding: 10px 5px;
+        font-size: 0.75rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .stat-card {
+        padding: 15px 10px;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+        line-height: 1.2;
+    }
+    
+    .achievement {
+        padding: 12px;
+    }
+    
+    .achievement h3 {
+        font-size: 0.9rem;
+        margin-bottom: 6px;
+    }
+    
+    .achievement p {
+        font-size: 0.8rem;
+        margin-bottom: 6px;
+    }
+    
+    .achievement small {
+        font-size: 0.7rem;
+    }
+    
+    .leaderboard-item {
+        padding: 10px;
+        font-size: 0.85rem;
+    }
+    
+    .leaderboard-item:hover::after {
+        display: none; /* Убираем подсказку на мобильных */
+    }
+    
+    .rank {
+        font-size: 1rem;
+    }
+}
+
+@media screen and (max-width: 400px) {
+    #manualInputSection{
+        flex-direction: column;
+    }
+    .SpecialAchievementForm-title{
+        font-size: 17px;
+    }
+    .SpecialAchievementForm-group{
+        flex-direction: column;
+        gap: 15px;
+    }
+    #specialAchievementUserId{
+        text-align: left !important;
+    }
+}
+
+/* Адаптация для очень маленьких экранов */
+@media screen and (max-width: 360px) {
+    .tabs {
+        font-size: 0.7rem;
+    }
+    
+    .tab {
+        padding: 8px 3px;
+    }
+    
+    .stats-grid {
+        gap: 6px;
+    }
+    
+    .stat-card {
+        padding: 12px 8px;
+    }
+    
+    .stat-number {
+        font-size: 1.3rem;
+    }
+    
+    .stat-label {
+        font-size: 0.7rem;
+    }
+}
+
+/* Модальное окно - мобильная адаптация */
+@media screen and (max-width: 768px) {
+    .modal {
+        padding: 10px;
+        align-items: flex-start;
+    }
+    
+    .modal-content {
+        max-width: 100%;
+        margin-top: 20px;
+    }
+    
+    .modal-header {
+        padding: 15px;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.3rem;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .modal-body {
+        padding: 15px;
+    }
+    
+    .modal-achievements {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .modal-achievement {
+        padding: 12px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .modal {
+        padding: 5px;
+    }
+    
+    .modal-content {
+        border-radius: 10px;
+        margin-top: 10px;
+    }
+    
+    .modal-header {
+        padding: 12px;
+        border-radius: 10px 10px 0 0;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.1rem;
+        margin-bottom: 6px;
+    }
+    
+    .modal-header h3 {
+        font-size: 1rem;
+        margin-bottom: 5px;
+    }
+    
+    .modal-header p {
+        font-size: 0.8rem;
+    }
+    
+    .close-btn {
+        width: 25px;
+        height: 25px;
+        font-size: 16px;
+        top: 8px;
+        right: 8px;
+    }
+    
+    .modal-body {
+        padding: 10px;
+    }
+    
+    .modal-achievement {
+        padding: 10px;
+    }
+    
+    .modal-achievement h4 {
+        font-size: 0.9rem;
+    }
+    
+    .modal-achievement p {
+        font-size: 0.8rem;
+    }
+    
+    .modal-achievement small {
+        font-size: 0.75rem;
+    }
+}
