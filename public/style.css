@@ -283,6 +283,7 @@ body.modal-open {
     font-weight: bold; 
     color: #667eea; 
     font-size: 1.2rem;
+    margin-right: 10px;
 }
 
 .settings-form { 
