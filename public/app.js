@@ -281,7 +281,7 @@ async function loadUserData(skipSecurityCheck = false) {
     let userId = document.getElementById('userIdInput').value.trim();
     if (!userId) return;
     
-    if (userId === window.CONFIG.ADMIN_LOGIN) {
+    if (userId.toLowerCase() === window.CONFIG.ADMIN_LOGIN.toLowerCase()) {
         userId = window.CONFIG.ADMIN_USER_ID;
         console.log('✅ Админ вошел по логину, используем ADMIN_USER_ID');
     } else if (userId === window.CONFIG.ADMIN_USER_ID && !skipSecurityCheck) {
