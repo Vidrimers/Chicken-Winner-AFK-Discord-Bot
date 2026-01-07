@@ -194,6 +194,9 @@ async function loadUserDataAuto(userId) {
         document.getElementById('userContent').style.display = 'block';
         document.getElementById('userIdDisplay').style.display = 'block';
         
+        // Скрываем поле ввода ID и кнопку загрузки когда пользователь залогинен
+        document.getElementById('manualInputSection').style.display = 'none';
+        
         document.getElementById('clearBtn').style.display = 'block';
         
         if (window.currentUserId === window.CONFIG.ADMIN_USER_ID) {
@@ -315,6 +318,9 @@ async function loadUserData() {
         document.getElementById('userDisplayLabel').textContent = '👤 Имя на сервере';
         showingUsername = true;
         document.getElementById('userIdDisplay').style.display = 'block';
+        
+        // Скрываем поле ввода ID и кнопку загрузки когда пользователь залогинен
+        document.getElementById('manualInputSection').style.display = 'none';
         
         document.getElementById('clearBtn').style.display = 'block';
         
@@ -470,6 +476,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const authOk = await checkAuthStatus();
         
         if (!authOk) {
+            // Показываем поле ввода ID если пользователь не залогинен
+            document.getElementById('manualInputSection').style.display = 'flex';
+            
             const savedUserId = loadSavedUserId();
             if (savedUserId) {
                 console.log('📱 Автоматически загружаю сохраненного пользователя:', savedUserId);
