@@ -45,18 +45,42 @@ body.modal-open {
 }
 
 .user-id-display { 
-    background: rgba(255,255,255,0.1); 
+    /* background: rgba(255,255,255,0.1);  */
     border-radius: 10px; 
     padding: 15px; 
     margin: 20px 0; 
     text-align: center; 
-    display: none; 
+    display: none;
+    transition: all 0.3s ease;
+    transform-style: preserve-3d;
+}
+
+.user-id-display:hover {
+    /* background: rgba(255,255,255,0.15); */
+    transform: scale(1.02);
+}
+
+.user-id-display.flipping {
+    animation: flip 0.3s ease-in-out;
+}
+
+@keyframes flip {
+    0% {
+        transform: perspective(400px) rotateY(0deg);
+    }
+    50% {
+        transform: perspective(400px) rotateY(90deg);
+    }
+    100% {
+        transform: perspective(400px) rotateY(0deg);
+    }
 }
 
 .user-id-display h3 { 
     font-size: 1.2rem; 
     margin-bottom: 5px; 
     color: #fff;
+    user-select: none;
 }
 
 .user-id-display .user-id { 
@@ -68,6 +92,19 @@ body.modal-open {
     display: inline-block;
     color: #fff;
     font-weight: bold;
+    user-select: all;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.user-id-display .user-id:hover {
+    background: rgba(255,255,255,0.3);
+    transform: scale(1.05);
+}
+
+.user-id-display .user-id:active {
+    transform: scale(0.98);
 }
 
 .content { 

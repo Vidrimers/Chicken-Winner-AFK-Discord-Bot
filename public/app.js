@@ -7,6 +7,89 @@ window.CONFIG = {
 };
 
 window.currentUserId = null;
+window.currentUsername = null;
+let showingUsername = true; // По умолчанию показываем имя
+
+// Функция переключения между именем и ID
+function toggleUserInfo() {
+    const label = document.getElementById('userDisplayLabel');
+    const value = document.getElementById('currentUserId');
+    const container = document.getElementById('userIdDisplay');
+    
+    if (!window.currentUserId || !window.currentUsername) return;
+    
+    // Добавляем класс для анимации
+    container.classList.add('flipping');
+    
+    // Меняем содержимое в середине анимации
+    setTimeout(() => {
+        showingUsername = !showingUsername;
+        
+        if (showingUsername) {
+            label.textContent = '👤 Имя на сервере';
+            value.textContent = window.currentUsername;
+        } else {
+            label.textContent = '👤 ID пользователя';
+            value.textContent = window.currentUserId;
+        }
+    }, 150); // Половина времени анимации
+    
+    // Убираем класс после завершения анимации
+    setTimeout(() => {
+        container.classList.remove('flipping');
+    }, 300);
+}
+
+// Функция копирования в буфер обмена
+async function copyToClipboard(event) {
+    event.stopPropagation(); // Останавливаем всплытие события, чтобы не сработал toggleUserInfo
+    
+    const element = document.getElementById('currentUserId');
+    const text = element.textContent;
+    
+    if (!text) return;
+    
+    try {
+        await navigator.clipboard.writeText(text);
+        
+        // Показываем уведомление
+        const originalText = element.textContent;
+        element.textContent = '✓ Скопировано!';
+        element.style.background = 'rgba(40, 167, 69, 0.5)';
+        
+        setTimeout(() => {
+            element.textContent = originalText;
+            element.style.background = '';
+        }, 1000);
+        
+        console.log('✅ Скопировано в буфер:', text);
+    } catch (err) {
+        console.error('❌ Ошибка копирования:', err);
+        
+        // Fallback для старых браузеров
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            element.textContent = '✓ Скопировано!';
+            element.style.background = 'rgba(40, 167, 69, 0.5)';
+            
+            setTimeout(() => {
+                element.textContent = text;
+                element.style.background = '';
+            }, 1000);
+        } catch (err2) {
+            console.error('❌ Fallback копирование не удалось:', err2);
+        }
+        
+        document.body.removeChild(textArea);
+    }
+}
 
 // Загружаем конфигурацию при старте
 async function loadConfig() {
@@ -89,7 +172,10 @@ async function loadUserDataAuto(userId) {
         console.log('✅ Данные получены:', data);
         
         const username = data.stats.username || 'Пользователь';
-        document.getElementById('currentUserId').textContent = userId;
+        window.currentUsername = username;
+        document.getElementById('currentUserId').textContent = username;
+        document.getElementById('userDisplayLabel').textContent = '👤 Имя на сервере';
+        showingUsername = true;
         
         try {
             await fetch(`/api/visit/${userId}`, {
@@ -223,7 +309,11 @@ async function loadUserData() {
         console.log('Вызываю displayUserSettings...');
         displayUserSettings(data.settings);
         
-        document.getElementById('currentUserId').textContent = userId;
+        const username = data.stats.username || 'Пользователь';
+        window.currentUsername = username;
+        document.getElementById('currentUserId').textContent = username;
+        document.getElementById('userDisplayLabel').textContent = '👤 Имя на сервере';
+        showingUsername = true;
         document.getElementById('userIdDisplay').style.display = 'block';
         
         document.getElementById('clearBtn').style.display = 'block';

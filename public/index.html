@@ -18,9 +18,9 @@
             
             <p>Статистика, рейтинг и достижения</p>
             
-            <div class="user-id-display" id="userIdDisplay">
-                <h3>👤 ID пользователя:</h3>
-                <span class="user-id" id="currentUserId"></span>
+            <div class="user-id-display" id="userIdDisplay" style="cursor: pointer;">
+                <h3 id="userDisplayLabel" onclick="toggleUserInfo()">👤 Имя на сервере</h3>
+                <span class="user-id" id="currentUserId" onclick="copyToClipboard(event)"></span>
             </div>
         </div>
         
