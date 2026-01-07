@@ -442,9 +442,7 @@ async function saveSettings() {
             })
         });
         
-        if (response.ok) {
-            alert('Настройки сохранены!');
-        } else {
+        if (!response.ok) {
             alert('Ошибка сохранения настроек');
         }
     } catch (error) {

@@ -5,6 +5,16 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import http from "http";
+import { 
+  sendTelegramReport,
+  sendAchievementNotification,
+  sendSpecialAchievementNotification,
+  sendSettingsChangeNotification,
+  sendAchievementDeleteNotification,
+  sendUserDeleteNotification,
+  sendUnauthorizedAccessNotification,
+  sendBotStatusNotification
+} from "./telegram.js";
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -177,11 +187,6 @@ const ACHIEVEMENTS_CHANNEL_ID = process.env.ACHIEVEMENTS_CHANNEL_ID;
 const SPECIAL_USER_ID = process.env.SPECIAL_USER_ID;
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 const DEFAULT_TEST_USER_ID = process.env.DEFAULT_TEST_USER_ID;
-
-// Telegram bot settings
-const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "137981675";
-const TELEGRAM_URL = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
 
 // Хранилище для отслеживания (временные данные)
 const userInactivityTimers = new Map();
@@ -510,22 +515,14 @@ async function checkAndSendMissedAchievementNotifications() {
 
         // Отправляем в Telegram
         try {
-          let telegramMessage =
-            `🏆 <b>Новое специальное достижение!</b>\n` +
-            `👤 Пользователь: ${username}\n` +
-            `🎯 Достижение: ${achievement.emoji} ${achievement.name}\n` +
-            `📝 Описание: ${achievement.description}\n`;
-
-          if (achievement.color) {
-            telegramMessage += `🎨 Цвет: ${achievement.color}\n`;
-          }
-
-          telegramMessage += `✅ Доступно с: ${formatTime(
-            new Date(achievement.special_date)
-          )}\n`;
-          telegramMessage += `📅 Отправлено: ${formatTime(new Date())}`;
-
-          sendTelegramReport(telegramMessage);
+          await sendSpecialAchievementNotification(
+            username,
+            achievement.emoji,
+            achievement.name,
+            achievement.description,
+            achievement.color,
+            achievement.special_date
+          );
           console.log(
             `✅ Telegram уведомление отправлено за достижение "${achievement.name}"`
           );
@@ -566,28 +563,7 @@ async function checkAndSendMissedAchievementNotifications() {
   }
 }
 
-// ===== ФУНКЦИЯ: ОТПРАВКА ОТЧЕТА В TELEGRAM =====
-async function sendTelegramReport(message) {
-  try {
-    const response = await fetch(TELEGRAM_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        text: message,
-        parse_mode: "HTML",
-      }),
-    });
-
-    if (!response.ok) {
-      console.error(`❌ Ошибка отправки в Telegram: ${response.status}`);
-    }
-  } catch (error) {
-    console.error("❌ Ошибка при отправке в Telegram:", error);
-  }
-}
+// Telegram функции импортированы из telegram.js
 
 // ===== ФУНКЦИЯ: ФОРМАТИРОВАНИЕ ВРЕМЕНИ =====
 function formatTime(date) {
@@ -824,15 +800,7 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
     }
 
     // Отправляем в Telegram
-    const telegramText =
-      `🏆 <b>Новое достижение!</b>\n` +
-      `👤 Пользователь: ${username}\n` +
-      `🎯 Достижение: ${achievement.name}\n` +
-      `📝 Описание: ${achievement.description}\n` +
-      `⭐ Очки: +${achievement.points}\n` +
-      `📅 Время: ${formatTime(new Date())}`;
-
-    sendTelegramReport(telegramText);
+    await sendAchievementNotification(username, achievement.name, achievement.description, achievement.points);
     console.log(`✅ Telegram отправлен`);
 
     // Отправляем уведомление в канал Discord
@@ -1091,7 +1059,7 @@ const checkSpecialAchievement = async () => {
           );
 
           // Отправляем в Telegram
-          sendTelegramReport(
+          await sendTelegramReport(
             `👑 <b>Специальное достижение выдано!</b>\n` +
               `🎯 Достижение: Лучший админ\n` +
               `👤 Пользователь ID: <code>${specialUserId}</code>\n` +
@@ -1295,15 +1263,12 @@ app.post("/api/settings/:userId", async (req, res) => {
             ? "✅ включены"
             : "❌ отключены";
 
-        sendTelegramReport(
-          `🔔 <b>Пользователь изменил настройки через веб-панель</b>\n` +
-            `👤 Пользователь: ${username}\n` +
-            `🆔 ID: <code>${userId}</code>\n` +
-            `📩 ЛС уведомления: ${dmStatus}\n` +
-            `⏱️ Таймер AFK: ${timeoutDisplay}\n` +
-            `🏆 Уведомления о достижениях: ${achievementStatus}\n` +
-            `📅 Время: ${formatTime(new Date())}`
-        );
+        const settingsText = 
+          `📩 ЛС уведомления: ${dmStatus}\n` +
+          `⏱️ Таймер AFK: ${timeoutDisplay}\n` +
+          `🏆 Уведомления о достижениях: ${achievementStatus}`;
+
+        await sendSettingsChangeNotification(username, userId, settingsText);
       } catch (error) {
         console.error(
           "Ошибка при проверке достижений через веб-панель:",
@@ -1513,33 +1478,14 @@ app.post("/api/admin/create-achievement", async (req, res) => {
             }
 
             // Отправляем в Telegram
-            let telegramMessage =
-              `🏆 <b>Новое специальное достижение!</b>\n` +
-              `👤 Пользователь: ${username}\n` +
-              `🎯 Достижение: ${emoji} ${name}\n` +
-              `📝 Описание: ${description}\n`;
-
-            if (color) {
-              telegramMessage += `🎨 Цвет: ${color}\n`;
-            }
-
-            if (specialDate) {
-              const scheduledTime = new Date(specialDate);
-              const now = new Date();
-              if (scheduledTime > now) {
-                telegramMessage += `⏰ Планируется: ${formatTime(
-                  scheduledTime
-                )}\n`;
-              } else {
-                telegramMessage += `✅ Доступно с: ${formatTime(
-                  scheduledTime
-                )}\n`;
-              }
-            }
-
-            telegramMessage += `📅 Создано: ${formatTime(new Date())}`;
-
-            sendTelegramReport(telegramMessage);
+            await sendSpecialAchievementNotification(
+              username,
+              emoji,
+              name,
+              description,
+              color,
+              specialDate
+            );
           } catch (notificationError) {
             console.error(
               "Ошибка при отправке отложенного уведомления:",
@@ -1667,15 +1613,7 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
     ).run(userId, achievementId);
 
     // Отправляем отчет в Telegram
-    const achievementPointsText =
-      achievementPoints > 0 ? `\n⭐ Очков удалено: -${achievementPoints}` : "";
-    sendTelegramReport(
-      `🗑️ <b>Достижение удалено!</b>\n` +
-        `👤 Пользователь: ${userName}\n` +
-        `🎯 Достижение: ${achievementName}\n` +
-        `📅 Время: ${formatTime(new Date())}${achievementPointsText}\n` +
-        `✅ Пользователь может получить его заново`
-    );
+    await sendAchievementDeleteNotification(userName, achievementName, achievementPoints);
 
     res.json({ success: true });
   } catch (error) {
@@ -1711,31 +1649,7 @@ app.post("/api/admin/delete-user", async (req, res) => {
     );
 
     // Отправляем уведомление в Telegram
-    fetch(
-      "https://api.telegram.org/bot" +
-        process.env.TELEGRAM_BOT_TOKEN +
-        "/sendMessage",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: process.env.TELEGRAM_CHAT_ID,
-          text:
-            "🗑️ <b>ПОЛЬЗОВАТЕЛЬ УДАЛЕН ИЗ БД</b>\n\n" +
-            "ID: <code>" +
-            userId +
-            "</code>\n" +
-            "Имя: " +
-            userName +
-            "\n" +
-            "Время: " +
-            new Date().toLocaleString("ru-RU"),
-          parse_mode: "HTML",
-        }),
-      }
-    ).catch((err) =>
-      console.log("Ошибка отправки уведомления в Telegram:", err)
-    );
+    await sendUserDeleteNotification(userId, userName);
 
     res.json({ success: true });
   } catch (error) {
@@ -1750,28 +1664,7 @@ app.post("/api/unauthorized-access", async (req, res) => {
 
   try {
     // Отправляем уведомление в Telegram
-    fetch(
-      "https://api.telegram.org/bot" +
-        process.env.TELEGRAM_BOT_TOKEN +
-        "/sendMessage",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: process.env.TELEGRAM_CHAT_ID,
-          text:
-            "⚠️ <b>ПОПЫТКА НЕСАНКЦИОНИРОВАННОГО ДОСТУПА!</b>\n\n" +
-            "Кто-то попытался зайти по прямому ADMIN_USER_ID: <code>" +
-            attemptedId +
-            "</code>\n" +
-            "Время: " +
-            timestamp,
-          parse_mode: "HTML",
-        }),
-      }
-    ).catch((err) =>
-      console.log("Ошибка отправки уведомления в Telegram:", err)
-    );
+    await sendUnauthorizedAccessNotification(attemptedId, timestamp);
 
     res.json({ success: true });
   } catch (error) {
@@ -2031,12 +1924,10 @@ client.on("messageCreate", async (message) => {
     await message.reply(
       "✅ ЛС уведомления о перемещении в токсичный канал **включены**"
     );
-    sendTelegramReport(
-      `🔔 <b>Пользователь изменил настройки</b>\n` +
-        `👤 Пользователь: ${message.author.username}\n` +
-        `🆔 ID: <code>${message.author.id}</code>\n` +
-        `📩 ЛС уведомления: ✅ ВКЛЮЧЕНЫ\n` +
-        `📅 Время: ${formatTime(new Date())}`
+    await sendSettingsChangeNotification(
+      message.author.username, 
+      message.author.id, 
+      `📩 ЛС уведомления: ✅ ВКЛЮЧЕНЫ`
     );
     return;
   }
@@ -2049,12 +1940,10 @@ client.on("messageCreate", async (message) => {
     await message.reply(
       "❌ ЛС уведомления о перемещении в токсичный канал **отключены**"
     );
-    sendTelegramReport(
-      `🔔 <b>Пользователь изменил настройки</b>\n` +
-        `👤 Пользователь: ${message.author.username}\n` +
-        `🆔 ID: <code>${message.author.id}</code>\n` +
-        `📩 ЛС уведомления: ❌ ОТКЛЮЧЕНЫ\n` +
-        `📅 Время: ${formatTime(new Date())}`
+    await sendSettingsChangeNotification(
+      message.author.username, 
+      message.author.id, 
+      `📩 ЛС уведомления: ❌ ОТКЛЮЧЕНЫ`
     );
     return;
   }
@@ -2068,13 +1957,10 @@ client.on("messageCreate", async (message) => {
       "⏰ Время до перемещения в AFK установлено: **15 минут**"
     );
     const dmEnabled = getUserDMSetting(message.author.id);
-    sendTelegramReport(
-      `⏰ <b>Пользователь изменил настройки</b>\n` +
-        `👤 Пользователь: ${message.author.username}\n` +
-        `🆔 ID: <code>${message.author.id}</code>\n` +
-        `⏱️ Таймер AFK: 15 минут\n` +
-        `📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}\n` +
-        `📅 Время: ${formatTime(new Date())}`
+    await sendSettingsChangeNotification(
+      message.author.username, 
+      message.author.id, 
+      `⏱️ Таймер AFK: 15 минут\n📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}`
     );
     return;
   }
@@ -2088,13 +1974,10 @@ client.on("messageCreate", async (message) => {
       "⏰ Время до перемещения в AFK установлено: **30 минут**"
     );
     const dmEnabled = getUserDMSetting(message.author.id);
-    sendTelegramReport(
-      `⏰ <b>Пользователь изменил настройки</b>\n` +
-        `👤 Пользователь: ${message.author.username}\n` +
-        `🆔 ID: <code>${message.author.id}</code>\n` +
-        `⏱️ Таймер AFK: 30 минут\n` +
-        `📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}\n` +
-        `📅 Время: ${formatTime(new Date())}`
+    await sendSettingsChangeNotification(
+      message.author.username, 
+      message.author.id, 
+      `⏱️ Таймер AFK: 30 минут\n📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}`
     );
     return;
   }
@@ -2108,13 +1991,10 @@ client.on("messageCreate", async (message) => {
       "⏰ Время до перемещения в AFK установлено: **45 минут**"
     );
     const dmEnabled = getUserDMSetting(message.author.id);
-    sendTelegramReport(
-      `⏰ <b>Пользователь изменил настройки</b>\n` +
-        `👤 Пользователь: ${message.author.username}\n` +
-        `🆔 ID: <code>${message.author.id}</code>\n` +
-        `⏱️ Таймер AFK: 45 минут\n` +
-        `📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}\n` +
-        `📅 Время: ${formatTime(new Date())}`
+    await sendSettingsChangeNotification(
+      message.author.username, 
+      message.author.id, 
+      `⏱️ Таймер AFK: 45 минут\n📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}`
     );
     return;
   }
@@ -2139,7 +2019,7 @@ client.on("messageCreate", async (message) => {
 🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}/?userId=${message.author.id}&autoLogin=true`
     );
 
-    sendTelegramReport(
+    await sendTelegramReport(
       `📊 <b>Пользователь проверил статус настроек</b>\n` +
         `👤 Пользователь: ${message.author.username}\n` +
         `🆔 ID: <code>${message.author.id}</code>\n` +
@@ -2158,12 +2038,10 @@ client.on("messageCreate", async (message) => {
 
     await message.reply("🏆✅ Уведомления о достижениях **включены**");
 
-    sendTelegramReport(
-      `🔔 <b>Пользователь изменил настройки</b>\n` +
-        `👤 Пользователь: ${message.author.username}\n` +
-        `🆔 ID: <code>${message.author.id}</code>\n` +
-        `🏆 Уведомления о достижениях: ✅ ВКЛЮЧЕНЫ\n` +
-        `📅 Время: ${formatTime(new Date())}`
+    await sendSettingsChangeNotification(
+      message.author.username, 
+      message.author.id, 
+      `🏆 Уведомления о достижениях: ✅ ВКЛЮЧЕНЫ`
     );
     return;
   }
@@ -2175,12 +2053,10 @@ client.on("messageCreate", async (message) => {
 
     await message.reply("🏆❌ Уведомления о достижениях **отключены**");
 
-    sendTelegramReport(
-      `🔔 <b>Пользователь изменил настройки</b>\n` +
-        `👤 Пользователь: ${message.author.username}\n` +
-        `🆔 ID: <code>${message.author.id}</code>\n` +
-        `🏆 Уведомления о достижениях: ❌ ОТКЛЮЧЕНЫ\n` +
-        `📅 Время: ${formatTime(new Date())}`
+    await sendSettingsChangeNotification(
+      message.author.username, 
+      message.author.id, 
+      `🏆 Уведомления о достижениях: ❌ ОТКЛЮЧЕНЫ`
     );
     return;
   }
@@ -2206,7 +2082,7 @@ client.on("messageCreate", async (message) => {
 🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}/?userId=${message.author.id}&autoLogin=true
     `);
 
-    sendTelegramReport(
+    await sendTelegramReport(
       `❓ <b>Пользователь запросил справку</b>\n` +
         `👤 Пользователь: ${message.author.username}\n` +
         `🆔 ID: <code>${message.author.id}</code>\n` +
@@ -2280,7 +2156,7 @@ client.on("messageCreate", async (message) => {
 
       console.log(`🗑️ Сброшены достижения для пользователя ${targetUserId}`);
 
-      sendTelegramReport(
+      await sendTelegramReport(
         `🗑️ <b>Достижения сброшены администратором</b>\n` +
           `👤 Администратор: ${message.author.username}\n` +
           `🎯 Для пользователя ID: <code>${targetUserId}</code>\n` +
@@ -2395,7 +2271,7 @@ client.on("messageCreate", async (message) => {
 
 // ===== ЧАСТЬ 6: ОБРАБОТЧИКИ СОБЫТИЙ И ЗАПУСК БОТА =====
 
-client.on("clientReady", () => {
+client.on("clientReady", async () => {
   console.log(`✅ Бот запущен как ${client.user.tag}`);
   console.log(`📝 AFK канал ID: ${AFK_CHANNEL_ID}`);
   console.log(`⏱️ Таймер неактивности по умолчанию: ${DEFAULT_TIMEOUT} минут`);
@@ -2403,12 +2279,11 @@ client.on("clientReady", () => {
   console.log(`📱 Telegram отчеты: включены`);
   console.log(`🌐 Веб-панель: http://${SERVER_IP}:${PORT}`);
 
-  sendTelegramReport(
-    `🚀 <b>AFK Bot запущен</b>\n` +
-      `📅 Время: ${formatTime(new Date())}\n` +
-      `🤖 Бот: ${client.user.tag}\n` +
-      `🌐 Веб-панель: http://${SERVER_IP}:${PORT}`
-  );
+  const botDetails = 
+    `🤖 Бот: ${client.user.tag}\n` +
+    `🌐 Веб-панель: http://${SERVER_IP}:${PORT}`;
+  
+  await sendBotStatusNotification('started', botDetails);
 
   client.guilds.cache.forEach((guild) => {
     const afkChannel = guild.channels.cache.get(AFK_CHANNEL_ID);
@@ -2510,7 +2385,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 
       await checkAchievements(userId, username);
 
-      sendTelegramReport(
+      await sendTelegramReport(
         `🎤 <b>Пользователь зашел в канал</b>\n` +
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
@@ -2576,7 +2451,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
         await checkAchievements(userId, username);
       }
 
-      sendTelegramReport(
+      await sendTelegramReport(
         `👋 <b>Пользователь покинул канал</b>\n` +
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
@@ -2628,7 +2503,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
         userAFKStartTimes.delete(userId);
       }
 
-      sendTelegramReport(
+      await sendTelegramReport(
         `🔄 <b>Пользователь переместился между каналами</b>\n` +
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
@@ -2688,7 +2563,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       incrementUserStat(userId, "total_mute_toggles");
       await checkAchievements(userId, username);
 
-      sendTelegramReport(
+      await sendTelegramReport(
         `🎙️❌ <b>Пользователь отключил микрофон</b>\n` +
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
@@ -2725,7 +2600,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 
       await checkAchievements(userId, username);
 
-      sendTelegramReport(
+      await sendTelegramReport(
         `📡 <b>Пользователь включил трансляцию</b>\n` +
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
@@ -2740,7 +2615,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     if (!newState.streaming && oldState.streaming) {
       console.log(`📡❌ ${username} отключил трансляцию`);
 
-      sendTelegramReport(
+      await sendTelegramReport(
         `📡❌ <b>Пользователь отключил трансляцию</b>\n` +
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
@@ -2760,7 +2635,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       incrementUserStat(userId, "total_mute_toggles");
       await checkAchievements(userId, username);
 
-      sendTelegramReport(
+      await sendTelegramReport(
         `🎙️✅ <b>Пользователь включил микрофон</b>\n` +
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
@@ -2777,7 +2652,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           await newState.setChannel(originalChannel);
           console.log(`✅ ${username} возвращен в ${originalChannel.name}`);
 
-          sendTelegramReport(
+          await sendTelegramReport(
             `↩️ <b>Пользователь возвращен из AFK</b>\n` +
               `👤 Пользователь: ${username}\n` +
               `📺 Из канала: 😡 Токсичный канал\n` +
@@ -2886,7 +2761,7 @@ function startInactivityTimer(member, guild) {
         );
 
         const dmEnabled = getUserDMSetting(userId);
-        sendTelegramReport(
+        await sendTelegramReport(
           `⏰ <b>Пользователь перемещен в AFK</b>\n` +
             `👤 Пользователь: ${username}\n` +
             `🆔 ID: <code>${userId}</code>\n` +
@@ -2932,11 +2807,9 @@ function clearInactivityTimer(userId) {
 }
 
 // ===== ОБРАБОТЧИКИ ОШИБОК И ЗАВЕРШЕНИЯ =====
-process.on("SIGINT", () => {
+process.on("SIGINT", async () => {
   console.log("🛑 Закрытие базы данных...");
-  sendTelegramReport(
-    `🛑 <b>AFK Bot остановлен</b>\n📅 Время: ${formatTime(new Date())}`
-  );
+  await sendBotStatusNotification('stopped');
   db.close();
   process.exit(0);
 });
