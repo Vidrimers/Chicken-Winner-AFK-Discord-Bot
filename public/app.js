@@ -505,3 +505,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     loadLeaderboard();
 });
+
+// Функция для создания бэкапа базы данных
+async function backupDatabase() {
+    try {
+        const response = await fetch('/api/admin/backup-database', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Бэкап базы данных создан успешно!');
+            console.log('📂 Файл:', data.filename);
+            alert('✅ Бэкап создан успешно!\n📂 Файл: ' + data.filename);
+        } else {
+            const error = await response.json();
+            alert('Ошибка при создании бэкапа: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Ошибка при создании бэкапа:', error);
+        alert('Ошибка при создании бэкапа базы данных');
+    }
+}

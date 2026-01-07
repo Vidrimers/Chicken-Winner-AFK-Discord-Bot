@@ -256,9 +256,10 @@ function displayUserAchievements(achievements) {
                     let addHtml = '';
                     unlockedOtherSpecial.forEach(achievement => {
                         const editBtn = `<button onclick="editSpecialAchievementOther('${achievement.achievement_id}', '${achievement.user_id}', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>`;
+                        const deleteBtn = `<button onclick="deleteUserAchievement('${achievement.user_id}', '${achievement.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>`;
                         const achievementColor = achievement.color || '#999';
                         addHtml += `
-                            <div class="achievement special-achievement" style="
+                            <div class="achievement special-achievement" data-achievement-id="${achievement.achievement_id}" style="
                                 background: linear-gradient(135deg, ${achievementColor}22 0%, ${achievementColor}11 100%); 
                                 color: #333; 
                                 border-left: 5px solid ${achievementColor};
@@ -271,6 +272,7 @@ function displayUserAchievements(achievements) {
                                 <h3 style="color: ${achievementColor}; font-weight: bold;">${achievement.emoji} ${achievement.name} 🔒</h3>
                                 <p style="color: #777; margin: 10px 0;">${achievement.description}</p>
                                 <small style="color: #888; font-weight: bold;">👤 Для ID: ${achievement.user_id}</small>
+                                ${deleteBtn}
                             </div>
                         `;
                     });

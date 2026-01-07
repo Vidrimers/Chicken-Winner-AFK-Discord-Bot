@@ -1719,6 +1719,52 @@ app.post("/api/admin/delete-user", async (req, res) => {
   }
 });
 
+// ===== БЭКАП БАЗЫ ДАННЫХ =====
+app.post("/api/admin/backup-database", async (req, res) => {
+  try {
+    const fs = await import('fs');
+    const path = await import('path');
+    
+    // Путь к текущей БД
+    const dbPath = './afkbot.db';
+    
+    // Проверяем существование файла
+    if (!fs.existsSync(dbPath)) {
+      return res.status(404).json({ error: "База данных не найдена" });
+    }
+    
+    // Создаем папку backup если её нет
+    const backupDir = './backup';
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    
+    // Генерируем имя файла с датой и временем
+    const now = new Date();
+    const dateStr = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const backupPath = path.join(backupDir, `afkbot-backup-${dateStr}.db`);
+    
+    console.log("💾 Создание бэкапа базы данных...");
+    console.log("📂 Путь: " + backupPath);
+    
+    // Копируем файл БД в папку backup
+    fs.copyFileSync(dbPath, backupPath);
+    
+    console.log("✅ Бэкап базы данных успешно создан: " + backupPath);
+    
+    res.json({ 
+      success: true, 
+      message: "Бэкап создан успешно",
+      filename: `afkbot-backup-${dateStr}.db`,
+      path: backupPath
+    });
+  } catch (error) {
+    console.error("❌ Ошибка при создании бэкапа:", error);
+    res.status(500).json({ error: "Ошибка при создании бэкапа" });
+  }
+});
+
+
 // ===== ПОПЫТКА НЕСАНКЦИОНИРОВАННОГО ДОСТУПА =====
 app.post("/api/unauthorized-access", async (req, res) => {
   const { attemptedId, timestamp } = req.body;

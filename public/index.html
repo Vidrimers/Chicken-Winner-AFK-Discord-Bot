@@ -221,16 +221,17 @@
                     <!-- Админ-панель -->
                     <div id="adminPanel" class="admin-panel" style="display: none;">
                         <div class="admin-panel-header">
-                            <h2>👑 Админ-панель</h2>
+                            <h2>Админ-панель</h2>
                             <p>Специальные функции для администратора</p>
                         </div>
                         <div class="admin-panel-content">
                             <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" class="admin-btn">
                                 <span class="admin-btn-icon">⭐</span>
-                                <span class="admin-btn-text">
-                                    <strong>Создать специальное достижение</strong>
-                                    <small>Выдать уникальное достижение пользователю</small>
-                                </span>
+                                <span class="admin-btn-text">Создать специальное достижение</span>
+                            </button>
+                            <button id="backupDatabaseBtn" onclick="backupDatabase()" class="admin-btn">
+                                <span class="admin-btn-icon">💾</span>
+                                <span class="admin-btn-text">Создать бэкап базы данных</span>
                             </button>
                         </div>
                     </div>

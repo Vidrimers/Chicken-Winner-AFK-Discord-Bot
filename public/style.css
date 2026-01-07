@@ -491,57 +491,53 @@ body.modal-open {
 .admin-panel-content {
     padding: 25px;
     display: flex;
-    flex-direction: column;
-    gap: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .admin-btn {
-    background: white;
-    border: 3px solid #ff6b35;
-    border-radius: 12px;
-    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 12px 20px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
+    transition: all 0.2s ease;
+    display: inline-flex;
     align-items: center;
-    gap: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    width: auto;
 }
 
 .admin-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(255, 107, 53, 0.3);
-    border-color: #ff6b35;
-    background: #fff9f0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .admin-btn:active {
-    transform: translateY(-1px);
+    transform: translateY(0);
 }
 
 .admin-btn-icon {
-    font-size: 2.5rem;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    font-size: 18px;
 }
 
 .admin-btn-text {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-    flex: 1;
+    align-items: center;
+    white-space: nowrap;
 }
 
 .admin-btn-text strong {
-    font-size: 1.2rem;
-    color: #333;
-    margin-bottom: 5px;
+    font-size: 14px;
+    color: white;
+    font-weight: 600;
 }
 
 .admin-btn-text small {
-    font-size: 0.9rem;
-    color: #666;
-    font-weight: normal;
+    display: none;
 }
 
 .loading { 
