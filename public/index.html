@@ -102,6 +102,50 @@
                 </div>
             </div>
             
+            <!-- МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
+            <div id="editSpecialAchievementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #a45eea; border-radius: 10px; padding: 20px; width: 90%; max-width: 600px; max-height: 80vh; overflow: auto; scrollbar-width: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 class="SpecialAchievementForm-title" style="color: white; margin: 0 auto;">✏️ Редактировать достижение</h2>
+                        <button onclick="closeEditSpecialAchievementModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
+                    </div>
+                    
+                    <form id="editSpecialAchievementForm">
+                        <input type="hidden" id="editAchievementId">
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: white; display: block; margin-bottom: 5px;text-align: center;">Эмодзи достижения:</label>
+                            <input type="text" id="editSpecialAchievementEmoji" maxlength="2" placeholder="🏆" style="width: 60px; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; text-align: center; margin: 0 auto; display: block; font-size: 24px;" oninput="updateEditSpecialAchievementPreview()">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Название достижения:</label>
+                            <input type="text" id="editSpecialAchievementName" placeholder="Название" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;" oninput="updateEditSpecialAchievementPreview()">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Описание:</label>
+                            <textarea id="editSpecialAchievementDescription" placeholder="Описание достижения" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; resize: vertical; min-height: 60px;"></textarea>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Цвет:</label>
+                            <input type="color" id="editSpecialAchievementColor" value="#a45eea" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px; cursor: pointer;" oninput="updateEditSpecialAchievementPreview()">
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="color: white; display: block; margin-bottom: 5px;">Превью:</label>
+                            <div id="editSpecialAchievementPreview" style="padding: 10px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px;"></div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <button type="button" onclick="saveEditSpecialAchievement()" style="padding: 10px; background-color: #a45eea; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Сохранить</button>
+                            <button type="button" onclick="closeEditSpecialAchievementModal()" style="padding: 10px; background-color: #555; color: #fff; border: none; border-radius: 5px; cursor: pointer;">Отмена</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
             <div id="userContent" style="display: none;">
                 <div class="tabs">
                     <div class="tab active" onclick="switchTab('stats')">📊 Статистика</div>

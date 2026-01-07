@@ -135,22 +135,41 @@ function displayUserAchievements(achievements) {
     }
     
     userSpecialAchievements.forEach(achievement => {
-        if (achievement.achievement_id === 'best_admin' && !achievement.emoji) {
-            const bestAdminInfo = SPECIAL_ACHIEVEMENTS.best_admin;
+        if (achievement.achievement_id === 'best_admin') {
+            // Для best_admin используем кастомные данные если есть, иначе дефолтные
+            let displayEmoji, displayName, displayDescription, displayColor;
+            
+            if (achievement.emoji) {
+                // Есть кастомные данные из БД
+                displayEmoji = achievement.emoji;
+                displayName = achievement.name;
+                displayDescription = achievement.description;
+                displayColor = achievement.color || '#ffd700';
+            } else {
+                // Используем дефолтные из константы
+                const bestAdminInfo = SPECIAL_ACHIEVEMENTS.best_admin;
+                displayEmoji = '👑';
+                displayName = bestAdminInfo.name;
+                displayDescription = bestAdminInfo.description;
+                displayColor = '#ffd700';
+            }
+            
             const isUnlocked = achievement.unlocked_at !== null;
             const deleteBtn = isAdmin ? `<button onclick="deleteUserAchievement('${window.currentUserId}', 'best_admin')" style="padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>` : '';
+            const editBtn = isAdmin ? `<button onclick="editSpecialAchievement('best_admin', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>` : '';
             
             if (isUnlocked) {
                 html += `
                     <div class="achievement special-achievement" data-achievement-id="best_admin" style="
-                        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); 
+                        background: linear-gradient(135deg, ${displayColor}22 0%, ${displayColor}11 100%); 
                         color: #333; 
-                        border-left: 5px solid #ff6b35;
+                        border-left: 5px solid ${displayColor};
                         position: relative;
                         overflow: visible;
                     ">
-                        <h3 style="color: #333; font-weight: bold;">${bestAdminInfo.name} ✨</h3>
-                        <p style="color: #555; margin: 10px 0;">${bestAdminInfo.description}</p>
+                        ${editBtn}
+                        <h3 style="color: ${displayColor}; font-weight: bold;">${displayEmoji} ${displayName} ✨</h3>
+                        <p style="color: #555; margin: 10px 0;">${displayDescription}</p>
                         <small style="color: #666; font-weight: bold;">🎉 Получено: ${new Date(achievement.unlocked_at).toLocaleDateString('ru-RU')}</small>
                         ${deleteBtn}
                     </div>
@@ -158,16 +177,17 @@ function displayUserAchievements(achievements) {
             } else {
                 html += `
                     <div class="achievement special-achievement" style="
-                        background: linear-gradient(135deg, #66666622 0%, #99999911 100%); 
+                        background: linear-gradient(135deg, ${displayColor}22 0%, ${displayColor}11 100%); 
                         color: #333; 
-                        border-left: 5px solid #999;
+                        border-left: 5px solid ${displayColor};
                         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-                        opacity: 0.7;
+                        opacity: 0.5;
                         position: relative;
                         overflow: visible;
                     ">
-                        <h3 style="color: #999; font-weight: bold;">${bestAdminInfo.name} 🔒</h3>
-                        <p style="color: #777; margin: 10px 0;">${bestAdminInfo.description}</p>
+                        ${editBtn}
+                        <h3 style="color: ${displayColor}; font-weight: bold;">${displayEmoji} ${displayName} 🔒</h3>
+                        <p style="color: #777; margin: 10px 0;">${displayDescription}</p>
                         <small style="color: #888; font-weight: bold;">❌ Для ID: 232581042177966080</small>
                         ${deleteBtn}
                     </div>
@@ -175,6 +195,7 @@ function displayUserAchievements(achievements) {
             }
         } else if (achievement.emoji) {
             const deleteBtn = isAdmin ? `<button onclick="deleteUserAchievement('${window.currentUserId}', '${achievement.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>` : '';
+            const editBtn = isAdmin ? `<button onclick="editSpecialAchievement('${achievement.achievement_id}', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>` : '';
             
             const achievementDate = achievement.special_date ? new Date(achievement.special_date) : null;
             const now = new Date();
@@ -191,6 +212,7 @@ function displayUserAchievements(achievements) {
                         position: relative;
                         overflow: visible;
                     ">
+                        ${editBtn}
                         <h3 style="color: ${achievement.color}; font-weight: bold;">${achievement.emoji} ${achievement.name} ✨</h3>
                         <p style="color: #555; margin: 10px 0;">${achievement.description}</p>
                         <small style="color: #666; font-weight: bold;">🎉 Получено: ${new Date(achievement.unlocked_at).toLocaleDateString('ru-RU')}</small>
@@ -201,15 +223,16 @@ function displayUserAchievements(achievements) {
                 const scheduledDate = achievementDate.toLocaleDateString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
                 html += `
                     <div class="achievement special-achievement" style="
-                        background: linear-gradient(135deg, #66666622 0%, #99999911 100%); 
+                        background: linear-gradient(135deg, ${achievement.color}22 0%, ${achievement.color}11 100%); 
                         color: #333; 
-                        border-left: 5px solid #999;
+                        border-left: 5px solid ${achievement.color};
                         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-                        opacity: 0.7;
+                        opacity: 0.5;
                         position: relative;
                         overflow: visible;
                     ">
-                        <h3 style="color: #999; font-weight: bold;">${achievement.emoji} ${achievement.name} 🔒</h3>
+                        ${editBtn}
+                        <h3 style="color: ${achievement.color}; font-weight: bold;">${achievement.emoji} ${achievement.name} 🔒</h3>
                         <p style="color: #777; margin: 10px 0;">${achievement.description}</p>
                         <small style="color: #888; font-weight: bold;">⏰ Планируется: ${scheduledDate}</small>
                         ${deleteBtn}
@@ -232,17 +255,20 @@ function displayUserAchievements(achievements) {
                 if (unlockedOtherSpecial.length > 0) {
                     let addHtml = '';
                     unlockedOtherSpecial.forEach(achievement => {
+                        const editBtn = `<button onclick="editSpecialAchievementOther('${achievement.achievement_id}', '${achievement.user_id}', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>`;
+                        const achievementColor = achievement.color || '#999';
                         addHtml += `
                             <div class="achievement special-achievement" style="
-                                background: linear-gradient(135deg, #66666622 0%, #99999911 100%); 
+                                background: linear-gradient(135deg, ${achievementColor}22 0%, ${achievementColor}11 100%); 
                                 color: #333; 
-                                border-left: 5px solid #999;
+                                border-left: 5px solid ${achievementColor};
                                 box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                                 opacity: 0.7;
                                 position: relative;
-                                overflow: hidden;
+                                overflow: visible;
                             ">
-                                <h3 style="color: #999; font-weight: bold;">${achievement.emoji} ${achievement.name} 🔒</h3>
+                                ${editBtn}
+                                <h3 style="color: ${achievementColor}; font-weight: bold;">${achievement.emoji} ${achievement.name} 🔒</h3>
                                 <p style="color: #777; margin: 10px 0;">${achievement.description}</p>
                                 <small style="color: #888; font-weight: bold;">👤 Для ID: ${achievement.user_id}</small>
                             </div>
@@ -273,13 +299,22 @@ function deleteUserAchievement(userId, achievementId) {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
+            // Удаляем элемент из DOM
             const achievementElement = document.querySelector('[data-achievement-id="' + achievementId + '"]');
             if (achievementElement) {
                 achievementElement.remove();
             }
             
+            // Если это текущий пользователь - перезагружаем его данные
             if (userId === window.currentUserId) {
-                loadUserData();
+                loadUserDataAuto(window.currentUserId);
+            }
+            
+            // Если открыто модальное окно - закрываем его и перезагружаем лидерборд
+            const modal = document.getElementById('achievementsModal');
+            if (modal) {
+                closeModal();
+                loadLeaderboard();
             }
             
             console.log('✅ Достижение успешно удалено!');

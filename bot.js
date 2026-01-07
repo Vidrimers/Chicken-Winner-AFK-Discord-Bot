@@ -194,6 +194,7 @@ const userOriginalChannels = new Map();
 const userJoinTimes = new Map();
 const userAFKStartTimes = new Map();
 const userStreamJoinTimes = new Map();
+const achievementTimers = new Map(); // Хранилище таймеров для запланированных достижений
 
 // ===== РАСШИРЕННАЯ СИСТЕМА ДОСТИЖЕНИЙ =====
 const ACHIEVEMENTS = {
@@ -1435,7 +1436,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
 
       if (delayMs > 0) {
         // Откладываем отправку уведомлений на указанное время
-        setTimeout(async () => {
+        const timeoutId = setTimeout(async () => {
           try {
             const user = await client.users.fetch(userId).catch(() => null);
             const username = user ? user.username : "Пользователь";
@@ -1504,7 +1505,13 @@ app.post("/api/admin/create-achievement", async (req, res) => {
               err
             );
           }
+          
+          // Удаляем таймер из Map после выполнения
+          achievementTimers.delete(achievementId);
         }, delayMs);
+        
+        // Сохраняем ID таймера для возможности отмены
+        achievementTimers.set(achievementId, timeoutId);
 
         console.log(
           '✅ Достижение "' +
@@ -1583,13 +1590,12 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
       .get(userId, achievementId);
 
     if (existingAchievement) {
-      // Помечаем достижение как вручную удаленное (флаг manually_deleted = 1)
-      // Это позволит пользователю получить достижение снова по условиям
+      // Полностью удаляем достижение из user_achievements
       db.prepare(
-        `UPDATE user_achievements SET manually_deleted = 1 WHERE user_id = ? AND achievement_id = ?`
+        `DELETE FROM user_achievements WHERE user_id = ? AND achievement_id = ?`
       ).run(userId, achievementId);
       console.log(
-        `🗑️ Достижение ${achievementId} помечено как удаленное (manually_deleted = 1)`
+        `🗑️ Достижение ${achievementId} полностью удалено из user_achievements`
       );
 
       // Если это обычное достижение (из ACHIEVEMENTS), вычитаем очки
@@ -1611,6 +1617,14 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
     db.prepare(
       `DELETE FROM achievements WHERE user_id = ? AND achievement_id = ?`
     ).run(userId, achievementId);
+    
+    // Отменяем запланированный таймер если он есть
+    const timerId = achievementTimers.get(achievementId);
+    if (timerId) {
+      clearTimeout(timerId);
+      achievementTimers.delete(achievementId);
+      console.log(`⏰ Отменён запланированный таймер для достижения ${achievementId}`);
+    }
 
     // Отправляем отчет в Telegram
     await sendAchievementDeleteNotification(userName, achievementName, achievementPoints);
@@ -1619,6 +1633,53 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
   } catch (error) {
     console.error("Ошибка при удалении достижения:", error);
     res.status(500).json({ error: "Ошибка при удалении достижения" });
+  }
+});
+
+// API endpoint для редактирования специального достижения
+app.post("/api/admin/edit-achievement", async (req, res) => {
+  const { achievementId, emoji, name, description, color } = req.body;
+
+  if (!achievementId || !emoji || !name || !description || !color) {
+    return res.status(400).json({ error: "Отсутствуют обязательные поля" });
+  }
+
+  try {
+    console.log(`✏️ Редактирование достижения: ${achievementId}`);
+
+    // Если это best_admin, обновляем в таблице achievements
+    if (achievementId === 'best_admin') {
+      // Проверяем, существует ли запись
+      const existing = db.prepare(`SELECT * FROM achievements WHERE achievement_id = ?`).get(achievementId);
+      
+      if (existing) {
+        // Обновляем существующую запись
+        db.prepare(`
+          UPDATE achievements 
+          SET emoji = ?, name = ?, description = ?, color = ?
+          WHERE achievement_id = ?
+        `).run(emoji, name, description, color, achievementId);
+      } else {
+        // Создаем новую запись для best_admin
+        db.prepare(`
+          INSERT INTO achievements (achievement_id, user_id, emoji, name, description, type, color)
+          VALUES (?, ?, ?, ?, ?, 'special', ?)
+        `).run(achievementId, process.env.ADMIN_USER_ID, emoji, name, description, color);
+      }
+    } else {
+      // Для других специальных достижений обновляем в таблице achievements
+      db.prepare(`
+        UPDATE achievements 
+        SET emoji = ?, name = ?, description = ?, color = ?
+        WHERE achievement_id = ?
+      `).run(emoji, name, description, color, achievementId);
+    }
+
+    console.log(`✅ Достижение ${achievementId} успешно обновлено`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("❌ Ошибка при редактировании достижения:", error);
+    res.status(500).json({ error: "Ошибка при редактировании достижения" });
   }
 });
 

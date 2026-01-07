@@ -10,6 +10,27 @@ window.currentUserId = null;
 window.currentUsername = null;
 let showingUsername = true; // По умолчанию показываем имя
 
+// Функция для безопасной установки имени пользователя
+function setUserDisplay(username, userId) {
+    window.currentUsername = username;
+    window.currentUserId = userId;
+    
+    const userIdElement = document.getElementById('currentUserId');
+    const labelElement = document.getElementById('userDisplayLabel');
+    
+    if (userIdElement) {
+        userIdElement.textContent = username;
+    } else {
+        console.error('❌ Элемент currentUserId не найден!');
+    }
+    
+    if (labelElement) {
+        labelElement.textContent = '👤 Имя на сервере';
+    }
+    
+    showingUsername = true;
+}
+
 // Функция переключения между именем и ID
 function toggleUserInfo() {
     const label = document.getElementById('userDisplayLabel');
@@ -111,6 +132,9 @@ function loginWithDiscord() {
 
 async function logout() {
     if (confirm('Вы уверены, что хотите выйти?')) {
+        // Очищаем localStorage перед редиректом
+        localStorage.removeItem('afkBotUserId');
+        console.log('🗑️ localStorage очищен при выходе');
         window.location.href = '/logout';
     }
 }
@@ -172,10 +196,7 @@ async function loadUserDataAuto(userId) {
         console.log('✅ Данные получены:', data);
         
         const username = data.stats.username || 'Пользователь';
-        window.currentUsername = username;
-        document.getElementById('currentUserId').textContent = username;
-        document.getElementById('userDisplayLabel').textContent = '👤 Имя на сервере';
-        showingUsername = true;
+        setUserDisplay(username, userId);
         
         try {
             await fetch(`/api/visit/${userId}`, {
@@ -256,14 +277,14 @@ function switchTab(tabName) {
     }
 }
 
-async function loadUserData() {
+async function loadUserData(skipSecurityCheck = false) {
     let userId = document.getElementById('userIdInput').value.trim();
     if (!userId) return;
     
     if (userId === window.CONFIG.ADMIN_LOGIN) {
         userId = window.CONFIG.ADMIN_USER_ID;
         console.log('✅ Админ вошел по логину, используем ADMIN_USER_ID');
-    } else if (userId === window.CONFIG.ADMIN_USER_ID) {
+    } else if (userId === window.CONFIG.ADMIN_USER_ID && !skipSecurityCheck) {
         alert('❌ Это же не твой ID, зайка, куда ты собрался?');
         
         fetch('/api/unauthorized-access', {
@@ -313,10 +334,7 @@ async function loadUserData() {
         displayUserSettings(data.settings);
         
         const username = data.stats.username || 'Пользователь';
-        window.currentUsername = username;
-        document.getElementById('currentUserId').textContent = username;
-        document.getElementById('userDisplayLabel').textContent = '👤 Имя на сервере';
-        showingUsername = true;
+        setUserDisplay(username, userId);
         document.getElementById('userIdDisplay').style.display = 'block';
         
         // Скрываем поле ввода ID и кнопку загрузки когда пользователь залогинен

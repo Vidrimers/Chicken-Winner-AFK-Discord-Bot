@@ -105,9 +105,13 @@ function displayUserModal(data, username, rank, userId, isAdmin = false) {
             
             specialAchievements.forEach(ach => {
                 const deleteBtn = isAdmin ? `<button onclick="deleteUserAchievement('${userId}', '${ach.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>` : '';
+                const achievementColor = ach.color || '#ffd700';
                 achievementsHtml += `
-                    <div class="modal-achievement special-achievement">
-                        <h4>${ach.emoji} ${ach.name} ✨</h4>
+                    <div class="modal-achievement special-achievement" style="
+                        background: linear-gradient(135deg, ${achievementColor}22 0%, ${achievementColor}11 100%);
+                        border-left: 4px solid ${achievementColor};
+                    ">
+                        <h4 style="color: ${achievementColor};">${ach.emoji} ${ach.name} ✨</h4>
                         <p style="margin: 8px 0; color: #555;">${ach.description}</p>
                         <small style="color: #666; font-weight: bold;">🎉 Получено: ${new Date(ach.unlocked_at).toLocaleDateString('ru-RU')}</small>
                         ${deleteBtn}
