@@ -438,6 +438,21 @@ function displayUserSettings(settings) {
     document.getElementById('dmNotifications').value = settings.dmNotifications.toString();
     document.getElementById('afkTimeout').value = settings.afkTimeout.toString();
     document.getElementById('achievementNotifications').value = settings.achievementNotifications.toString();
+    
+    // Загружаем тему
+    const theme = settings.theme || 'standard';
+    document.getElementById('themeSelect').value = theme;
+    applyTheme(theme);
+}
+
+// Функция для применения темы
+function applyTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+}
+
+// Функция для предпросмотра темы (без сохранения)
+function previewTheme(theme) {
+    applyTheme(theme);
 }
 
 async function saveSettings() {
@@ -446,6 +461,7 @@ async function saveSettings() {
     const dmNotifications = document.getElementById('dmNotifications').value === 'true';
     const afkTimeout = parseInt(document.getElementById('afkTimeout').value);
     const achievementNotifications = document.getElementById('achievementNotifications').value === 'true';
+    const theme = document.getElementById('themeSelect').value;
     
     try {
         const response = await fetch(`/api/settings/${window.currentUserId}`, {
@@ -456,7 +472,8 @@ async function saveSettings() {
             body: JSON.stringify({
                 dmNotifications,
                 afkTimeout,
-                achievementNotifications
+                achievementNotifications,
+                theme
             })
         });
         

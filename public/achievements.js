@@ -55,7 +55,7 @@ function displayUserAchievements(achievements) {
     html += `
         <div style="grid-column: 1 / -1; text-align: center; margin-bottom: 20px;">
             <h2 style="color: #667eea; margin-bottom: 10px;">🏆 Достижения (${unlockedRegular.length}/${totalRegular})</h2>
-            <div style="background: #f8f9fa; padding: 10px; border-radius: 10px; display: inline-block;">
+            <div class="progressbar" style="background: #f8f9fa; padding: 10px; border-radius: 10px; display: inline-block;">
                 <strong>Прогресс: ${Math.round((unlockedRegular.length / totalRegular) * 100)}%</strong>
                 <div style="width: 200px; height: 8px; background: #ddd; border-radius: 4px; margin: 5px auto; overflow: hidden;">
                     <div style="width: ${(unlockedRegular.length / totalRegular) * 100}%; height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); transition: width 0.3s;"></div>
@@ -156,7 +156,7 @@ function displayUserAchievements(achievements) {
             
             const isUnlocked = achievement.unlocked_at !== null;
             const deleteBtn = isAdmin ? `<button onclick="deleteUserAchievement('${window.currentUserId}', 'best_admin')" style="padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>` : '';
-            const editBtn = isAdmin ? `<button onclick="editSpecialAchievement('best_admin', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>` : '';
+            const editBtn = isAdmin ? `<button onclick="editSpecialAchievement('best_admin', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: transparent; border: none; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>` : '';
             
             if (isUnlocked) {
                 html += `
@@ -195,7 +195,7 @@ function displayUserAchievements(achievements) {
             }
         } else if (achievement.emoji) {
             const deleteBtn = isAdmin ? `<button onclick="deleteUserAchievement('${window.currentUserId}', '${achievement.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>` : '';
-            const editBtn = isAdmin ? `<button onclick="editSpecialAchievement('${achievement.achievement_id}', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>` : '';
+            const editBtn = isAdmin ? `<button onclick="editSpecialAchievement('${achievement.achievement_id}', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: transparent; border: none; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>` : '';
             
             const achievementDate = achievement.special_date ? new Date(achievement.special_date) : null;
             const now = new Date();
@@ -255,7 +255,7 @@ function displayUserAchievements(achievements) {
                 if (unlockedOtherSpecial.length > 0) {
                     let addHtml = '';
                     unlockedOtherSpecial.forEach(achievement => {
-                        const editBtn = `<button onclick="editSpecialAchievementOther('${achievement.achievement_id}', '${achievement.user_id}', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>`;
+                        const editBtn = `<button onclick="editSpecialAchievementOther('${achievement.achievement_id}', '${achievement.user_id}', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: transparent; border: none; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>`;
                         const deleteBtn = `<button onclick="deleteUserAchievement('${achievement.user_id}', '${achievement.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>`;
                         const achievementColor = achievement.color || '#999';
                         addHtml += `

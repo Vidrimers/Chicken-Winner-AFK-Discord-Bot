@@ -1,0 +1,488 @@
+/* ===== ТЕМА: МЕТАЛЛ ===== */
+body[data-theme="metal"] {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+}
+
+body[data-theme="metal"] .container {
+    background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+    box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="metal"] .header {
+    background: rgba(50, 50, 50, 0.6);
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid #666;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+body[data-theme="metal"] .stat-card,
+body[data-theme="metal"] .setting-card,
+body[data-theme="metal"] .achievement {
+    background: rgba(60, 60, 60, 0.4);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(150, 150, 150, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+body[data-theme="metal"] .tab {
+    background: rgba(50, 50, 50, 0.5);
+    color: #b0b0b0;
+}
+
+body[data-theme="metal"] .tab.active {
+    background: linear-gradient(135deg, #8b8b8b 0%, #5a5a5a 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(139, 139, 139, 0.4);
+}
+
+body[data-theme="metal"] .admin-btn,
+body[data-theme="metal"] .save-settings-btn {
+    background: linear-gradient(135deg, #8b8b8b 0%, #5a5a5a 100%);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+body[data-theme="metal"] .user-search input,
+body[data-theme="metal"] .setting-select {
+    background: rgba(40, 40, 40, 0.6);
+    border: 1px solid rgba(150, 150, 150, 0.3);
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] .user-search button {
+    background: linear-gradient(135deg, #8b8b8b 0%, #5a5a5a 100%);
+}
+
+body[data-theme="metal"] h1,
+body[data-theme="metal"] h2,
+body[data-theme="metal"] h3 {
+    color: #e0e0e0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+body[data-theme="metal"] p,
+body[data-theme="metal"] small {
+    color: #b0b0b0;
+}
+
+body[data-theme="metal"] .admin-panel {
+    background: rgba(40, 40, 40, 0.5);
+    backdrop-filter: blur(10px);
+}
+
+body[data-theme="metal"] .admin-panel-header {
+    background: rgba(50, 50, 50, 0.7);
+    border-bottom: 2px solid #666;
+}
+
+body[data-theme="metal"] .leaderboard-item {
+    background: rgba(60, 60, 60, 0.4);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(150, 150, 150, 0.3);
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] .leaderboard-item:hover {
+    background: rgba(70, 70, 70, 0.5);
+    border-color: rgba(150, 150, 150, 0.5);
+}
+
+body[data-theme="metal"] #createSpecialAchievementModal > div,
+body[data-theme="metal"] #editSpecialAchievementModal > div,
+body[data-theme="metal"] #achievementsModal .modal-content {
+    background: rgba(40, 40, 40, 0.95);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(150, 150, 150, 0.3);
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] .modal-header {
+    background: rgba(50, 50, 50, 0.7);
+    border-bottom: 2px solid #666;
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] .modal-tab-button {
+    background: rgba(50, 50, 50, 0.5);
+    color: #b0b0b0;
+    border: 1px solid rgba(150, 150, 150, 0.3);
+}
+
+body[data-theme="metal"] .modal-tab-button.active {
+    background: linear-gradient(135deg, #8b8b8b 0%, #5a5a5a 100%);
+    color: white;
+}
+
+body[data-theme="metal"] .modal-body {
+    background: rgba(40, 40, 40, 0.5);
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] .modal-achievements .achievement {
+    background: rgba(60, 60, 60, 0.4);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(150, 150, 150, 0.3);
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] .stat-item {
+    background: rgba(60, 60, 60, 0.4);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(150, 150, 150, 0.3);
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] .progressbar {
+    background: rgba(50, 50, 50, 0.6) !important;
+    border: 1px solid rgba(150, 150, 150, 0.3) !important;
+    color: #e0e0e0 !important;
+}
+
+body[data-theme="metal"] .progressbar strong {
+    color: #e0e0e0 !important;
+}
+
+body[data-theme="metal"] .progressbar > div {
+    background: rgba(40, 40, 40, 0.8) !important;
+}
+
+body[data-theme="metal"] .progressbar > div > div {
+    background: linear-gradient(90deg, #8b8b8b, #5a5a5a) !important;
+}
+
+body[data-theme="metal"] #createSpecialAchievementModal input,
+body[data-theme="metal"] #createSpecialAchievementModal textarea,
+body[data-theme="metal"] #editSpecialAchievementModal input,
+body[data-theme="metal"] #editSpecialAchievementModal textarea {
+    background: rgba(30, 30, 30, 0.8);
+    border: 1px solid rgba(150, 150, 150, 0.3);
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] #createSpecialAchievementModal button,
+body[data-theme="metal"] #editSpecialAchievementModal button {
+    background: linear-gradient(135deg, #8b8b8b 0%, #5a5a5a 100%);
+}
+
+body[data-theme="metal"] #specialAchievementPreview,
+body[data-theme="metal"] #editSpecialAchievementPreview {
+    background: rgba(30, 30, 30, 0.8);
+    border: 1px solid rgba(150, 150, 150, 0.3);
+}
+
+/* ===== ТЕМА: ДИСКОРД ===== */
+body[data-theme="discord"] {
+    background: #36393f;
+}
+
+body[data-theme="discord"] .container {
+    background: #36393f;
+}
+
+body[data-theme="discord"] .header {
+    background: #2f3136;
+    border-bottom: 2px solid #202225;
+}
+
+body[data-theme="discord"] .stat-card,
+body[data-theme="discord"] .setting-card,
+body[data-theme="discord"] .achievement {
+    background: #40444b;
+    border: 1px solid #202225;
+    color: #dcddde;
+}
+
+body[data-theme="discord"] .tab {
+    background: #2f3136;
+    color: #b9bbbe;
+}
+
+body[data-theme="discord"] .tab.active {
+    background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+    color: white;
+}
+
+body[data-theme="discord"] .admin-btn,
+body[data-theme="discord"] .save-settings-btn {
+    background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+}
+
+body[data-theme="discord"] .user-search input,
+body[data-theme="discord"] .setting-select {
+    background: #40444b;
+    border: 1px solid #202225;
+    color: #dcddde;
+}
+
+body[data-theme="discord"] .user-search button {
+    background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+}
+
+body[data-theme="discord"] h1,
+body[data-theme="discord"] h2,
+body[data-theme="discord"] h3 {
+    color: #dcddde;
+}
+
+body[data-theme="discord"] p,
+body[data-theme="discord"] small {
+    color: #b9bbbe;
+}
+
+body[data-theme="discord"] .admin-panel {
+    background: #2f3136;
+}
+
+body[data-theme="discord"] .admin-panel-header {
+    background: #202225;
+    border-bottom: 2px solid #5865f2;
+}
+
+body[data-theme="discord"] .leaderboard-item {
+    background: #40444b;
+    border: 1px solid #202225;
+    color: #dcddde;
+}
+
+body[data-theme="discord"] .leaderboard-item:hover {
+    background: #4a4e55;
+    border-color: #5865f2;
+}
+
+body[data-theme="discord"] #createSpecialAchievementModal > div,
+body[data-theme="discord"] #editSpecialAchievementModal > div,
+body[data-theme="discord"] #achievementsModal .modal-content {
+    background: #2f3136;
+    border: 2px solid #5865f2;
+    color: #dcddde;
+}
+
+body[data-theme="discord"] .modal-header {
+    background: #202225;
+    border-bottom: 2px solid #5865f2;
+    color: #dcddde;
+}
+
+body[data-theme="discord"] .modal-tab-button {
+    background: #40444b;
+    color: #b9bbbe;
+    border: 1px solid #202225;
+}
+
+body[data-theme="discord"] .modal-tab-button.active {
+    background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+    color: white;
+}
+
+body[data-theme="discord"] .modal-body {
+    background: #2f3136;
+    color: #dcddde;
+}
+
+body[data-theme="discord"] .modal-achievements .achievement {
+    background: #40444b;
+    border: 1px solid #202225;
+    color: #dcddde;
+}
+
+body[data-theme="discord"] .stat-item {
+    background: #40444b;
+    border: 1px solid #202225;
+    color: #dcddde;
+}
+
+body[data-theme="discord"] .progressbar {
+    background: #40444b !important;
+    border: 1px solid #202225 !important;
+    color: #dcddde !important;
+}
+
+body[data-theme="discord"] .progressbar strong {
+    color: #dcddde !important;
+}
+
+body[data-theme="discord"] .progressbar > div {
+    background: #202225 !important;
+}
+
+body[data-theme="discord"] .progressbar > div > div {
+    background: linear-gradient(90deg, #5865f2, #4752c4) !important;
+}
+
+body[data-theme="discord"] #createSpecialAchievementModal input,
+body[data-theme="discord"] #createSpecialAchievementModal textarea,
+body[data-theme="discord"] #editSpecialAchievementModal input,
+body[data-theme="discord"] #editSpecialAchievementModal textarea {
+    background: #40444b;
+    border: 1px solid #202225;
+    color: #dcddde;
+}
+
+body[data-theme="discord"] #createSpecialAchievementModal button,
+body[data-theme="discord"] #editSpecialAchievementModal button {
+    background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
+}
+
+body[data-theme="discord"] #specialAchievementPreview,
+body[data-theme="discord"] #editSpecialAchievementPreview {
+    background: #40444b;
+    border: 1px solid #202225;
+}
+
+/* ===== ТЕМА: СТИМ ===== */
+body[data-theme="steam"] {
+    background: #1b2838;
+}
+
+body[data-theme="steam"] .container {
+    background: linear-gradient(135deg, #1b2838 0%, #171a21 100%);
+}
+
+body[data-theme="steam"] .header {
+    background: linear-gradient(135deg, #171a21 0%, #1b2838 100%);
+    border-bottom: 2px solid #66c0f4;
+}
+
+body[data-theme="steam"] .stat-card,
+body[data-theme="steam"] .setting-card,
+body[data-theme="steam"] .achievement {
+    background: #16202d;
+    border: 1px solid #2a475e;
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] .tab {
+    background: #16202d;
+    color: #8f98a0;
+}
+
+body[data-theme="steam"] .tab.active {
+    background: linear-gradient(135deg, #66c0f4 0%, #417a9b 100%);
+    color: white;
+}
+
+body[data-theme="steam"] .admin-btn,
+body[data-theme="steam"] .save-settings-btn {
+    background: linear-gradient(135deg, #66c0f4 0%, #417a9b 100%);
+}
+
+body[data-theme="steam"] .user-search input,
+body[data-theme="steam"] .setting-select {
+    background: #16202d;
+    border: 1px solid #2a475e;
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] .user-search button {
+    background: linear-gradient(135deg, #66c0f4 0%, #417a9b 100%);
+}
+
+body[data-theme="steam"] h1,
+body[data-theme="steam"] h2,
+body[data-theme="steam"] h3 {
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] p,
+body[data-theme="steam"] small {
+    color: #8f98a0;
+}
+
+body[data-theme="steam"] .admin-panel {
+    background: #16202d;
+}
+
+body[data-theme="steam"] .admin-panel-header {
+    background: #171a21;
+    border-bottom: 2px solid #66c0f4;
+}
+
+body[data-theme="steam"] .leaderboard-item {
+    background: #16202d;
+    border: 1px solid #2a475e;
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] .leaderboard-item:hover {
+    background: #1e2a3d;
+    border-color: #66c0f4;
+}
+
+body[data-theme="steam"] #createSpecialAchievementModal > div,
+body[data-theme="steam"] #editSpecialAchievementModal > div,
+body[data-theme="steam"] #achievementsModal .modal-content {
+    background: #171a21;
+    border: 2px solid #66c0f4;
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] .modal-header {
+    background: #1b2838;
+    border-bottom: 2px solid #66c0f4;
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] .modal-tab-button {
+    background: #16202d;
+    color: #8f98a0;
+    border: 1px solid #2a475e;
+}
+
+body[data-theme="steam"] .modal-tab-button.active {
+    background: linear-gradient(135deg, #66c0f4 0%, #417a9b 100%);
+    color: white;
+}
+
+body[data-theme="steam"] .modal-body {
+    background: #171a21;
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] .modal-achievements .achievement {
+    background: #16202d;
+    border: 1px solid #2a475e;
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] .stat-item {
+    background: #16202d;
+    border: 1px solid #2a475e;
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] .progressbar {
+    background: #16202d !important;
+    border: 1px solid #2a475e !important;
+    color: #c7d5e0 !important;
+}
+
+body[data-theme="steam"] .progressbar strong {
+    color: #c7d5e0 !important;
+}
+
+body[data-theme="steam"] .progressbar > div {
+    background: #0e1621 !important;
+}
+
+body[data-theme="steam"] .progressbar > div > div {
+    background: linear-gradient(90deg, #66c0f4, #417a9b) !important;
+}
+
+body[data-theme="steam"] #createSpecialAchievementModal input,
+body[data-theme="steam"] #createSpecialAchievementModal textarea,
+body[data-theme="steam"] #editSpecialAchievementModal input,
+body[data-theme="steam"] #editSpecialAchievementModal textarea {
+    background: #16202d;
+    border: 1px solid #2a475e;
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] #createSpecialAchievementModal button,
+body[data-theme="steam"] #editSpecialAchievementModal button {
+    background: linear-gradient(135deg, #66c0f4 0%, #417a9b 100%);
+}
+
+body[data-theme="steam"] #specialAchievementPreview,
+body[data-theme="steam"] #editSpecialAchievementPreview {
+    background: #16202d;
+    border: 1px solid #2a475e;
+}

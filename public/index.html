@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>AFK Bot - Панель управления</title>
     <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/theme.css">
     <link rel="stylesheet" href="/media.css">
     <script src="/app.js" defer></script>
     <script src="/achievements.js" defer></script>
@@ -206,6 +207,20 @@
                             </div>
                         </div>
                         
+                        <div class="setting-card">
+                            <div class="setting-card-icon">🎨</div>
+                            <div class="setting-card-content">
+                                <h3 class="setting-card-title">Тема оформления</h3>
+                                <p class="setting-card-description">Выберите цветовую схему интерфейса</p>
+                                <select id="themeSelect" class="setting-select" onchange="previewTheme(this.value)">
+                                    <option value="standard">🎨 Стандарт</option>
+                                    <option value="metal">⚙️ Металл</option>
+                                    <option value="discord">💬 Дискорд</option>
+                                    <option value="steam">🎮 Стим</option>
+                                </select>
+                            </div>
+                        </div>
+                        
                         <div class="setting-card logout-card">
                             <div class="setting-card-icon">🚪</div>
                             <div class="setting-card-content">
@@ -231,7 +246,7 @@
                             </button>
                             <button id="backupDatabaseBtn" onclick="backupDatabase()" class="admin-btn">
                                 <span class="admin-btn-icon">💾</span>
-                                <span class="admin-btn-text">Создать бэкап базы данных</span>
+                                <span class="admin-btn-text">Бэкап БД</span>
                             </button>
                         </div>
                     </div>

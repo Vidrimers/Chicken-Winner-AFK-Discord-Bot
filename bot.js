@@ -41,7 +41,8 @@ db.exec(`
     user_id TEXT PRIMARY KEY,
     dm_notifications BOOLEAN DEFAULT 1,
     afk_timeout INTEGER DEFAULT 15,
-    achievement_notifications BOOLEAN DEFAULT 1
+    achievement_notifications BOOLEAN DEFAULT 1,
+    theme TEXT DEFAULT 'standard'
   )
 `);
 
@@ -165,6 +166,12 @@ try {
 try {
   db.exec(
     `ALTER TABLE user_settings ADD COLUMN achievement_notifications BOOLEAN DEFAULT 1`
+  );
+} catch (error) {}
+
+try {
+  db.exec(
+    `ALTER TABLE user_settings ADD COLUMN theme TEXT DEFAULT 'standard'`
   );
 } catch (error) {}
 
@@ -650,6 +657,15 @@ const setUserAchievementNotificationSetting = (userId, enabled) => {
             ?)
   `);
   stmt.run(userId, userId, userId, enabled ? 1 : 0);
+};
+
+// Функция для получения темы пользователя
+const getUserTheme = (userId) => {
+  const stmt = db.prepare(
+    "SELECT theme FROM user_settings WHERE user_id = ?"
+  );
+  const result = stmt.get(userId);
+  return result && result.theme ? result.theme : 'standard';
 };
 
 // ===== ФУНКЦИИ СТАТИСТИКИ =====
@@ -1141,6 +1157,7 @@ app.get("/api/stats/:userId", (req, res) => {
       dmNotifications: getUserDMSetting(userId),
       afkTimeout: getUserTimeout(userId),
       achievementNotifications: getUserAchievementNotificationSetting(userId),
+      theme: getUserTheme(userId),
     };
 
     res.json({
@@ -1178,7 +1195,7 @@ app.get("/api/special-achievements", (req, res) => {
 
 app.post("/api/settings/:userId", async (req, res) => {
   const userId = req.params.userId;
-  const { dmNotifications, afkTimeout, achievementNotifications } = req.body;
+  const { dmNotifications, afkTimeout, achievementNotifications, theme } = req.body;
 
   try {
     // Инициализируем пользователя, если нужно
@@ -1212,6 +1229,14 @@ app.post("/api/settings/:userId", async (req, res) => {
         setUserAchievementNotificationSetting(userId, achievementNotifications);
         settingsChanged = true;
       }
+    }
+    
+    // Сохраняем тему
+    if (theme !== undefined) {
+      db.prepare(
+        "UPDATE user_settings SET theme = ? WHERE user_id = ?"
+      ).run(theme, userId);
+      settingsChanged = true;
     }
 
     // Если настройки изменились - обновляем статистику
@@ -1264,10 +1289,21 @@ app.post("/api/settings/:userId", async (req, res) => {
             ? "✅ включены"
             : "❌ отключены";
 
+        // Получаем название темы
+        const themeValue = theme !== undefined ? theme : getUserTheme(userId);
+        const themeNames = {
+          'standard': '🎨 Стандарт',
+          'metal': '⚙️ Металл',
+          'discord': '💬 Дискорд',
+          'steam': '🎮 Стим'
+        };
+        const themeDisplay = themeNames[themeValue] || themeValue;
+
         const settingsText = 
           `📩 ЛС уведомления: ${dmStatus}\n` +
           `⏱️ Таймер AFK: ${timeoutDisplay}\n` +
-          `🏆 Уведомления о достижениях: ${achievementStatus}`;
+          `🏆 Уведомления о достижениях: ${achievementStatus}\n` +
+          `🎨 Тема оформления: ${themeDisplay}`;
 
         await sendSettingsChangeNotification(username, userId, settingsText);
       } catch (error) {
