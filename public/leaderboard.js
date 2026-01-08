@@ -60,8 +60,8 @@ function displayUserModal(data, username, rank, userId, isAdmin = false) {
     const stats = data.stats;
     
     // Подсчитываем достижения (исключая специальные)
-    const regularAchievements = achievements.filter(a => !a.emoji && !a.type);
-    const specialAchievements = achievements.filter(a => a.emoji && a.type === 'special');
+    const regularAchievements = achievements.filter(a => !a.emoji && !a.type && a.achievement_id !== 'best_admin');
+    const specialAchievements = achievements.filter(a => (a.emoji && a.type === 'special') || a.achievement_id === 'best_admin');
     const totalRegular = Object.keys(window.ACHIEVEMENTS).length;
     
     // Формируем HTML для достижений
@@ -101,14 +101,36 @@ function displayUserModal(data, username, rank, userId, isAdmin = false) {
             
             specialAchievements.forEach(ach => {
                 const deleteBtn = isAdmin ? `<button onclick="deleteUserAchievement('${userId}', '${ach.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>` : '';
-                const achievementColor = ach.color || '#ffd700';
+                
+                // Для best_admin используем кастомные данные если есть, иначе дефолтные
+                let displayEmoji, displayName, displayDescription, displayColor;
+                
+                if (ach.achievement_id === 'best_admin') {
+                    if (ach.emoji) {
+                        displayEmoji = ach.emoji;
+                        displayName = ach.name;
+                        displayDescription = ach.description;
+                        displayColor = ach.color || '#ffd700';
+                    } else {
+                        displayEmoji = '👑';
+                        displayName = 'Kakashech - Лучший админ';
+                        displayDescription = 'Лучший admin_ebaniy канала';
+                        displayColor = '#ffd700';
+                    }
+                } else {
+                    displayEmoji = ach.emoji;
+                    displayName = ach.name;
+                    displayDescription = ach.description;
+                    displayColor = ach.color || '#ffd700';
+                }
+                
                 achievementsHtml += `
                     <div class="modal-achievement special-achievement" style="
-                        background: linear-gradient(135deg, ${achievementColor}22 0%, ${achievementColor}11 100%);
-                        border-left: 4px solid ${achievementColor};
+                        background: linear-gradient(135deg, ${displayColor}22 0%, ${displayColor}11 100%);
+                        border-left: 4px solid ${displayColor};
                     ">
-                        <h4 style="color: ${achievementColor};">${ach.emoji} ${ach.name} ✨</h4>
-                        <p style="margin: 8px 0; color: #555;">${ach.description}</p>
+                        <h4 style="color: ${displayColor};">${displayEmoji} ${displayName} ✨</h4>
+                        <p style="margin: 8px 0; color: #555;">${displayDescription}</p>
                         <small style="color: #666; font-weight: bold;">🎉 Получено: ${new Date(ach.unlocked_at).toLocaleDateString('ru-RU')}</small>
                         ${deleteBtn}
                     </div>
