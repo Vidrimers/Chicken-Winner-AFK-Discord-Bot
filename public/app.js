@@ -337,6 +337,24 @@ async function loadUserData(skipSecurityCheck = false) {
         setUserDisplay(username, userId);
         document.getElementById('userIdDisplay').style.display = 'block';
         
+        // Проверяем обновление имени через 5 секунд (на случай если бот только обновил имена)
+        setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/stats/${userId}`);
+                if (response.ok) {
+                    const freshData = await response.json();
+                    const newUsername = freshData.stats.username || 'Пользователь';
+                    
+                    if (newUsername !== username) {
+                        console.log('🔄 Обновление имени:', username, '→', newUsername);
+                        setUserDisplay(newUsername, userId);
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка при обновлении имени:', error);
+            }
+        }, 5000);
+        
         // Скрываем поле ввода ID и кнопку загрузки когда пользователь залогинен
         document.getElementById('manualInputSection').style.display = 'none';
         
@@ -641,5 +659,51 @@ async function deleteUser(userId, username) {
     } catch (error) {
         console.error('Ошибка при удалении пользователя:', error);
         alert('Ошибка при удалении пользователя');
+    }
+}
+
+
+// Функция для обновления имен пользователей
+async function updateUserNames() {
+    const btn = document.getElementById('updateNamesBtn');
+    const originalText = btn.innerHTML;
+    
+    try {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="admin-btn-icon">⏳</span><span class="admin-btn-text">Обновление...</span>';
+        
+        const response = await fetch('/api/admin/update-names', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Имена обновлены:', data);
+            alert(`✅ Обновлено имен: ${data.updated}\nВсего пользователей: ${data.total}`);
+            
+            // Обновляем текущую страницу если нужно
+            if (window.currentUserId) {
+                setTimeout(async () => {
+                    const freshResponse = await fetch(`/api/stats/${window.currentUserId}`);
+                    if (freshResponse.ok) {
+                        const freshData = await freshResponse.json();
+                        const newUsername = freshData.stats.username || 'Пользователь';
+                        setUserDisplay(newUsername, window.currentUserId);
+                    }
+                }, 1000);
+            }
+        } else {
+            const error = await response.json();
+            alert('Ошибка при обновлении имен: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Ошибка при обновлении имен:', error);
+        alert('Ошибка при обновлении имен');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }

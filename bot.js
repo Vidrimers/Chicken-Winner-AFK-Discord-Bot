@@ -1816,6 +1816,47 @@ app.post("/api/admin/backup-database", async (req, res) => {
   }
 });
 
+// ===== ОБНОВЛЕНИЕ ИМЕН ПОЛЬЗОВАТЕЛЕЙ =====
+app.post("/api/admin/update-names", async (req, res) => {
+  try {
+    console.log("🔄 Запрос на обновление имен пользователей...");
+    
+    const guild = client.guilds.cache.first();
+    if (!guild) {
+      return res.status(500).json({ error: "Гильдия не найдена" });
+    }
+    
+    const allUsers = db.prepare("SELECT user_id FROM user_stats").all();
+    let updated = 0;
+    let total = allUsers.length;
+    
+    for (const user of allUsers) {
+      try {
+        const member = await guild.members.fetch(user.user_id).catch(() => null);
+        if (member) {
+          const displayName = member.displayName || member.user.username;
+          db.prepare("UPDATE user_stats SET username = ? WHERE user_id = ?").run(displayName, user.user_id);
+          updated++;
+        }
+      } catch (err) {
+        // Пропускаем пользователей которых не удалось найти
+      }
+    }
+    
+    console.log(`✅ Обновлено displayName для ${updated} из ${total} пользователей`);
+    
+    res.json({ 
+      success: true, 
+      updated: updated,
+      total: total,
+      message: `Обновлено ${updated} из ${total} пользователей`
+    });
+  } catch (error) {
+    console.error("❌ Ошибка при обновлении имен:", error);
+    res.status(500).json({ error: "Ошибка при обновлении имен" });
+  }
+});
+
 
 // ===== ПОПЫТКА НЕСАНКЦИОНИРОВАННОГО ДОСТУПА =====
 app.post("/api/unauthorized-access", async (req, res) => {
@@ -1953,7 +1994,15 @@ client.on("messageCreate", async (message) => {
 
   const content = message.content.toLowerCase();
   const userId = message.author.id;
-  const username = message.author.username;
+  
+  // Получаем displayName из guild member если возможно
+  let username = message.author.username;
+  if (message.guild) {
+    const member = await message.guild.members.fetch(userId).catch(() => null);
+    if (member) {
+      username = member.displayName || member.user.username;
+    }
+  }
 
   // Инициализируем пользователя в статистике
   initUserStats(userId, username);
@@ -2456,6 +2505,35 @@ client.on("clientReady", async () => {
   setInterval(checkSpecialAchievement, 60000);
   console.log("⏰ Запущена проверка специального достижения");
 
+  // Обновляем displayName для всех пользователей в БД
+  setTimeout(async () => {
+    console.log("🔄 Обновление displayName для всех пользователей...");
+    try {
+      const guild = client.guilds.cache.first();
+      if (guild) {
+        const allUsers = db.prepare("SELECT user_id FROM user_stats").all();
+        let updated = 0;
+        
+        for (const user of allUsers) {
+          try {
+            const member = await guild.members.fetch(user.user_id).catch(() => null);
+            if (member) {
+              const displayName = member.displayName || member.user.username;
+              db.prepare("UPDATE user_stats SET username = ? WHERE user_id = ?").run(displayName, user.user_id);
+              updated++;
+            }
+          } catch (err) {
+            // Пропускаем пользователей которых не удалось найти
+          }
+        }
+        
+        console.log(`✅ Обновлено displayName для ${updated} пользователей`);
+      }
+    } catch (error) {
+      console.error("❌ Ошибка при обновлении displayName:", error);
+    }
+  }, 5000); // Задержка 5 секунд
+
   // Проверяем пропущенные уведомления о достижениях при запуске (с задержкой)
   setTimeout(() => {
     console.log("🔍 Проверка пропущенных уведомлений о достижениях...");
@@ -2484,7 +2562,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
   try {
     const member = newState.member;
     const userId = member.id;
-    const username = member.user.username;
+    const username = member.displayName || member.user.username;
 
     if (member.user.bot) return;
 
@@ -2840,7 +2918,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 // ===== ФУНКЦИЯ: ЗАПУСК ТАЙМЕРА НЕАКТИВНОСТИ С ОТСЛЕЖИВАНИЕМ AFK ВРЕМЕНИ =====
 function startInactivityTimer(member, guild) {
   const userId = member.id;
-  const username = member.user.username;
+  const username = member.displayName || member.user.username;
   const userTimeout = getUserTimeout(userId);
 
   // Если значение меньше 15, то это секунды (админ опции: 10, 60), иначе минуты
