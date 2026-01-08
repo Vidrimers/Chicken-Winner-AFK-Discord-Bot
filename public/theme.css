@@ -131,6 +131,21 @@ body[data-theme="metal"] .stat-item {
     color: #e0e0e0;
 }
 
+body[data-theme="metal"] .modal .stats-grid .stat-item {
+    background: rgba(60, 60, 60, 0.4);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(150, 150, 150, 0.3);
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] .stat-value {
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] .stat-label {
+    color: #b0b0b0;
+}
+
 body[data-theme="metal"] .progressbar {
     background: rgba(50, 50, 50, 0.6) !important;
     border: 1px solid rgba(150, 150, 150, 0.3) !important;
@@ -290,6 +305,20 @@ body[data-theme="discord"] .stat-item {
     color: #dcddde;
 }
 
+body[data-theme="discord"] .modal .stats-grid .stat-item {
+    background: #40444b;
+    border: 1px solid #202225;
+    color: #dcddde;
+}
+
+body[data-theme="discord"] .stat-value {
+    color: #dcddde;
+}
+
+body[data-theme="discord"] .stat-label {
+    color: #b9bbbe;
+}
+
 body[data-theme="discord"] .progressbar {
     background: #40444b !important;
     border: 1px solid #202225 !important;
@@ -447,6 +476,20 @@ body[data-theme="steam"] .stat-item {
     background: #16202d;
     border: 1px solid #2a475e;
     color: #c7d5e0;
+}
+
+body[data-theme="steam"] .modal .stats-grid .stat-item {
+    background: #16202d;
+    border: 1px solid #2a475e;
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] .stat-value {
+    color: #c7d5e0;
+}
+
+body[data-theme="steam"] .stat-label {
+    color: #8f98a0;
 }
 
 body[data-theme="steam"] .progressbar {
