@@ -829,7 +829,7 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
       if (channel) {
         const discordText =
           `🏆 **Новое достижение!**\n\n` +
-          `👤 **Пользователь:** <@${userId}> (${username})\n` +
+          `👤 **Пользователь:** <@${userId}>\n` +
           `🎯 **Достижение:** ${achievement.name}\n` +
           `📝 **Описание:** ${achievement.description}\n` +
           `⭐ **Очки:** +${achievement.points}\n` +
