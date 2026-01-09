@@ -34,7 +34,7 @@
     }
     
     .content {
-        padding: 20px;
+        padding: 0px 20px 20px 20px;
     }
     
     .user-search {
@@ -92,10 +92,42 @@
     }
     
     .leaderboard-item {
-        padding: 12px 15px;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 5px;
+        padding: 12px 15px !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px;
+    }
+    
+    .leaderboard-item .leaderboard-item-top {
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        justify-content: flex-start !important;
+        width: 280px !important;
+        max-width: 90% !important;
+    }
+    
+    .leaderboard-item .rank {
+        width: 50px !important;
+        text-align: center !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .leaderboard-item img {
+        width: 40px !important;
+        height: 40px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .leaderboard-item strong {
+        text-align: left !important;
+        flex: 1 !important;
+    }
+    
+    .leaderboard-item .leaderboard-item-bottom {
+        width: 100% !important;
+        justify-content: center !important;
     }
     
     .leaderboard-item:hover::after {
@@ -130,7 +162,7 @@
     }
     
     .header h1 {
-        font-size: 1.6rem;
+        font-size: 1.5rem;
         margin-bottom: 8px;
     }
     
@@ -154,7 +186,7 @@
     }
     
     .content {
-        padding: 15px;
+        padding: 0px 15px 15px 15px;
     }
     
     .tabs {

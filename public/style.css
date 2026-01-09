@@ -108,7 +108,7 @@ body.modal-open {
 }
 
 .content { 
-    padding: 30px; 
+    padding: 0px 30px 30px 30px;
 }
 
 .user-search { 
