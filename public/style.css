@@ -60,7 +60,7 @@ body.modal-open {
     transform: scale(1.02);
 }
 
-.user-id-display.flipping {
+#userInfoFlipContainer.flipping {
     animation: flip 0.3s ease-in-out;
 }
 
@@ -112,7 +112,7 @@ body.modal-open {
 }
 
 .user-search { 
-    margin-bottom: 30px; 
+    /* margin-bottom: 30px;  */
     display: flex; 
     gap: 10px; 
     justify-content: center;
@@ -605,6 +605,15 @@ body.modal-open {
 .modal-header p {
     font-size: 0.9rem;
     opacity: 0.9;
+}
+
+.modal-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .close-btn {

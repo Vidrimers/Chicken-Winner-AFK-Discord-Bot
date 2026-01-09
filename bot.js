@@ -144,6 +144,10 @@ try {
 } catch (error) {}
 
 try {
+  db.exec(`ALTER TABLE user_stats ADD COLUMN avatar_url TEXT`);
+} catch (error) {}
+
+try {
   db.exec(`
     UPDATE user_stats 
     SET longest_session_date = (
@@ -669,7 +673,7 @@ const getUserTheme = (userId) => {
 };
 
 // ===== ФУНКЦИИ СТАТИСТИКИ =====
-const initUserStats = (userId, username) => {
+const initUserStats = (userId, username, avatarUrl = null) => {
   // Проверяем, существует ли уже пользователь
   const existingStmt = db.prepare(
     "SELECT username FROM user_stats WHERE user_id = ?"
@@ -684,17 +688,23 @@ const initUserStats = (userId, username) => {
       username !== "Web User"
     ) {
       const updateStmt = db.prepare(
-        "UPDATE user_stats SET username = ? WHERE user_id = ?"
+        "UPDATE user_stats SET username = ?, avatar_url = ? WHERE user_id = ?"
       );
-      updateStmt.run(username, userId);
+      updateStmt.run(username, avatarUrl, userId);
+    } else if (avatarUrl) {
+      // Обновляем аватарку если передана
+      const updateStmt = db.prepare(
+        "UPDATE user_stats SET avatar_url = ? WHERE user_id = ?"
+      );
+      updateStmt.run(avatarUrl, userId);
     }
   } else {
     // Если пользователя нет - создаем новую запись
     const stmt = db.prepare(`
-      INSERT INTO user_stats (user_id, username) 
-      VALUES (?, ?)
+      INSERT INTO user_stats (user_id, username, avatar_url) 
+      VALUES (?, ?, ?)
     `);
-    stmt.run(userId, username);
+    stmt.run(userId, username, avatarUrl);
   }
 };
 
@@ -1835,7 +1845,8 @@ app.post("/api/admin/update-names", async (req, res) => {
         const member = await guild.members.fetch(user.user_id).catch(() => null);
         if (member) {
           const displayName = member.displayName || member.user.username;
-          db.prepare("UPDATE user_stats SET username = ? WHERE user_id = ?").run(displayName, user.user_id);
+          const avatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
+          db.prepare("UPDATE user_stats SET username = ?, avatar_url = ? WHERE user_id = ?").run(displayName, avatarUrl, user.user_id);
           updated++;
         }
       } catch (err) {
@@ -1843,7 +1854,7 @@ app.post("/api/admin/update-names", async (req, res) => {
       }
     }
     
-    console.log(`✅ Обновлено displayName для ${updated} из ${total} пользователей`);
+    console.log(`✅ Обновлено displayName и аватарок для ${updated} из ${total} пользователей`);
     
     res.json({ 
       success: true, 
@@ -1997,15 +2008,18 @@ client.on("messageCreate", async (message) => {
   
   // Получаем displayName из guild member если возможно
   let username = message.author.username;
+  let avatarUrl = message.author.displayAvatarURL({ format: 'png', size: 128 });
+  
   if (message.guild) {
     const member = await message.guild.members.fetch(userId).catch(() => null);
     if (member) {
       username = member.displayName || member.user.username;
+      avatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
     }
   }
 
   // Инициализируем пользователя в статистике
-  initUserStats(userId, username);
+  initUserStats(userId, username, avatarUrl);
 
   // Увеличиваем счетчик сообщений
   incrementUserStat(userId, "messages_sent");
@@ -2507,7 +2521,7 @@ client.on("clientReady", async () => {
 
   // Обновляем displayName для всех пользователей в БД
   setTimeout(async () => {
-    console.log("🔄 Обновление displayName для всех пользователей...");
+    console.log("🔄 Обновление displayName и аватарок для всех пользователей...");
     try {
       const guild = client.guilds.cache.first();
       if (guild) {
@@ -2519,7 +2533,8 @@ client.on("clientReady", async () => {
             const member = await guild.members.fetch(user.user_id).catch(() => null);
             if (member) {
               const displayName = member.displayName || member.user.username;
-              db.prepare("UPDATE user_stats SET username = ? WHERE user_id = ?").run(displayName, user.user_id);
+              const avatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
+              db.prepare("UPDATE user_stats SET username = ?, avatar_url = ? WHERE user_id = ?").run(displayName, avatarUrl, user.user_id);
               updated++;
             }
           } catch (err) {
@@ -2527,7 +2542,7 @@ client.on("clientReady", async () => {
           }
         }
         
-        console.log(`✅ Обновлено displayName для ${updated} пользователей`);
+        console.log(`✅ Обновлено displayName и аватарок для ${updated} пользователей`);
       }
     } catch (error) {
       console.error("❌ Ошибка при обновлении displayName:", error);
@@ -2563,11 +2578,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     const member = newState.member;
     const userId = member.id;
     const username = member.displayName || member.user.username;
+    const avatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
 
     if (member.user.bot) return;
 
     // Инициализируем пользователя в статистике
-    initUserStats(userId, username);
+    initUserStats(userId, username, avatarUrl);
 
     // Проверяем выход из AFK канала и обновляем время в AFK
     if (
@@ -2919,6 +2935,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 function startInactivityTimer(member, guild) {
   const userId = member.id;
   const username = member.displayName || member.user.username;
+  const avatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
   const userTimeout = getUserTimeout(userId);
 
   // Если значение меньше 15, то это секунды (админ опции: 10, 60), иначе минуты

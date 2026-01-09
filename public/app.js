@@ -35,12 +35,12 @@ function setUserDisplay(username, userId) {
 function toggleUserInfo() {
     const label = document.getElementById('userDisplayLabel');
     const value = document.getElementById('currentUserId');
-    const container = document.getElementById('userIdDisplay');
+    const flipContainer = document.getElementById('userInfoFlipContainer');
     
     if (!window.currentUserId || !window.currentUsername) return;
     
     // Добавляем класс для анимации
-    container.classList.add('flipping');
+    flipContainer.classList.add('flipping');
     
     // Меняем содержимое в середине анимации
     setTimeout(() => {
@@ -57,7 +57,7 @@ function toggleUserInfo() {
     
     // Убираем класс после завершения анимации
     setTimeout(() => {
-        container.classList.remove('flipping');
+        flipContainer.classList.remove('flipping');
     }, 300);
 }
 
@@ -132,8 +132,12 @@ function loginWithDiscord() {
 
 async function logout() {
     if (confirm('Вы уверены, что хотите выйти?')) {
+        // Скрываем аватарку
+        hideUserAvatar();
+        
         // Очищаем localStorage перед редиректом
         localStorage.removeItem('afkBotUserId');
+        localStorage.removeItem('afkBotUserAvatar');
         console.log('🗑️ localStorage очищен при выходе');
         window.location.href = '/logout';
     }
@@ -196,7 +200,15 @@ async function loadUserDataAuto(userId) {
         console.log('✅ Данные получены:', data);
         
         const username = data.stats.username || 'Пользователь';
+        const avatarUrl = data.stats.avatar_url || null;
+        
         setUserDisplay(username, userId);
+        displayUserAvatar(avatarUrl);
+        
+        // Сохраняем аватарку в localStorage
+        if (avatarUrl) {
+            localStorage.setItem('afkBotUserAvatar', avatarUrl);
+        }
         
         try {
             await fetch(`/api/visit/${userId}`, {
@@ -334,8 +346,16 @@ async function loadUserData(skipSecurityCheck = false) {
         displayUserSettings(data.settings);
         
         const username = data.stats.username || 'Пользователь';
+        const avatarUrl = data.stats.avatar_url || null;
+        
         setUserDisplay(username, userId);
+        displayUserAvatar(avatarUrl);
         document.getElementById('userIdDisplay').style.display = 'block';
+        
+        // Сохраняем аватарку в localStorage
+        if (avatarUrl) {
+            localStorage.setItem('afkBotUserAvatar', avatarUrl);
+        }
         
         // Проверяем обновление имени через 5 секунд (на случай если бот только обновил имена)
         setTimeout(async () => {
@@ -344,10 +364,17 @@ async function loadUserData(skipSecurityCheck = false) {
                 if (response.ok) {
                     const freshData = await response.json();
                     const newUsername = freshData.stats.username || 'Пользователь';
+                    const newAvatarUrl = freshData.stats.avatar_url || null;
                     
                     if (newUsername !== username) {
                         console.log('🔄 Обновление имени:', username, '→', newUsername);
                         setUserDisplay(newUsername, userId);
+                    }
+                    
+                    if (newAvatarUrl && newAvatarUrl !== avatarUrl) {
+                        console.log('🔄 Обновление аватарки');
+                        localStorage.setItem('afkBotUserAvatar', newAvatarUrl);
+                        displayUserAvatar(newAvatarUrl);
                     }
                 }
             } catch (error) {
@@ -706,4 +733,23 @@ async function updateUserNames() {
         btn.disabled = false;
         btn.innerHTML = originalText;
     }
+}
+
+// Функция для отображения аватарки пользователя
+function displayUserAvatar(avatarUrl) {
+    const avatarContainer = document.getElementById('userAvatarContainer');
+    const avatarImg = document.getElementById('userAvatar');
+    
+    if (avatarUrl) {
+        avatarImg.src = avatarUrl;
+        avatarContainer.style.display = 'block';
+    } else {
+        avatarImg.src = 'https://cdn.discordapp.com/embed/avatars/0.png';
+        avatarContainer.style.display = 'block';
+    }
+}
+
+function hideUserAvatar() {
+    const avatarContainer = document.getElementById('userAvatarContainer');
+    avatarContainer.style.display = 'none';
 }

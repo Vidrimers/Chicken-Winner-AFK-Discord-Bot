@@ -10,11 +10,15 @@ async function loadLeaderboard() {
             const hours = Math.floor(user.total_voice_time / 3600);
             const minutes = Math.floor((user.total_voice_time % 3600) / 60);
             const userId = user.user_id.replace(/"/g, '&quot;');
+            const avatarUrl = user.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png';
             
             html += '<div class="leaderboard-item" onclick="showUserModal(&#34;' + userId + '&#34;, &#34;' + (user.username || 'Неизвестный пользователь').replace(/"/g, '&quot;') + '&#34;, ' + (index + 1) + ')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">' +
-                '<div>' +
-                    '<span class="rank">#' + (index + 1) + '</span>' +
-                    '<strong>' + (user.username || 'Неизвестный пользователь') + '</strong>' +
+                '<div style="display: flex; align-items: center; gap: 12px;">' +
+                    '<img src="' + avatarUrl + '" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">' +
+                    '<div>' +
+                        '<span class="rank">#' + (index + 1) + '</span>' +
+                        '<strong>' + (user.username || 'Неизвестный пользователь') + '</strong>' +
+                    '</div>' +
                 '</div>' +
                 '<div style="display: flex; align-items: center;">' +
                     '<span>' + hours + 'ч ' + minutes + 'м</span>' +
@@ -35,7 +39,12 @@ async function showUserModal(userId, username, rank) {
         const data = await response.json();
         const isAdmin = window.currentUserId === window.CONFIG.ADMIN_USER_ID;
         
-        displayUserModal(data, username, rank, userId, isAdmin);
+        // Получаем аватарку из localStorage или используем дефолтную
+        const savedUsers = JSON.parse(localStorage.getItem('leaderboardUsers') || '[]');
+        const user = savedUsers.find(u => u.user_id === userId);
+        const avatarUrl = user?.avatar_url || data.stats?.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png';
+        
+        displayUserModal(data, username, rank, userId, isAdmin, avatarUrl);
     } catch (error) {
         alert('Ошибка загрузки данных пользователя');
     }
@@ -55,7 +64,7 @@ function switchModalTab(tabName) {
     document.querySelector(`[onclick="switchModalTab('${tabName}')"]`).classList.add('active');
 }
 
-function displayUserModal(data, username, rank, userId, isAdmin = false) {
+function displayUserModal(data, username, rank, userId, isAdmin = false, avatarUrl = 'https://cdn.discordapp.com/embed/avatars/0.png') {
     const achievements = data.achievements;
     const stats = data.stats;
     
@@ -142,9 +151,12 @@ function displayUserModal(data, username, rank, userId, isAdmin = false) {
     let modalHtml = `
         <div class="modal" id="achievementsModal">
             <div class="modal-content" style="max-width: 800px; height: 80vh;overflow: auto; scrollbar-width: none;">
-                <div class="modal-header">
-                    <h2>👤 Профиль пользователя</h2>
-                    <h3>#${rank} ${username}</h3>
+                <div class="modal-header" style="display: flex; align-items: center; gap: 20px; position: relative;">
+                    <img src="${avatarUrl}" alt="Avatar" class="modal-avatar">
+                    <div style="flex: 1; text-align: center;">
+                        <h2>👤 Профиль пользователя</h2>
+                        <h3>#${rank} ${username}</h3>
+                    </div>
                     <button class="close-btn" onclick="closeModal()">×</button>
                 </div>
                 
