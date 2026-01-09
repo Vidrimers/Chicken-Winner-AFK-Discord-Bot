@@ -514,6 +514,13 @@ function displayUserSettings(settings) {
     // Синхронизируем localStorage с сервером
     if (secretThemeActivated) {
         localStorage.setItem('secretThemeActivated', 'true');
+        
+        // Убираем подсказку и курсор у логотипа
+        const logoActivate = document.querySelector('.header-logo-img-activate');
+        if (logoActivate) {
+            logoActivate.removeAttribute('title');
+            logoActivate.style.cursor = 'default';
+        }
     }
     
     if (secretThemeActivated && themeSelect && !themeSelect.querySelector('option[value="die-my-darling"]')) {
@@ -641,6 +648,13 @@ async function activateSecretTheme() {
         
         // Сохраняем флаг в localStorage
         localStorage.setItem('secretThemeActivated', 'true');
+        
+        // Убираем подсказку и курсор у логотипа
+        const logoActivate = document.querySelector('.header-logo-img-activate');
+        if (logoActivate) {
+            logoActivate.removeAttribute('title');
+            logoActivate.style.cursor = 'default';
+        }
         
         // Применяем тему
         applyTheme('die-my-darling');
