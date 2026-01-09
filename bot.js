@@ -1213,11 +1213,48 @@ app.use('/avatars', express.static(path.join(__dirname, "avatars")));
 app.use(express.json());
 
 // API маршруты
-app.get("/api/stats/:userId", (req, res) => {
+app.get("/api/stats/:userId", async (req, res) => {
   try {
     const userId = req.params.userId;
 
-    const stats = getUserStats(userId);
+    let stats = getUserStats(userId);
+    
+    // Если пользователя нет в БД, создаем его с аватаркой
+    if (!stats) {
+      console.log(`📝 Новый пользователь ${userId} зашел на сайт, создаем запись...`);
+      
+      try {
+        const guild = client.guilds.cache.first();
+        if (guild) {
+          const member = await guild.members.fetch(userId).catch(() => null);
+          if (member) {
+            const username = member.displayName || member.user.username;
+            const discordAvatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
+            const localAvatarPath = await downloadAvatar(userId, discordAvatarUrl);
+            
+            // Создаем пользователя
+            initUserStats(userId, username, localAvatarPath);
+            
+            // Получаем созданную статистику
+            stats = getUserStats(userId);
+            console.log(`✅ Создан пользователь ${username} (${userId}) с аватаркой`);
+          } else {
+            // Пользователь не найден на сервере Discord
+            initUserStats(userId, 'Web User', '/avatars/nopic.png');
+            stats = getUserStats(userId);
+            console.log(`⚠️ Пользователь ${userId} не найден на сервере Discord`);
+          }
+        } else {
+          // Гильдия не найдена
+          initUserStats(userId, 'Web User', '/avatars/nopic.png');
+          stats = getUserStats(userId);
+        }
+      } catch (error) {
+        console.error(`❌ Ошибка при создании пользователя ${userId}:`, error);
+        initUserStats(userId, 'Web User', '/avatars/nopic.png');
+        stats = getUserStats(userId);
+      }
+    }
 
     const achievements = getUserAchievements(userId);
 
