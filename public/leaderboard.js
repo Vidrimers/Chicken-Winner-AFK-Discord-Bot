@@ -1,4 +1,4 @@
-async function loadLeaderboard() {
+async function loadLeaderboard(forceRefresh = false) {
     try {
         const response = await fetch('/api/leaderboard');
         const leaderboard = await response.json();
@@ -14,11 +14,15 @@ async function loadLeaderboard() {
             const minutes = Math.floor((user.total_voice_time % 3600) / 60);
             const userId = user.user_id.replace(/"/g, '&quot;');
             const avatarUrl = user.avatar_url || '/avatars/nopic.png';
+            // Добавляем timestamp только если принудительное обновление или nopic.png
+            const avatarUrlFinal = (forceRefresh || avatarUrl.includes('nopic.png')) 
+                ? avatarUrl + '?t=' + Date.now() 
+                : avatarUrl;
             
             html += '<div class="leaderboard-item" onclick="showUserModal(&#34;' + userId + '&#34;, &#34;' + (user.username || 'Неизвестный пользователь').replace(/"/g, '&quot;') + '&#34;, ' + (index + 1) + ')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">' +
                 '<div class="leaderboard-item-top" style="display: flex; align-items: center; gap: 12px;">' +
                     '<span class="rank">#' + (index + 1) + '</span>' +
-                    '<img src="' + avatarUrl + '" alt="Avatar" onerror="this.src=\'/avatars/nopic.png\'" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">' +
+                    '<img src="' + avatarUrlFinal + '" alt="Avatar" onerror="this.src=\'/avatars/nopic.png\'" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">' +
                     '<strong>' + (user.username || 'Неизвестный пользователь') + '</strong>' +
                 '</div>' +
                 '<div class="leaderboard-item-bottom" style="display: flex; align-items: center;">' +
@@ -68,6 +72,11 @@ function switchModalTab(tabName) {
 function displayUserModal(data, username, rank, userId, isAdmin = false, avatarUrl = '/avatars/nopic.png') {
     const achievements = data.achievements;
     const stats = data.stats;
+    
+    // Добавляем timestamp только если nopic.png
+    const avatarUrlFinal = avatarUrl.includes('nopic.png') 
+        ? avatarUrl + '?t=' + Date.now() 
+        : avatarUrl;
     
     // Подсчитываем достижения (исключая специальные)
     const regularAchievements = achievements.filter(a => !a.emoji && !a.type && a.achievement_id !== 'best_admin');
@@ -153,7 +162,7 @@ function displayUserModal(data, username, rank, userId, isAdmin = false, avatarU
         <div class="modal" id="achievementsModal">
             <div class="modal-content" style="max-width: 800px; height: 80vh;overflow: auto; scrollbar-width: none;">
                 <div class="modal-header" style="display: flex; align-items: center; gap: 20px; position: relative;">
-                    <img src="${avatarUrl}" alt="Avatar" class="modal-avatar" onerror="this.src='/avatars/nopic.png'">
+                    <img src="${avatarUrlFinal}" alt="Avatar" class="modal-avatar" onerror="this.src='/avatars/nopic.png'">
                     <div class="modal-header-name-block" style="flex: 1; text-align: center;">
                         <h2>👤 Профиль пользователя</h2>
                         <h3>#${rank} ${username}</h3>

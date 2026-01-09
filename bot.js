@@ -735,8 +735,8 @@ const initUserStats = (userId, username, avatarUrl = null) => {
   const existing = existingStmt.get(userId);
 
   if (existing) {
-    // Пользователь уже существует - ничего не делаем с аватаркой
-    // Обновляем только имя если оно было "Web User"
+    // Пользователь уже существует
+    // Обновляем имя если оно было "Web User"
     if (
       existing.username === "Web User" &&
       username &&
@@ -746,6 +746,14 @@ const initUserStats = (userId, username, avatarUrl = null) => {
         "UPDATE user_stats SET username = ? WHERE user_id = ?"
       );
       updateStmt.run(username, userId);
+    }
+    
+    // Обновляем аватарку если передана (для случая когда была nopic.png)
+    if (avatarUrl && avatarUrl !== '/avatars/nopic.png') {
+      const updateStmt = db.prepare(
+        "UPDATE user_stats SET avatar_url = ? WHERE user_id = ?"
+      );
+      updateStmt.run(avatarUrl, userId);
     }
   } else {
     // Новый пользователь - создаем запись с аватаркой
@@ -2129,8 +2137,8 @@ client.on("messageCreate", async (message) => {
   const content = message.content.toLowerCase();
   const userId = message.author.id;
   
-  // Проверяем существует ли пользователь в БД
-  const existingUser = db.prepare("SELECT user_id FROM user_stats WHERE user_id = ?").get(userId);
+  // Проверяем существует ли пользователь в БД и его аватарку
+  const existingUser = db.prepare("SELECT user_id, avatar_url FROM user_stats WHERE user_id = ?").get(userId);
   
   // Получаем displayName из guild member если возможно
   let username = message.author.username;
@@ -2141,16 +2149,19 @@ client.on("messageCreate", async (message) => {
     if (member) {
       username = member.displayName || member.user.username;
       
-      // Скачиваем аватарку только для нового пользователя
-      if (!existingUser) {
+      // Скачиваем аватарку если пользователь новый или у него nopic.png
+      const needsAvatar = !existingUser || !existingUser.avatar_url || existingUser.avatar_url.includes('nopic.png');
+      
+      if (needsAvatar) {
         const discordAvatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
         localAvatarPath = await downloadAvatar(userId, discordAvatarUrl);
       }
     }
   }
 
-  // Инициализируем пользователя в статистике (аватарка только для новых)
-  initUserStats(userId, username, existingUser ? null : localAvatarPath);
+  // Инициализируем пользователя в статистике
+  const needsAvatar = !existingUser || !existingUser.avatar_url || existingUser.avatar_url.includes('nopic.png');
+  initUserStats(userId, username, needsAvatar ? localAvatarPath : null);
 
   // Увеличиваем счетчик сообщений
   incrementUserStat(userId, "messages_sent");
@@ -2727,19 +2738,21 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 
     if (member.user.bot) return;
 
-    // Проверяем существует ли пользователь в БД
-    const existingUser = db.prepare("SELECT user_id FROM user_stats WHERE user_id = ?").get(userId);
+    // Проверяем существует ли пользователь в БД и его аватарку
+    const existingUser = db.prepare("SELECT user_id, avatar_url FROM user_stats WHERE user_id = ?").get(userId);
     
     let localAvatarPath = '/avatars/nopic.png';
     
-    // Скачиваем аватарку только для нового пользователя
-    if (!existingUser) {
+    // Скачиваем аватарку если пользователь новый или у него nopic.png
+    const needsAvatar = !existingUser || !existingUser.avatar_url || existingUser.avatar_url.includes('nopic.png');
+    
+    if (needsAvatar) {
       const discordAvatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
       localAvatarPath = await downloadAvatar(userId, discordAvatarUrl);
     }
 
-    // Инициализируем пользователя в статистике (аватарка только для новых)
-    initUserStats(userId, username, existingUser ? null : localAvatarPath);
+    // Инициализируем пользователя в статистике
+    initUserStats(userId, username, needsAvatar ? localAvatarPath : null);
 
     // Проверяем выход из AFK канала и обновляем время в AFK
     if (

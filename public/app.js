@@ -758,7 +758,25 @@ async function downloadAvatars() {
             
             // Перезагружаем рейтинг чтобы обновить аватарки
             if (typeof loadLeaderboard === 'function') {
-                loadLeaderboard();
+                await loadLeaderboard(true); // Передаем true для принудительного обновления кеша
+            }
+            
+            // Обновляем аватарку текущего пользователя если он залогинен
+            if (window.currentUserId) {
+                const userResponse = await fetch(`/api/stats/${window.currentUserId}`);
+                if (userResponse.ok) {
+                    const userData = await userResponse.json();
+                    if (userData.stats.avatar_url) {
+                        // Обновляем аватарку в шапке
+                        const avatarImg = document.getElementById('userAvatar');
+                        if (avatarImg) {
+                            avatarImg.src = userData.stats.avatar_url + '?t=' + Date.now(); // Добавляем timestamp чтобы обновить кеш
+                        }
+                        
+                        // Обновляем в localStorage
+                        localStorage.setItem('afkBotUserAvatar', userData.stats.avatar_url);
+                    }
+                }
             }
         } else {
             const error = await response.json();
