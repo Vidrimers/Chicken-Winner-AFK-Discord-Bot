@@ -711,6 +711,19 @@ body.modal-open {
     }
 }
 
+/* Стили для специального достижения Die my Darling */
+.achievement[data-achievement-id*="die-my-darling"],
+.modal-achievement[data-achievement-id*="die-my-darling"] {
+    border-left: 5px solid #8b0000 !important;
+    transition: all 0.3s ease;
+}
+
+.achievement[data-achievement-id*="die-my-darling"]:hover,
+.modal-achievement[data-achievement-id*="die-my-darling"]:hover {
+    box-shadow: 0 0 20px rgba(139, 0, 0, 0.6), 0 0 40px rgba(139, 0, 0, 0.4);
+    border-left-color: #dc143c !important;
+}
+
 /* Стили для вкладок в модальном окне */
 .modal-tabs {
     display: flex;

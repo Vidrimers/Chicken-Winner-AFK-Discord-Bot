@@ -980,7 +980,6 @@ function showNotOnServerWarning() {
                 imgWrapper.style.position = 'relative';
                 
                 const img = node.cloneNode(true);
-                // img.style.verticalAlign = 'middle';
                 
                 // Если это logo.png, меняем на logo-dark.png за 3 секунды
                 if (img.src.includes('logo.png') && !img.src.includes('logo-dark.png')) {
@@ -997,7 +996,6 @@ function showNotOnServerWarning() {
                     darkImg.style.height = img.style.height;
                     darkImg.style.marginRight = img.style.marginRight;
                     darkImg.style.marginLeft = img.style.marginLeft;
-                    // darkImg.style.verticalAlign = 'middle';
                     darkImg.style.opacity = '0';
                     darkImg.style.transition = 'opacity 3s ease-in-out';
                     
@@ -1213,7 +1211,6 @@ function showUnauthorizedAccessWarning() {
                 imgWrapper.style.position = 'relative';
                 
                 const img = node.cloneNode(true);
-                // img.style.verticalAlign = 'middle';
                 
                 // Если это logo.png, меняем на logo-dark.png за 3 секунды
                 if (img.src.includes('logo.png') && !img.src.includes('logo-dark.png')) {
@@ -1230,7 +1227,6 @@ function showUnauthorizedAccessWarning() {
                     darkImg.style.height = img.style.height;
                     darkImg.style.marginRight = img.style.marginRight;
                     darkImg.style.marginLeft = img.style.marginLeft;
-                    // darkImg.style.verticalAlign = 'middle';
                     darkImg.style.opacity = '0';
                     darkImg.style.transition = 'opacity 3s ease-in-out';
                     

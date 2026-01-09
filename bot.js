@@ -485,7 +485,7 @@ async function checkAndSendMissedAchievementNotifications() {
         if (user) {
           try {
             const dmMessage =
-              `\n\n🏆 **Новое достижение!**\n\n` +
+              `\n\n🏆 **Новое специальное достижение!**\n\n` +
               `${achievement.emoji} **${achievement.name}**\n` +
               `${achievement.description}\n\n` +
               `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}/?userId=${achievement.user_id}&autoLogin=true`;
@@ -510,7 +510,7 @@ async function checkAndSendMissedAchievementNotifications() {
           const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
           if (channel) {
             const channelMessage =
-              `\n\n🏆 **Новое достижение!**\n\n` +
+              `\n\n🏆 **Новое специальное достижение!**\n\n` +
               `👤 **Пользователь:** <@${achievement.user_id}>\n` +
               `🎯 **Достижение:** ${achievement.emoji} ${achievement.name}\n` +
               `📝 **Описание:** ${achievement.description}\n` +
@@ -935,11 +935,14 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
 };
 
 const getUserAchievements = (userId) => {
-  // Получаем обычные достижения из user_achievements (исключаем удаленные)
+  // Получаем обычные достижения из user_achievements (исключаем удаленные и специальные)
   const stmt = db.prepare(`
     SELECT ua.*, ua.unlocked_at, NULL as emoji, NULL as name, NULL as description, NULL as color, NULL as type
     FROM user_achievements ua
-    WHERE ua.user_id = ? AND (ua.manually_deleted = 0 OR ua.manually_deleted IS NULL)
+    LEFT JOIN achievements a ON ua.achievement_id = a.achievement_id
+    WHERE ua.user_id = ? 
+      AND (ua.manually_deleted = 0 OR ua.manually_deleted IS NULL)
+      AND (a.type IS NULL OR a.type != 'special')
     ORDER BY ua.unlocked_at DESC
   `);
   const regularAchievements = stmt.all(userId);
@@ -1172,7 +1175,7 @@ const checkSpecialAchievement = async () => {
             const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
             if (channel) {
               await channel.send(
-                `🏆 **Новое достижение!**\n\n` +
+                `🏆 **Новое специальное достижение!**\n\n` +
                   `👤 **Пользователь:** <@${specialUserId}> (Лучший админ)\n` +
                   `🎯 **Достижение:** 👑 Kakashech - Лучший админ\n` +
                   `📝 **Описание:** Лучший admin_ebaniy канала\n` +
@@ -1493,6 +1496,91 @@ app.post("/api/activate-secret-theme/:userId", async (req, res) => {
 
     console.log(`🥀 Секретная тема активирована для пользователя ${userId}`);
 
+    // Создаем специальное достижение
+    const achievementId = `secret-theme-${userId}-${Date.now()}`;
+    const nowMoscowISO = getMoscowNowISO();
+    
+    try {
+      // Добавляем достижение в таблицу achievements
+      db.prepare(
+        `INSERT INTO achievements (achievement_id, user_id, emoji, name, description, type, color, special_date, notifications_sent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        achievementId,
+        userId,
+        '🥀',
+        'Die my Darling',
+        'Открыл секретную тему',
+        'special',
+        '#8b0000',
+        nowMoscowISO,
+        1
+      );
+
+      // Добавляем в user_achievements
+      db.prepare(
+        `INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, manually_deleted)
+         VALUES (?, ?, ?, ?)`
+      ).run(userId, achievementId, nowMoscowISO, 0);
+
+      console.log(`🏆 Достижение "Die my Darling" выдано пользователю ${userId}`);
+
+      // Отправляем уведомление пользователю
+      const user = await client.users.fetch(userId).catch(() => null);
+      const username = user ? user.username : 'Пользователь';
+      
+      if (user) {
+        try {
+          const dmMessage =
+            `\n\n🏆 **Новое специальное достижение!**\n\n` +
+            `🥀 **Die my Darling**\n` +
+            `Открыл секретную тему\n\n` +
+            `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`;
+
+          await user.send(dmMessage);
+          console.log(`✅ ЛС отправлено пользователю ${username}`);
+        } catch (dmError) {
+          console.log(`❌ Не удалось отправить ЛС пользователю ${userId}: ${dmError.message}`);
+        }
+      }
+
+      // Отправляем в канал Discord
+      try {
+        const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
+        if (channel) {
+          const channelMessage =
+            `\n\n🏆 **Новое специальное достижение!**\n\n` +
+            `👤 **Пользователь:** <@${userId}>\n` +
+            `🎯 **Достижение:** 🥀 Die my Darling\n` +
+            `📝 **Описание:** Открыл секретную тему\n` +
+            `📅 **Время:** ${formatTime(new Date())}\n\n` +
+            `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}`;
+
+          await channel.send(channelMessage);
+          console.log(`✅ Сообщение в канал отправлено`);
+        }
+      } catch (channelError) {
+        console.log(`❌ Не удалось отправить уведомление в канал: ${channelError.message}`);
+      }
+
+      // Отправляем в Telegram
+      try {
+        await sendSpecialAchievementNotification(
+          username,
+          '🥀',
+          'Die my Darling',
+          'Открыл секретную тему',
+          '#8b0000',
+          nowMoscowISO
+        );
+        console.log(`✅ Telegram уведомление отправлено`);
+      } catch (telegramError) {
+        console.log(`⚠️ Ошибка при отправке в Telegram: ${telegramError.message}`);
+      }
+    } catch (achievementError) {
+      console.error('❌ Ошибка при создании достижения:', achievementError);
+    }
+
     res.json({ success: true, alreadyActivated: false });
   } catch (error) {
     console.error("Ошибка при активации секретной темы:", error);
@@ -1660,7 +1748,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
             if (user) {
               try {
                 await user.send(
-                  `🏆 **Новое достижение!**\n\n` +
+                  `🏆 **Новое специальное достижение!**\n\n` +
                     `${emoji} **${name}**\n` +
                     `${description}\n\n` +
                     `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
@@ -1679,7 +1767,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
               );
               if (channel) {
                 await channel.send(
-                  `🏆 **Новое достижение!**\n\n` +
+                  `🏆 **Новое специальное достижение!**\n\n` +
                     `👤 **Пользователь:** <@${userId}>\n` +
                     `🎯 **Достижение:** ${emoji} ${name}\n` +
                     `📝 **Описание:** ${description}\n` +

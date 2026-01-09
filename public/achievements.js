@@ -106,8 +106,17 @@ function displayUserAchievements(achievements) {
         
         if (isAdmin) return true;
         
-        if (!a.special_date) return true;
+        // Если достижение уже разблокировано (есть unlocked_at), показываем его
+        if (a.unlocked_at) {
+            return true;
+        }
         
+        // Если нет special_date, показываем
+        if (!a.special_date) {
+            return true;
+        }
+        
+        // Если есть special_date но нет unlocked_at, проверяем дату
         const achievementDate = new Date(a.special_date);
         return achievementDate <= now;
     });
@@ -197,12 +206,11 @@ function displayUserAchievements(achievements) {
             const deleteBtn = isAdmin ? `<button onclick="deleteUserAchievement('${window.currentUserId}', '${achievement.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>` : '';
             const editBtn = isAdmin ? `<button onclick="editSpecialAchievement('${achievement.achievement_id}', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: transparent; border: none; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>` : '';
             
-            const achievementDate = achievement.special_date ? new Date(achievement.special_date) : null;
-            const now = new Date();
+            // Если есть unlocked_at, значит достижение уже получено
+            const isUnlocked = !!achievement.unlocked_at;
             
-            const isAchievementUnlocked = !achievementDate || achievementDate <= now;
-            
-            if (isAchievementUnlocked) {
+            if (isUnlocked) {
+                // Достижение получено - показываем дату получения
                 html += `
                     <div class="achievement special-achievement" data-achievement-id="${achievement.achievement_id}" style="
                         background: linear-gradient(135deg, ${achievement.color}22 0%, ${achievement.color}11 100%); 
@@ -220,7 +228,9 @@ function displayUserAchievements(achievements) {
                     </div>
                 `;
             } else {
-                const scheduledDate = achievementDate.toLocaleDateString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                // Достижение еще не получено - показываем когда планируется
+                const achievementDate = achievement.special_date ? new Date(achievement.special_date) : null;
+                const scheduledDate = achievementDate ? achievementDate.toLocaleDateString('ru-RU', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'Неизвестно';
                 html += `
                     <div class="achievement special-achievement" style="
                         background: linear-gradient(135deg, ${achievement.color}22 0%, ${achievement.color}11 100%); 

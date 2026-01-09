@@ -14,5 +14,6 @@ replacements.txt
 * copy*.db
 *.db
 backup/
+avatars/
 
 DISCORD_OAUTH_SETUP.md
