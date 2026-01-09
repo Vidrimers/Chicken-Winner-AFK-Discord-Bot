@@ -151,7 +151,7 @@ function displayUserModal(data, username, rank, userId, isAdmin = false, avatarU
             <div class="modal-content" style="max-width: 800px; height: 80vh;overflow: auto; scrollbar-width: none;">
                 <div class="modal-header" style="display: flex; align-items: center; gap: 20px; position: relative;">
                     <img src="${avatarUrl}" alt="Avatar" class="modal-avatar">
-                    <div style="flex: 1; text-align: center;">
+                    <div class="modal-header-name-block" style="flex: 1; text-align: center;">
                         <h2>👤 Профиль пользователя</h2>
                         <h3>#${rank} ${username}</h3>
                     </div>

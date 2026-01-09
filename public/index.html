@@ -34,14 +34,14 @@
         
         <div class="content">
             <div class="user-search">
-                <div id="authSection" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;">
+                <div id="authSection" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 0; align-items: center;">
                     <div id="userInfoDisplay" style="display: none; flex: 1; min-width: 200px; padding: 10px 20px; background: #667eea; color: white; border-radius: 5px; font-weight: bold; font-size: 14px; text-align: center;">
                         👤 <span id="userUsername"></span>
                     </div>
                     <button id="logoutBtn" onclick="logout()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🚪 Выход</button>
                 </div>
                 
-                <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 0; padding: 10px;">
                     <input type="text" id="userIdInput" placeholder="Discord ID" style="flex: 1;">
                     <button onclick="loadUserData()" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
                     <button id="clearBtn" onclick="clearSavedUserId()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Выход</button>

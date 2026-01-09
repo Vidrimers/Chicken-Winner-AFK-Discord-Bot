@@ -116,6 +116,7 @@ body.modal-open {
     display: flex; 
     gap: 10px; 
     justify-content: center;
+    padding: 0;
 }
 
 .user-search input { 
