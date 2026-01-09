@@ -10,6 +10,15 @@ window.currentUserId = null;
 window.currentUsername = null;
 let showingUsername = true; // По умолчанию показываем имя
 
+// Проверяем флаг предупреждения при загрузке страницы
+if (localStorage.getItem('notOnServerWarning') === 'true') {
+    // Очищаем данные пользователя
+    localStorage.removeItem('afkBotUserId');
+    localStorage.removeItem('afkBotUserAvatar');
+    localStorage.removeItem('notOnServerWarning');
+    console.log('🧹 Очищены данные пользователя после предупреждения');
+}
+
 // Функция для безопасной установки имени пользователя
 function setUserDisplay(username, userId) {
     window.currentUsername = username;
@@ -826,6 +835,9 @@ function hideUserAvatar() {
 
 // Функция показа предупреждения для пользователей не с сервера
 function showNotOnServerWarning() {
+    // Устанавливаем флаг что показано предупреждение
+    localStorage.setItem('notOnServerWarning', 'true');
+    
     // Меняем фон на кроваво-красный
     document.body.style.background = 'linear-gradient(135deg, #8B0000 0%, #DC143C 100%)';
     document.querySelector('.container').style.background = 'linear-gradient(135deg, #8B0000 0%, #DC143C 100%)';
@@ -902,20 +914,38 @@ function showNotOnServerWarning() {
             <img src="/avatars/warning.png" alt="Warning" style="width: 200px; height: 200px; margin-bottom: 30px; filter: drop-shadow(0 0 20px rgba(255,0,0,0.8)); animation: pulse 2s ease-in-out infinite;">
             <h1 style="color: white; font-size: 3rem; margin-bottom: 20px; text-shadow: 0 0 20px rgba(0,0,0,0.5);">Ты кто?</h1>
             <p style="color: white; font-size: 1.5rem; margin-bottom: 40px; text-shadow: 0 0 10px rgba(0,0,0,0.5);">Сначала присоединись к серверу</p>
-            <a href="https://discord.gg/KCJrkf9Q" target="_blank" style="
-                padding: 20px 50px;
-                background: white;
-                color: #8B0000;
-                text-decoration: none;
-                font-size: 1.3rem;
-                font-weight: bold;
-                border-radius: 50px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-                transition: all 0.3s ease;
-                display: inline-block;
-            " onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 15px 40px rgba(0,0,0,0.7)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.5)';">
-                🚪 Присоединиться
-            </a>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+                <a href="https://discord.gg/KCJrkf9Q" target="_blank" style="
+                    padding: 20px 50px;
+                    background: white;
+                    color: #8B0000;
+                    text-decoration: none;
+                    font-size: 1.3rem;
+                    font-weight: bold;
+                    border-radius: 50px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                    transition: all 0.3s ease;
+                    display: inline-block;
+                " onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 15px 40px rgba(0,0,0,0.7)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.5)';">
+                    🚪 Присоединиться
+                </a>
+                <button onclick="restoreNormalView()" style="
+                    padding: 20px 50px;
+                    background: rgba(255,255,255,0.2);
+                    color: white;
+                    border: 2px solid white;
+                    text-decoration: none;
+                    font-size: 1.3rem;
+                    font-weight: bold;
+                    border-radius: 50px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                    transition: all 0.3s ease;
+                    display: inline-block;
+                    cursor: pointer;
+                " onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 15px 40px rgba(0,0,0,0.7)'; this.style.background='rgba(255,255,255,0.3)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.5)'; this.style.background='rgba(255,255,255,0.2)';">
+                    🔙 Войти нормально
+                </button>
+            </div>
         </div>
     `;
     
@@ -939,4 +969,16 @@ function showNotOnServerWarning() {
     }
     
     document.querySelector('.content').innerHTML = warningHtml;
+}
+
+
+// Функция восстановления нормального вида сайта
+function restoreNormalView() {
+    // Очищаем сохраненный userId и флаг предупреждения
+    localStorage.removeItem('afkBotUserId');
+    localStorage.removeItem('afkBotUserAvatar');
+    localStorage.removeItem('notOnServerWarning');
+    
+    // Перезагружаем страницу чтобы вернуть все к исходному состоянию
+    window.location.reload();
 }
