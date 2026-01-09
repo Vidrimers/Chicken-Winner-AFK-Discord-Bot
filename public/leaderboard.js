@@ -199,8 +199,8 @@ function displayUserModal(data, username, rank, userId, isAdmin = false, avatarU
     
     let modalHtml = `
         <div class="modal" id="achievementsModal">
-            <div class="modal-content" style="max-width: 800px; height: 80vh;overflow: auto; scrollbar-width: none;">
-                <div class="modal-header" style="display: flex; align-items: center; gap: 20px; position: relative;">
+            <div class="modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;">
+                <div class="modal-header" style="display: flex; align-items: center; gap: 20px; position: relative; flex-shrink: 0;">
                     <img src="${avatarUrlFinal}" alt="Avatar" class="modal-avatar" onerror="this.src='/avatars/nopic.png'">
                     <div class="modal-header-name-block" style="flex: 1; text-align: center;">
                         <h2>👤 Профиль пользователя</h2>
@@ -209,12 +209,12 @@ function displayUserModal(data, username, rank, userId, isAdmin = false, avatarU
                     <button class="close-btn" onclick="closeModal()">×</button>
                 </div>
                 
-                <div class="modal-tabs">
+                <div class="modal-tabs" style="flex-shrink: 0;">
                     <button class="modal-tab-button active" onclick="switchModalTab('achievements')">🏆 Достижения</button>
                     <button class="modal-tab-button" onclick="switchModalTab('stats')">📊 Статистика</button>
                 </div>
                 
-                <div class="modal-body">
+                <div class="modal-body" style="flex: 1; overflow-y: auto; overflow-x: hidden;">
                     <div id="modal-achievements" class="modal-tab-content">
                         <div style="text-align: center; margin-bottom: 20px;">
                             <p>Достижений: ${regularAchievements.length}/${totalRegular} (${Math.round((regularAchievements.length / totalRegular) * 100)}%)</p>
@@ -250,6 +250,34 @@ function displayUserModal(data, username, rank, userId, isAdmin = false, avatarU
                             <div class="stat-item">
                                 <div class="stat-value">${Math.floor((stats.longest_session || 0) / 3600)}ч ${Math.floor(((stats.longest_session || 0) % 3600) / 60)}м${stats.longest_session_date ? '<br><span style="font-size:0.55em;color:#999;">' + new Date(stats.longest_session_date).toLocaleDateString('ru-RU') + ' ' + new Date(stats.longest_session_date).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'}) + '</span>' : ''}</div>
                                 <div class="stat-label">Самая длинная сессия</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.total_mute_toggles || 0}</div>
+                                <div class="stat-label">Переключений микрофона</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.settings_changes || 0}</div>
+                                <div class="stat-label">Изменений настроек</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.messages_sent || 0}</div>
+                                <div class="stat-label">Отправлено сообщений</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.mentions_responded || 0}</div>
+                                <div class="stat-label">Ответов на упоминания</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${Math.floor((stats.stream_channel_time || 0) / 3600)}ч ${Math.floor(((stats.stream_channel_time || 0) % 3600) / 60)}м</div>
+                                <div class="stat-label">Время в канале Че смотрим?</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.web_visits || 0}</div>
+                                <div class="stat-label">Посещений веб-панели</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.total_streams || 0}</div>
+                                <div class="stat-label">Включений трансляций</div>
                             </div>
                         </div>
                     </div>

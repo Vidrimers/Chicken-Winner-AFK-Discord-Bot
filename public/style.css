@@ -869,7 +869,7 @@ body.modal-open {
 .modal-tabs {
     display: flex;
     background: #f8f9fa;
-    margin: 20px 0;
+    /* margin: 20px 0; */
     overflow: hidden;
 }
 
