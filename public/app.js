@@ -846,37 +846,93 @@ function showNotOnServerWarning() {
     // Окрашиваем header
     const header = document.querySelector('.header');
     header.style.background = 'linear-gradient(135deg, #8B0000 0%, #DC143C 100%)';
-    header.style.position = 'relative';
+    header.style.position = 'fixed';
+    header.style.top = '0';
+    header.style.left = '0';
+    header.style.right = '0';
     header.style.overflow = 'visible';
-    header.style.minHeight = '150px';
+    header.style.minHeight = '80px';
+    header.style.zIndex = '1';
     
-    // Функция для разбивки текста на символы
+    // Функция для разбивки текста на символы и обработки изображений
     function splitTextToChars(element) {
-        const text = element.textContent;
-        element.textContent = '';
+        const childNodes = Array.from(element.childNodes);
+        element.innerHTML = '';
         element.style.position = 'relative';
         
-        // Используем Array.from для правильной обработки эмодзи
-        Array.from(text).forEach((char, index) => {
-            const span = document.createElement('span');
-            span.textContent = char;
-            span.style.display = 'inline-block';
-            span.style.position = 'relative';
-            
-            // Сохраняем пробелы
-            if (char === ' ') {
-                span.style.width = '0.3em';
+        childNodes.forEach((node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                // Обрабатываем текстовые узлы
+                const text = node.textContent;
+                Array.from(text).forEach((char) => {
+                    const span = document.createElement('span');
+                    span.textContent = char;
+                    span.style.display = 'inline-block';
+                    span.style.position = 'relative';
+                    
+                    // Сохраняем пробелы
+                    if (char === ' ') {
+                        span.style.width = '0.3em';
+                    }
+                    
+                    // Случайные параметры анимации
+                    const duration = 3 + Math.random() * 4;
+                    const delay = 4 + Math.random() * 2;
+                    const rotation = (Math.random() - 0.5) * 720;
+                    
+                    span.style.animation = `fallDown ${duration}s ease-in ${delay}s forwards`;
+                    span.style.setProperty('--rotation', `${rotation}deg`);
+                    
+                    element.appendChild(span);
+                });
+            } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'IMG') {
+                // Обрабатываем img элементы
+                const imgWrapper = document.createElement('span');
+                imgWrapper.style.display = 'inline-block';
+                imgWrapper.style.position = 'relative';
+                
+                const img = node.cloneNode(true);
+                // img.style.verticalAlign = 'middle';
+                
+                // Если это logo.png, меняем на logo-dark.png за 3 секунды
+                if (img.src.includes('logo.png') && !img.src.includes('logo-dark.png')) {
+                    img.style.transition = 'opacity 3s ease-in-out';
+                    img.style.opacity = '1';
+                    
+                    const darkImg = document.createElement('img');
+                    darkImg.src = img.src.replace('logo.png', 'logo-dark.png');
+                    darkImg.style.position = 'absolute';
+                    darkImg.style.top = '0';
+                    darkImg.style.left = '0';
+                    darkImg.style.width = img.style.width;
+                    darkImg.style.height = img.style.height;
+                    darkImg.style.marginRight = img.style.marginRight;
+                    darkImg.style.marginLeft = img.style.marginLeft;
+                    // darkImg.style.verticalAlign = 'middle';
+                    darkImg.style.opacity = '0';
+                    darkImg.style.transition = 'opacity 3s ease-in-out';
+                    
+                    imgWrapper.style.position = 'relative';
+                    
+                    setTimeout(() => {
+                        img.style.opacity = '0';
+                        darkImg.style.opacity = '1';
+                    }, 100);
+                    
+                    imgWrapper.appendChild(darkImg);
+                }
+                
+                // Случайные параметры анимации падения
+                const duration = 3 + Math.random() * 4;
+                const delay = 4 + Math.random() * 2;
+                const rotation = (Math.random() - 0.5) * 720;
+                
+                imgWrapper.style.animation = `fallDown ${duration}s ease-in ${delay}s forwards`;
+                imgWrapper.style.setProperty('--rotation', `${rotation}deg`);
+                
+                imgWrapper.appendChild(img);
+                element.appendChild(imgWrapper);
             }
-            
-            // Случайные параметры анимации
-            const duration = 3 + Math.random() * 4; // 3-7 секунд
-            const delay = 2 + Math.random() * 2; // 2-4 секунд задержка (2 сек стоят + 0-2 сек разброс)
-            const rotation = (Math.random() - 0.5) * 720; // -360 до 360 градусов
-            
-            span.style.animation = `fallDown ${duration}s ease-in ${delay}s forwards`;
-            span.style.setProperty('--rotation', `${rotation}deg`);
-            
-            element.appendChild(span);
         });
     }
     
@@ -917,10 +973,10 @@ function showNotOnServerWarning() {
     
     // Создаем предупреждение
     const warningHtml = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; padding: 40px; text-align: center;">
-            <img src="/avatars/warning.png" alt="Warning" style="width: 200px; height: 200px; margin-bottom: 30px; filter: drop-shadow(0 0 20px rgba(255,0,0,0.8)); animation: pulse 2s ease-in-out infinite;">
-            <h1 style="color: white; font-size: 3rem; margin-bottom: 20px; text-shadow: 0 0 20px rgba(0,0,0,0.5);">Ты кто?</h1>
-            <p style="color: white; font-size: 1.5rem; margin-bottom: 40px; text-shadow: 0 0 10px rgba(0,0,0,0.5);">Сначала присоединись к серверу</p>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; text-align: center; box-sizing: border-box;">
+            <img src="/avatars/warning.png" alt="Warning" style="width: 150px; height: 150px; margin-bottom: 20px; filter: drop-shadow(0 0 20px rgba(255,0,0,0.8)); animation: pulse 2s ease-in-out infinite;">
+            <h1 style="color: white; font-size: 2.5rem; margin-bottom: 15px; text-shadow: 0 0 20px rgba(0,0,0,0.5);">Ты кто?</h1>
+            <p style="color: white; font-size: 1.3rem; margin-bottom: 30px; text-shadow: 0 0 10px rgba(0,0,0,0.5);">Сначала присоединись к серверу</p>
             <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
                 <a href="https://discord.gg/KCJrkf9Q" target="_blank" class="warning-btn warning-btn-primary">
                     🚪 Присоединиться
@@ -991,7 +1047,11 @@ function showNotOnServerWarning() {
         document.head.appendChild(style);
     }
     
-    document.querySelector('.content').innerHTML = warningHtml;
+    const contentElement = document.querySelector('.content');
+    contentElement.innerHTML = warningHtml;
+    contentElement.style.overflow = 'hidden';
+    contentElement.style.height = '100vh';
+    document.body.style.overflow = 'hidden';
 }
 
 
@@ -1018,37 +1078,93 @@ function showUnauthorizedAccessWarning() {
     // Окрашиваем header
     const header = document.querySelector('.header');
     header.style.background = 'linear-gradient(135deg, #8B0000 0%, #DC143C 100%)';
-    header.style.position = 'relative';
+    header.style.position = 'fixed';
+    header.style.top = '0';
+    header.style.left = '0';
+    header.style.right = '0';
     header.style.overflow = 'visible';
-    header.style.minHeight = '150px';
+    header.style.minHeight = '80px';
+    header.style.zIndex = '1';
     
-    // Функция для разбивки текста на символы
+    // Функция для разбивки текста на символы и обработки изображений
     function splitTextToChars(element) {
-        const text = element.textContent;
-        element.textContent = '';
+        const childNodes = Array.from(element.childNodes);
+        element.innerHTML = '';
         element.style.position = 'relative';
         
-        // Используем Array.from для правильной обработки эмодзи
-        Array.from(text).forEach((char, index) => {
-            const span = document.createElement('span');
-            span.textContent = char;
-            span.style.display = 'inline-block';
-            span.style.position = 'relative';
-            
-            // Сохраняем пробелы
-            if (char === ' ') {
-                span.style.width = '0.3em';
+        childNodes.forEach((node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                // Обрабатываем текстовые узлы
+                const text = node.textContent;
+                Array.from(text).forEach((char) => {
+                    const span = document.createElement('span');
+                    span.textContent = char;
+                    span.style.display = 'inline-block';
+                    span.style.position = 'relative';
+                    
+                    // Сохраняем пробелы
+                    if (char === ' ') {
+                        span.style.width = '0.3em';
+                    }
+                    
+                    // Случайные параметры анимации
+                    const duration = 3 + Math.random() * 4;
+                    const delay = 4 + Math.random() * 2;
+                    const rotation = (Math.random() - 0.5) * 720;
+                    
+                    span.style.animation = `fallDown ${duration}s ease-in ${delay}s forwards`;
+                    span.style.setProperty('--rotation', `${rotation}deg`);
+                    
+                    element.appendChild(span);
+                });
+            } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'IMG') {
+                // Обрабатываем img элементы
+                const imgWrapper = document.createElement('span');
+                imgWrapper.style.display = 'inline-block';
+                imgWrapper.style.position = 'relative';
+                
+                const img = node.cloneNode(true);
+                // img.style.verticalAlign = 'middle';
+                
+                // Если это logo.png, меняем на logo-dark.png за 3 секунды
+                if (img.src.includes('logo.png') && !img.src.includes('logo-dark.png')) {
+                    img.style.transition = 'opacity 3s ease-in-out';
+                    img.style.opacity = '1';
+                    
+                    const darkImg = document.createElement('img');
+                    darkImg.src = img.src.replace('logo.png', 'logo-dark.png');
+                    darkImg.style.position = 'absolute';
+                    darkImg.style.top = '0';
+                    darkImg.style.left = '0';
+                    darkImg.style.width = img.style.width;
+                    darkImg.style.height = img.style.height;
+                    darkImg.style.marginRight = img.style.marginRight;
+                    darkImg.style.marginLeft = img.style.marginLeft;
+                    // darkImg.style.verticalAlign = 'middle';
+                    darkImg.style.opacity = '0';
+                    darkImg.style.transition = 'opacity 3s ease-in-out';
+                    
+                    imgWrapper.style.position = 'relative';
+                    
+                    setTimeout(() => {
+                        img.style.opacity = '0';
+                        darkImg.style.opacity = '1';
+                    }, 100);
+                    
+                    imgWrapper.appendChild(darkImg);
+                }
+                
+                // Случайные параметры анимации падения
+                const duration = 3 + Math.random() * 4;
+                const delay = 4 + Math.random() * 2;
+                const rotation = (Math.random() - 0.5) * 720;
+                
+                imgWrapper.style.animation = `fallDown ${duration}s ease-in ${delay}s forwards`;
+                imgWrapper.style.setProperty('--rotation', `${rotation}deg`);
+                
+                imgWrapper.appendChild(img);
+                element.appendChild(imgWrapper);
             }
-            
-            // Случайные параметры анимации
-            const duration = 3 + Math.random() * 4;
-            const delay = 2 + Math.random() * 2;
-            const rotation = (Math.random() - 0.5) * 720;
-            
-            span.style.animation = `fallDown ${duration}s ease-in ${delay}s forwards`;
-            span.style.setProperty('--rotation', `${rotation}deg`);
-            
-            element.appendChild(span);
         });
     }
     
@@ -1089,10 +1205,10 @@ function showUnauthorizedAccessWarning() {
     
     // Создаем предупреждение для несанкционированного доступа
     const warningHtml = `
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; padding: 40px; text-align: center;">
-            <img src="/avatars/warning.png" alt="Warning" style="width: 200px; height: 200px; margin-bottom: 30px; filter: drop-shadow(0 0 20px rgba(255,0,0,0.8)); animation: pulse 2s ease-in-out infinite;">
-            <h1 style="color: white; font-size: 3rem; margin-bottom: 20px; text-shadow: 0 0 20px rgba(0,0,0,0.5);">Слышь, псина</h1>
-            <p style="color: white; font-size: 1.5rem; margin-bottom: 40px; text-shadow: 0 0 10px rgba(0,0,0,0.5);">Куда ты идешь?</p>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; text-align: center; box-sizing: border-box;">
+            <img src="/avatars/warning.png" alt="Warning" style="width: 150px; height: 150px; margin-bottom: 20px; filter: drop-shadow(0 0 20px rgba(255,0,0,0.8)); animation: pulse 2s ease-in-out infinite;">
+            <h1 style="color: white; font-size: 2.5rem; margin-bottom: 15px; text-shadow: 0 0 20px rgba(0,0,0,0.5);">Слышь, псина</h1>
+            <p style="color: white; font-size: 1.3rem; margin-bottom: 30px; text-shadow: 0 0 10px rgba(0,0,0,0.5);">Куда ты идешь?</p>
             <button onclick="restoreNormalView()" class="warning-btn warning-btn-primary">
                 🔙 Войти нормально
             </button>
@@ -1158,5 +1274,9 @@ function showUnauthorizedAccessWarning() {
         document.head.appendChild(style);
     }
     
-    document.querySelector('.content').innerHTML = warningHtml;
+    const contentElement = document.querySelector('.content');
+    contentElement.innerHTML = warningHtml;
+    contentElement.style.overflow = 'hidden';
+    contentElement.style.height = '100vh';
+    document.body.style.overflow = 'hidden';
 }
