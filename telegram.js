@@ -147,3 +147,16 @@ export async function sendBotStatusNotification(status, details = '') {
   
   await sendTelegramReport(message);
 }
+
+/**
+ * Отправка уведомления о попытке входа пользователя не с сервера
+ */
+export async function sendNotOnServerAttempt(userId, timestamp) {
+  const message = 
+    "🚫 <b>ПОПЫТКА ВХОДА НЕ С СЕРВЕРА!</b>\n\n" +
+    `👤 User ID: <code>${userId}</code>\n` +
+    `⏰ Время: ${timestamp}\n` +
+    `⚠️ Пользователь не найден на Discord сервере`;
+  
+  await sendTelegramReport(message);
+}

@@ -199,6 +199,12 @@ async function loadUserDataAuto(userId) {
         const data = await response.json();
         console.log('✅ Данные получены:', data);
         
+        // Проверяем если пользователь не на сервере
+        if (data.notOnServer) {
+            showNotOnServerWarning();
+            return;
+        }
+        
         const username = data.stats.username || 'Пользователь';
         const avatarUrl = data.stats.avatar_url || null;
         
@@ -323,6 +329,13 @@ async function loadUserData(skipSecurityCheck = false) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
+        
+        // Проверяем если пользователь не на сервере
+        if (data.notOnServer) {
+            showNotOnServerWarning();
+            return;
+        }
+        
         console.log('Полученные данные:', data);
 
         try {
@@ -808,4 +821,122 @@ function displayUserAvatar(avatarUrl) {
 function hideUserAvatar() {
     const avatarContainer = document.getElementById('userAvatarContainer');
     avatarContainer.style.display = 'none';
+}
+
+
+// Функция показа предупреждения для пользователей не с сервера
+function showNotOnServerWarning() {
+    // Меняем фон на кроваво-красный
+    document.body.style.background = 'linear-gradient(135deg, #8B0000 0%, #DC143C 100%)';
+    document.querySelector('.container').style.background = 'linear-gradient(135deg, #8B0000 0%, #DC143C 100%)';
+    
+    // Окрашиваем header
+    const header = document.querySelector('.header');
+    header.style.background = 'linear-gradient(135deg, #8B0000 0%, #DC143C 100%)';
+    header.style.position = 'relative';
+    header.style.overflow = 'visible';
+    header.style.minHeight = '150px';
+    
+    // Функция для разбивки текста на символы
+    function splitTextToChars(element) {
+        const text = element.textContent;
+        element.textContent = '';
+        element.style.position = 'relative';
+        
+        text.split('').forEach((char, index) => {
+            const span = document.createElement('span');
+            span.textContent = char;
+            span.style.display = 'inline-block';
+            span.style.position = 'relative';
+            
+            // Случайные параметры анимации
+            const duration = 3 + Math.random() * 4; // 3-7 секунд
+            const delay = 5 + Math.random() * 2; // 5-7 секунд задержка (5 сек стоят + 0-2 сек разброс)
+            const rotation = (Math.random() - 0.5) * 720; // -360 до 360 градусов
+            
+            span.style.animation = `fallDown ${duration}s ease-in ${delay}s forwards`;
+            span.style.setProperty('--rotation', `${rotation}deg`);
+            
+            element.appendChild(span);
+        });
+    }
+    
+    // Разбиваем текст в h1 и p на символы
+    const h1 = header.querySelector('h1');
+    const p = header.querySelector('p');
+    
+    if (h1) splitTextToChars(h1);
+    if (p) splitTextToChars(p);
+    
+    // Добавляем CSS анимацию если её еще нет
+    if (!document.getElementById('fallDownAnimation')) {
+        const style = document.createElement('style');
+        style.id = 'fallDownAnimation';
+        style.textContent = `
+            @keyframes fallDown {
+                0% {
+                    transform: translateY(0) rotate(0deg);
+                    opacity: 1;
+                }
+                90% {
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(100vh) rotate(var(--rotation));
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Скрываем все содержимое
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('userContent').style.display = 'none';
+    document.getElementById('userIdDisplay').style.display = 'none';
+    document.getElementById('manualInputSection').style.display = 'none';
+    
+    // Создаем предупреждение
+    const warningHtml = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; padding: 40px; text-align: center;">
+            <img src="/avatars/warning.png" alt="Warning" style="width: 200px; height: 200px; margin-bottom: 30px; filter: drop-shadow(0 0 20px rgba(255,0,0,0.8)); animation: pulse 2s ease-in-out infinite;">
+            <h1 style="color: white; font-size: 3rem; margin-bottom: 20px; text-shadow: 0 0 20px rgba(0,0,0,0.5);">Ты кто?</h1>
+            <p style="color: white; font-size: 1.5rem; margin-bottom: 40px; text-shadow: 0 0 10px rgba(0,0,0,0.5);">Сначала присоединись к серверу</p>
+            <a href="https://discord.gg/KCJrkf9Q" target="_blank" style="
+                padding: 20px 50px;
+                background: white;
+                color: #8B0000;
+                text-decoration: none;
+                font-size: 1.3rem;
+                font-weight: bold;
+                border-radius: 50px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                transition: all 0.3s ease;
+                display: inline-block;
+            " onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 15px 40px rgba(0,0,0,0.7)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 10px 30px rgba(0,0,0,0.5)';">
+                🚪 Присоединиться
+            </a>
+        </div>
+    `;
+    
+    // Добавляем анимацию пульсации для картинки
+    if (!document.getElementById('pulseAnimation')) {
+        const style = document.createElement('style');
+        style.id = 'pulseAnimation';
+        style.textContent = `
+            @keyframes pulse {
+                0%, 100% {
+                    transform: scale(1);
+                    filter: drop-shadow(0 0 20px rgba(255,0,0,0.8));
+                }
+                50% {
+                    transform: scale(1.1);
+                    filter: drop-shadow(0 0 40px rgba(255,0,0,1));
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.querySelector('.content').innerHTML = warningHtml;
 }

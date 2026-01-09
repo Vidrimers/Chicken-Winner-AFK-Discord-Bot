@@ -13,7 +13,8 @@ import {
   sendAchievementDeleteNotification,
   sendUserDeleteNotification,
   sendUnauthorizedAccessNotification,
-  sendBotStatusNotification
+  sendBotStatusNotification,
+  sendNotOnServerAttempt
 } from "./telegram.js";
 dotenv.config();
 
@@ -1240,9 +1241,15 @@ app.get("/api/stats/:userId", async (req, res) => {
             console.log(`✅ Создан пользователь ${username} (${userId}) с аватаркой`);
           } else {
             // Пользователь не найден на сервере Discord
-            initUserStats(userId, 'Web User', '/avatars/nopic.png');
-            stats = getUserStats(userId);
             console.log(`⚠️ Пользователь ${userId} не найден на сервере Discord`);
+            
+            // Отправляем уведомление в Telegram
+            await sendNotOnServerAttempt(userId, new Date().toLocaleString('ru-RU'));
+            
+            return res.json({
+              notOnServer: true,
+              message: 'Пользователь не найден на Discord сервере'
+            });
           }
         } else {
           // Гильдия не найдена
