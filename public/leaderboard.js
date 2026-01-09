@@ -14,11 +14,9 @@ async function loadLeaderboard() {
             
             html += '<div class="leaderboard-item" onclick="showUserModal(&#34;' + userId + '&#34;, &#34;' + (user.username || 'Неизвестный пользователь').replace(/"/g, '&quot;') + '&#34;, ' + (index + 1) + ')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">' +
                 '<div style="display: flex; align-items: center; gap: 12px;">' +
+                    '<span class="rank">#' + (index + 1) + '</span>' +
                     '<img src="' + avatarUrl + '" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">' +
-                    '<div>' +
-                        '<span class="rank">#' + (index + 1) + '</span>' +
-                        '<strong>' + (user.username || 'Неизвестный пользователь') + '</strong>' +
-                    '</div>' +
+                    '<strong>' + (user.username || 'Неизвестный пользователь') + '</strong>' +
                 '</div>' +
                 '<div style="display: flex; align-items: center;">' +
                     '<span>' + hours + 'ч ' + minutes + 'м</span>' +
