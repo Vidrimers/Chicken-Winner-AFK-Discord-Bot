@@ -901,6 +901,7 @@ function showNotOnServerWarning() {
                     
                     const darkImg = document.createElement('img');
                     darkImg.src = img.src.replace('logo.png', 'logo-dark.png');
+                    darkImg.className = img.className;
                     darkImg.style.position = 'absolute';
                     darkImg.style.top = '0';
                     darkImg.style.left = '0';
@@ -1133,6 +1134,7 @@ function showUnauthorizedAccessWarning() {
                     
                     const darkImg = document.createElement('img');
                     darkImg.src = img.src.replace('logo.png', 'logo-dark.png');
+                    darkImg.className = img.className;
                     darkImg.style.position = 'absolute';
                     darkImg.style.top = '0';
                     darkImg.style.left = '0';
