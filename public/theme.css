@@ -529,3 +529,190 @@ body[data-theme="steam"] #editSpecialAchievementPreview {
     background: #16202d;
     border: 1px solid #2a475e;
 }
+
+/* ===== ТЕМА: DIE MY DARLING ===== */
+body[data-theme="die-my-darling"] {
+    background: linear-gradient(135deg, #1a0a0f 0%, #0d0507 100%);
+}
+
+body[data-theme="die-my-darling"] .container {
+    background: linear-gradient(135deg, #2a0f1a 0%, #1a0a0f 100%);
+    box-shadow: 0 0 50px rgba(139, 0, 0, 0.3);
+}
+
+body[data-theme="die-my-darling"] .header {
+    background: rgba(58, 15, 30, 0.6);
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid #5a1f2f;
+    box-shadow: 0 4px 20px rgba(139, 0, 0, 0.4);
+}
+
+body[data-theme="die-my-darling"] .stat-card,
+body[data-theme="die-my-darling"] .setting-card,
+body[data-theme="die-my-darling"] .achievement {
+    background: rgba(42, 15, 26, 0.5);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(139, 0, 0, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+body[data-theme="die-my-darling"] .tab {
+    background: rgba(42, 15, 26, 0.5);
+    color: #c9a0a0;
+}
+
+body[data-theme="die-my-darling"] .tab.active {
+    background: linear-gradient(135deg, #8b0000 0%, #5a0000 100%);
+    color: #ffd0d0;
+    box-shadow: 0 4px 15px rgba(139, 0, 0, 0.5);
+}
+
+body[data-theme="die-my-darling"] .admin-btn,
+body[data-theme="die-my-darling"] .save-settings-btn {
+    background: linear-gradient(135deg, #8b0000 0%, #5a0000 100%);
+    box-shadow: 0 4px 15px rgba(139, 0, 0, 0.4);
+}
+
+body[data-theme="die-my-darling"] .user-search input,
+body[data-theme="die-my-darling"] .setting-select {
+    background: rgba(26, 10, 15, 0.7);
+    border: 1px solid rgba(139, 0, 0, 0.4);
+    color: #e0c0c0;
+}
+
+body[data-theme="die-my-darling"] .user-search button {
+    background: linear-gradient(135deg, #8b0000 0%, #5a0000 100%);
+}
+
+body[data-theme="die-my-darling"] h1,
+body[data-theme="die-my-darling"] h2,
+body[data-theme="die-my-darling"] h3 {
+    color: #ffd0d0;
+    text-shadow: 2px 2px 8px rgba(139, 0, 0, 0.6);
+}
+
+body[data-theme="die-my-darling"] p,
+body[data-theme="die-my-darling"] small {
+    color: #c9a0a0;
+}
+
+body[data-theme="die-my-darling"] .admin-panel {
+    background: rgba(26, 10, 15, 0.6);
+    backdrop-filter: blur(10px);
+}
+
+body[data-theme="die-my-darling"] .admin-panel-header {
+    background: rgba(42, 15, 26, 0.8);
+    border-bottom: 2px solid #8b0000;
+}
+
+body[data-theme="die-my-darling"] .leaderboard-item {
+    background: rgba(42, 15, 26, 0.5);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(139, 0, 0, 0.3);
+    color: #e0c0c0;
+}
+
+body[data-theme="die-my-darling"] .leaderboard-item:hover {
+    background: rgba(58, 20, 35, 0.6);
+    border-color: rgba(139, 0, 0, 0.6);
+    box-shadow: 0 4px 20px rgba(139, 0, 0, 0.3);
+}
+
+body[data-theme="die-my-darling"] #createSpecialAchievementModal > div,
+body[data-theme="die-my-darling"] #editSpecialAchievementModal > div,
+body[data-theme="die-my-darling"] #achievementsModal .modal-content {
+    background: rgba(26, 10, 15, 0.95);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(139, 0, 0, 0.5);
+    color: #e0c0c0;
+}
+
+body[data-theme="die-my-darling"] .modal-header {
+    background: rgba(42, 15, 26, 0.8);
+    border-bottom: 2px solid #8b0000;
+    color: #ffd0d0;
+}
+
+body[data-theme="die-my-darling"] .modal-tab-button {
+    background: rgba(42, 15, 26, 0.5);
+    color: #c9a0a0;
+    border: 1px solid rgba(139, 0, 0, 0.3);
+}
+
+body[data-theme="die-my-darling"] .modal-tab-button.active {
+    background: linear-gradient(135deg, #8b0000 0%, #5a0000 100%);
+    color: #ffd0d0;
+}
+
+body[data-theme="die-my-darling"] .modal-body {
+    background: rgba(26, 10, 15, 0.6);
+    color: #e0c0c0;
+}
+
+body[data-theme="die-my-darling"] .modal-achievements .achievement {
+    background: rgba(42, 15, 26, 0.5);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(139, 0, 0, 0.3);
+    color: #e0c0c0;
+}
+
+body[data-theme="die-my-darling"] .stat-item {
+    background: rgba(42, 15, 26, 0.5);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(139, 0, 0, 0.3);
+    color: #e0c0c0;
+}
+
+body[data-theme="die-my-darling"] .modal .stats-grid .stat-item {
+    background: rgba(42, 15, 26, 0.5);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(139, 0, 0, 0.3);
+    color: #e0c0c0;
+}
+
+body[data-theme="die-my-darling"] .stat-value {
+    color: #ffd0d0 !important;
+}
+
+body[data-theme="die-my-darling"] .stat-label {
+    color: #c9a0a0 !important;
+}
+
+body[data-theme="die-my-darling"] .progressbar {
+    background: rgba(42, 15, 26, 0.6) !important;
+    border: 1px solid rgba(139, 0, 0, 0.4) !important;
+    color: #e0c0c0 !important;
+}
+
+body[data-theme="die-my-darling"] .progressbar strong {
+    color: #ffd0d0 !important;
+}
+
+body[data-theme="die-my-darling"] .progressbar > div {
+    background: rgba(26, 10, 15, 0.8) !important;
+}
+
+body[data-theme="die-my-darling"] .progressbar > div > div {
+    background: linear-gradient(90deg, #8b0000, #5a0000) !important;
+}
+
+body[data-theme="die-my-darling"] #createSpecialAchievementModal input,
+body[data-theme="die-my-darling"] #createSpecialAchievementModal textarea,
+body[data-theme="die-my-darling"] #editSpecialAchievementModal input,
+body[data-theme="die-my-darling"] #editSpecialAchievementModal textarea {
+    background: rgba(26, 10, 15, 0.8);
+    border: 1px solid rgba(139, 0, 0, 0.4);
+    color: #e0c0c0;
+}
+
+body[data-theme="die-my-darling"] #createSpecialAchievementModal button,
+body[data-theme="die-my-darling"] #editSpecialAchievementModal button {
+    background: linear-gradient(135deg, #8b0000 0%, #5a0000 100%);
+}
+
+body[data-theme="die-my-darling"] #specialAchievementPreview,
+body[data-theme="die-my-darling"] #editSpecialAchievementPreview {
+    background: rgba(26, 10, 15, 0.8);
+    border: 1px solid rgba(139, 0, 0, 0.4);
+}

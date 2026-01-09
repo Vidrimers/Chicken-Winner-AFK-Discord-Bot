@@ -507,6 +507,17 @@ function displayUserSettings(settings) {
     document.getElementById('afkTimeout').value = settings.afkTimeout.toString();
     document.getElementById('achievementNotifications').value = settings.achievementNotifications.toString();
     
+    // Проверяем активирована ли секретная тема
+    const secretThemeActivated = localStorage.getItem('secretThemeActivated');
+    const themeSelect = document.getElementById('themeSelect');
+    
+    if (secretThemeActivated === 'true' && themeSelect && !themeSelect.querySelector('option[value="die-my-darling"]')) {
+        const option = document.createElement('option');
+        option.value = 'die-my-darling';
+        option.textContent = '🥀 Die my Darling';
+        themeSelect.appendChild(option);
+    }
+    
     // Загружаем тему
     const theme = settings.theme || 'standard';
     document.getElementById('themeSelect').value = theme;
@@ -517,7 +528,6 @@ function displayUserSettings(settings) {
 function applyTheme(theme) {
     document.body.setAttribute('data-theme', theme);
 }
-
 // Функция для предпросмотра темы (без сохранения)
 function previewTheme(theme) {
     applyTheme(theme);
@@ -564,6 +574,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('logoutBtn').style.display = 'none';
     document.getElementById('userIdInput').style.display = 'block';
     
+    // Добавляем обработчик клика на логотип для активации секретной темы
+    const logoActivate = document.querySelector('.header-logo-img-activate');
+    if (logoActivate) {
+        logoActivate.addEventListener('click', activateSecretTheme);
+    }
+    
     const urlParams = new URLSearchParams(window.location.search);
     const autoLogin = urlParams.get('autoLogin');
     const userIdParam = urlParams.get('userId');
@@ -590,6 +606,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     loadLeaderboard();
 });
+
+// Функция активации секретной темы
+function activateSecretTheme() {
+    const secretThemeActivated = localStorage.getItem('secretThemeActivated');
+    
+    if (secretThemeActivated === 'true') {
+        console.log('🔒 Секретная тема уже активирована');
+        return;
+    }
+    
+    // Активируем тему
+    localStorage.setItem('secretThemeActivated', 'true');
+    applyTheme('die-my-darling');
+    
+    // Добавляем опцию в селект если её еще нет
+    const themeSelect = document.getElementById('themeSelect');
+    if (themeSelect && !themeSelect.querySelector('option[value="die-my-darling"]')) {
+        const option = document.createElement('option');
+        option.value = 'die-my-darling';
+        option.textContent = '🥀 Die my Darling';
+        themeSelect.appendChild(option);
+    }
+    
+    // Устанавливаем тему в селекте
+    if (themeSelect) {
+        themeSelect.value = 'die-my-darling';
+    }
+    
+    // Сохраняем тему для текущего пользователя
+    if (window.currentUserId) {
+        saveSettings();
+    }
+    
+    console.log('🥀 Секретная тема "Die my Darling" активирована!');
+}
 
 // Функция для создания бэкапа базы данных
 async function backupDatabase() {
