@@ -606,6 +606,10 @@ body[data-theme="die-my-darling"] .admin-panel-header {
     border-bottom: 2px solid #8b0000;
 }
 
+body[data-theme="die-my-darling"] .leaderboard {
+    background: transparent;
+}
+
 body[data-theme="die-my-darling"] .leaderboard-item {
     background: rgba(42, 15, 26, 0.5);
     backdrop-filter: blur(5px);
