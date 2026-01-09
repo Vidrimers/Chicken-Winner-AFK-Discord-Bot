@@ -1818,6 +1818,20 @@ app.post("/api/admin/delete-user", async (req, res) => {
       ? userStats.username || "Пользователь ID: " + userId
       : "Пользователь ID: " + userId;
 
+    // Удаляем файл аватарки если он существует
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const avatarPath = path.join('./avatars', `${userId}.png`);
+      
+      if (fs.existsSync(avatarPath)) {
+        fs.unlinkSync(avatarPath);
+        console.log(`🗑️ Удален файл аватарки: ${avatarPath}`);
+      }
+    } catch (err) {
+      console.error(`❌ Ошибка при удалении аватарки для ${userId}:`, err.message);
+    }
+
     // Удаляем пользователя из всех таблиц
     db.prepare("DELETE FROM user_stats WHERE user_id = ?").run(userId);
     db.prepare("DELETE FROM user_settings WHERE user_id = ?").run(userId);
