@@ -855,11 +855,17 @@ function showNotOnServerWarning() {
         element.textContent = '';
         element.style.position = 'relative';
         
-        text.split('').forEach((char, index) => {
+        // Используем Array.from для правильной обработки эмодзи
+        Array.from(text).forEach((char, index) => {
             const span = document.createElement('span');
             span.textContent = char;
             span.style.display = 'inline-block';
             span.style.position = 'relative';
+            
+            // Сохраняем пробелы
+            if (char === ' ') {
+                span.style.width = '0.3em';
+            }
             
             // Случайные параметры анимации
             const duration = 3 + Math.random() * 4; // 3-7 секунд
