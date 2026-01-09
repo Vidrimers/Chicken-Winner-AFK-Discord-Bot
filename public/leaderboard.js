@@ -3,6 +3,9 @@ async function loadLeaderboard() {
         const response = await fetch('/api/leaderboard');
         const leaderboard = await response.json();
         
+        // Сохраняем данные пользователей с аватарками в localStorage
+        localStorage.setItem('leaderboardUsers', JSON.stringify(leaderboard));
+        
         const leaderboardList = document.getElementById('leaderboardList');
         let html = '';
         
@@ -10,12 +13,12 @@ async function loadLeaderboard() {
             const hours = Math.floor(user.total_voice_time / 3600);
             const minutes = Math.floor((user.total_voice_time % 3600) / 60);
             const userId = user.user_id.replace(/"/g, '&quot;');
-            const avatarUrl = user.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png';
+            const avatarUrl = user.avatar_url || '/avatars/nopic.png';
             
             html += '<div class="leaderboard-item" onclick="showUserModal(&#34;' + userId + '&#34;, &#34;' + (user.username || 'Неизвестный пользователь').replace(/"/g, '&quot;') + '&#34;, ' + (index + 1) + ')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">' +
                 '<div class="leaderboard-item-top" style="display: flex; align-items: center; gap: 12px;">' +
                     '<span class="rank">#' + (index + 1) + '</span>' +
-                    '<img src="' + avatarUrl + '" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">' +
+                    '<img src="' + avatarUrl + '" alt="Avatar" onerror="this.src=\'/avatars/nopic.png\'" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">' +
                     '<strong>' + (user.username || 'Неизвестный пользователь') + '</strong>' +
                 '</div>' +
                 '<div class="leaderboard-item-bottom" style="display: flex; align-items: center;">' +
@@ -40,7 +43,7 @@ async function showUserModal(userId, username, rank) {
         // Получаем аватарку из localStorage или используем дефолтную
         const savedUsers = JSON.parse(localStorage.getItem('leaderboardUsers') || '[]');
         const user = savedUsers.find(u => u.user_id === userId);
-        const avatarUrl = user?.avatar_url || data.stats?.avatar_url || 'https://cdn.discordapp.com/embed/avatars/0.png';
+        const avatarUrl = user?.avatar_url || data.stats?.avatar_url || '/avatars/nopic.png';
         
         displayUserModal(data, username, rank, userId, isAdmin, avatarUrl);
     } catch (error) {
@@ -62,7 +65,7 @@ function switchModalTab(tabName) {
     document.querySelector(`[onclick="switchModalTab('${tabName}')"]`).classList.add('active');
 }
 
-function displayUserModal(data, username, rank, userId, isAdmin = false, avatarUrl = 'https://cdn.discordapp.com/embed/avatars/0.png') {
+function displayUserModal(data, username, rank, userId, isAdmin = false, avatarUrl = '/avatars/nopic.png') {
     const achievements = data.achievements;
     const stats = data.stats;
     
@@ -150,7 +153,7 @@ function displayUserModal(data, username, rank, userId, isAdmin = false, avatarU
         <div class="modal" id="achievementsModal">
             <div class="modal-content" style="max-width: 800px; height: 80vh;overflow: auto; scrollbar-width: none;">
                 <div class="modal-header" style="display: flex; align-items: center; gap: 20px; position: relative;">
-                    <img src="${avatarUrl}" alt="Avatar" class="modal-avatar">
+                    <img src="${avatarUrl}" alt="Avatar" class="modal-avatar" onerror="this.src='/avatars/nopic.png'">
                     <div class="modal-header-name-block" style="flex: 1; text-align: center;">
                         <h2>👤 Профиль пользователя</h2>
                         <h3>#${rank} ${username}</h3>

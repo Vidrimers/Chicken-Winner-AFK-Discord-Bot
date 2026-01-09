@@ -735,6 +735,44 @@ async function updateUserNames() {
     }
 }
 
+// Функция для загрузки аватарок на сервер
+async function downloadAvatars() {
+    const btn = document.getElementById('downloadAvatarsBtn');
+    const originalText = btn.innerHTML;
+    
+    try {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="admin-btn-icon">⏳</span><span class="admin-btn-text">Загрузка...</span>';
+        
+        const response = await fetch('/api/admin/download-avatars', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Аватарки загружены:', data);
+            alert(`✅ Загружено аватарок: ${data.downloaded}\nОшибок: ${data.errors}\nВсего пользователей: ${data.total}`);
+            
+            // Перезагружаем рейтинг чтобы обновить аватарки
+            if (typeof loadLeaderboard === 'function') {
+                loadLeaderboard();
+            }
+        } else {
+            const error = await response.json();
+            alert('Ошибка при загрузке аватарок: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Ошибка при загрузке аватарок:', error);
+        alert('Ошибка при загрузке аватарок');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
 // Функция для отображения аватарки пользователя
 function displayUserAvatar(avatarUrl) {
     const avatarContainer = document.getElementById('userAvatarContainer');
@@ -744,7 +782,7 @@ function displayUserAvatar(avatarUrl) {
         avatarImg.src = avatarUrl;
         avatarContainer.style.display = 'block';
     } else {
-        avatarImg.src = 'https://cdn.discordapp.com/embed/avatars/0.png';
+        avatarImg.src = '/avatars/nopic.png';
         avatarContainer.style.display = 'block';
     }
 }

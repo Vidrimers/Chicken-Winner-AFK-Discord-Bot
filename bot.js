@@ -672,39 +672,88 @@ const getUserTheme = (userId) => {
   return result && result.theme ? result.theme : 'standard';
 };
 
+// ===== ФУНКЦИЯ СКАЧИВАНИЯ АВАТАРКИ =====
+const downloadAvatar = async (userId, avatarUrl) => {
+  try {
+    if (!avatarUrl || avatarUrl.includes('nopic.png') || avatarUrl.startsWith('/avatars/')) {
+      return '/avatars/nopic.png';
+    }
+
+    const fs = await import('fs');
+    const path = await import('path');
+    const https = await import('https');
+    
+    const avatarsDir = './avatars';
+    if (!fs.existsSync(avatarsDir)) {
+      fs.mkdirSync(avatarsDir, { recursive: true });
+    }
+    
+    const fileName = `${userId}.png`;
+    const filePath = path.join(avatarsDir, fileName);
+    
+    return new Promise((resolve, reject) => {
+      const file = fs.createWriteStream(filePath);
+      const request = https.get(avatarUrl, { timeout: 5000 }, (response) => {
+        if (response.statusCode !== 200) {
+          fs.unlink(filePath, () => {});
+          resolve('/avatars/nopic.png');
+          return;
+        }
+        
+        response.pipe(file);
+        file.on('finish', () => {
+          file.close();
+          resolve(`/avatars/${fileName}`);
+        });
+      });
+      
+      request.on('error', (err) => {
+        fs.unlink(filePath, () => {});
+        console.error(`❌ Ошибка загрузки аватарки для ${userId}:`, err.message);
+        resolve('/avatars/nopic.png');
+      });
+      
+      request.on('timeout', () => {
+        request.destroy();
+        fs.unlink(filePath, () => {});
+        console.error(`⏱️ Таймаут загрузки аватарки для ${userId}`);
+        resolve('/avatars/nopic.png');
+      });
+    });
+  } catch (error) {
+    console.error(`❌ Ошибка при скачивании аватарки для ${userId}:`, error.message);
+    return '/avatars/nopic.png';
+  }
+};
+
 // ===== ФУНКЦИИ СТАТИСТИКИ =====
 const initUserStats = (userId, username, avatarUrl = null) => {
   // Проверяем, существует ли уже пользователь
   const existingStmt = db.prepare(
-    "SELECT username FROM user_stats WHERE user_id = ?"
+    "SELECT username, avatar_url FROM user_stats WHERE user_id = ?"
   );
   const existing = existingStmt.get(userId);
 
   if (existing) {
-    // Если пользователь существует и имя - это "Web User", обновляем на реальное
+    // Пользователь уже существует - ничего не делаем с аватаркой
+    // Обновляем только имя если оно было "Web User"
     if (
       existing.username === "Web User" &&
       username &&
       username !== "Web User"
     ) {
       const updateStmt = db.prepare(
-        "UPDATE user_stats SET username = ?, avatar_url = ? WHERE user_id = ?"
+        "UPDATE user_stats SET username = ? WHERE user_id = ?"
       );
-      updateStmt.run(username, avatarUrl, userId);
-    } else if (avatarUrl) {
-      // Обновляем аватарку если передана
-      const updateStmt = db.prepare(
-        "UPDATE user_stats SET avatar_url = ? WHERE user_id = ?"
-      );
-      updateStmt.run(avatarUrl, userId);
+      updateStmt.run(username, userId);
     }
   } else {
-    // Если пользователя нет - создаем новую запись
+    // Новый пользователь - создаем запись с аватаркой
     const stmt = db.prepare(`
       INSERT INTO user_stats (user_id, username, avatar_url) 
       VALUES (?, ?, ?)
     `);
-    stmt.run(userId, username, avatarUrl);
+    stmt.run(userId, username, avatarUrl || '/avatars/nopic.png');
   }
 };
 
@@ -1152,6 +1201,7 @@ function clearSession(res, req) {
 }
 
 app.use(express.static(path.join(__dirname, "public")));
+app.use('/avatars', express.static(path.join(__dirname, "avatars")));
 app.use(express.json());
 
 // API маршруты
@@ -1845,8 +1895,9 @@ app.post("/api/admin/update-names", async (req, res) => {
         const member = await guild.members.fetch(user.user_id).catch(() => null);
         if (member) {
           const displayName = member.displayName || member.user.username;
-          const avatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
-          db.prepare("UPDATE user_stats SET username = ?, avatar_url = ? WHERE user_id = ?").run(displayName, avatarUrl, user.user_id);
+          const discordAvatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
+          const localAvatarPath = await downloadAvatar(user.user_id, discordAvatarUrl);
+          db.prepare("UPDATE user_stats SET username = ?, avatar_url = ? WHERE user_id = ?").run(displayName, localAvatarPath, user.user_id);
           updated++;
         }
       } catch (err) {
@@ -1868,6 +1919,78 @@ app.post("/api/admin/update-names", async (req, res) => {
   }
 });
 
+// ===== ЗАГРУЗКА АВАТАРОК НА СЕРВЕР =====
+app.post("/api/admin/download-avatars", async (req, res) => {
+  try {
+    console.log("📥 Запрос на загрузку аватарок...");
+    
+    const fs = await import('fs');
+    const path = await import('path');
+    const https = await import('https');
+    
+    // Создаем папку avatars если её нет
+    const avatarsDir = './avatars';
+    if (!fs.existsSync(avatarsDir)) {
+      fs.mkdirSync(avatarsDir, { recursive: true });
+    }
+    
+    const guild = client.guilds.cache.first();
+    if (!guild) {
+      return res.status(500).json({ error: "Гильдия не найдена" });
+    }
+    
+    const allUsers = db.prepare("SELECT user_id, avatar_url FROM user_stats").all();
+    let downloaded = 0;
+    let errors = 0;
+    let total = allUsers.length;
+    
+    for (const user of allUsers) {
+      try {
+        if (!user.avatar_url || user.avatar_url.includes('nopic.png') || user.avatar_url.startsWith('/avatars/')) {
+          continue;
+        }
+        
+        const fileName = `${user.user_id}.png`;
+        const filePath = path.join(avatarsDir, fileName);
+        
+        // Скачиваем аватарку
+        await new Promise((resolve, reject) => {
+          const file = fs.createWriteStream(filePath);
+          https.get(user.avatar_url, (response) => {
+            response.pipe(file);
+            file.on('finish', () => {
+              file.close();
+              // Обновляем путь в базе данных
+              db.prepare("UPDATE user_stats SET avatar_url = ? WHERE user_id = ?").run(`/avatars/${fileName}`, user.user_id);
+              downloaded++;
+              resolve();
+            });
+          }).on('error', (err) => {
+            fs.unlink(filePath, () => {});
+            errors++;
+            reject(err);
+          });
+        });
+      } catch (err) {
+        console.error(`❌ Ошибка загрузки аватарки для ${user.user_id}:`, err.message);
+        errors++;
+      }
+    }
+    
+    console.log(`✅ Загружено ${downloaded} аватарок, ошибок: ${errors}`);
+    
+    res.json({ 
+      success: true, 
+      downloaded: downloaded,
+      errors: errors,
+      total: total,
+      message: `Загружено ${downloaded} аватарок, ошибок: ${errors}`
+    });
+  } catch (error) {
+    console.error("❌ Ошибка при загрузке аватарок:", error);
+    res.status(500).json({ error: "Ошибка при загрузке аватарок" });
+  }
+});
 
 // ===== ПОПЫТКА НЕСАНКЦИОНИРОВАННОГО ДОСТУПА =====
 app.post("/api/unauthorized-access", async (req, res) => {
@@ -2006,20 +2129,28 @@ client.on("messageCreate", async (message) => {
   const content = message.content.toLowerCase();
   const userId = message.author.id;
   
+  // Проверяем существует ли пользователь в БД
+  const existingUser = db.prepare("SELECT user_id FROM user_stats WHERE user_id = ?").get(userId);
+  
   // Получаем displayName из guild member если возможно
   let username = message.author.username;
-  let avatarUrl = message.author.displayAvatarURL({ format: 'png', size: 128 });
+  let localAvatarPath = '/avatars/nopic.png';
   
   if (message.guild) {
     const member = await message.guild.members.fetch(userId).catch(() => null);
     if (member) {
       username = member.displayName || member.user.username;
-      avatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
+      
+      // Скачиваем аватарку только для нового пользователя
+      if (!existingUser) {
+        const discordAvatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
+        localAvatarPath = await downloadAvatar(userId, discordAvatarUrl);
+      }
     }
   }
 
-  // Инициализируем пользователя в статистике
-  initUserStats(userId, username, avatarUrl);
+  // Инициализируем пользователя в статистике (аватарка только для новых)
+  initUserStats(userId, username, existingUser ? null : localAvatarPath);
 
   // Увеличиваем счетчик сообщений
   incrementUserStat(userId, "messages_sent");
@@ -2515,13 +2646,29 @@ client.on("clientReady", async () => {
       console.log(`❌ AFK канал не найден в гильдии ${guild.name}`);
     }
   });
+  
+  // Миграция: очищаем все CDN URL из базы данных
+  console.log("🔄 Миграция: очистка CDN URL из базы данных...");
+  try {
+    const cdnUsers = db.prepare("SELECT user_id FROM user_stats WHERE avatar_url LIKE '%cdn.discordapp.com%'").all();
+    if (cdnUsers.length > 0) {
+      console.log(`📝 Найдено ${cdnUsers.length} пользователей с CDN URL`);
+      db.prepare("UPDATE user_stats SET avatar_url = '/avatars/nopic.png' WHERE avatar_url LIKE '%cdn.discordapp.com%'").run();
+      console.log(`✅ CDN URL очищены, установлен nopic.png`);
+    } else {
+      console.log(`✅ CDN URL не найдены`);
+    }
+  } catch (error) {
+    console.error("❌ Ошибка при миграции CDN URL:", error);
+  }
+  
   // Запускаем проверку специального достижения каждую минуту
   setInterval(checkSpecialAchievement, 60000);
   console.log("⏰ Запущена проверка специального достижения");
 
-  // Обновляем displayName для всех пользователей в БД
+  // Обновляем только displayName для всех пользователей в БД (без аватарок)
   setTimeout(async () => {
-    console.log("🔄 Обновление displayName и аватарок для всех пользователей...");
+    console.log("🔄 Обновление displayName для всех пользователей...");
     try {
       const guild = client.guilds.cache.first();
       if (guild) {
@@ -2533,8 +2680,7 @@ client.on("clientReady", async () => {
             const member = await guild.members.fetch(user.user_id).catch(() => null);
             if (member) {
               const displayName = member.displayName || member.user.username;
-              const avatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
-              db.prepare("UPDATE user_stats SET username = ?, avatar_url = ? WHERE user_id = ?").run(displayName, avatarUrl, user.user_id);
+              db.prepare("UPDATE user_stats SET username = ? WHERE user_id = ?").run(displayName, user.user_id);
               updated++;
             }
           } catch (err) {
@@ -2542,7 +2688,7 @@ client.on("clientReady", async () => {
           }
         }
         
-        console.log(`✅ Обновлено displayName и аватарок для ${updated} пользователей`);
+        console.log(`✅ Обновлено displayName для ${updated} пользователей`);
       }
     } catch (error) {
       console.error("❌ Ошибка при обновлении displayName:", error);
@@ -2578,12 +2724,22 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     const member = newState.member;
     const userId = member.id;
     const username = member.displayName || member.user.username;
-    const avatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
 
     if (member.user.bot) return;
 
-    // Инициализируем пользователя в статистике
-    initUserStats(userId, username, avatarUrl);
+    // Проверяем существует ли пользователь в БД
+    const existingUser = db.prepare("SELECT user_id FROM user_stats WHERE user_id = ?").get(userId);
+    
+    let localAvatarPath = '/avatars/nopic.png';
+    
+    // Скачиваем аватарку только для нового пользователя
+    if (!existingUser) {
+      const discordAvatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
+      localAvatarPath = await downloadAvatar(userId, discordAvatarUrl);
+    }
+
+    // Инициализируем пользователя в статистике (аватарка только для новых)
+    initUserStats(userId, username, existingUser ? null : localAvatarPath);
 
     // Проверяем выход из AFK канала и обновляем время в AFK
     if (
