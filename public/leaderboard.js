@@ -39,6 +39,9 @@ async function loadLeaderboard(forceRefresh = false) {
 }
 
 async function showUserModal(userId, username, rank) {
+    // Показываем индикатор загрузки
+    showLoadingModal();
+    
     try {
         const response = await fetch(`/api/stats/${userId}`);
         const data = await response.json();
@@ -49,9 +52,45 @@ async function showUserModal(userId, username, rank) {
         const user = savedUsers.find(u => u.user_id === userId);
         const avatarUrl = user?.avatar_url || data.stats?.avatar_url || '/avatars/nopic.png';
         
+        // Закрываем индикатор загрузки и показываем модалку с данными
+        closeLoadingModal();
         displayUserModal(data, username, rank, userId, isAdmin, avatarUrl);
     } catch (error) {
+        closeLoadingModal();
         alert('Ошибка загрузки данных пользователя');
+    }
+}
+
+function showLoadingModal() {
+    const loadingHtml = `
+        <div class="modal" id="loadingModal">
+            <div class="loading-modal-content">
+                <div class="loading-spinner">
+                    <img src="/avatars/loading.png" alt="Loading" class="loading-image">
+                    <div class="loading-dots">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                </div>
+                <p class="loading-text">Загрузка данных...</p>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', loadingHtml);
+    document.body.classList.add('modal-open');
+}
+
+function closeLoadingModal() {
+    const modal = document.getElementById('loadingModal');
+    if (modal) {
+        modal.remove();
     }
 }
 
