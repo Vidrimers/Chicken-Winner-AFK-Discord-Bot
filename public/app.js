@@ -507,11 +507,16 @@ function displayUserSettings(settings) {
     document.getElementById('afkTimeout').value = settings.afkTimeout.toString();
     document.getElementById('achievementNotifications').value = settings.achievementNotifications.toString();
     
-    // Проверяем активирована ли секретная тема
-    const secretThemeActivated = localStorage.getItem('secretThemeActivated');
+    // Проверяем активирована ли секретная тема на сервере
+    const secretThemeActivated = settings.secretThemeActivated || false;
     const themeSelect = document.getElementById('themeSelect');
     
-    if (secretThemeActivated === 'true' && themeSelect && !themeSelect.querySelector('option[value="die-my-darling"]')) {
+    // Синхронизируем localStorage с сервером
+    if (secretThemeActivated) {
+        localStorage.setItem('secretThemeActivated', 'true');
+    }
+    
+    if (secretThemeActivated && themeSelect && !themeSelect.querySelector('option[value="die-my-darling"]')) {
         const option = document.createElement('option');
         option.value = 'die-my-darling';
         option.textContent = '🥀 Die my Darling';
@@ -608,38 +613,56 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Функция активации секретной темы
-function activateSecretTheme() {
-    const secretThemeActivated = localStorage.getItem('secretThemeActivated');
-    
-    if (secretThemeActivated === 'true') {
-        console.log('🔒 Секретная тема уже активирована');
+async function activateSecretTheme() {
+    if (!window.currentUserId) {
+        console.log('⚠️ Нужно войти чтобы активировать секретную тему');
         return;
     }
     
-    // Активируем тему
-    localStorage.setItem('secretThemeActivated', 'true');
-    applyTheme('die-my-darling');
-    
-    // Добавляем опцию в селект если её еще нет
-    const themeSelect = document.getElementById('themeSelect');
-    if (themeSelect && !themeSelect.querySelector('option[value="die-my-darling"]')) {
-        const option = document.createElement('option');
-        option.value = 'die-my-darling';
-        option.textContent = '🥀 Die my Darling';
-        themeSelect.appendChild(option);
+    try {
+        // Отправляем запрос на сервер для активации темы
+        const response = await fetch(`/api/activate-secret-theme/${window.currentUserId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Ошибка активации темы');
+        }
+        
+        const data = await response.json();
+        
+        if (data.alreadyActivated) {
+            console.log('🔒 Секретная тема уже активирована');
+            return;
+        }
+        
+        // Сохраняем флаг в localStorage
+        localStorage.setItem('secretThemeActivated', 'true');
+        
+        // Применяем тему
+        applyTheme('die-my-darling');
+        
+        // Добавляем опцию в селект если её еще нет
+        const themeSelect = document.getElementById('themeSelect');
+        if (themeSelect && !themeSelect.querySelector('option[value="die-my-darling"]')) {
+            const option = document.createElement('option');
+            option.value = 'die-my-darling';
+            option.textContent = '🥀 Die my Darling';
+            themeSelect.appendChild(option);
+        }
+        
+        // Устанавливаем тему в селекте
+        if (themeSelect) {
+            themeSelect.value = 'die-my-darling';
+        }
+        
+        console.log('🥀 Секретная тема "Die my Darling" активирована!');
+    } catch (error) {
+        console.error('❌ Ошибка при активации секретной темы:', error);
     }
-    
-    // Устанавливаем тему в селекте
-    if (themeSelect) {
-        themeSelect.value = 'die-my-darling';
-    }
-    
-    // Сохраняем тему для текущего пользователя
-    if (window.currentUserId) {
-        saveSettings();
-    }
-    
-    console.log('🥀 Секретная тема "Die my Darling" активирована!');
 }
 
 // Функция для создания бэкапа базы данных

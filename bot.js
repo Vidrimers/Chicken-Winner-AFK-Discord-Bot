@@ -182,6 +182,12 @@ try {
 
 try {
   db.exec(
+    `ALTER TABLE user_settings ADD COLUMN secret_theme_activated BOOLEAN DEFAULT 0`
+  );
+} catch (error) {}
+
+try {
+  db.exec(
     `ALTER TABLE achievements ADD COLUMN notifications_sent BOOLEAN DEFAULT 0`
   );
 } catch (error) {}
@@ -671,6 +677,15 @@ const getUserTheme = (userId) => {
   );
   const result = stmt.get(userId);
   return result && result.theme ? result.theme : 'standard';
+};
+
+// Функция для получения флага активации секретной темы
+const getSecretThemeActivated = (userId) => {
+  const stmt = db.prepare(
+    "SELECT secret_theme_activated FROM user_settings WHERE user_id = ?"
+  );
+  const result = stmt.get(userId);
+  return result ? Boolean(result.secret_theme_activated) : false;
 };
 
 // ===== ФУНКЦИЯ СКАЧИВАНИЯ АВАТАРКИ =====
@@ -1270,6 +1285,7 @@ app.get("/api/stats/:userId", async (req, res) => {
       afkTimeout: getUserTimeout(userId),
       achievementNotifications: getUserAchievementNotificationSetting(userId),
       theme: getUserTheme(userId),
+      secretThemeActivated: getSecretThemeActivated(userId),
     };
 
     res.json({
@@ -1445,6 +1461,41 @@ app.post("/api/settings/:userId", async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error("Ошибка при сохранении настроек:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// API для активации секретной темы
+app.post("/api/activate-secret-theme/:userId", async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    // Проверяем активирована ли уже тема
+    const stmt = db.prepare(
+      "SELECT secret_theme_activated FROM user_settings WHERE user_id = ?"
+    );
+    const settings = stmt.get(userId);
+
+    if (settings && settings.secret_theme_activated) {
+      return res.json({ success: true, alreadyActivated: true });
+    }
+
+    // Активируем секретную тему
+    db.prepare(
+      `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated) 
+       VALUES (?, 
+               COALESCE((SELECT dm_notifications FROM user_settings WHERE user_id = ?), 1), 
+               COALESCE((SELECT afk_timeout FROM user_settings WHERE user_id = ?), 15),
+               COALESCE((SELECT achievement_notifications FROM user_settings WHERE user_id = ?), 1),
+               'die-my-darling',
+               1)`
+    ).run(userId, userId, userId, userId);
+
+    console.log(`🥀 Секретная тема активирована для пользователя ${userId}`);
+
+    res.json({ success: true, alreadyActivated: false });
+  } catch (error) {
+    console.error("Ошибка при активации секретной темы:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
