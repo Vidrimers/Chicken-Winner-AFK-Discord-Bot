@@ -131,6 +131,15 @@
         justify-content: center !important;
     }
     
+    .user-id-display:hover {
+        transform: none !important;
+    }
+    
+    .user-id-display .user-id:hover {
+        background: rgba(255,255,255,0.2) !important;
+        transform: none !important;
+    }
+    
     .leaderboard-item:hover::after {
         content: "👆 Нажмите для достижений";
         font-size: 11px;
