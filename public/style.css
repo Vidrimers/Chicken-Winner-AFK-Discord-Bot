@@ -571,6 +571,13 @@ body.modal-open {
     -webkit-overflow-scrolling: touch;
 }
 
+/* Модальное окно загрузки - всегда по центру */
+#loadingModal {
+    overflow: hidden !important;
+    padding: 0 !important;
+    align-items: center !important;
+}
+
 /* Индикатор загрузки модального окна */
 .loading-modal-content {
     background: transparent;
@@ -579,6 +586,7 @@ body.modal-open {
     align-items: center;
     justify-content: center;
     gap: 30px;
+    min-height: 200px;
 }
 
 .loading-spinner {
