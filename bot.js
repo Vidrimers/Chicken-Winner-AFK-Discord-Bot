@@ -1327,10 +1327,11 @@ app.get("/api/admin/users", (req, res) => {
 app.get("/api/special-achievements", (req, res) => {
   try {
     const stmt = db.prepare(`
-      SELECT DISTINCT achievement_id, emoji, name, description, type, color, special_date, user_id
-      FROM achievements
-      WHERE type = 'special'
-      ORDER BY created_at DESC
+      SELECT DISTINCT a.achievement_id, a.emoji, a.name, a.description, a.type, a.color, a.special_date, a.user_id, ua.unlocked_at
+      FROM achievements a
+      LEFT JOIN user_achievements ua ON a.achievement_id = ua.achievement_id AND a.user_id = ua.user_id
+      WHERE a.type = 'special'
+      ORDER BY a.created_at DESC
     `);
     const specialAchievements = stmt.all();
     res.json(specialAchievements);

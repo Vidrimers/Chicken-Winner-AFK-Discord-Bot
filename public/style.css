@@ -850,6 +850,23 @@ body.modal-open {
     }
 }
 
+/* Анимация вертикального флипа для имени/ID пользователя */
+@keyframes flipVertical {
+    0% {
+        transform: rotateX(0deg);
+    }
+    50% {
+        transform: rotateX(90deg);
+    }
+    100% {
+        transform: rotateX(0deg);
+    }
+}
+
+.user-flip-container:hover .user-flip-text {
+    color: #667eea;
+}
+
 /* Стили для специального достижения Die my Darling */
 .achievement[data-achievement-id*="die-my-darling"],
 .modal-achievement[data-achievement-id*="die-my-darling"] {

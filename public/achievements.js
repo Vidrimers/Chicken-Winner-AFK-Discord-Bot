@@ -253,17 +253,35 @@ function displayUserAchievements(achievements) {
     if (isAdmin) {
         fetch('/api/special-achievements')
             .then(r => r.json())
-            .then(allSpecial => {
+            .then(async allSpecial => {
                 const unlockedIds = userSpecialAchievements.map(a => a.achievement_id);
                 
                 const unlockedOtherSpecial = allSpecial.filter(a => !unlockedIds.includes(a.achievement_id));
                 
                 if (unlockedOtherSpecial.length > 0) {
+                    // Загружаем имена пользователей
+                    const userNames = {};
+                    for (const achievement of unlockedOtherSpecial) {
+                        if (!userNames[achievement.user_id]) {
+                            try {
+                                const response = await fetch(`/api/stats/${achievement.user_id}`);
+                                const data = await response.json();
+                                userNames[achievement.user_id] = data.stats?.username || 'Неизвестный';
+                            } catch (err) {
+                                userNames[achievement.user_id] = 'Неизвестный';
+                            }
+                        }
+                    }
+                    
                     let addHtml = '';
                     unlockedOtherSpecial.forEach(achievement => {
                         const editBtn = `<button onclick="editSpecialAchievementOther('${achievement.achievement_id}', '${achievement.user_id}', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: transparent; border: none; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>`;
                         const deleteBtn = `<button onclick="deleteUserAchievement('${achievement.user_id}', '${achievement.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>`;
                         const achievementColor = achievement.color || '#999';
+                        const userName = userNames[achievement.user_id] || 'Неизвестный';
+                        const flipId = `flip-${achievement.achievement_id}`;
+                        const unlockedDate = achievement.unlocked_at ? new Date(achievement.unlocked_at).toLocaleDateString('ru-RU') : 'Неизвестно';
+                        
                         addHtml += `
                             <div class="achievement special-achievement" data-achievement-id="${achievement.achievement_id}" style="
                                 background: linear-gradient(135deg, ${achievementColor}22 0%, ${achievementColor}11 100%); 
@@ -276,7 +294,13 @@ function displayUserAchievements(achievements) {
                                 ${editBtn}
                                 <h3 style="color: ${achievementColor}; font-weight: bold;">${achievement.emoji} ${achievement.name} 🔒</h3>
                                 <p style="color: #777; margin: 10px 0;">${achievement.description}</p>
-                                <small style="color: #888; font-weight: bold;">👤 Для ID: ${achievement.user_id}</small>
+                                <small style="color: #888; font-weight: bold; display: block; margin-top: 5px;">
+                                    <span onclick="toggleUserFlip('${flipId}')" style="cursor: pointer;">👤 Для:</span>
+                                    <span class="user-flip-container" id="${flipId}" data-showing-id="false" style="display: inline-block; position: relative; perspective: 1000px;">
+                                        <span class="user-flip-text" onclick="copyUserInfo(event, '${userName}', '${achievement.user_id}')" data-username="${userName}" data-userid="${achievement.user_id}" style="cursor: pointer; display: inline-block; transition: transform 0.3s; transform-style: preserve-3d;">${userName}</span>
+                                    </span>
+                                </small>
+                                <small style="color: #666; font-weight: bold; display: block; margin-top: 3px;">🎉 Получено: ${unlockedDate}</small>
                                 ${deleteBtn}
                             </div>
                         `;
@@ -285,6 +309,96 @@ function displayUserAchievements(achievements) {
                 }
             })
             .catch(err => console.error('Ошибка загрузки специальных достижений:', err));
+    }
+}
+
+// Функция для переключения между именем и ID
+function toggleUserFlip(flipId) {
+    const container = document.getElementById(flipId);
+    const textElement = container.querySelector('.user-flip-text');
+    
+    // Получаем текущее состояние из data-атрибута или определяем по содержимому
+    const isShowingName = !container.dataset.showingId || container.dataset.showingId === 'false';
+    
+    // Добавляем класс для анимации
+    textElement.style.animation = 'flipVertical 0.3s ease-in-out';
+    
+    // Меняем текст в середине анимации
+    setTimeout(() => {
+        const userName = textElement.dataset.username || textElement.textContent;
+        const userId = textElement.dataset.userid;
+        
+        if (!textElement.dataset.username) {
+            textElement.dataset.username = userName;
+        }
+        if (!textElement.dataset.userid) {
+            textElement.dataset.userid = userId;
+        }
+        
+        if (isShowingName) {
+            textElement.textContent = userId;
+            container.dataset.showingId = 'true';
+        } else {
+            textElement.textContent = userName;
+            container.dataset.showingId = 'false';
+        }
+    }, 150);
+    
+    // Убираем анимацию после завершения
+    setTimeout(() => {
+        textElement.style.animation = '';
+    }, 300);
+}
+
+// Функция для копирования имени или ID в буфер обмена
+async function copyUserInfo(event, userName, userId) {
+    event.stopPropagation();
+    
+    const textElement = event.target;
+    const textToCopy = textElement.textContent;
+    
+    try {
+        await navigator.clipboard.writeText(textToCopy);
+        
+        // Показываем уведомление
+        const originalText = textElement.textContent;
+        const originalColor = textElement.style.color;
+        textElement.textContent = '✓ Скопировано!';
+        textElement.style.color = '#28a745';
+        
+        setTimeout(() => {
+            textElement.textContent = originalText;
+            textElement.style.color = originalColor;
+        }, 1000);
+        
+        console.log('✅ Скопировано в буфер:', textToCopy);
+    } catch (err) {
+        console.error('❌ Ошибка копирования:', err);
+        
+        // Fallback для старых браузеров
+        const textArea = document.createElement('textarea');
+        textArea.value = textToCopy;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            const originalText = textElement.textContent;
+            const originalColor = textElement.style.color;
+            textElement.textContent = '✓ Скопировано!';
+            textElement.style.color = '#28a745';
+            
+            setTimeout(() => {
+                textElement.textContent = originalText;
+                textElement.style.color = originalColor;
+            }, 1000);
+        } catch (err2) {
+            console.error('❌ Fallback копирование не удалось:', err2);
+        }
+        
+        document.body.removeChild(textArea);
     }
 }
 
