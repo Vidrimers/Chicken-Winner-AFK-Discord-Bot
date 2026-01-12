@@ -174,7 +174,6 @@ function displayUserAchievements(achievements) {
                         color: #333; 
                         border-left: 5px solid ${displayColor};
                         position: relative;
-                        overflow: visible;
                     ">
                         ${editBtn}
                         <h3 style="color: ${displayColor}; font-weight: bold;">${displayEmoji} ${displayName} ✨</h3>
@@ -192,7 +191,6 @@ function displayUserAchievements(achievements) {
                         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                         opacity: 0.5;
                         position: relative;
-                        overflow: visible;
                     ">
                         ${editBtn}
                         <h3 style="color: ${displayColor}; font-weight: bold;">${displayEmoji} ${displayName} 🔒</h3>
@@ -218,7 +216,6 @@ function displayUserAchievements(achievements) {
                         border-left: 5px solid ${achievement.color};
                         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                         position: relative;
-                        overflow: visible;
                     ">
                         ${editBtn}
                         <h3 style="color: ${achievement.color}; font-weight: bold;">${achievement.emoji} ${achievement.name} ✨</h3>
@@ -239,7 +236,6 @@ function displayUserAchievements(achievements) {
                         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                         opacity: 0.5;
                         position: relative;
-                        overflow: visible;
                     ">
                         ${editBtn}
                         <h3 style="color: ${achievement.color}; font-weight: bold;">${achievement.emoji} ${achievement.name} 🔒</h3>
@@ -276,7 +272,6 @@ function displayUserAchievements(achievements) {
                                 box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                                 opacity: 0.7;
                                 position: relative;
-                                overflow: visible;
                             ">
                                 ${editBtn}
                                 <h3 style="color: ${achievementColor}; font-weight: bold;">${achievement.emoji} ${achievement.name} 🔒</h3>

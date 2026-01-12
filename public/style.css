@@ -817,17 +817,6 @@ body.modal-open {
     position: relative;
     overflow: hidden;
     transition: all 0.3s ease;
-    pointer-events: none;
-}
-
-.special-achievement > * {
-    pointer-events: auto;
-}
-
-.special-achievement button {
-    pointer-events: auto;
-    position: relative;
-    z-index: 10;
 }
 
 .special-achievement::before {
@@ -840,6 +829,7 @@ body.modal-open {
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
     transition: all 0.6s ease;
     opacity: 0;
+    pointer-events: none;
 }
 
 .special-achievement:hover {
