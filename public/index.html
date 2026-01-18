@@ -812,16 +812,29 @@
                   <p class="setting-card-description">
                     Выберите цветовую схему интерфейса
                   </p>
-                  <select
-                    id="themeSelect"
-                    class="setting-select"
-                    onchange="previewTheme(this.value)"
+                  <p
+                    class="setting-card-description"
+                    style="
+                      font-size: 12px;
+                      margin-top: -10px;
+                      opacity: 0.8;
+                      color: #667eea;
+                    "
                   >
-                    <option value="standard">🎨 Стандарт</option>
-                    <option value="metal">⚙️ Металл</option>
-                    <option value="discord">💬 Дискорд</option>
-                    <option value="steam">🎮 Стим</option>
-                  </select>
+                    🔍 Секретные темы можно найти на сайте, если хорошо искать
+                  </p>
+                  <div class="setting-card-actions">
+                    <select
+                      id="themeSelect"
+                      class="setting-select"
+                      onchange="previewTheme(this.value)"
+                    >
+                      <option value="standard">🎨 Стандарт</option>
+                      <option value="metal">⚙️ Металл</option>
+                      <option value="discord">💬 Дискорд</option>
+                      <option value="steam">🎮 Стим</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
