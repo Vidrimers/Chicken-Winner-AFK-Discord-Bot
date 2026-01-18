@@ -3,6 +3,10 @@ async function loadLeaderboard(forceRefresh = false) {
         const response = await fetch('/api/leaderboard');
         const leaderboard = await response.json();
         
+        // Получаем онлайн статусы
+        const statusResponse = await fetch('/api/online-status');
+        const onlineStatuses = await statusResponse.json();
+        
         // Сохраняем данные пользователей с аватарками в localStorage
         localStorage.setItem('leaderboardUsers', JSON.stringify(leaderboard));
         
@@ -19,10 +23,19 @@ async function loadLeaderboard(forceRefresh = false) {
                 ? avatarUrl + '?t=' + Date.now() 
                 : avatarUrl;
             
+            // Получаем статус пользователя
+            const userStatus = onlineStatuses[user.user_id];
+            const statusIndicator = userStatus 
+                ? `<span class="status-indicator ${userStatus}"></span>` 
+                : '';
+            
             html += '<div class="leaderboard-item" onclick="showUserModal(&#34;' + userId + '&#34;, &#34;' + (user.username || 'Неизвестный пользователь').replace(/"/g, '&quot;') + '&#34;, ' + (index + 1) + ')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">' +
                 '<div class="leaderboard-item-top" style="display: flex; align-items: center; gap: 12px;">' +
                     '<span class="rank">#' + (index + 1) + '</span>' +
-                    '<img src="' + avatarUrlFinal + '" alt="Avatar" onerror="this.src=\'/avatars/nopic.png\'" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">' +
+                    '<div class="avatar-container">' +
+                        '<img src="' + avatarUrlFinal + '" alt="Avatar" onerror="this.src=\'/avatars/nopic.png\'">' +
+                        statusIndicator +
+                    '</div>' +
                     '<strong>' + (user.username || 'Неизвестный пользователь') + '</strong>' +
                 '</div>' +
                 '<div class="leaderboard-item-bottom" style="display: flex; align-items: center;">' +
@@ -52,9 +65,14 @@ async function showUserModal(userId, username, rank) {
         const user = savedUsers.find(u => u.user_id === userId);
         const avatarUrl = user?.avatar_url || data.stats?.avatar_url || '/avatars/nopic.png';
         
+        // Получаем онлайн статус пользователя
+        const statusResponse = await fetch('/api/online-status');
+        const onlineStatuses = await statusResponse.json();
+        const userStatus = onlineStatuses[userId];
+        
         // Закрываем индикатор загрузки и показываем модалку с данными
         closeLoadingModal();
-        displayUserModal(data, username, rank, userId, isAdmin, avatarUrl);
+        displayUserModal(data, username, rank, userId, isAdmin, avatarUrl, userStatus);
     } catch (error) {
         closeLoadingModal();
         alert('Ошибка загрузки данных пользователя');
@@ -108,7 +126,7 @@ function switchModalTab(tabName) {
     document.querySelector(`[onclick="switchModalTab('${tabName}')"]`).classList.add('active');
 }
 
-function displayUserModal(data, username, rank, userId, isAdmin = false, avatarUrl = '/avatars/nopic.png') {
+function displayUserModal(data, username, rank, userId, isAdmin = false, avatarUrl = '/avatars/nopic.png', userStatus = null) {
     const achievements = data.achievements;
     const stats = data.stats;
     
@@ -116,6 +134,11 @@ function displayUserModal(data, username, rank, userId, isAdmin = false, avatarU
     const avatarUrlFinal = avatarUrl.includes('nopic.png') 
         ? avatarUrl + '?t=' + Date.now() 
         : avatarUrl;
+    
+    // Формируем индикатор статуса
+    const statusIndicator = userStatus 
+        ? `<span class="status-indicator ${userStatus}"></span>` 
+        : '';
     
     // Подсчитываем достижения (исключая специальные)
     const regularAchievements = achievements.filter(a => !a.emoji && !a.type && a.achievement_id !== 'best_admin');
@@ -201,7 +224,10 @@ function displayUserModal(data, username, rank, userId, isAdmin = false, avatarU
         <div class="modal" id="achievementsModal">
             <div class="modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;">
                 <div class="modal-header" style="display: flex; align-items: center; gap: 20px; position: relative; flex-shrink: 0;">
-                    <img src="${avatarUrlFinal}" alt="Avatar" class="modal-avatar" onerror="this.src='/avatars/nopic.png'">
+                    <div class="modal-avatar-container">
+                        <img src="${avatarUrlFinal}" alt="Avatar" class="modal-avatar" onerror="this.src='/avatars/nopic.png'">
+                        ${statusIndicator}
+                    </div>
                     <div class="modal-header-name-block" style="flex: 1; text-align: center;">
                         <h2>👤 Профиль пользователя</h2>
                         <h3>#${rank} ${username}</h3>
@@ -297,6 +323,42 @@ function closeModal() {
         document.body.classList.remove('modal-open');
     }
 }
+
+// Периодическое обновление онлайн статусов (каждые 30 секунд)
+setInterval(async () => {
+    try {
+        const statusResponse = await fetch('/api/online-status');
+        const onlineStatuses = await statusResponse.json();
+        
+        // Обновляем индикаторы статусов для текущих элементов
+        const leaderboardItems = document.querySelectorAll('.leaderboard-item');
+        leaderboardItems.forEach((item, index) => {
+            const savedUsers = JSON.parse(localStorage.getItem('leaderboardUsers') || '[]');
+            if (savedUsers[index]) {
+                const userId = savedUsers[index].user_id;
+                const avatarContainer = item.querySelector('.avatar-container');
+                
+                if (avatarContainer) {
+                    // Удаляем старый индикатор
+                    const oldIndicator = avatarContainer.querySelector('.status-indicator');
+                    if (oldIndicator) {
+                        oldIndicator.remove();
+                    }
+                    
+                    // Добавляем новый индикатор, если пользователь онлайн
+                    const userStatus = onlineStatuses[userId];
+                    if (userStatus) {
+                        const statusIndicator = document.createElement('span');
+                        statusIndicator.className = `status-indicator ${userStatus}`;
+                        avatarContainer.appendChild(statusIndicator);
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Ошибка обновления онлайн статусов:', error);
+    }
+}, 30000); // 30 секунд
 
 document.addEventListener('click', function(event) {
     const modal = document.getElementById('achievementsModal');

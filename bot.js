@@ -1528,6 +1528,28 @@ app.get("/api/leaderboard", (req, res) => {
   res.json(topUsers);
 });
 
+// API endpoint для получения онлайн статусов пользователей
+app.get("/api/online-status", (req, res) => {
+  try {
+    const guild = client.guilds.cache.first();
+    if (!guild) {
+      return res.json({});
+    }
+
+    const onlineStatuses = {};
+    guild.members.cache.forEach((member) => {
+      if (member.presence?.status && member.presence.status !== "offline") {
+        onlineStatuses[member.id] = member.presence.status; // online, idle, dnd
+      }
+    });
+
+    res.json(onlineStatuses);
+  } catch (error) {
+    console.error("❌ Ошибка при получении онлайн статусов:", error);
+    res.json({});
+  }
+});
+
 // API endpoint для получения всех пользователей (для админа)
 app.get("/api/admin/users", (req, res) => {
   try {

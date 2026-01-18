@@ -280,6 +280,45 @@ body.modal-open {
   white-space: nowrap;
 }
 
+/* Контейнер для аватарки с индикатором онлайн */
+.avatar-container {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+
+.avatar-container img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Индикатор онлайн статуса */
+.status-indicator {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+}
+
+.status-indicator.online {
+  background-color: #43b581; /* зеленый */
+}
+
+.status-indicator.idle {
+  background-color: #faa61a; /* желтый */
+}
+
+.status-indicator.dnd {
+  background-color: #f04747; /* красный */
+}
+
+
 .rank {
   font-weight: bold;
   color: #667eea;
@@ -778,6 +817,34 @@ body.modal-open {
   object-fit: cover;
   border: none;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Контейнер для модальной аватарки с индикатором онлайн */
+.modal-avatar-container {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+.modal-avatar-container img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Индикатор онлайн статуса для модалки (больше размер) */
+.modal-avatar-container .status-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
 .close-btn {
