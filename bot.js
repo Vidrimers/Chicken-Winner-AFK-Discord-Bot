@@ -3877,6 +3877,153 @@ function clearInactivityTimer(userId) {
   }
 }
 
+// ===== ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ ИНФОРМАЦИИ О ПОЛЬЗОВАТЕЛЯХ В КАНАЛАХ =====
+export function getVoiceChannelActivity() {
+  try {
+    // Проверяем, что Discord клиент готов
+    if (!client || !client.isReady()) {
+      console.log("⚠️ Discord клиент еще не готов");
+      return { 
+        success: false, 
+        message: "⏳ Discord бот еще загружается, попробуйте через несколько секунд" 
+      };
+    }
+
+    const guild = client.guilds.cache.first();
+    if (!guild) {
+      console.log("⚠️ Сервер не найден");
+      return { success: false, message: "❌ Сервер не найден" };
+    }
+
+    const voiceChannels = guild.channels.cache.filter(
+      (channel) => channel.type === ChannelType.GuildVoice
+    );
+
+    console.log(`📊 Всего голосовых каналов: ${voiceChannels.size}`);
+
+    if (voiceChannels.size === 0) {
+      return { success: true, message: "📭 Нет голосовых каналов на сервере" };
+    }
+
+    let activeChannels = [];
+    let totalMembers = 0;
+
+    voiceChannels.forEach((channel) => {
+      const memberCount = channel.members ? channel.members.size : 0;
+      console.log(`🔊 Канал "${channel.name}": ${memberCount} участников`);
+      
+      if (memberCount > 0) {
+        totalMembers += memberCount;
+        const channelInfo = {
+          name: channel.name,
+          id: channel.id,
+          members: []
+        };
+
+        channel.members.forEach((member) => {
+          try {
+            const joinTime = userJoinTimes.get(member.id);
+            let duration = "Неизвестно";
+            
+            if (joinTime) {
+              const now = Date.now();
+              const diff = now - joinTime;
+              const hours = Math.floor(diff / 3600000);
+              const minutes = Math.floor((diff % 3600000) / 60000);
+              
+              if (hours > 0) {
+                duration = `${hours}ч ${minutes}м`;
+              } else {
+                duration = `${minutes}м`;
+              }
+            }
+
+            const memberInfo = {
+              username: member.user ? member.user.username : "Unknown",
+              displayName: member.displayName || member.user?.username || "Unknown",
+              id: member.id,
+              duration: duration,
+              streaming: member.voice?.streaming || false,
+              selfVideo: member.voice?.selfVideo || false,
+              muted: member.voice?.mute || false,
+              deafened: member.voice?.deaf || false
+            };
+
+            channelInfo.members.push(memberInfo);
+            console.log(`  👤 Добавлен: ${memberInfo.displayName} (${duration})`);
+          } catch (memberError) {
+            console.error(`⚠️ Ошибка обработки участника ${member.id}:`, memberError.message);
+          }
+        });
+
+        if (channelInfo.members.length > 0) {
+          activeChannels.push(channelInfo);
+          console.log(`✅ Канал "${channelInfo.name}" добавлен с ${channelInfo.members.length} участниками`);
+        } else {
+          console.log(`⚠️ Канал "${channelInfo.name}" имеет участников, но все были пропущены из-за ошибок`);
+        }
+      }
+    });
+
+    console.log(`📊 Итого: ${totalMembers} участников в ${activeChannels.length} каналах`);
+
+    if (activeChannels.length === 0) {
+      console.log(`⚠️ activeChannels пуст, но было найдено ${totalMembers} участников`);
+      return { 
+        success: true, 
+        message: totalMembers > 0 
+          ? "⚠️ Не удалось получить информацию о пользователях в каналах. Попробуйте позже."
+          : "📭 Все голосовые каналы пусты" 
+      };
+    }
+
+    // Формируем текстовое сообщение
+    let message = "🎤 <b>Активность в голосовых каналах:</b>\n\n";
+
+    activeChannels.forEach((channel) => {
+      message += `🔊 <b>${channel.name}</b> (${channel.members.length} чел.)\n`;
+      
+      channel.members.forEach((member) => {
+        let statusIcons = [];
+        if (member.streaming) statusIcons.push("🔴 Стрим");
+        if (member.selfVideo) statusIcons.push("📹 Видео");
+        if (member.muted) statusIcons.push("🔇");
+        if (member.deafened) statusIcons.push("🔕");
+        
+        const status = statusIcons.length > 0 ? ` (${statusIcons.join(", ")})` : "";
+        message += `  👤 ${member.displayName}${status}`;
+        
+        // Показываем время только если оно известно
+        if (member.duration !== "Неизвестно") {
+          message += `\n     ⏱ ${member.duration}`;
+        }
+        
+        message += `\n`;
+      });
+      
+      message += "\n";
+    });
+
+    message += `📅 ${new Date().toLocaleString("ru-RU")}`;
+
+    console.log(`✅ Информация о каналах успешно собрана: ${activeChannels.length} активных каналов`);
+
+    return { 
+      success: true, 
+      message: message,
+      activeChannels: activeChannels
+    };
+
+  } catch (error) {
+    console.error("❌ Ошибка при получении информации о каналах:", error);
+    console.error("Stack trace:", error.stack);
+    return { 
+      success: false, 
+      message: "❌ Ошибка при получении информации о каналах" 
+    };
+  }
+}
+
 // ===== ОБРАБОТЧИКИ ОШИБОК И ЗАВЕРШЕНИЯ =====
 process.on("SIGINT", async () => {
   console.log("🛑 Закрытие базы данных...");
@@ -3895,5 +4042,5 @@ client.login(process.env.DISCORD_TOKEN);
 
 // ===== ИНИЦИАЛИЗАЦИЯ TELEGRAM БОТА =====
 setTimeout(() => {
-  initTelegramBot(db, client, useLinkCode);
+  initTelegramBot(db, client, useLinkCode, getVoiceChannelActivity);
 }, 2000); // Даем Discord боту время на запуск
