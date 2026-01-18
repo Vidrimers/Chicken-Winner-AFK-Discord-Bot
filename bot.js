@@ -5,7 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import http from "http";
-import { 
+import {
   sendTelegramReport,
   sendAchievementNotification,
   sendSpecialAchievementNotification,
@@ -14,7 +14,10 @@ import {
   sendUserDeleteNotification,
   sendUnauthorizedAccessNotification,
   sendBotStatusNotification,
-  sendNotOnServerAttempt
+  sendNotOnServerAttempt,
+  initTelegramBot,
+  registerTelegramUser,
+  sendTelegramMessageToUser,
 } from "./telegram.js";
 dotenv.config();
 
@@ -105,6 +108,25 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS telegram_users (
+    user_id TEXT PRIMARY KEY,
+    telegram_chat_id TEXT,
+    started_bot BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS telegram_link_codes (
+    code TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    used BOOLEAN DEFAULT 0
+  )
+`);
+
 // Добавляем колонки, если их нет (обратная совместимость)
 try {
   db.exec(`ALTER TABLE user_stats ADD COLUMN total_afk_time INTEGER DEFAULT 0`);
@@ -112,7 +134,7 @@ try {
 
 try {
   db.exec(
-    `ALTER TABLE user_stats ADD COLUMN settings_changes INTEGER DEFAULT 0`
+    `ALTER TABLE user_stats ADD COLUMN settings_changes INTEGER DEFAULT 0`,
   );
 } catch (error) {}
 
@@ -122,13 +144,13 @@ try {
 
 try {
   db.exec(
-    `ALTER TABLE user_stats ADD COLUMN mentions_responded INTEGER DEFAULT 0`
+    `ALTER TABLE user_stats ADD COLUMN mentions_responded INTEGER DEFAULT 0`,
   );
 } catch (error) {}
 
 try {
   db.exec(
-    `ALTER TABLE user_stats ADD COLUMN stream_channel_time INTEGER DEFAULT 0`
+    `ALTER TABLE user_stats ADD COLUMN stream_channel_time INTEGER DEFAULT 0`,
   );
 } catch (error) {}
 
@@ -164,37 +186,41 @@ try {
   console.log("✅ Миграция: заполнены корректные даты для longest_session");
 } catch (error) {
   console.log(
-    "ℹ️ Миграция longest_session_date уже выполнена или таблица voice_sessions пуста"
+    "ℹ️ Миграция longest_session_date уже выполнена или таблица voice_sessions пуста",
   );
 }
 
 try {
   db.exec(
-    `ALTER TABLE user_settings ADD COLUMN achievement_notifications BOOLEAN DEFAULT 1`
+    `ALTER TABLE user_settings ADD COLUMN achievement_notifications BOOLEAN DEFAULT 1`,
+  );
+} catch (error) {}
+
+try {
+  db.exec(`ALTER TABLE user_settings ADD COLUMN theme TEXT DEFAULT 'standard'`);
+} catch (error) {}
+
+try {
+  db.exec(
+    `ALTER TABLE user_settings ADD COLUMN secret_theme_activated BOOLEAN DEFAULT 0`,
   );
 } catch (error) {}
 
 try {
   db.exec(
-    `ALTER TABLE user_settings ADD COLUMN theme TEXT DEFAULT 'standard'`
+    `ALTER TABLE user_settings ADD COLUMN channel_notifications BOOLEAN DEFAULT 0`,
   );
 } catch (error) {}
 
 try {
   db.exec(
-    `ALTER TABLE user_settings ADD COLUMN secret_theme_activated BOOLEAN DEFAULT 0`
+    `ALTER TABLE achievements ADD COLUMN notifications_sent BOOLEAN DEFAULT 0`,
   );
 } catch (error) {}
 
 try {
   db.exec(
-    `ALTER TABLE achievements ADD COLUMN notifications_sent BOOLEAN DEFAULT 0`
-  );
-} catch (error) {}
-
-try {
-  db.exec(
-    `ALTER TABLE user_achievements ADD COLUMN manually_deleted BOOLEAN DEFAULT 0`
+    `ALTER TABLE user_achievements ADD COLUMN manually_deleted BOOLEAN DEFAULT 0`,
   );
 } catch (error) {}
 
@@ -448,12 +474,12 @@ async function checkAndSendMissedAchievementNotifications() {
         AND special_date IS NOT NULL
         AND special_date <= ?
         AND (notifications_sent = 0 OR notifications_sent IS NULL)
-    `
+    `,
       )
       .all(nowMoscowISO);
 
     console.log(
-      `🎯 Найдено достижений для отправки уведомлений: ${missedAchievements.length}`
+      `🎯 Найдено достижений для отправки уведомлений: ${missedAchievements.length}`,
     );
 
     if (missedAchievements.length === 0) {
@@ -462,20 +488,20 @@ async function checkAndSendMissedAchievementNotifications() {
     }
 
     console.log(
-      `⏰ Найдено ${missedAchievements.length} пропущенных уведомлений о достижениях`
+      `⏰ Найдено ${missedAchievements.length} пропущенных уведомлений о достижениях`,
     );
 
     for (const achievement of missedAchievements) {
       try {
         console.log(
-          `📤 Обработка достижения: ${achievement.name} для пользователя ${achievement.user_id}`
+          `📤 Обработка достижения: ${achievement.name} для пользователя ${achievement.user_id}`,
         );
 
         const user = await client.users
           .fetch(achievement.user_id)
           .catch((err) => {
             console.log(
-              `⚠️ Не удалось получить пользователя ${achievement.user_id}: ${err.message}`
+              `⚠️ Не удалось получить пользователя ${achievement.user_id}: ${err.message}`,
             );
             return null;
           });
@@ -492,16 +518,16 @@ async function checkAndSendMissedAchievementNotifications() {
 
             await user.send(dmMessage);
             console.log(
-              `✅ ЛС отправлено пользователю ${username} за достижение "${achievement.name}"`
+              `✅ ЛС отправлено пользователю ${username} за достижение "${achievement.name}"`,
             );
           } catch (dmError) {
             console.log(
-              `❌ Не удалось отправить ЛС пользователю ${achievement.user_id}: ${dmError.message}`
+              `❌ Не удалось отправить ЛС пользователю ${achievement.user_id}: ${dmError.message}`,
             );
           }
         } else {
           console.log(
-            `⚠️ Пользователь ${achievement.user_id} не найден в Discord`
+            `⚠️ Пользователь ${achievement.user_id} не найден в Discord`,
           );
         }
 
@@ -519,16 +545,16 @@ async function checkAndSendMissedAchievementNotifications() {
 
             await channel.send(channelMessage);
             console.log(
-              `✅ Сообщение в канал отправлено за достижение "${achievement.name}"`
+              `✅ Сообщение в канал отправлено за достижение "${achievement.name}"`,
             );
           } else {
             console.log(
-              `⚠️ Канал достижений (${ACHIEVEMENTS_CHANNEL_ID}) не найден`
+              `⚠️ Канал достижений (${ACHIEVEMENTS_CHANNEL_ID}) не найден`,
             );
           }
         } catch (channelError) {
           console.log(
-            `❌ Не удалось отправить уведомление в канал: ${channelError.message}`
+            `❌ Не удалось отправить уведомление в канал: ${channelError.message}`,
           );
         }
 
@@ -540,35 +566,35 @@ async function checkAndSendMissedAchievementNotifications() {
             achievement.name,
             achievement.description,
             achievement.color,
-            achievement.special_date
+            achievement.special_date,
           );
           console.log(
-            `✅ Telegram уведомление отправлено за достижение "${achievement.name}"`
+            `✅ Telegram уведомление отправлено за достижение "${achievement.name}"`,
           );
         } catch (telegramError) {
           console.log(
-            `⚠️ Ошибка при отправке в Telegram: ${telegramError.message}`
+            `⚠️ Ошибка при отправке в Telegram: ${telegramError.message}`,
           );
         }
 
         // Отмечаем что уведомления отправлены
         try {
           db.prepare(
-            `UPDATE achievements SET notifications_sent = 1 WHERE achievement_id = ?`
+            `UPDATE achievements SET notifications_sent = 1 WHERE achievement_id = ?`,
           ).run(achievement.achievement_id);
           console.log(
-            `✅ Флаг notifications_sent установлен для ${achievement.achievement_id}`
+            `✅ Флаг notifications_sent установлен для ${achievement.achievement_id}`,
           );
         } catch (updateErr) {
           console.error(
             "❌ Ошибка при обновлении флага notifications_sent:",
-            updateErr
+            updateErr,
           );
         }
       } catch (notificationError) {
         console.error(
           `❌ Ошибка при отправке пропущенного уведомления:`,
-          notificationError
+          notificationError,
         );
       }
     }
@@ -577,7 +603,7 @@ async function checkAndSendMissedAchievementNotifications() {
   } catch (error) {
     console.error(
       "❌ Критическая ошибка при проверке пропущенных уведомлений:",
-      error
+      error,
     );
   }
 }
@@ -620,7 +646,7 @@ function formatDuration(seconds) {
 // ===== ФУНКЦИИ ДЛЯ РАБОТЫ С БАЗОЙ ДАННЫХ =====
 const getUserDMSetting = (userId) => {
   const stmt = db.prepare(
-    "SELECT dm_notifications FROM user_settings WHERE user_id = ?"
+    "SELECT dm_notifications FROM user_settings WHERE user_id = ?",
   );
   const result = stmt.get(userId);
   return result ? Boolean(result.dm_notifications) : true;
@@ -628,7 +654,7 @@ const getUserDMSetting = (userId) => {
 
 const getUserTimeout = (userId) => {
   const stmt = db.prepare(
-    "SELECT afk_timeout FROM user_settings WHERE user_id = ?"
+    "SELECT afk_timeout FROM user_settings WHERE user_id = ?",
   );
   const result = stmt.get(userId);
   return result ? result.afk_timeout : DEFAULT_TIMEOUT;
@@ -653,7 +679,7 @@ const setUserTimeout = (userId, timeout) => {
 // Функции для управления уведомлениями о достижениях
 const getUserAchievementNotificationSetting = (userId) => {
   const stmt = db.prepare(
-    "SELECT achievement_notifications FROM user_settings WHERE user_id = ?"
+    "SELECT achievement_notifications FROM user_settings WHERE user_id = ?",
   );
   const result = stmt.get(userId);
   return result ? Boolean(result.achievement_notifications) : true;
@@ -672,73 +698,245 @@ const setUserAchievementNotificationSetting = (userId, enabled) => {
 
 // Функция для получения темы пользователя
 const getUserTheme = (userId) => {
-  const stmt = db.prepare(
-    "SELECT theme FROM user_settings WHERE user_id = ?"
-  );
+  const stmt = db.prepare("SELECT theme FROM user_settings WHERE user_id = ?");
   const result = stmt.get(userId);
-  return result && result.theme ? result.theme : 'standard';
+  return result && result.theme ? result.theme : "standard";
 };
 
 // Функция для получения флага активации секретной темы
 const getSecretThemeActivated = (userId) => {
   const stmt = db.prepare(
-    "SELECT secret_theme_activated FROM user_settings WHERE user_id = ?"
+    "SELECT secret_theme_activated FROM user_settings WHERE user_id = ?",
   );
   const result = stmt.get(userId);
   return result ? Boolean(result.secret_theme_activated) : false;
 };
 
+// Функция для получения настроек уведомлений канала
+const getUserChannelNotificationSetting = (userId) => {
+  const stmt = db.prepare(
+    "SELECT channel_notifications FROM user_settings WHERE user_id = ?",
+  );
+  const result = stmt.get(userId);
+  return result ? Boolean(result.channel_notifications) : false;
+};
+
+// Функция для установки настроек уведомлений канала
+const setUserChannelNotificationSetting = (userId, value) => {
+  console.log(
+    `🔧 setUserChannelNotificationSetting вызвана для userId ${userId} со значением:`,
+    value,
+    typeof value,
+  );
+  const numValue = value ? 1 : 0;
+  console.log(`🔧 Преобразовано в число:`, numValue);
+
+  db.prepare(
+    `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated, channel_notifications) 
+       VALUES (?, 
+               COALESCE((SELECT dm_notifications FROM user_settings WHERE user_id = ?), 1), 
+               COALESCE((SELECT afk_timeout FROM user_settings WHERE user_id = ?), 15),
+               COALESCE((SELECT achievement_notifications FROM user_settings WHERE user_id = ?), 1),
+               COALESCE((SELECT theme FROM user_settings WHERE user_id = ?), 'standard'),
+               COALESCE((SELECT secret_theme_activated FROM user_settings WHERE user_id = ?), 0),
+               ?)`,
+  ).run(userId, userId, userId, userId, userId, userId, numValue);
+
+  // Проверяем что сохранилось
+  const saved = getUserChannelNotificationSetting(userId);
+  console.log(`✅ После сохранения в БД значение:`, saved, typeof saved);
+};
+
+// Функция для проверки, нажал ли пользователь /start в Telegram боте
+const hasUserStartedTelegramBot = (userId) => {
+  const stmt = db.prepare(
+    "SELECT started_bot FROM telegram_users WHERE user_id = ?",
+  );
+  const result = stmt.get(userId);
+  return result ? Boolean(result.started_bot) : false;
+};
+
+// Функция для получения Telegram chat ID по Discord ID
+const getTelegramChatId = (userId) => {
+  const stmt = db.prepare(
+    "SELECT telegram_chat_id FROM telegram_users WHERE user_id = ? AND started_bot = 1",
+  );
+  const result = stmt.get(userId);
+  return result ? result.telegram_chat_id : null;
+};
+
+// Генерация 6-значного кода для связывания аккаунтов
+const generateLinkCode = (userId) => {
+  // Удаляем старые неиспользованные коды пользователя
+  db.prepare(
+    "DELETE FROM telegram_link_codes WHERE user_id = ? AND used = 0",
+  ).run(userId);
+
+  // Генерируем уникальный 6-значный код
+  let code;
+  let attempts = 0;
+  do {
+    code = Math.floor(100000 + Math.random() * 900000).toString();
+    attempts++;
+    if (attempts > 100) {
+      throw new Error("Не удалось сгенерировать уникальный код");
+    }
+  } while (
+    db.prepare("SELECT code FROM telegram_link_codes WHERE code = ?").get(code)
+  );
+
+  // Код действителен 15 минут
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+  db.prepare(
+    "INSERT INTO telegram_link_codes (code, user_id, expires_at) VALUES (?, ?, ?)",
+  ).run(code, userId, expiresAt);
+
+  return code;
+};
+
+// Проверка и использование кода для связывания
+const useLinkCode = (code, telegramChatId) => {
+  const now = new Date().toISOString();
+  const result = db
+    .prepare(
+      "SELECT user_id, expires_at, used FROM telegram_link_codes WHERE code = ?",
+    )
+    .get(code);
+
+  if (!result) {
+    return { success: false, error: "Код не найден" };
+  }
+
+  if (result.used) {
+    return { success: false, error: "Код уже использован" };
+  }
+
+  if (result.expires_at < now) {
+    return { success: false, error: "Код истёк" };
+  }
+
+  // Помечаем код как использованный
+  db.prepare("UPDATE telegram_link_codes SET used = 1 WHERE code = ?").run(
+    code,
+  );
+
+  // Создаём или обновляем связь с Telegram
+  db.prepare(
+    `INSERT OR REPLACE INTO telegram_users (user_id, telegram_chat_id, started_bot, created_at) 
+     VALUES (?, ?, 1, COALESCE((SELECT created_at FROM telegram_users WHERE user_id = ?), CURRENT_TIMESTAMP))`,
+  ).run(result.user_id, telegramChatId, result.user_id);
+
+  return { success: true, userId: result.user_id };
+};
+
+// Проверка статуса связи с Telegram
+const getTelegramLinkStatus = (userId) => {
+  const result = db
+    .prepare(
+      "SELECT telegram_chat_id, started_bot, created_at FROM telegram_users WHERE user_id = ?",
+    )
+    .get(userId);
+
+  if (!result || !result.started_bot) {
+    return { linked: false };
+  }
+
+  return {
+    linked: true,
+    telegramChatId: result.telegram_chat_id,
+    linkedAt: result.created_at,
+  };
+};
+
+// Функция для отправки уведомлений всем пользователям с включенной настройкой
+async function notifyChannelActivity(message) {
+  try {
+    // Получаем всех пользователей с включенными уведомлениями
+    const usersWithNotifications = db
+      .prepare(
+        `
+      SELECT us.user_id, tu.telegram_chat_id 
+      FROM user_settings us
+      JOIN telegram_users tu ON us.user_id = tu.user_id
+      WHERE us.channel_notifications = 1 AND tu.started_bot = 1
+    `,
+      )
+      .all();
+
+    console.log(
+      `📢 Отправка уведомлений ${usersWithNotifications.length} пользователям`,
+    );
+
+    for (const user of usersWithNotifications) {
+      await sendTelegramMessageToUser(user.telegram_chat_id, message);
+    }
+  } catch (error) {
+    console.error(`❌ Ошибка отправки уведомлений о канале: ${error.message}`);
+  }
+}
+
 // ===== ФУНКЦИЯ СКАЧИВАНИЯ АВАТАРКИ =====
 const downloadAvatar = async (userId, avatarUrl) => {
   try {
-    if (!avatarUrl || avatarUrl.includes('nopic.png') || avatarUrl.startsWith('/avatars/')) {
-      return '/avatars/nopic.png';
+    if (
+      !avatarUrl ||
+      avatarUrl.includes("nopic.png") ||
+      avatarUrl.startsWith("/avatars/")
+    ) {
+      return "/avatars/nopic.png";
     }
 
-    const fs = await import('fs');
-    const path = await import('path');
-    const https = await import('https');
-    
-    const avatarsDir = './avatars';
+    const fs = await import("fs");
+    const path = await import("path");
+    const https = await import("https");
+
+    const avatarsDir = "./avatars";
     if (!fs.existsSync(avatarsDir)) {
       fs.mkdirSync(avatarsDir, { recursive: true });
     }
-    
+
     const fileName = `${userId}.png`;
     const filePath = path.join(avatarsDir, fileName);
-    
+
     return new Promise((resolve, reject) => {
       const file = fs.createWriteStream(filePath);
       const request = https.get(avatarUrl, { timeout: 5000 }, (response) => {
         if (response.statusCode !== 200) {
           fs.unlink(filePath, () => {});
-          resolve('/avatars/nopic.png');
+          resolve("/avatars/nopic.png");
           return;
         }
-        
+
         response.pipe(file);
-        file.on('finish', () => {
+        file.on("finish", () => {
           file.close();
           resolve(`/avatars/${fileName}`);
         });
       });
-      
-      request.on('error', (err) => {
+
+      request.on("error", (err) => {
         fs.unlink(filePath, () => {});
-        console.error(`❌ Ошибка загрузки аватарки для ${userId}:`, err.message);
-        resolve('/avatars/nopic.png');
+        console.error(
+          `❌ Ошибка загрузки аватарки для ${userId}:`,
+          err.message,
+        );
+        resolve("/avatars/nopic.png");
       });
-      
-      request.on('timeout', () => {
+
+      request.on("timeout", () => {
         request.destroy();
         fs.unlink(filePath, () => {});
         console.error(`⏱️ Таймаут загрузки аватарки для ${userId}`);
-        resolve('/avatars/nopic.png');
+        resolve("/avatars/nopic.png");
       });
     });
   } catch (error) {
-    console.error(`❌ Ошибка при скачивании аватарки для ${userId}:`, error.message);
-    return '/avatars/nopic.png';
+    console.error(
+      `❌ Ошибка при скачивании аватарки для ${userId}:`,
+      error.message,
+    );
+    return "/avatars/nopic.png";
   }
 };
 
@@ -746,7 +944,7 @@ const downloadAvatar = async (userId, avatarUrl) => {
 const initUserStats = (userId, username, avatarUrl = null) => {
   // Проверяем, существует ли уже пользователь
   const existingStmt = db.prepare(
-    "SELECT username, avatar_url FROM user_stats WHERE user_id = ?"
+    "SELECT username, avatar_url FROM user_stats WHERE user_id = ?",
   );
   const existing = existingStmt.get(userId);
 
@@ -759,15 +957,15 @@ const initUserStats = (userId, username, avatarUrl = null) => {
       username !== "Web User"
     ) {
       const updateStmt = db.prepare(
-        "UPDATE user_stats SET username = ? WHERE user_id = ?"
+        "UPDATE user_stats SET username = ? WHERE user_id = ?",
       );
       updateStmt.run(username, userId);
     }
-    
+
     // Обновляем аватарку если передана (для случая когда была nopic.png)
-    if (avatarUrl && avatarUrl !== '/avatars/nopic.png') {
+    if (avatarUrl && avatarUrl !== "/avatars/nopic.png") {
       const updateStmt = db.prepare(
-        "UPDATE user_stats SET avatar_url = ? WHERE user_id = ?"
+        "UPDATE user_stats SET avatar_url = ? WHERE user_id = ?",
       );
       updateStmt.run(avatarUrl, userId);
     }
@@ -777,7 +975,7 @@ const initUserStats = (userId, username, avatarUrl = null) => {
       INSERT INTO user_stats (user_id, username, avatar_url) 
       VALUES (?, ?, ?)
     `);
-    stmt.run(userId, username, avatarUrl || '/avatars/nopic.png');
+    stmt.run(userId, username, avatarUrl || "/avatars/nopic.png");
   }
 };
 
@@ -823,13 +1021,13 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
   // Если достижение уже разблокировано (и не удалено) - не добавляем снова
   if (existing && !existing.manually_deleted) {
     console.log(
-      `⏭️ Достижение ${achievementId} уже есть у пользователя ${username}`
+      `⏭️ Достижение ${achievementId} уже есть у пользователя ${username}`,
     );
     return false;
   }
 
   console.log(
-    `✅ Добавляем новое достижение ${achievementId} пользователю ${username}`
+    `✅ Добавляем новое достижение ${achievementId} пользователю ${username}`,
   );
 
   // Если достижение было удалено (manually_deleted = 1), обновляем флаг и время
@@ -841,7 +1039,7 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
       UPDATE user_achievements 
       SET manually_deleted = 0, unlocked_at = CURRENT_TIMESTAMP
       WHERE user_id = ? AND achievement_id = ?
-    `
+    `,
     ).run(userId, achievementId);
   } else {
     const stmt = db.prepare(`
@@ -855,12 +1053,12 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
   const achievement = ACHIEVEMENTS[achievementId];
   console.log(
     `🔍 Ищем в ACHIEVEMENTS[${achievementId}]:`,
-    achievement ? "✅ НАЙДЕНО" : "❌ НЕ НАЙДЕНО"
+    achievement ? "✅ НАЙДЕНО" : "❌ НЕ НАЙДЕНО",
   );
 
   if (achievement) {
     console.log(
-      `📤 Отправляем уведомления для достижения: ${achievement.name}`
+      `📤 Отправляем уведомления для достижения: ${achievement.name}`,
     );
 
     // Всегда добавляем очки
@@ -874,7 +1072,7 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
     console.log(
       `👤 Member: ${
         member ? member.username : "НЕ НАЙДЕН"
-      }, Уведомления: ${achievementNotificationsEnabled}`
+      }, Уведомления: ${achievementNotificationsEnabled}`,
     );
 
     if (member && achievementNotificationsEnabled) {
@@ -889,25 +1087,30 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
           messageText +
             `💡 Посмотреть все достижения:\n` +
             `📱 В боте: \`.!. achievements\`\n` +
-            `🌐 Веб-панель: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
+            `🌐 Веб-панель: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`,
         );
         console.log(`✅ ЛС отправлено пользователю ${username}`);
       } catch (error) {
         console.log(
-          `❌ Не удалось отправить уведомление о достижении пользователю ${username}: ${error.message}`
+          `❌ Не удалось отправить уведомление о достижении пользователю ${username}: ${error.message}`,
         );
       }
     }
 
     // Отправляем в Telegram
-    await sendAchievementNotification(username, achievement.name, achievement.description, achievement.points);
+    await sendAchievementNotification(
+      username,
+      achievement.name,
+      achievement.description,
+      achievement.points,
+    );
     console.log(`✅ Telegram отправлен`);
 
     // Отправляем уведомление в канал Discord
     try {
       const channel = client.channels.cache.get(ACHIEVEMENTS_CHANNEL_ID);
       console.log(
-        `📢 Канал достижений: ${channel ? channel.name : "НЕ НАЙДЕН"}`
+        `📢 Канал достижений: ${channel ? channel.name : "НЕ НАЙДЕН"}`,
       );
       if (channel) {
         const discordText =
@@ -923,7 +1126,7 @@ const checkAndUnlockAchievement = async (userId, username, achievementId) => {
       }
     } catch (error) {
       console.log(
-        `❌ Не удалось отправить уведомление о достижении в канал: ${error.message}`
+        `❌ Не удалось отправить уведомление о достижении в канал: ${error.message}`,
       );
     }
 
@@ -1154,11 +1357,11 @@ const checkSpecialAchievement = async () => {
         const user = await client.users.fetch(specialUserId);
         if (user) {
           await user.send(
-            "🎉 Поздравляем! Ты стал лучшим администратором канала! С днем рождения, малютка 👑"
+            "🎉 Поздравляем! Ты стал лучшим администратором канала! С днем рождения, малютка 👑",
           );
 
           console.log(
-            `🎉 Специальное достижение "Лучший админ" выдано пользователю ${specialUserId}`
+            `🎉 Специальное достижение "Лучший админ" выдано пользователю ${specialUserId}`,
           );
 
           // Отправляем в Telegram
@@ -1167,7 +1370,7 @@ const checkSpecialAchievement = async () => {
               `🎯 Достижение: Лучший админ\n` +
               `👤 Пользователь ID: <code>${specialUserId}</code>\n` +
               `🎂 Поздравление с днем рождения отправлено!\n` +
-              `📅 Время: ${formatTime(new Date())}`
+              `📅 Время: ${formatTime(new Date())}`,
           );
 
           // Отправляем уведомление в канал Discord
@@ -1181,12 +1384,12 @@ const checkSpecialAchievement = async () => {
                   `📝 **Описание:** Лучший admin_ebaniy канала\n` +
                   `📅 **Время:** ${formatTime(new Date())}\n` +
                   `🎂  **Поздравляем малютку с днем рождения**\n\n` +
-                  `🌐 **Посмотреть это достижение можно в веб-панели:** http://${SERVER_IP}:${PORT}`
+                  `🌐 **Посмотреть это достижение можно в веб-панели:** http://${SERVER_IP}:${PORT}`,
               );
             }
           } catch (channelError) {
             console.log(
-              `Не удалось отправить уведомление о достижении best_admin в канал: ${channelError.message}`
+              `Не удалось отправить уведомление о достижении best_admin в канал: ${channelError.message}`,
             );
           }
         }
@@ -1216,7 +1419,7 @@ function setSession(res, userId) {
   sessions.set(sessionId, { userId, createdAt: Date.now() });
   res.setHeader(
     "Set-Cookie",
-    `sessionId=${sessionId}; Path=/; Max-Age=86400; SameSite=Strict`
+    `sessionId=${sessionId}; Path=/; Max-Age=86400; SameSite=Strict`,
   );
   return sessionId;
 }
@@ -1228,7 +1431,7 @@ function clearSession(res, req) {
 }
 
 app.use(express.static(path.join(__dirname, "public")));
-app.use('/avatars', express.static(path.join(__dirname, "avatars")));
+app.use("/avatars", express.static(path.join(__dirname, "avatars")));
 app.use(express.json());
 
 // API маршруты
@@ -1237,46 +1440,61 @@ app.get("/api/stats/:userId", async (req, res) => {
     const userId = req.params.userId;
 
     let stats = getUserStats(userId);
-    
+
     // Если пользователя нет в БД, создаем его с аватаркой
     if (!stats) {
-      console.log(`📝 Новый пользователь ${userId} зашел на сайт, создаем запись...`);
-      
+      console.log(
+        `📝 Новый пользователь ${userId} зашел на сайт, создаем запись...`,
+      );
+
       try {
         const guild = client.guilds.cache.first();
         if (guild) {
           const member = await guild.members.fetch(userId).catch(() => null);
           if (member) {
             const username = member.displayName || member.user.username;
-            const discordAvatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
-            const localAvatarPath = await downloadAvatar(userId, discordAvatarUrl);
-            
+            const discordAvatarUrl = member.user.displayAvatarURL({
+              format: "png",
+              size: 128,
+            });
+            const localAvatarPath = await downloadAvatar(
+              userId,
+              discordAvatarUrl,
+            );
+
             // Создаем пользователя
             initUserStats(userId, username, localAvatarPath);
-            
+
             // Получаем созданную статистику
             stats = getUserStats(userId);
-            console.log(`✅ Создан пользователь ${username} (${userId}) с аватаркой`);
+            console.log(
+              `✅ Создан пользователь ${username} (${userId}) с аватаркой`,
+            );
           } else {
             // Пользователь не найден на сервере Discord
-            console.log(`⚠️ Пользователь ${userId} не найден на сервере Discord`);
-            
+            console.log(
+              `⚠️ Пользователь ${userId} не найден на сервере Discord`,
+            );
+
             // Отправляем уведомление в Telegram
-            await sendNotOnServerAttempt(userId, new Date().toLocaleString('ru-RU'));
-            
+            await sendNotOnServerAttempt(
+              userId,
+              new Date().toLocaleString("ru-RU"),
+            );
+
             return res.json({
               notOnServer: true,
-              message: 'Пользователь не найден на Discord сервере'
+              message: "Пользователь не найден на Discord сервере",
             });
           }
         } else {
           // Гильдия не найдена
-          initUserStats(userId, 'Web User', '/avatars/nopic.png');
+          initUserStats(userId, "Web User", "/avatars/nopic.png");
           stats = getUserStats(userId);
         }
       } catch (error) {
         console.error(`❌ Ошибка при создании пользователя ${userId}:`, error);
-        initUserStats(userId, 'Web User', '/avatars/nopic.png');
+        initUserStats(userId, "Web User", "/avatars/nopic.png");
         stats = getUserStats(userId);
       }
     }
@@ -1289,6 +1507,7 @@ app.get("/api/stats/:userId", async (req, res) => {
       achievementNotifications: getUserAchievementNotificationSetting(userId),
       theme: getUserTheme(userId),
       secretThemeActivated: getSecretThemeActivated(userId),
+      channelNotifications: getUserChannelNotificationSetting(userId),
     };
 
     res.json({
@@ -1343,7 +1562,13 @@ app.get("/api/special-achievements", (req, res) => {
 
 app.post("/api/settings/:userId", async (req, res) => {
   const userId = req.params.userId;
-  const { dmNotifications, afkTimeout, achievementNotifications, theme } = req.body;
+  const {
+    dmNotifications,
+    afkTimeout,
+    achievementNotifications,
+    theme,
+    channelNotifications,
+  } = req.body;
 
   try {
     // Инициализируем пользователя, если нужно
@@ -1378,13 +1603,42 @@ app.post("/api/settings/:userId", async (req, res) => {
         settingsChanged = true;
       }
     }
-    
+
     // Сохраняем тему
     if (theme !== undefined) {
-      db.prepare(
-        "UPDATE user_settings SET theme = ? WHERE user_id = ?"
-      ).run(theme, userId);
+      db.prepare("UPDATE user_settings SET theme = ? WHERE user_id = ?").run(
+        theme,
+        userId,
+      );
       settingsChanged = true;
+    }
+
+    // Проверяем настройки уведомлений о канале
+    if (channelNotifications !== undefined) {
+      console.log(
+        `📊 Получено значение channelNotifications:`,
+        channelNotifications,
+        typeof channelNotifications,
+      );
+
+      const currentChannelNotifications =
+        getUserChannelNotificationSetting(userId);
+
+      console.log(
+        `📊 Текущее значение в БД:`,
+        currentChannelNotifications,
+        typeof currentChannelNotifications,
+      );
+
+      // Сохраняем настройку независимо от того, нажал ли пользователь /start
+      // Уведомления просто не будут приходить, пока не нажмет /start
+      if (channelNotifications !== currentChannelNotifications) {
+        console.log(`💾 Сохраняем новое значение:`, channelNotifications);
+        setUserChannelNotificationSetting(userId, channelNotifications);
+        settingsChanged = true;
+      } else {
+        console.log(`⏭️ Значение не изменилось, пропускаем сохранение`);
+      }
     }
 
     // Если настройки изменились - обновляем статистику
@@ -1412,8 +1666,8 @@ app.post("/api/settings/:userId", async (req, res) => {
               ? "✅ включены"
               : "❌ отключены"
             : currentDM
-            ? "✅ включены"
-            : "❌ отключены";
+              ? "✅ включены"
+              : "❌ отключены";
 
         const timeoutValue =
           afkTimeout !== undefined ? afkTimeout : currentTimeout;
@@ -1434,30 +1688,40 @@ app.post("/api/settings/:userId", async (req, res) => {
               ? "✅ включены"
               : "❌ отключены"
             : getUserAchievementNotificationSetting(userId)
-            ? "✅ включены"
-            : "❌ отключены";
+              ? "✅ включены"
+              : "❌ отключены";
 
         // Получаем название темы
         const themeValue = theme !== undefined ? theme : getUserTheme(userId);
         const themeNames = {
-          'standard': '🎨 Стандарт',
-          'metal': '⚙️ Металл',
-          'discord': '💬 Дискорд',
-          'steam': '🎮 Стим'
+          standard: "🎨 Стандарт",
+          metal: "⚙️ Металл",
+          discord: "💬 Дискорд",
+          steam: "🎮 Стим",
         };
         const themeDisplay = themeNames[themeValue] || themeValue;
 
-        const settingsText = 
+        const channelStatus =
+          channelNotifications !== undefined
+            ? channelNotifications
+              ? "✅ включены"
+              : "❌ отключены"
+            : getUserChannelNotificationSetting(userId)
+              ? "✅ включены"
+              : "❌ отключены";
+
+        const settingsText =
           `📩 ЛС уведомления: ${dmStatus}\n` +
           `⏱️ Таймер AFK: ${timeoutDisplay}\n` +
           `🏆 Уведомления о достижениях: ${achievementStatus}\n` +
+          `🔔 Уведомления "Кто в канале": ${channelStatus}\n` +
           `🎨 Тема оформления: ${themeDisplay}`;
 
         await sendSettingsChangeNotification(username, userId, settingsText);
       } catch (error) {
         console.error(
           "Ошибка при проверке достижений через веб-панель:",
-          error
+          error,
         );
       }
     }
@@ -1476,7 +1740,7 @@ app.post("/api/activate-secret-theme/:userId", async (req, res) => {
   try {
     // Проверяем активирована ли уже тема
     const stmt = db.prepare(
-      "SELECT secret_theme_activated FROM user_settings WHERE user_id = ?"
+      "SELECT secret_theme_activated FROM user_settings WHERE user_id = ?",
     );
     const settings = stmt.get(userId);
 
@@ -1492,7 +1756,7 @@ app.post("/api/activate-secret-theme/:userId", async (req, res) => {
                COALESCE((SELECT afk_timeout FROM user_settings WHERE user_id = ?), 15),
                COALESCE((SELECT achievement_notifications FROM user_settings WHERE user_id = ?), 1),
                'die-my-darling',
-               1)`
+               1)`,
     ).run(userId, userId, userId, userId);
 
     console.log(`🥀 Секретная тема активирована для пользователя ${userId}`);
@@ -1500,36 +1764,38 @@ app.post("/api/activate-secret-theme/:userId", async (req, res) => {
     // Создаем специальное достижение
     const achievementId = `secret-theme-${userId}-${Date.now()}`;
     const nowMoscowISO = getMoscowNowISO();
-    
+
     try {
       // Добавляем достижение в таблицу achievements
       db.prepare(
         `INSERT INTO achievements (achievement_id, user_id, emoji, name, description, type, color, special_date, notifications_sent)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         achievementId,
         userId,
-        '🥀',
-        'Die my Darling',
-        'Открыл секретную тему',
-        'special',
-        '#8b0000',
+        "🥀",
+        "Die my Darling",
+        "Открыл секретную тему",
+        "special",
+        "#8b0000",
         nowMoscowISO,
-        1
+        1,
       );
 
       // Добавляем в user_achievements
       db.prepare(
         `INSERT INTO user_achievements (user_id, achievement_id, unlocked_at, manually_deleted)
-         VALUES (?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?)`,
       ).run(userId, achievementId, nowMoscowISO, 0);
 
-      console.log(`🏆 Достижение "Die my Darling" выдано пользователю ${userId}`);
+      console.log(
+        `🏆 Достижение "Die my Darling" выдано пользователю ${userId}`,
+      );
 
       // Отправляем уведомление пользователю
       const user = await client.users.fetch(userId).catch(() => null);
-      const username = user ? user.username : 'Пользователь';
-      
+      const username = user ? user.username : "Пользователь";
+
       if (user) {
         try {
           const dmMessage =
@@ -1541,7 +1807,9 @@ app.post("/api/activate-secret-theme/:userId", async (req, res) => {
           await user.send(dmMessage);
           console.log(`✅ ЛС отправлено пользователю ${username}`);
         } catch (dmError) {
-          console.log(`❌ Не удалось отправить ЛС пользователю ${userId}: ${dmError.message}`);
+          console.log(
+            `❌ Не удалось отправить ЛС пользователю ${userId}: ${dmError.message}`,
+          );
         }
       }
 
@@ -1561,31 +1829,114 @@ app.post("/api/activate-secret-theme/:userId", async (req, res) => {
           console.log(`✅ Сообщение в канал отправлено`);
         }
       } catch (channelError) {
-        console.log(`❌ Не удалось отправить уведомление в канал: ${channelError.message}`);
+        console.log(
+          `❌ Не удалось отправить уведомление в канал: ${channelError.message}`,
+        );
       }
 
       // Отправляем в Telegram
       try {
         await sendSpecialAchievementNotification(
           username,
-          '🥀',
-          'Die my Darling',
-          'Открыл секретную тему',
-          '#8b0000',
-          nowMoscowISO
+          "🥀",
+          "Die my Darling",
+          "Открыл секретную тему",
+          "#8b0000",
+          nowMoscowISO,
         );
         console.log(`✅ Telegram уведомление отправлено`);
       } catch (telegramError) {
-        console.log(`⚠️ Ошибка при отправке в Telegram: ${telegramError.message}`);
+        console.log(
+          `⚠️ Ошибка при отправке в Telegram: ${telegramError.message}`,
+        );
       }
     } catch (achievementError) {
-      console.error('❌ Ошибка при создании достижения:', achievementError);
+      console.error("❌ Ошибка при создании достижения:", achievementError);
     }
 
     res.json({ success: true, alreadyActivated: false });
   } catch (error) {
     console.error("Ошибка при активации секретной темы:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// API для регистрации Telegram chat_id пользователя
+app.post("/api/register-telegram/:userId", async (req, res) => {
+  const userId = req.params.userId;
+  const { telegramChatId } = req.body;
+
+  try {
+    if (!telegramChatId) {
+      return res.status(400).json({ error: "Telegram chat ID is required" });
+    }
+
+    const success = registerTelegramUser(userId, telegramChatId);
+
+    if (success) {
+      res.json({
+        success: true,
+        message: "Telegram chat ID registered successfully",
+      });
+    } else {
+      res.status(500).json({ error: "Failed to register Telegram chat ID" });
+    }
+  } catch (error) {
+    console.error("Ошибка при регистрации Telegram chat ID:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// API для генерации кода связывания с Telegram
+app.post("/api/telegram-link/generate/:userId", async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const code = generateLinkCode(userId);
+    res.json({
+      success: true,
+      code: code,
+      expiresIn: 900, // 15 минут в секундах
+    });
+  } catch (error) {
+    console.error("Ошибка при генерации кода:", error);
+    res.status(500).json({ error: "Failed to generate link code" });
+  }
+});
+
+// API для проверки статуса связи с Telegram
+app.get("/api/telegram-link/status/:userId", async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    const status = getTelegramLinkStatus(userId);
+    res.json(status);
+  } catch (error) {
+    console.error("Ошибка при проверке статуса:", error);
+    res.status(500).json({ error: "Failed to check link status" });
+  }
+});
+
+// API для отвязки Telegram аккаунта
+app.delete("/api/telegram-link/unlink/:userId", async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+    // Удаляем связь из базы данных
+    db.prepare("DELETE FROM telegram_users WHERE user_id = ?").run(userId);
+
+    // Отключаем уведомления канала
+    setUserChannelNotificationSetting(userId, false);
+
+    console.log(`🔓 Telegram аккаунт отвязан для userId: ${userId}`);
+
+    res.json({
+      success: true,
+      message: "Telegram аккаунт успешно отвязан",
+    });
+  } catch (error) {
+    console.error("Ошибка при отвязке Telegram:", error);
+    res.status(500).json({ error: "Failed to unlink Telegram account" });
   }
 });
 
@@ -1629,7 +1980,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
     req.body;
 
   console.log(
-    `📝 Параметры: emoji=${emoji}, name=${name}, type=${type}, userId=${userId}, specialDate=${specialDate}`
+    `📝 Параметры: emoji=${emoji}, name=${name}, type=${type}, userId=${userId}, specialDate=${specialDate}`,
   );
 
   // Проверяем обязательные поля
@@ -1640,7 +1991,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
 
   try {
     console.log(
-      `📝 API: Получен запрос на создание достижения: ${name} для пользователя ${userId}`
+      `📝 API: Получен запрос на создание достижения: ${name} для пользователя ${userId}`,
     );
 
     // Проверяем что тип = 'special'
@@ -1663,7 +2014,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
         `
         INSERT INTO achievements (achievement_id, user_id, emoji, name, description, type, color, special_date)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `
+      `,
       ).run(
         achievementId,
         userId,
@@ -1672,7 +2023,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
         description,
         type,
         color,
-        specialDate || null
+        specialDate || null,
       );
     } catch (err) {
       console.error(`❌ Ошибка при добавлении в achievements:`, err);
@@ -1687,7 +2038,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
         `
         INSERT OR IGNORE INTO user_achievements (user_id, achievement_id, unlocked_at)
         VALUES (?, ?, ?)
-      `
+      `,
       ).run(userId, achievementId, unlockedTime);
     } catch (err) {
       console.error(`❌ Ошибка при добавлении в user_achievements:`, err);
@@ -1725,17 +2076,17 @@ app.post("/api/admin/create-achievement", async (req, res) => {
       console.log("   Дата/время из интерфейса: " + targetDateStr);
       console.log("   Текущее UTC: " + now.toISOString());
       console.log(
-        "   Целевое UTC (уже корректное): " + targetDateUTC.toISOString()
+        "   Целевое UTC (уже корректное): " + targetDateUTC.toISOString(),
       );
       console.log(
         "   Задержка (мс): " +
           delayMs +
           " = " +
           Math.round(delayMs / 60000) +
-          " минут"
+          " минут",
       );
       console.log(
-        "   Будет ли setTimeout? " + (delayMs > 0 ? "ДА ✅" : "НЕТ ❌")
+        "   Будет ли setTimeout? " + (delayMs > 0 ? "ДА ✅" : "НЕТ ❌"),
       );
 
       if (delayMs > 0) {
@@ -1752,11 +2103,11 @@ app.post("/api/admin/create-achievement", async (req, res) => {
                   `🏆 **Новое специальное достижение!**\n\n` +
                     `${emoji} **${name}**\n` +
                     `${description}\n\n` +
-                    `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`
+                    `🌐 Посмотреть в веб-панели: http://${SERVER_IP}:${PORT}/?userId=${userId}&autoLogin=true`,
                 );
               } catch (dmError) {
                 console.log(
-                  `Не удалось отправить ЛС пользователю ${userId}: ${dmError.message}`
+                  `Не удалось отправить ЛС пользователю ${userId}: ${dmError.message}`,
                 );
               }
             }
@@ -1764,7 +2115,7 @@ app.post("/api/admin/create-achievement", async (req, res) => {
             // Отправляем в канал Discord
             try {
               const channel = client.channels.cache.get(
-                ACHIEVEMENTS_CHANNEL_ID
+                ACHIEVEMENTS_CHANNEL_ID,
               );
               if (channel) {
                 await channel.send(
@@ -1773,12 +2124,12 @@ app.post("/api/admin/create-achievement", async (req, res) => {
                     `🎯 **Достижение:** ${emoji} ${name}\n` +
                     `📝 **Описание:** ${description}\n` +
                     `📅 **Время:** ${formatTime(new Date())}\n\n` +
-                    `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}`
+                    `🌐 **Посмотреть в веб-панели:** http://${SERVER_IP}:${PORT}`,
                 );
               }
             } catch (channelError) {
               console.log(
-                `Не удалось отправить уведомление в канал: ${channelError.message}`
+                `Не удалось отправить уведомление в канал: ${channelError.message}`,
               );
             }
 
@@ -1789,31 +2140,31 @@ app.post("/api/admin/create-achievement", async (req, res) => {
               name,
               description,
               color,
-              specialDate
+              specialDate,
             );
           } catch (notificationError) {
             console.error(
               "Ошибка при отправке отложенного уведомления:",
-              notificationError
+              notificationError,
             );
           }
 
           // Отмечаем что уведомления отправлены
           try {
             db.prepare(
-              `UPDATE achievements SET notifications_sent = 1 WHERE achievement_id = ?`
+              `UPDATE achievements SET notifications_sent = 1 WHERE achievement_id = ?`,
             ).run(achievementId);
           } catch (err) {
             console.error(
               "Ошибка при обновлении флага notifications_sent:",
-              err
+              err,
             );
           }
-          
+
           // Удаляем таймер из Map после выполнения
           achievementTimers.delete(achievementId);
         }, delayMs);
-        
+
         // Сохраняем ID таймера для возможности отмены
         achievementTimers.set(achievementId, timeoutId);
 
@@ -1821,14 +2172,14 @@ app.post("/api/admin/create-achievement", async (req, res) => {
           '✅ Достижение "' +
             name +
             '" запланировано на ' +
-            targetDateUTC.toLocaleString("ru-RU")
+            targetDateUTC.toLocaleString("ru-RU"),
         );
       } else {
         // Если дата в прошлом или сейчас (delayMs <= 0)
         // Просто отмечаем что уведомления нужно было отправить
         // Они будут отправлены при следующей проверке пропущенных уведомлений
         console.log(
-          `⚠️ Дата достижения "${name}" уже в прошлом (delayMs=${delayMs})`
+          `⚠️ Дата достижения "${name}" уже в прошлом (delayMs=${delayMs})`,
         );
         console.log(`   Уведомления будут отправлены при проверке пропущенных`);
 
@@ -1869,7 +2220,7 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
         .prepare(
           `
         SELECT name, points FROM achievements WHERE achievement_id = ? AND user_id = ?
-      `
+      `,
         )
         .get(achievementId, userId);
 
@@ -1889,29 +2240,29 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
     // Проверяем, есть ли запись о достижении в user_achievements
     const existingAchievement = db
       .prepare(
-        `SELECT id FROM user_achievements WHERE user_id = ? AND achievement_id = ?`
+        `SELECT id FROM user_achievements WHERE user_id = ? AND achievement_id = ?`,
       )
       .get(userId, achievementId);
 
     if (existingAchievement) {
       // Полностью удаляем достижение из user_achievements
       db.prepare(
-        `DELETE FROM user_achievements WHERE user_id = ? AND achievement_id = ?`
+        `DELETE FROM user_achievements WHERE user_id = ? AND achievement_id = ?`,
       ).run(userId, achievementId);
       console.log(
-        `🗑️ Достижение ${achievementId} полностью удалено из user_achievements`
+        `🗑️ Достижение ${achievementId} полностью удалено из user_achievements`,
       );
 
       // Если это обычное достижение (из ACHIEVEMENTS), вычитаем очки
       if (achievement && achievement.points > 0) {
         db.prepare(
-          `UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?`
+          `UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?`,
         ).run(achievement.points, userId);
         console.log(`💔 Вычтено ${achievement.points} очков`);
       } else if (achievementPoints > 0) {
         // Если это спец. достижение с очками, тоже вычитаем
         db.prepare(
-          `UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?`
+          `UPDATE user_stats SET rank_points = MAX(0, rank_points - ?) WHERE user_id = ?`,
         ).run(achievementPoints, userId);
         console.log(`💔 Вычтено ${achievementPoints} очков`);
       }
@@ -1919,19 +2270,25 @@ app.post("/api/admin/delete-achievement", async (req, res) => {
 
     // Также удаляем из таблицы achievements если это специальное достижение
     db.prepare(
-      `DELETE FROM achievements WHERE user_id = ? AND achievement_id = ?`
+      `DELETE FROM achievements WHERE user_id = ? AND achievement_id = ?`,
     ).run(userId, achievementId);
-    
+
     // Отменяем запланированный таймер если он есть
     const timerId = achievementTimers.get(achievementId);
     if (timerId) {
       clearTimeout(timerId);
       achievementTimers.delete(achievementId);
-      console.log(`⏰ Отменён запланированный таймер для достижения ${achievementId}`);
+      console.log(
+        `⏰ Отменён запланированный таймер для достижения ${achievementId}`,
+      );
     }
 
     // Отправляем отчет в Telegram
-    await sendAchievementDeleteNotification(userName, achievementName, achievementPoints);
+    await sendAchievementDeleteNotification(
+      userName,
+      achievementName,
+      achievementPoints,
+    );
 
     res.json({ success: true });
   } catch (error) {
@@ -1952,31 +2309,46 @@ app.post("/api/admin/edit-achievement", async (req, res) => {
     console.log(`✏️ Редактирование достижения: ${achievementId}`);
 
     // Если это best_admin, обновляем в таблице achievements
-    if (achievementId === 'best_admin') {
+    if (achievementId === "best_admin") {
       // Проверяем, существует ли запись
-      const existing = db.prepare(`SELECT * FROM achievements WHERE achievement_id = ?`).get(achievementId);
-      
+      const existing = db
+        .prepare(`SELECT * FROM achievements WHERE achievement_id = ?`)
+        .get(achievementId);
+
       if (existing) {
         // Обновляем существующую запись
-        db.prepare(`
+        db.prepare(
+          `
           UPDATE achievements 
           SET emoji = ?, name = ?, description = ?, color = ?
           WHERE achievement_id = ?
-        `).run(emoji, name, description, color, achievementId);
+        `,
+        ).run(emoji, name, description, color, achievementId);
       } else {
         // Создаем новую запись для best_admin
-        db.prepare(`
+        db.prepare(
+          `
           INSERT INTO achievements (achievement_id, user_id, emoji, name, description, type, color)
           VALUES (?, ?, ?, ?, ?, 'special', ?)
-        `).run(achievementId, process.env.ADMIN_USER_ID, emoji, name, description, color);
+        `,
+        ).run(
+          achievementId,
+          process.env.ADMIN_USER_ID,
+          emoji,
+          name,
+          description,
+          color,
+        );
       }
     } else {
       // Для других специальных достижений обновляем в таблице achievements
-      db.prepare(`
+      db.prepare(
+        `
         UPDATE achievements 
         SET emoji = ?, name = ?, description = ?, color = ?
         WHERE achievement_id = ?
-      `).run(emoji, name, description, color, achievementId);
+      `,
+      ).run(emoji, name, description, color, achievementId);
     }
 
     console.log(`✅ Достижение ${achievementId} успешно обновлено`);
@@ -2004,16 +2376,19 @@ app.post("/api/admin/delete-user", async (req, res) => {
 
     // Удаляем файл аватарки если он существует
     try {
-      const fs = await import('fs');
-      const path = await import('path');
-      const avatarPath = path.join('./avatars', `${userId}.png`);
-      
+      const fs = await import("fs");
+      const path = await import("path");
+      const avatarPath = path.join("./avatars", `${userId}.png`);
+
       if (fs.existsSync(avatarPath)) {
         fs.unlinkSync(avatarPath);
         console.log(`🗑️ Удален файл аватарки: ${avatarPath}`);
       }
     } catch (err) {
-      console.error(`❌ Ошибка при удалении аватарки для ${userId}:`, err.message);
+      console.error(
+        `❌ Ошибка при удалении аватарки для ${userId}:`,
+        err.message,
+      );
     }
 
     // Удаляем пользователя из всех таблиц
@@ -2024,7 +2399,11 @@ app.post("/api/admin/delete-user", async (req, res) => {
     db.prepare("DELETE FROM achievements WHERE user_id = ?").run(userId);
 
     console.log(
-      "🗑️ Пользователь " + userId + " (" + userName + ") полностью удален из БД"
+      "🗑️ Пользователь " +
+        userId +
+        " (" +
+        userName +
+        ") полностью удален из БД",
     );
 
     // Отправляем уведомление в Telegram
@@ -2040,41 +2419,41 @@ app.post("/api/admin/delete-user", async (req, res) => {
 // ===== БЭКАП БАЗЫ ДАННЫХ =====
 app.post("/api/admin/backup-database", async (req, res) => {
   try {
-    const fs = await import('fs');
-    const path = await import('path');
-    
+    const fs = await import("fs");
+    const path = await import("path");
+
     // Путь к текущей БД
-    const dbPath = './afkbot.db';
-    
+    const dbPath = "./afkbot.db";
+
     // Проверяем существование файла
     if (!fs.existsSync(dbPath)) {
       return res.status(404).json({ error: "База данных не найдена" });
     }
-    
+
     // Создаем папку backup если её нет
-    const backupDir = './backup';
+    const backupDir = "./backup";
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
     }
-    
+
     // Генерируем имя файла с датой и временем
     const now = new Date();
-    const dateStr = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const dateStr = now.toISOString().replace(/[:.]/g, "-").slice(0, -5);
     const backupPath = path.join(backupDir, `afkbot-backup-${dateStr}.db`);
-    
+
     console.log("💾 Создание бэкапа базы данных...");
     console.log("📂 Путь: " + backupPath);
-    
+
     // Копируем файл БД в папку backup
     fs.copyFileSync(dbPath, backupPath);
-    
+
     console.log("✅ Бэкап базы данных успешно создан: " + backupPath);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: "Бэкап создан успешно",
       filename: `afkbot-backup-${dateStr}.db`,
-      path: backupPath
+      path: backupPath,
     });
   } catch (error) {
     console.error("❌ Ошибка при создании бэкапа:", error);
@@ -2086,38 +2465,50 @@ app.post("/api/admin/backup-database", async (req, res) => {
 app.post("/api/admin/update-names", async (req, res) => {
   try {
     console.log("🔄 Запрос на обновление имен пользователей...");
-    
+
     const guild = client.guilds.cache.first();
     if (!guild) {
       return res.status(500).json({ error: "Гильдия не найдена" });
     }
-    
+
     const allUsers = db.prepare("SELECT user_id FROM user_stats").all();
     let updated = 0;
     let total = allUsers.length;
-    
+
     for (const user of allUsers) {
       try {
-        const member = await guild.members.fetch(user.user_id).catch(() => null);
+        const member = await guild.members
+          .fetch(user.user_id)
+          .catch(() => null);
         if (member) {
           const displayName = member.displayName || member.user.username;
-          const discordAvatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
-          const localAvatarPath = await downloadAvatar(user.user_id, discordAvatarUrl);
-          db.prepare("UPDATE user_stats SET username = ?, avatar_url = ? WHERE user_id = ?").run(displayName, localAvatarPath, user.user_id);
+          const discordAvatarUrl = member.user.displayAvatarURL({
+            format: "png",
+            size: 128,
+          });
+          const localAvatarPath = await downloadAvatar(
+            user.user_id,
+            discordAvatarUrl,
+          );
+          db.prepare(
+            "UPDATE user_stats SET username = ?, avatar_url = ? WHERE user_id = ?",
+          ).run(displayName, localAvatarPath, user.user_id);
           updated++;
         }
       } catch (err) {
         // Пропускаем пользователей которых не удалось найти
       }
     }
-    
-    console.log(`✅ Обновлено displayName и аватарок для ${updated} из ${total} пользователей`);
-    
-    res.json({ 
-      success: true, 
+
+    console.log(
+      `✅ Обновлено displayName и аватарок для ${updated} из ${total} пользователей`,
+    );
+
+    res.json({
+      success: true,
       updated: updated,
       total: total,
-      message: `Обновлено ${updated} из ${total} пользователей`
+      message: `Обновлено ${updated} из ${total} пользователей`,
     });
   } catch (error) {
     console.error("❌ Ошибка при обновлении имен:", error);
@@ -2129,68 +2520,81 @@ app.post("/api/admin/update-names", async (req, res) => {
 app.post("/api/admin/download-avatars", async (req, res) => {
   try {
     console.log("📥 Запрос на загрузку аватарок...");
-    
-    const fs = await import('fs');
-    const path = await import('path');
-    const https = await import('https');
-    
+
+    const fs = await import("fs");
+    const path = await import("path");
+    const https = await import("https");
+
     // Создаем папку avatars если её нет
-    const avatarsDir = './avatars';
+    const avatarsDir = "./avatars";
     if (!fs.existsSync(avatarsDir)) {
       fs.mkdirSync(avatarsDir, { recursive: true });
     }
-    
+
     const guild = client.guilds.cache.first();
     if (!guild) {
       return res.status(500).json({ error: "Гильдия не найдена" });
     }
-    
-    const allUsers = db.prepare("SELECT user_id, avatar_url FROM user_stats").all();
+
+    const allUsers = db
+      .prepare("SELECT user_id, avatar_url FROM user_stats")
+      .all();
     let downloaded = 0;
     let errors = 0;
     let total = allUsers.length;
-    
+
     for (const user of allUsers) {
       try {
-        if (!user.avatar_url || user.avatar_url.includes('nopic.png') || user.avatar_url.startsWith('/avatars/')) {
+        if (
+          !user.avatar_url ||
+          user.avatar_url.includes("nopic.png") ||
+          user.avatar_url.startsWith("/avatars/")
+        ) {
           continue;
         }
-        
+
         const fileName = `${user.user_id}.png`;
         const filePath = path.join(avatarsDir, fileName);
-        
+
         // Скачиваем аватарку
         await new Promise((resolve, reject) => {
           const file = fs.createWriteStream(filePath);
-          https.get(user.avatar_url, (response) => {
-            response.pipe(file);
-            file.on('finish', () => {
-              file.close();
-              // Обновляем путь в базе данных
-              db.prepare("UPDATE user_stats SET avatar_url = ? WHERE user_id = ?").run(`/avatars/${fileName}`, user.user_id);
-              downloaded++;
-              resolve();
+          https
+            .get(user.avatar_url, (response) => {
+              response.pipe(file);
+              file.on("finish", () => {
+                file.close();
+                // Обновляем путь в базе данных
+                db.prepare(
+                  "UPDATE user_stats SET avatar_url = ? WHERE user_id = ?",
+                ).run(`/avatars/${fileName}`, user.user_id);
+                downloaded++;
+                resolve();
+              });
+            })
+            .on("error", (err) => {
+              fs.unlink(filePath, () => {});
+              errors++;
+              reject(err);
             });
-          }).on('error', (err) => {
-            fs.unlink(filePath, () => {});
-            errors++;
-            reject(err);
-          });
         });
       } catch (err) {
-        console.error(`❌ Ошибка загрузки аватарки для ${user.user_id}:`, err.message);
+        console.error(
+          `❌ Ошибка загрузки аватарки для ${user.user_id}:`,
+          err.message,
+        );
         errors++;
       }
     }
-    
+
     console.log(`✅ Загружено ${downloaded} аватарок, ошибок: ${errors}`);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       downloaded: downloaded,
       errors: errors,
       total: total,
-      message: `Загружено ${downloaded} аватарок, ошибок: ${errors}`
+      message: `Загружено ${downloaded} аватарок, ошибок: ${errors}`,
     });
   } catch (error) {
     console.error("❌ Ошибка при загрузке аватарок:", error);
@@ -2220,7 +2624,7 @@ app.get("/auth/discord", (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID;
   const redirectUri = encodeURIComponent(
     process.env.DISCORD_REDIRECT_URI ||
-      "http://localhost:3000/auth/discord/callback"
+      "http://localhost:3000/auth/discord/callback",
   );
   const scopes = encodeURIComponent("identify");
   const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}`;
@@ -2315,11 +2719,10 @@ app.get("/api/config", (req, res) => {
     ADMIN_USER_ID: process.env.ADMIN_USER_ID,
     ADMIN_LOGIN: process.env.ADMIN_LOGIN,
     SERVER_IP: SERVER_IP,
-    PORT: PORT
+    PORT: PORT,
+    TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME || "your_bot",
   });
 });
-
-
 
 // Запуск веб-сервера
 app.listen(PORT, "0.0.0.0", () => {
@@ -2334,31 +2737,42 @@ client.on("messageCreate", async (message) => {
 
   const content = message.content.toLowerCase();
   const userId = message.author.id;
-  
+
   // Проверяем существует ли пользователь в БД и его аватарку
-  const existingUser = db.prepare("SELECT user_id, avatar_url FROM user_stats WHERE user_id = ?").get(userId);
-  
+  const existingUser = db
+    .prepare("SELECT user_id, avatar_url FROM user_stats WHERE user_id = ?")
+    .get(userId);
+
   // Получаем displayName из guild member если возможно
   let username = message.author.username;
-  let localAvatarPath = '/avatars/nopic.png';
-  
+  let localAvatarPath = "/avatars/nopic.png";
+
   if (message.guild) {
     const member = await message.guild.members.fetch(userId).catch(() => null);
     if (member) {
       username = member.displayName || member.user.username;
-      
+
       // Скачиваем аватарку если пользователь новый или у него nopic.png
-      const needsAvatar = !existingUser || !existingUser.avatar_url || existingUser.avatar_url.includes('nopic.png');
-      
+      const needsAvatar =
+        !existingUser ||
+        !existingUser.avatar_url ||
+        existingUser.avatar_url.includes("nopic.png");
+
       if (needsAvatar) {
-        const discordAvatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
+        const discordAvatarUrl = member.user.displayAvatarURL({
+          format: "png",
+          size: 128,
+        });
         localAvatarPath = await downloadAvatar(userId, discordAvatarUrl);
       }
     }
   }
 
   // Инициализируем пользователя в статистике
-  const needsAvatar = !existingUser || !existingUser.avatar_url || existingUser.avatar_url.includes('nopic.png');
+  const needsAvatar =
+    !existingUser ||
+    !existingUser.avatar_url ||
+    existingUser.avatar_url.includes("nopic.png");
   initUserStats(userId, username, needsAvatar ? localAvatarPath : null);
 
   // Увеличиваем счетчик сообщений
@@ -2375,7 +2789,7 @@ client.on("messageCreate", async (message) => {
   if (message.reference) {
     try {
       const repliedTo = await message.channel.messages.fetch(
-        message.reference.messageId
+        message.reference.messageId,
       );
       // Проверяем, был ли упомянут текущий пользователь в том сообщении
       // Также проверяем, содержит ли исходное сообщение User ID в формате <@userId>
@@ -2391,7 +2805,7 @@ client.on("messageCreate", async (message) => {
     } catch (error) {
       console.log(
         "Не удалось получить сообщение для проверки упоминания:",
-        error.message
+        error.message,
       );
     }
   }
@@ -2406,7 +2820,7 @@ client.on("messageCreate", async (message) => {
 
     if (!stats) {
       await message.reply(
-        "📊 У вас пока нет статистики. Начните использовать голосовые каналы!"
+        "📊 У вас пока нет статистики. Начните использовать голосовые каналы!",
       );
       return;
     }
@@ -2445,10 +2859,10 @@ client.on("messageCreate", async (message) => {
   if (content === ".!. achievements" || content === ".!. достижения") {
     const achievements = getUserAchievements(userId);
     const totalAchievements = Object.keys(ACHIEVEMENTS).filter(
-      (id) => id !== "best_admin"
+      (id) => id !== "best_admin",
     ).length;
     const userAchievements = achievements.filter(
-      (a) => a.achievement_id !== "best_admin"
+      (a) => a.achievement_id !== "best_admin",
     );
 
     let achievementText = `🏆 **Ваши достижения (${userAchievements.length}/${totalAchievements}):**\n\n`;
@@ -2482,12 +2896,12 @@ client.on("messageCreate", async (message) => {
     }
 
     await message.reply(
-      "✅ ЛС уведомления о перемещении в токсичный канал **включены**"
+      "✅ ЛС уведомления о перемещении в токсичный канал **включены**",
     );
     await sendSettingsChangeNotification(
-      message.author.username, 
-      message.author.id, 
-      `📩 ЛС уведомления: ✅ ВКЛЮЧЕНЫ`
+      message.author.username,
+      message.author.id,
+      `📩 ЛС уведомления: ✅ ВКЛЮЧЕНЫ`,
     );
     return;
   }
@@ -2498,12 +2912,12 @@ client.on("messageCreate", async (message) => {
     await checkAchievements(userId, username);
 
     await message.reply(
-      "❌ ЛС уведомления о перемещении в токсичный канал **отключены**"
+      "❌ ЛС уведомления о перемещении в токсичный канал **отключены**",
     );
     await sendSettingsChangeNotification(
-      message.author.username, 
-      message.author.id, 
-      `📩 ЛС уведомления: ❌ ОТКЛЮЧЕНЫ`
+      message.author.username,
+      message.author.id,
+      `📩 ЛС уведомления: ❌ ОТКЛЮЧЕНЫ`,
     );
     return;
   }
@@ -2514,13 +2928,13 @@ client.on("messageCreate", async (message) => {
     await checkAchievements(userId, username);
 
     await message.reply(
-      "⏰ Время до перемещения в AFK установлено: **15 минут**"
+      "⏰ Время до перемещения в AFK установлено: **15 минут**",
     );
     const dmEnabled = getUserDMSetting(message.author.id);
     await sendSettingsChangeNotification(
-      message.author.username, 
-      message.author.id, 
-      `⏱️ Таймер AFK: 15 минут\n📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}`
+      message.author.username,
+      message.author.id,
+      `⏱️ Таймер AFK: 15 минут\n📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}`,
     );
     return;
   }
@@ -2531,13 +2945,13 @@ client.on("messageCreate", async (message) => {
     await checkAchievements(userId, username);
 
     await message.reply(
-      "⏰ Время до перемещения в AFK установлено: **30 минут**"
+      "⏰ Время до перемещения в AFK установлено: **30 минут**",
     );
     const dmEnabled = getUserDMSetting(message.author.id);
     await sendSettingsChangeNotification(
-      message.author.username, 
-      message.author.id, 
-      `⏱️ Таймер AFK: 30 минут\n📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}`
+      message.author.username,
+      message.author.id,
+      `⏱️ Таймер AFK: 30 минут\n📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}`,
     );
     return;
   }
@@ -2548,13 +2962,13 @@ client.on("messageCreate", async (message) => {
     await checkAchievements(userId, username);
 
     await message.reply(
-      "⏰ Время до перемещения в AFK установлено: **45 минут**"
+      "⏰ Время до перемещения в AFK установлено: **45 минут**",
     );
     const dmEnabled = getUserDMSetting(message.author.id);
     await sendSettingsChangeNotification(
-      message.author.username, 
-      message.author.id, 
-      `⏱️ Таймер AFK: 45 минут\n📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}`
+      message.author.username,
+      message.author.id,
+      `⏱️ Таймер AFK: 45 минут\n📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}`,
     );
     return;
   }
@@ -2576,7 +2990,7 @@ client.on("messageCreate", async (message) => {
 \`.!. achievements\` - посмотреть достижения
 
 👤 **Твой ID:** \`${message.author.id}\`
-🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}`
+🌐 **Веб-панель:** http://${SERVER_IP}:${PORT}`,
     );
 
     await sendTelegramReport(
@@ -2585,7 +2999,7 @@ client.on("messageCreate", async (message) => {
         `🆔 ID: <code>${message.author.id}</code>\n` +
         `⏱️ Текущий таймер: ${timeout} минут\n` +
         `📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}\n` +
-        `📅 Время: ${formatTime(new Date())}`
+        `📅 Время: ${formatTime(new Date())}`,
     );
     return;
   }
@@ -2599,9 +3013,9 @@ client.on("messageCreate", async (message) => {
     await message.reply("🏆✅ Уведомления о достижениях **включены**");
 
     await sendSettingsChangeNotification(
-      message.author.username, 
-      message.author.id, 
-      `🏆 Уведомления о достижениях: ✅ ВКЛЮЧЕНЫ`
+      message.author.username,
+      message.author.id,
+      `🏆 Уведомления о достижениях: ✅ ВКЛЮЧЕНЫ`,
     );
     return;
   }
@@ -2614,9 +3028,9 @@ client.on("messageCreate", async (message) => {
     await message.reply("🏆❌ Уведомления о достижениях **отключены**");
 
     await sendSettingsChangeNotification(
-      message.author.username, 
-      message.author.id, 
-      `🏆 Уведомления о достижениях: ❌ ОТКЛЮЧЕНЫ`
+      message.author.username,
+      message.author.id,
+      `🏆 Уведомления о достижениях: ❌ ОТКЛЮЧЕНЫ`,
     );
     return;
   }
@@ -2646,7 +3060,7 @@ client.on("messageCreate", async (message) => {
       `❓ <b>Пользователь запросил справку</b>\n` +
         `👤 Пользователь: ${message.author.username}\n` +
         `🆔 ID: <code>${message.author.id}</code>\n` +
-        `📅 Время: ${formatTime(new Date())}`
+        `📅 Время: ${formatTime(new Date())}`,
     );
     return;
   }
@@ -2664,7 +3078,7 @@ client.on("messageCreate", async (message) => {
 
       if (achievements.length === 0) {
         await message.reply(
-          `❌ У пользователя \`${targetUserId}\` нет достижений`
+          `❌ У пользователя \`${targetUserId}\` нет достижений`,
         );
         return;
       }
@@ -2698,20 +3112,20 @@ client.on("messageCreate", async (message) => {
     try {
       // Удаляем все достижения пользователя
       const stmt = db.prepare(
-        "DELETE FROM user_achievements WHERE user_id = ?"
+        "DELETE FROM user_achievements WHERE user_id = ?",
       );
       const result = stmt.run(targetUserId);
 
       // Обнуляем очки рейтинга
       const resetPointsStmt = db.prepare(
-        "UPDATE user_stats SET rank_points = 0 WHERE user_id = ?"
+        "UPDATE user_stats SET rank_points = 0 WHERE user_id = ?",
       );
       resetPointsStmt.run(targetUserId);
 
       await message.reply(
         `✅ **Достижения сброшены для пользователя:** \`${targetUserId}\`\n` +
           `🗑️ Удалено достижений: **${result.changes}**\n` +
-          `⭐ Очки рейтинга обнулены`
+          `⭐ Очки рейтинга обнулены`,
       );
 
       console.log(`🗑️ Сброшены достижения для пользователя ${targetUserId}`);
@@ -2721,7 +3135,7 @@ client.on("messageCreate", async (message) => {
           `👤 Администратор: ${message.author.username}\n` +
           `🎯 Для пользователя ID: <code>${targetUserId}</code>\n` +
           `📊 Удалено достижений: ${result.changes}\n` +
-          `📅 Время: ${formatTime(new Date())}`
+          `📅 Время: ${formatTime(new Date())}`,
       );
     } catch (error) {
       await message.reply("❌ Ошибка при сбросе достижений: " + error.message);
@@ -2741,7 +3155,7 @@ client.on("messageCreate", async (message) => {
 
     if (!achievementId) {
       await message.reply(
-        `❌ Укажите ID достижения\nПример: \`.!. resetachievement first_join ${DEFAULT_TEST_USER_ID}\``
+        `❌ Укажите ID достижения\nПример: \`.!. resetachievement first_join ${DEFAULT_TEST_USER_ID}\``,
       );
       return;
     }
@@ -2757,7 +3171,7 @@ client.on("messageCreate", async (message) => {
             .join("\n")}\n\n` +
           `💡 **Правильное использование:**\n` +
           `\`.!. resetachievement ACHIEVEMENT_ID USER_ID\`\n` +
-          `**Пример:** \`.!. resetachievement first_web_visit ${DEFAULT_TEST_USER_ID}\``
+          `**Пример:** \`.!. resetachievement first_web_visit ${DEFAULT_TEST_USER_ID}\``,
       );
       return;
     }
@@ -2771,7 +3185,7 @@ client.on("messageCreate", async (message) => {
 
       if (!stats) {
         await message.reply(
-          `❌ Пользователь \`${targetUserId}\` не найден в статистике`
+          `❌ Пользователь \`${targetUserId}\` не найден в статистике`,
         );
         return;
       }
@@ -2785,15 +3199,15 @@ client.on("messageCreate", async (message) => {
           `⏰ Таймер AFK: **${getUserTimeout(targetUserId)} минут**\n` +
           `🏆 До достижения "Исследователь": **${Math.max(
             0,
-            20 - (stats.settings_changes || 0)
-          )} изменений**`
+            20 - (stats.settings_changes || 0),
+          )} изменений**`,
       );
       return;
     }
 
     try {
       const stmt = db.prepare(
-        "DELETE FROM user_achievements WHERE user_id = ? AND achievement_id = ?"
+        "DELETE FROM user_achievements WHERE user_id = ? AND achievement_id = ?",
       );
       const result = stmt.run(targetUserId, achievementId);
 
@@ -2808,11 +3222,11 @@ client.on("messageCreate", async (message) => {
           `✅ **Достижение сброшено:**\n` +
             `🎯 Достижение: \`${achievementId}\`\n` +
             `👤 Пользователь: \`${targetUserId}\`\n` +
-            `⭐ Очков вычтено: ${achievement?.points || 0}`
+            `⭐ Очков вычтено: ${achievement?.points || 0}`,
         );
       } else {
         await message.reply(
-          `❌ Достижение \`${achievementId}\` не найдено у пользователя \`${targetUserId}\``
+          `❌ Достижение \`${achievementId}\` не найдено у пользователя \`${targetUserId}\``,
         );
       }
     } catch (error) {
@@ -2839,30 +3253,36 @@ client.on("clientReady", async () => {
   console.log(`📱 Telegram отчеты: включены`);
   console.log(`🌐 Веб-панель: http://${SERVER_IP}:${PORT}`);
 
-  const botDetails = 
+  const botDetails =
     `🤖 Бот: ${client.user.tag}\n` +
     `🌐 Веб-панель: http://${SERVER_IP}:${PORT}`;
-  
-  await sendBotStatusNotification('started', botDetails);
+
+  await sendBotStatusNotification("started", botDetails);
 
   client.guilds.cache.forEach((guild) => {
     const afkChannel = guild.channels.cache.get(AFK_CHANNEL_ID);
     if (afkChannel) {
       console.log(
-        `✅ AFK канал найден: ${afkChannel.name} в гильдии ${guild.name}`
+        `✅ AFK канал найден: ${afkChannel.name} в гильдии ${guild.name}`,
       );
     } else {
       console.log(`❌ AFK канал не найден в гильдии ${guild.name}`);
     }
   });
-  
+
   // Миграция: очищаем все CDN URL из базы данных
   console.log("🔄 Миграция: очистка CDN URL из базы данных...");
   try {
-    const cdnUsers = db.prepare("SELECT user_id FROM user_stats WHERE avatar_url LIKE '%cdn.discordapp.com%'").all();
+    const cdnUsers = db
+      .prepare(
+        "SELECT user_id FROM user_stats WHERE avatar_url LIKE '%cdn.discordapp.com%'",
+      )
+      .all();
     if (cdnUsers.length > 0) {
       console.log(`📝 Найдено ${cdnUsers.length} пользователей с CDN URL`);
-      db.prepare("UPDATE user_stats SET avatar_url = '/avatars/nopic.png' WHERE avatar_url LIKE '%cdn.discordapp.com%'").run();
+      db.prepare(
+        "UPDATE user_stats SET avatar_url = '/avatars/nopic.png' WHERE avatar_url LIKE '%cdn.discordapp.com%'",
+      ).run();
       console.log(`✅ CDN URL очищены, установлен nopic.png`);
     } else {
       console.log(`✅ CDN URL не найдены`);
@@ -2870,7 +3290,7 @@ client.on("clientReady", async () => {
   } catch (error) {
     console.error("❌ Ошибка при миграции CDN URL:", error);
   }
-  
+
   // Запускаем проверку специального достижения каждую минуту
   setInterval(checkSpecialAchievement, 60000);
   console.log("⏰ Запущена проверка специального достижения");
@@ -2883,20 +3303,24 @@ client.on("clientReady", async () => {
       if (guild) {
         const allUsers = db.prepare("SELECT user_id FROM user_stats").all();
         let updated = 0;
-        
+
         for (const user of allUsers) {
           try {
-            const member = await guild.members.fetch(user.user_id).catch(() => null);
+            const member = await guild.members
+              .fetch(user.user_id)
+              .catch(() => null);
             if (member) {
               const displayName = member.displayName || member.user.username;
-              db.prepare("UPDATE user_stats SET username = ? WHERE user_id = ?").run(displayName, user.user_id);
+              db.prepare(
+                "UPDATE user_stats SET username = ? WHERE user_id = ?",
+              ).run(displayName, user.user_id);
               updated++;
             }
           } catch (err) {
             // Пропускаем пользователей которых не удалось найти
           }
         }
-        
+
         console.log(`✅ Обновлено displayName для ${updated} пользователей`);
       }
     } catch (error) {
@@ -2922,7 +3346,7 @@ client.on("clientReady", async () => {
     } catch (error) {
       console.error(
         "❌ Ошибка при периодической проверке пропущенных уведомлений:",
-        error
+        error,
       );
     }
   }, 30000);
@@ -2937,15 +3361,23 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
     if (member.user.bot) return;
 
     // Проверяем существует ли пользователь в БД и его аватарку
-    const existingUser = db.prepare("SELECT user_id, avatar_url FROM user_stats WHERE user_id = ?").get(userId);
-    
-    let localAvatarPath = '/avatars/nopic.png';
-    
+    const existingUser = db
+      .prepare("SELECT user_id, avatar_url FROM user_stats WHERE user_id = ?")
+      .get(userId);
+
+    let localAvatarPath = "/avatars/nopic.png";
+
     // Скачиваем аватарку если пользователь новый или у него nopic.png
-    const needsAvatar = !existingUser || !existingUser.avatar_url || existingUser.avatar_url.includes('nopic.png');
-    
+    const needsAvatar =
+      !existingUser ||
+      !existingUser.avatar_url ||
+      existingUser.avatar_url.includes("nopic.png");
+
     if (needsAvatar) {
-      const discordAvatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
+      const discordAvatarUrl = member.user.displayAvatarURL({
+        format: "png",
+        size: 128,
+      });
       localAvatarPath = await downloadAvatar(userId, discordAvatarUrl);
     }
 
@@ -3008,7 +3440,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
           `📺 Канал: ${newState.channel.name}\n` +
-          `📅 Время захода: ${formatTime(joinTime)}`
+          `📅 Время захода: ${formatTime(joinTime)}`,
+      );
+
+      // Отправляем уведомления пользователям с включенной настройкой
+      await notifyChannelActivity(
+        `🎤 <b>${username}</b> зашел в канал <b>${newState.channel.name}</b>`,
       );
 
       if (newState.selfMute) {
@@ -3028,7 +3465,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           const afkDuration = Math.floor((Date.now() - afkStartTime) / 1000);
           incrementUserStat(userId, "total_afk_time", afkDuration);
           console.log(
-            `⏱️ AFK время добавлено при выходе: ${formatDuration(afkDuration)}`
+            `⏱️ AFK время добавлено при выходе: ${formatDuration(afkDuration)}`,
           );
         }
       }
@@ -3074,7 +3511,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
           `📺 Канал: ${oldState.channel.name}\n` +
-          `📅 Время: ${formatTime(new Date())}`
+          `📅 Время: ${formatTime(new Date())}`,
+      );
+
+      // Отправляем уведомления пользователям с включенной настройкой
+      await notifyChannelActivity(
+        `👋 <b>${username}</b> вышел из канала <b>${oldState.channel.name}</b>`,
       );
 
       clearInactivityTimer(userId);
@@ -3092,7 +3534,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
       oldState.channel.id !== newState.channel.id
     ) {
       console.log(
-        `🔄 ${username} переместился из ${oldState.channel.name} в ${newState.channel.name}`
+        `🔄 ${username} переместился из ${oldState.channel.name} в ${newState.channel.name}`,
       );
 
       // ✅ Учитываем AFK время при переходе ИЗ AFK в другой канал
@@ -3104,8 +3546,8 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           userAFKStartTimes.delete(userId);
           console.log(
             `⏱️ AFK время добавлено при переходе: ${formatDuration(
-              afkDuration
-            )}`
+              afkDuration,
+            )}`,
           );
         }
       }
@@ -3127,7 +3569,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           `🆔 ID: <code>${userId}</code>\n` +
           `📺 Из канала: ${oldState.channel.name}\n` +
           `📺 В канал: ${newState.channel.name}\n` +
-          `📅 Время: ${formatTime(new Date())}`
+          `📅 Время: ${formatTime(new Date())}`,
       );
 
       // Обновляем время присоединения для нового канала
@@ -3188,13 +3630,13 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           `📺 Канал: ${newState.channel.name}\n` +
           `⏱️ Запущен таймер на: ${timeoutDisplay}\n` +
           `📩 ЛС уведомления: ${dmEnabled ? "✅ включены" : "❌ отключены"}\n` +
-          `📅 Время: ${formatTime(new Date())}`
+          `📅 Время: ${formatTime(new Date())}`,
       );
 
       if (dmEnabled) {
         await member
           .send(
-            `🎙️❌ Похоже ты решил побыть AFK, раз отключил микрофон, через ${timeoutDisplay} ты окажешься в токсичном канале, подумай об этом\n\n💡 Чтобы отключить эти уведомления, напиши \`.!.\` на сервере`
+            `🎙️❌ Похоже ты решил побыть AFK, раз отключил микрофон, через ${timeoutDisplay} ты окажешься в токсичном канале, подумай об этом\n\n💡 Чтобы отключить эти уведомления, напиши \`.!.\` на сервере`,
           )
           .catch(() => {
             console.log(`❌ Не удалось отправить ЛС пользователю ${username}`);
@@ -3223,7 +3665,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
           `📺 Канал: ${newState.channel.name}\n` +
-          `📅 Время: ${formatTime(new Date())}`
+          `📅 Время: ${formatTime(new Date())}`,
+      );
+
+      // Отправляем уведомления пользователям с включенной настройкой
+      await notifyChannelActivity(
+        `📡 <b>${username}</b> включил трансляцию в канале <b>${newState.channel.name}</b>`,
       );
 
       return;
@@ -3238,7 +3685,12 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           `👤 Пользователь: ${username}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
           `📺 Канал: ${newState.channel.name}\n` +
-          `📅 Время: ${formatTime(new Date())}`
+          `📅 Время: ${formatTime(new Date())}`,
+      );
+
+      // Отправляем уведомления пользователям с включенной настройкой
+      await notifyChannelActivity(
+        `📡❌ <b>${username}</b> отключил трансляцию в канале <b>${newState.channel.name}</b>`,
       );
 
       return;
@@ -3259,7 +3711,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
           `🆔 ID: <code>${userId}</code>\n` +
           `📺 Канал: ${newState.channel.name}\n` +
           `🛑 Таймер остановлен\n` +
-          `📅 Время: ${formatTime(new Date())}`
+          `📅 Время: ${formatTime(new Date())}`,
       );
 
       const originalChannelId = userOriginalChannels.get(userId);
@@ -3275,7 +3727,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
               `👤 Пользователь: ${username}\n` +
               `📺 Из канала: 😡 Токсичный канал\n` +
               `📺 В канал: ${originalChannel.name}\n` +
-              `📅 Время: ${formatTime(new Date())}`
+              `📅 Время: ${formatTime(new Date())}`,
           );
 
           userOriginalChannels.delete(userId);
@@ -3302,7 +3754,7 @@ client.on("voiceStateUpdate", async (oldState, newState) => {
 function startInactivityTimer(member, guild) {
   const userId = member.id;
   const username = member.displayName || member.user.username;
-  const avatarUrl = member.user.displayAvatarURL({ format: 'png', size: 128 });
+  const avatarUrl = member.user.displayAvatarURL({ format: "png", size: 128 });
   const userTimeout = getUserTimeout(userId);
 
   // Если значение меньше 15, то это секунды (админ опции: 10, 60), иначе минуты
@@ -3339,19 +3791,19 @@ function startInactivityTimer(member, guild) {
   const timeoutId = setTimeout(async () => {
     try {
       console.log(
-        `⏳ Проверяем пользователя ${username} (ID: ${userId}) через ${timeoutDisplay}`
+        `⏳ Проверяем пользователя ${username} (ID: ${userId}) через ${timeoutDisplay}`,
       );
       const currentMember = guild.members.cache.get(userId);
 
       if (currentMember && currentMember.voice.channel) {
         console.log(
-          `🎤 ${username} все еще в канале: ${currentMember.voice.channel.name}`
+          `🎤 ${username} все еще в канале: ${currentMember.voice.channel.name}`,
         );
         console.log(`🎙️ selfMute: ${currentMember.voice.selfMute}`);
 
         if (!currentMember.voice.selfMute) {
           console.log(
-            `🎙️ ${username} включил микрофон или микрофон не отключен, отменяем перемещение в AFK`
+            `🎙️ ${username} включил микрофон или микрофон не отключен, отменяем перемещение в AFK`,
           );
           return;
         }
@@ -3376,7 +3828,7 @@ function startInactivityTimer(member, guild) {
         await checkAchievements(userId, username);
 
         console.log(
-          `⏰ ${username} переемещен в AFK за неактивность (${timeoutDisplay})`
+          `⏰ ${username} переемещен в AFK за неактивность (${timeoutDisplay})`,
         );
 
         const dmEnabled = getUserDMSetting(userId);
@@ -3390,19 +3842,19 @@ function startInactivityTimer(member, guild) {
             `📩 ЛС уведомления: ${
               dmEnabled ? "✅ включены" : "❌ отключены"
             }\n` +
-            `📅 Время: ${formatTime(new Date())}`
+            `📅 Время: ${formatTime(new Date())}`,
         );
 
         if (dmEnabled) {
           await currentMember
             .send(
-              `⏰ Ты был неактивен ${timeoutDisplay}, малютка, и был перемещен откисать в токсичный канал.\n\n💡 Чтобы изменить настройки, напиши \`.!.\` на сервере`
+              `⏰ Ты был неактивен ${timeoutDisplay}, малютка, и был перемещен откисать в токсичный канал.\n\n💡 Чтобы изменить настройки, напиши \`.!.\` на сервере`,
             )
             .catch(() => {});
         }
       } else {
         console.log(
-          `❌ ${username} не найден в голосовых каналах или покинул канал`
+          `❌ ${username} не найден в голосовых каналах или покинул канал`,
         );
       }
     } catch (error) {
@@ -3428,15 +3880,20 @@ function clearInactivityTimer(userId) {
 // ===== ОБРАБОТЧИКИ ОШИБОК И ЗАВЕРШЕНИЯ =====
 process.on("SIGINT", async () => {
   console.log("🛑 Закрытие базы данных...");
-  await sendBotStatusNotification('stopped');
+  await sendBotStatusNotification("stopped");
   db.close();
   process.exit(0);
 });
 
 client.on("error", (error) => console.error("❌ Client error:", error));
 process.on("unhandledRejection", (error) =>
-  console.error("❌ Unhandled rejection:", error)
+  console.error("❌ Unhandled rejection:", error),
 );
 
 // ===== ЗАПУСК БОТА =====
 client.login(process.env.DISCORD_TOKEN);
+
+// ===== ИНИЦИАЛИЗАЦИЯ TELEGRAM БОТА =====
+setTimeout(() => {
+  initTelegramBot(db, client, useLinkCode);
+}, 2000); // Даем Discord боту время на запуск

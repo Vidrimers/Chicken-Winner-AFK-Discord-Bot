@@ -1,301 +1,1022 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
     <title>AFK Bot - Панель управления</title>
-    <link rel="stylesheet" href="/style.css">
-    <link rel="stylesheet" href="/theme.css">
-    <link rel="stylesheet" href="/media.css">
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="/media.css" />
     <script src="/app.js" defer></script>
     <script src="/achievements.js" defer></script>
     <script src="/leaderboard.js" defer></script>
     <script src="/special-achievements.js" defer></script>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1><img class="header-logo-img" src="/avatars/logo.png" alt="Logo" style="width: 50px; height: 50px; margin-right: 10px;"> Chicken Winner AFK Bot <img class="header-logo-img header-logo-img-activate" src="/avatars/logo.png" alt="Logo" style="width: 50px; height: 50px; margin-left: 10px; cursor: pointer;" title="Секретная тема"></h1>
-            
-            <p>Статистика, рейтинг и достижения</p>
-            
-            <div class="user-id-display" id="userIdDisplay">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
-                    <div id="userAvatarContainer" style="display: none;">
-                        <img id="userAvatar" src="" alt="Avatar" onerror="this.src='/avatars/nopic.png'" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
-                    </div>
-                    <div id="userInfoFlipContainer" style="display: flex; flex-direction: column; align-items: center; cursor: pointer; min-width: 250px;">
-                        <h3 id="userDisplayLabel" onclick="toggleUserInfo()">👤 Имя на сервере</h3>
-                        <span class="user-id" id="currentUserId" onclick="copyToClipboard(event)"></span>
-                    </div>
-                </div>
+      <div class="header">
+        <h1>
+          <img
+            class="header-logo-img"
+            src="/avatars/logo.png"
+            alt="Logo"
+            style="width: 50px; height: 50px; margin-right: 10px"
+          />
+          Chicken Winner AFK Bot
+          <img
+            class="header-logo-img header-logo-img-activate"
+            src="/avatars/logo.png"
+            alt="Logo"
+            style="
+              width: 50px;
+              height: 50px;
+              margin-left: 10px;
+              cursor: pointer;
+            "
+            title="Секретная тема"
+          />
+        </h1>
+
+        <p>Статистика, рейтинг и достижения</p>
+
+        <div class="user-id-display" id="userIdDisplay">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 20px;
+            "
+          >
+            <div id="userAvatarContainer" style="display: none">
+              <img
+                id="userAvatar"
+                src=""
+                alt="Avatar"
+                onerror="this.src = '/avatars/nopic.png'"
+                style="
+                  width: 60px;
+                  height: 60px;
+                  border-radius: 50%;
+                  object-fit: cover;
+                  border: none;
+                  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                "
+              />
             </div>
+            <div
+              id="userInfoFlipContainer"
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                cursor: pointer;
+                min-width: 250px;
+              "
+            >
+              <h3 id="userDisplayLabel" onclick="toggleUserInfo()">
+                👤 Имя на сервере
+              </h3>
+              <span
+                class="user-id"
+                id="currentUserId"
+                onclick="copyToClipboard(event)"
+              ></span>
+            </div>
+          </div>
         </div>
-        
-        <div class="content">
-            <div class="user-search">
-                <div id="authSection" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 0; align-items: center;">
-                    <div id="userInfoDisplay" style="display: none; flex: 1; min-width: 200px; padding: 10px 20px; background: #667eea; color: white; border-radius: 5px; font-weight: bold; font-size: 14px; text-align: center;">
-                        👤 <span id="userUsername"></span>
-                    </div>
-                    <button id="logoutBtn" onclick="logout()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px;">🚪 Выход</button>
-                </div>
-                
-                <div id="manualInputSection" style="display: flex; gap: 10px; margin-bottom: 0; padding: 10px;">
-                    <input type="text" id="userIdInput" placeholder="Discord ID" style="flex: 1;">
-                    <button onclick="loadUserData()" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 5px; cursor: pointer;">Загрузить</button>
-                    <button id="clearBtn" onclick="clearSavedUserId()" style="display: none; padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Выход</button>
-                </div>
+      </div>
+
+      <div class="content">
+        <div class="user-search">
+          <div
+            id="authSection"
+            style="
+              display: flex;
+              gap: 10px;
+              flex-wrap: wrap;
+              margin-bottom: 0;
+              align-items: center;
+            "
+          >
+            <div
+              id="userInfoDisplay"
+              style="
+                display: none;
+                flex: 1;
+                min-width: 200px;
+                padding: 10px 20px;
+                background: #667eea;
+                color: white;
+                border-radius: 5px;
+                font-weight: bold;
+                font-size: 14px;
+                text-align: center;
+              "
+            >
+              👤 <span id="userUsername"></span>
             </div>
-            
-            <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
-            <div id="createSpecialAchievementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #a45eea; border-radius: 10px; padding: 20px; width: 90%; max-width: 600px; height: 80vh; overflow: auto; scrollbar-width: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 class="SpecialAchievementForm-title" style="color: white; margin: 0 auto;">⭐ Создать спец. достижение</h2>
-                        <button onclick="closeCreateSpecialAchievementModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
-                    </div>
-                    
-                    <form id="createSpecialAchievementForm">
-                        <div class="SpecialAchievementForm-group" style="display: flex;justify-content: space-evenly;margin-bottom: 15px;">
-        <div style="display: flex;flex-direction: column;">
-                            <label style="color: white; display: block; margin-bottom: 5px;text-align: center;">Эмодзи достижения:</label>
-                            <input type="text" id="specialAchievementEmoji" maxlength="2" placeholder="🏆" style="width: 30%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; text-align: center;margin: 0 auto;" oninput="updateSpecialAchievementPreview()">
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: white; display: block; margin-bottom: 5px;">Discord ID пользователя:</label>
-                            <input type="text" id="specialAchievementUserId" placeholder="123456789" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; text-align:center;">
-                        </div>
-    </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: white; display: block; margin-bottom: 5px;">Название достижения:</label>
-                            <input type="text" id="specialAchievementName" placeholder="Название" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;" oninput="updateSpecialAchievementPreview()">
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: white;; display: block; margin-bottom: 5px;">Описание:</label>
-                            <textarea id="specialAchievementDescription" placeholder="Описание достижения" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; resize: vertical; min-height: 60px;"></textarea>
-                        </div>
-                        
-                        
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                            <div>
-                                <label style="color: white; display: block; margin-bottom: 5px;">Дата:</label>
-                                <input type="date" id="specialAchievementDate" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;">
-                            </div>
-                            <div>
-                                <label style="color: white; display: block; margin-bottom: 5px;">Время:</label>
-                                <input type="time" id="specialAchievementTime" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;">
-                            </div>
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: white; display: block; margin-bottom: 5px;">Цвет:</label>
-                            <input type="color" id="specialAchievementColor" value="#a45eea" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px; cursor: pointer;" oninput="updateSpecialAchievementPreview()">
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: white; display: block; margin-bottom: 5px;">Превью:</label>
-                            <div id="specialAchievementPreview" style="padding: 10px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px;"></div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <button type="button" onclick="createSpecialAchievement()" style="padding: 10px; background-color: #a45eea; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Создать</button>
-                            <button type="button" onclick="closeCreateSpecialAchievementModal()" style="padding: 10px; background-color: #555; color: #fff; border: none; border-radius: 5px; cursor: pointer;">Отмена</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
-            <div id="editSpecialAchievementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #a45eea; border-radius: 10px; padding: 20px; width: 90%; max-width: 600px; max-height: 80vh; overflow: auto; scrollbar-width: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 class="SpecialAchievementForm-title" style="color: white; margin: 0 auto;">✏️ Редактировать достижение</h2>
-                        <button onclick="closeEditSpecialAchievementModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
-                    </div>
-                    
-                    <form id="editSpecialAchievementForm">
-                        <input type="hidden" id="editAchievementId">
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: white; display: block; margin-bottom: 5px;text-align: center;">Эмодзи достижения:</label>
-                            <input type="text" id="editSpecialAchievementEmoji" maxlength="2" placeholder="🏆" style="width: 60px; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; text-align: center; margin: 0 auto; display: block; font-size: 24px;" oninput="updateEditSpecialAchievementPreview()">
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: white; display: block; margin-bottom: 5px;">Название достижения:</label>
-                            <input type="text" id="editSpecialAchievementName" placeholder="Название" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px;" oninput="updateEditSpecialAchievementPreview()">
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: white; display: block; margin-bottom: 5px;">Описание:</label>
-                            <textarea id="editSpecialAchievementDescription" placeholder="Описание достижения" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; color: white; border-radius: 5px; resize: vertical; min-height: 60px;"></textarea>
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: white; display: block; margin-bottom: 5px;">Цвет:</label>
-                            <input type="color" id="editSpecialAchievementColor" value="#a45eea" style="width: 100%; padding: 8px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px; cursor: pointer;" oninput="updateEditSpecialAchievementPreview()">
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <label style="color: white; display: block; margin-bottom: 5px;">Превью:</label>
-                            <div id="editSpecialAchievementPreview" style="padding: 10px; background: #0a0a0a; border: 1px solid #a45eea; border-radius: 5px;"></div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <button type="button" onclick="saveEditSpecialAchievement()" style="padding: 10px; background-color: #a45eea; color: #000; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Сохранить</button>
-                            <button type="button" onclick="closeEditSpecialAchievementModal()" style="padding: 10px; background-color: #555; color: #fff; border: none; border-radius: 5px; cursor: pointer;">Отмена</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- МОДАЛЬНОЕ ОКНО УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ -->
-            <div id="usersModal" onclick="closeUsersModalOnOutsideClick(event)" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000;">
-                <div onclick="event.stopPropagation()" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; border: 2px solid #667eea; border-radius: 10px; padding: 20px; width: 90%; max-width: 800px; max-height: 80vh; overflow: auto; scrollbar-width: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="color: white; margin: 0;">👥 Управление пользователями</h2>
-                        <button onclick="closeUsersModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
-                    </div>
-                    
-                    <div id="usersList" style="display: flex; flex-direction: column; gap: 10px;">
-                        <!-- Список пользователей будет загружен здесь -->
-                    </div>
-                </div>
-            </div>
-            
-            <div id="userContent" style="display: none;">
-                <div class="tabs">
-                    <div class="tab active" onclick="switchTab('stats')">📊 Статистика</div>
-                    <div class="tab" onclick="switchTab('achievements')">🏆 Достижения</div>
-                    <div class="tab" onclick="switchTab('settings')">⚙️ Настройки</div>
-                    <div class="tab" onclick="switchTab('leaderboard')">🏅 Рейтинг</div>
-                </div>
-                
-                <div id="stats" class="tab-content active">
-                    <div class="stats-grid" id="statsGrid">
-                        <!-- Статистика будет загружена здесь -->
-                    </div>
-                </div>
-                
-                <div id="achievements" class="tab-content">
-                    <div class="achievements" id="achievementsList">
-                        <!-- Достижения будут загружены здесь -->
-                    </div>
-                </div>
-                
-                <div id="settings" class="tab-content">
-                    <div class="settings-cards">
-                        <div class="setting-card">
-                            <div class="setting-card-icon">📩</div>
-                            <div class="setting-card-content">
-                                <h3 class="setting-card-title">ЛС уведомления</h3>
-                                <p class="setting-card-description">Получать личные сообщения при перемещении в AFK</p>
-                                <select id="dmNotifications" class="setting-select">
-                                    <option value="true">✅ Включены</option>
-                                    <option value="false">❌ Отключены</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="setting-card">
-                            <div class="setting-card-icon">⏰</div>
-                            <div class="setting-card-content">
-                                <h3 class="setting-card-title">Время до AFK</h3>
-                                <p class="setting-card-description">Через сколько минут неактивности переместить в AFK канал</p>
-                                <select id="afkTimeout" class="setting-select">
-                                    <option value="10" class="admin-option" style="display: none;">10 секунд</option>
-                                    <option value="15">15 минут</option>
-                                    <option value="30">30 минут</option>
-                                    <option value="45">45 минут</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="setting-card">
-                            <div class="setting-card-icon">🏆</div>
-                            <div class="setting-card-content">
-                                <h3 class="setting-card-title">Уведомления о достижениях</h3>
-                                <p class="setting-card-description">Получать уведомления при разблокировке новых достижений</p>
-                                <select id="achievementNotifications" class="setting-select">
-                                    <option value="true">✅ Включены</option>
-                                    <option value="false">❌ Отключены</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="setting-card">
-                            <div class="setting-card-icon">🎨</div>
-                            <div class="setting-card-content">
-                                <h3 class="setting-card-title">Тема оформления</h3>
-                                <p class="setting-card-description">Выберите цветовую схему интерфейса</p>
-                                <select id="themeSelect" class="setting-select" onchange="previewTheme(this.value)">
-                                    <option value="standard">🎨 Стандарт</option>
-                                    <option value="metal">⚙️ Металл</option>
-                                    <option value="discord">💬 Дискорд</option>
-                                    <option value="steam">🎮 Стим</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="setting-card logout-card">
-                            <div class="setting-card-icon">🚪</div>
-                            <div class="setting-card-content">
-                                <h3 class="setting-card-title">Выход из аккаунта</h3>
-                                <p class="setting-card-description">Выйти из текущего аккаунта и очистить сохраненные данные</p>
-                                <button class="logout-btn" onclick="logout()">🚪 Разлогиниться</button>
-                            </div>
-                        </div>
-                        
-                        <button class="save-settings-btn" onclick="saveSettings()">💾 Сохранить настройки</button>
-                    </div>
-                    
-                    <!-- Админ-панель -->
-                    <div id="adminPanel" class="admin-panel" style="display: none;">
-                        <div class="admin-panel-header">
-                            <h2>Админ-панель</h2>
-                            <p>Специальные функции для администратора</p>
-                        </div>
-                        <div class="admin-panel-content">
-                            <button id="createSpecialAchievementBtn" onclick="openCreateSpecialAchievementModal()" class="admin-btn">
-                                <span class="admin-btn-icon">⭐</span>
-                                <span class="admin-btn-text">Создать специальное достижение</span>
-                            </button>
-                            <button id="backupDatabaseBtn" onclick="backupDatabase()" class="admin-btn">
-                                <span class="admin-btn-icon">💾</span>
-                                <span class="admin-btn-text">Бэкап БД</span>
-                            </button>
-                            <button id="manageUsersBtn" onclick="openUsersModal()" class="admin-btn">
-                                <span class="admin-btn-icon">👥</span>
-                                <span class="admin-btn-text">Пользователи</span>
-                            </button>
-                            <button id="updateNamesBtn" onclick="updateUserNames()" class="admin-btn">
-                                <span class="admin-btn-icon">🔄</span>
-                                <span class="admin-btn-text">Проверить имена</span>
-                            </button>
-                            <button id="downloadAvatarsBtn" onclick="downloadAvatars()" class="admin-btn">
-                                <span class="admin-btn-icon">📥</span>
-                                <span class="admin-btn-text">Загрузить аватарки</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div id="leaderboard" class="tab-content">
-                    <div class="leaderboard" id="leaderboardList">
-                        <!-- Рейтинг будет загружен здесь -->
-                    </div>
-                </div>
-            </div>
-            
-            <div id="loading" class="loading">
-                Введи свой Discord ID для загрузки данных, малютка...
-            </div>
+            <button
+              id="logoutBtn"
+              onclick="logout()"
+              style="
+                display: none;
+                padding: 10px 20px;
+                background: #ff4444;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-weight: bold;
+                cursor: pointer;
+                font-size: 14px;
+              "
+            >
+              🚪 Выход
+            </button>
+          </div>
+
+          <div
+            id="manualInputSection"
+            style="display: flex; gap: 10px; margin-bottom: 0; padding: 10px"
+          >
+            <input
+              type="text"
+              id="userIdInput"
+              placeholder="Discord ID"
+              style="flex: 1"
+            />
+            <button
+              onclick="loadUserData()"
+              style="
+                padding: 10px 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+              "
+            >
+              Загрузить
+            </button>
+            <button
+              id="clearBtn"
+              onclick="clearSavedUserId()"
+              style="
+                display: none;
+                padding: 10px 20px;
+                background: #ff4444;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-weight: bold;
+              "
+            >
+              Выход
+            </button>
+          </div>
         </div>
+
+        <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
+        <div
+          id="createSpecialAchievementModal"
+          style="
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+          "
+        >
+          <div
+            style="
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              background: #1a1a1a;
+              border: 2px solid #a45eea;
+              border-radius: 10px;
+              padding: 20px;
+              width: 90%;
+              max-width: 600px;
+              height: 80vh;
+              overflow: auto;
+              scrollbar-width: none;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+              "
+            >
+              <h2
+                class="SpecialAchievementForm-title"
+                style="color: white; margin: 0 auto"
+              >
+                ⭐ Создать спец. достижение
+              </h2>
+              <button
+                onclick="closeCreateSpecialAchievementModal()"
+                style="
+                  background: none;
+                  border: none;
+                  color: white;
+                  font-size: 24px;
+                  cursor: pointer;
+                "
+              >
+                &times;
+              </button>
+            </div>
+
+            <form id="createSpecialAchievementForm">
+              <div
+                class="SpecialAchievementForm-group"
+                style="
+                  display: flex;
+                  justify-content: space-evenly;
+                  margin-bottom: 15px;
+                "
+              >
+                <div style="display: flex; flex-direction: column">
+                  <label
+                    style="
+                      color: white;
+                      display: block;
+                      margin-bottom: 5px;
+                      text-align: center;
+                    "
+                    >Эмодзи достижения:</label
+                  >
+                  <input
+                    type="text"
+                    id="specialAchievementEmoji"
+                    maxlength="2"
+                    placeholder="🏆"
+                    style="
+                      width: 30%;
+                      padding: 8px;
+                      background: #0a0a0a;
+                      border: 1px solid #a45eea;
+                      color: white;
+                      border-radius: 5px;
+                      text-align: center;
+                      margin: 0 auto;
+                    "
+                    oninput="updateSpecialAchievementPreview()"
+                  />
+                </div>
+
+                <div style="margin-bottom: 15px">
+                  <label
+                    style="color: white; display: block; margin-bottom: 5px"
+                    >Discord ID пользователя:</label
+                  >
+                  <input
+                    type="text"
+                    id="specialAchievementUserId"
+                    placeholder="123456789"
+                    style="
+                      width: 100%;
+                      padding: 8px;
+                      background: #0a0a0a;
+                      border: 1px solid #a45eea;
+                      color: white;
+                      border-radius: 5px;
+                      text-align: center;
+                    "
+                  />
+                </div>
+              </div>
+
+              <div style="margin-bottom: 15px">
+                <label style="color: white; display: block; margin-bottom: 5px"
+                  >Название достижения:</label
+                >
+                <input
+                  type="text"
+                  id="specialAchievementName"
+                  placeholder="Название"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    background: #0a0a0a;
+                    border: 1px solid #a45eea;
+                    color: white;
+                    border-radius: 5px;
+                  "
+                  oninput="updateSpecialAchievementPreview()"
+                />
+              </div>
+
+              <div style="margin-bottom: 15px">
+                <label style="color: white; display: block; margin-bottom: 5px"
+                  >Описание:</label
+                >
+                <textarea
+                  id="specialAchievementDescription"
+                  placeholder="Описание достижения"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    background: #0a0a0a;
+                    border: 1px solid #a45eea;
+                    color: white;
+                    border-radius: 5px;
+                    resize: vertical;
+                    min-height: 60px;
+                  "
+                ></textarea>
+              </div>
+
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 10px;
+                  margin-bottom: 15px;
+                "
+              >
+                <div>
+                  <label
+                    style="color: white; display: block; margin-bottom: 5px"
+                    >Дата:</label
+                  >
+                  <input
+                    type="date"
+                    id="specialAchievementDate"
+                    style="
+                      width: 100%;
+                      padding: 8px;
+                      background: #0a0a0a;
+                      border: 1px solid #a45eea;
+                      color: white;
+                      border-radius: 5px;
+                    "
+                  />
+                </div>
+                <div>
+                  <label
+                    style="color: white; display: block; margin-bottom: 5px"
+                    >Время:</label
+                  >
+                  <input
+                    type="time"
+                    id="specialAchievementTime"
+                    style="
+                      width: 100%;
+                      padding: 8px;
+                      background: #0a0a0a;
+                      border: 1px solid #a45eea;
+                      color: white;
+                      border-radius: 5px;
+                    "
+                  />
+                </div>
+              </div>
+
+              <div style="margin-bottom: 15px">
+                <label style="color: white; display: block; margin-bottom: 5px"
+                  >Цвет:</label
+                >
+                <input
+                  type="color"
+                  id="specialAchievementColor"
+                  value="#a45eea"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    background: #0a0a0a;
+                    border: 1px solid #a45eea;
+                    border-radius: 5px;
+                    cursor: pointer;
+                  "
+                  oninput="updateSpecialAchievementPreview()"
+                />
+              </div>
+
+              <div style="margin-bottom: 15px">
+                <label style="color: white; display: block; margin-bottom: 5px"
+                  >Превью:</label
+                >
+                <div
+                  id="specialAchievementPreview"
+                  style="
+                    padding: 10px;
+                    background: #0a0a0a;
+                    border: 1px solid #a45eea;
+                    border-radius: 5px;
+                  "
+                ></div>
+              </div>
+
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+              >
+                <button
+                  type="button"
+                  onclick="createSpecialAchievement()"
+                  style="
+                    padding: 10px;
+                    background-color: #a45eea;
+                    color: #000;
+                    border: none;
+                    border-radius: 5px;
+                    font-weight: bold;
+                    cursor: pointer;
+                  "
+                >
+                  Создать
+                </button>
+                <button
+                  type="button"
+                  onclick="closeCreateSpecialAchievementModal()"
+                  style="
+                    padding: 10px;
+                    background-color: #555;
+                    color: #fff;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                  "
+                >
+                  Отмена
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ СПЕЦИАЛЬНОГО ДОСТИЖЕНИЯ -->
+        <div
+          id="editSpecialAchievementModal"
+          style="
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+          "
+        >
+          <div
+            style="
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              background: #1a1a1a;
+              border: 2px solid #a45eea;
+              border-radius: 10px;
+              padding: 20px;
+              width: 90%;
+              max-width: 600px;
+              max-height: 80vh;
+              overflow: auto;
+              scrollbar-width: none;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+              "
+            >
+              <h2
+                class="SpecialAchievementForm-title"
+                style="color: white; margin: 0 auto"
+              >
+                ✏️ Редактировать достижение
+              </h2>
+              <button
+                onclick="closeEditSpecialAchievementModal()"
+                style="
+                  background: none;
+                  border: none;
+                  color: white;
+                  font-size: 24px;
+                  cursor: pointer;
+                "
+              >
+                &times;
+              </button>
+            </div>
+
+            <form id="editSpecialAchievementForm">
+              <input type="hidden" id="editAchievementId" />
+
+              <div style="margin-bottom: 15px">
+                <label
+                  style="
+                    color: white;
+                    display: block;
+                    margin-bottom: 5px;
+                    text-align: center;
+                  "
+                  >Эмодзи достижения:</label
+                >
+                <input
+                  type="text"
+                  id="editSpecialAchievementEmoji"
+                  maxlength="2"
+                  placeholder="🏆"
+                  style="
+                    width: 60px;
+                    padding: 8px;
+                    background: #0a0a0a;
+                    border: 1px solid #a45eea;
+                    color: white;
+                    border-radius: 5px;
+                    text-align: center;
+                    margin: 0 auto;
+                    display: block;
+                    font-size: 24px;
+                  "
+                  oninput="updateEditSpecialAchievementPreview()"
+                />
+              </div>
+
+              <div style="margin-bottom: 15px">
+                <label style="color: white; display: block; margin-bottom: 5px"
+                  >Название достижения:</label
+                >
+                <input
+                  type="text"
+                  id="editSpecialAchievementName"
+                  placeholder="Название"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    background: #0a0a0a;
+                    border: 1px solid #a45eea;
+                    color: white;
+                    border-radius: 5px;
+                  "
+                  oninput="updateEditSpecialAchievementPreview()"
+                />
+              </div>
+
+              <div style="margin-bottom: 15px">
+                <label style="color: white; display: block; margin-bottom: 5px"
+                  >Описание:</label
+                >
+                <textarea
+                  id="editSpecialAchievementDescription"
+                  placeholder="Описание достижения"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    background: #0a0a0a;
+                    border: 1px solid #a45eea;
+                    color: white;
+                    border-radius: 5px;
+                    resize: vertical;
+                    min-height: 60px;
+                  "
+                ></textarea>
+              </div>
+
+              <div style="margin-bottom: 15px">
+                <label style="color: white; display: block; margin-bottom: 5px"
+                  >Цвет:</label
+                >
+                <input
+                  type="color"
+                  id="editSpecialAchievementColor"
+                  value="#a45eea"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    background: #0a0a0a;
+                    border: 1px solid #a45eea;
+                    border-radius: 5px;
+                    cursor: pointer;
+                  "
+                  oninput="updateEditSpecialAchievementPreview()"
+                />
+              </div>
+
+              <div style="margin-bottom: 15px">
+                <label style="color: white; display: block; margin-bottom: 5px"
+                  >Превью:</label
+                >
+                <div
+                  id="editSpecialAchievementPreview"
+                  style="
+                    padding: 10px;
+                    background: #0a0a0a;
+                    border: 1px solid #a45eea;
+                    border-radius: 5px;
+                  "
+                ></div>
+              </div>
+
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+              >
+                <button
+                  type="button"
+                  onclick="saveEditSpecialAchievement()"
+                  style="
+                    padding: 10px;
+                    background-color: #a45eea;
+                    color: #000;
+                    border: none;
+                    border-radius: 5px;
+                    font-weight: bold;
+                    cursor: pointer;
+                  "
+                >
+                  Сохранить
+                </button>
+                <button
+                  type="button"
+                  onclick="closeEditSpecialAchievementModal()"
+                  style="
+                    padding: 10px;
+                    background-color: #555;
+                    color: #fff;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                  "
+                >
+                  Отмена
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- МОДАЛЬНОЕ ОКНО УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ -->
+        <div
+          id="usersModal"
+          onclick="closeUsersModalOnOutsideClick(event)"
+          style="
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+          "
+        >
+          <div
+            onclick="event.stopPropagation()"
+            style="
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              background: #1a1a1a;
+              border: 2px solid #667eea;
+              border-radius: 10px;
+              padding: 20px;
+              width: 90%;
+              max-width: 800px;
+              max-height: 80vh;
+              overflow: auto;
+              scrollbar-width: none;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+              "
+            >
+              <h2 style="color: white; margin: 0">
+                👥 Управление пользователями
+              </h2>
+              <button
+                onclick="closeUsersModal()"
+                style="
+                  background: none;
+                  border: none;
+                  color: white;
+                  font-size: 24px;
+                  cursor: pointer;
+                "
+              >
+                &times;
+              </button>
+            </div>
+
+            <div
+              id="usersList"
+              style="display: flex; flex-direction: column; gap: 10px"
+            >
+              <!-- Список пользователей будет загружен здесь -->
+            </div>
+          </div>
+        </div>
+
+        <div id="userContent" style="display: none">
+          <div class="tabs">
+            <div class="tab active" onclick="switchTab('stats')">
+              📊 Статистика
+            </div>
+            <div class="tab" onclick="switchTab('achievements')">
+              🏆 Достижения
+            </div>
+            <div class="tab" onclick="switchTab('settings')">⚙️ Настройки</div>
+            <div class="tab" onclick="switchTab('leaderboard')">🏅 Рейтинг</div>
+          </div>
+
+          <div id="stats" class="tab-content active">
+            <div class="stats-grid" id="statsGrid">
+              <!-- Статистика будет загружена здесь -->
+            </div>
+          </div>
+
+          <div id="achievements" class="tab-content">
+            <div class="achievements" id="achievementsList">
+              <!-- Достижения будут загружены здесь -->
+            </div>
+          </div>
+
+          <div id="settings" class="tab-content">
+            <div class="settings-cards">
+              <div class="setting-card">
+                <div class="setting-card-icon">📩</div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">ЛС уведомления</h3>
+                  <p class="setting-card-description">
+                    Получать личные сообщения при перемещении в AFK
+                  </p>
+                  <select id="dmNotifications" class="setting-select">
+                    <option value="true">✅ Включены</option>
+                    <option value="false">❌ Отключены</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-card-icon">⏰</div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">Время до AFK</h3>
+                  <p class="setting-card-description">
+                    Через сколько минут неактивности переместить в AFK канал
+                  </p>
+                  <select id="afkTimeout" class="setting-select">
+                    <option
+                      value="10"
+                      class="admin-option"
+                      style="display: none"
+                    >
+                      10 секунд
+                    </option>
+                    <option value="15">15 минут</option>
+                    <option value="30">30 минут</option>
+                    <option value="45">45 минут</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-card-icon">🏆</div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">Уведомления о достижениях</h3>
+                  <p class="setting-card-description">
+                    Получать уведомления при разблокировке новых достижений
+                  </p>
+                  <select id="achievementNotifications" class="setting-select">
+                    <option value="true">✅ Включены</option>
+                    <option value="false">❌ Отключены</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-card-icon">🎨</div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">Тема оформления</h3>
+                  <p class="setting-card-description">
+                    Выберите цветовую схему интерфейса
+                  </p>
+                  <select
+                    id="themeSelect"
+                    class="setting-select"
+                    onchange="previewTheme(this.value)"
+                  >
+                    <option value="standard">🎨 Стандарт</option>
+                    <option value="metal">⚙️ Металл</option>
+                    <option value="discord">💬 Дискорд</option>
+                    <option value="steam">🎮 Стим</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-card-icon">🔔</div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">Кто в канале</h3>
+                  <p class="setting-card-description">
+                    Показывать в боте кто заходит, уходит, включает и отключает
+                    трансляцию
+                  </p>
+                  <p
+                    id="channelNotificationsHint"
+                    class="setting-card-description"
+                    style="
+                      font-size: 12px;
+                      margin-top: 5px;
+                      opacity: 0.8;
+                      color: #ff9800;
+                    "
+                  >
+                    ⚠️ Сначала свяжите аккаунт с Telegram ниже
+                  </p>
+                  <select
+                    id="channelNotifications"
+                    class="setting-select"
+                    disabled
+                    style="opacity: 0.5; cursor: not-allowed"
+                  >
+                    <option value="true">✅ Включено</option>
+                    <option value="false">❌ Отключено</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="setting-card">
+                <div class="setting-card-icon">🔗</div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">Связь с Telegram</h3>
+                  <p
+                    class="setting-card-description"
+                    id="telegramLinkDescription"
+                  >
+                    Свяжите Discord аккаунт с Telegram для получения уведомлений
+                  </p>
+                  <div
+                    id="telegramLinkStatus"
+                    style="
+                      margin-top: 10px;
+                      padding: 10px;
+                      border-radius: 8px;
+                      background: rgba(102, 126, 234, 0.1);
+                      display: none;
+                    "
+                  >
+                    <div
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        margin-bottom: 8px;
+                      "
+                    >
+                      <span style="font-size: 20px">✅</span>
+                      <span style="font-weight: 600">Аккаунты связаны</span>
+                    </div>
+                    <p style="font-size: 12px; opacity: 0.8; margin: 0">
+                      Вы получаете уведомления в Telegram
+                    </p>
+                  </div>
+                  <button
+                    id="telegramLinkBtn"
+                    class="setting-select"
+                    style="
+                      cursor: pointer;
+                      text-align: center;
+                      font-weight: 600;
+                      background: linear-gradient(
+                        135deg,
+                        #667eea 0%,
+                        #764ba2 100%
+                      );
+                      color: white;
+                      border: none;
+                      padding: 12px;
+                      width: 100%;
+                      margin-top: 10px;
+                    "
+                  >
+                    🔗 Связать с Telegram
+                  </button>
+                  <button
+                    id="telegramUnlinkBtn"
+                    class="setting-select"
+                    style="
+                      cursor: pointer;
+                      text-align: center;
+                      font-weight: 600;
+                      background: #f44336;
+                      color: white;
+                      border: none;
+                      padding: 12px;
+                      width: 100%;
+                      margin-top: 10px;
+                      display: none;
+                    "
+                    onclick="unlinkTelegram()"
+                  >
+                    🔓 Отвязать
+                  </button>
+                </div>
+              </div>
+
+              <div class="setting-card logout-card">
+                <div class="setting-card-icon">🚪</div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">Выход из аккаунта</h3>
+                  <p class="setting-card-description">
+                    Выйти из текущего аккаунта и очистить сохраненные данные
+                  </p>
+                  <button class="logout-btn" onclick="logout()">
+                    🚪 Разлогиниться
+                  </button>
+                </div>
+              </div>
+
+              <button class="save-settings-btn" onclick="saveSettings()">
+                💾 Сохранить настройки
+              </button>
+            </div>
+
+            <!-- Админ-панель -->
+            <div id="adminPanel" class="admin-panel" style="display: none">
+              <div class="admin-panel-header">
+                <h2>Админ-панель</h2>
+                <p>Специальные функции для администратора</p>
+              </div>
+              <div class="admin-panel-content">
+                <button
+                  id="createSpecialAchievementBtn"
+                  onclick="openCreateSpecialAchievementModal()"
+                  class="admin-btn"
+                >
+                  <span class="admin-btn-icon">⭐</span>
+                  <span class="admin-btn-text"
+                    >Создать специальное достижение</span
+                  >
+                </button>
+                <button
+                  id="backupDatabaseBtn"
+                  onclick="backupDatabase()"
+                  class="admin-btn"
+                >
+                  <span class="admin-btn-icon">💾</span>
+                  <span class="admin-btn-text">Бэкап БД</span>
+                </button>
+                <button
+                  id="manageUsersBtn"
+                  onclick="openUsersModal()"
+                  class="admin-btn"
+                >
+                  <span class="admin-btn-icon">👥</span>
+                  <span class="admin-btn-text">Пользователи</span>
+                </button>
+                <button
+                  id="updateNamesBtn"
+                  onclick="updateUserNames()"
+                  class="admin-btn"
+                >
+                  <span class="admin-btn-icon">🔄</span>
+                  <span class="admin-btn-text">Проверить имена</span>
+                </button>
+                <button
+                  id="downloadAvatarsBtn"
+                  onclick="downloadAvatars()"
+                  class="admin-btn"
+                >
+                  <span class="admin-btn-icon">📥</span>
+                  <span class="admin-btn-text">Загрузить аватарки</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="leaderboard" class="tab-content">
+            <div class="leaderboard" id="leaderboardList">
+              <!-- Рейтинг будет загружен здесь -->
+            </div>
+          </div>
+        </div>
+
+        <div id="loading" class="loading">
+          Введи свой Discord ID для загрузки данных, малютка...
+        </div>
+      </div>
     </div>
-</body>
+  </body>
 </html>
