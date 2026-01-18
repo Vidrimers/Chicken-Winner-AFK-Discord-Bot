@@ -3917,24 +3917,19 @@ export function getVoiceChannelActivity() {
         const channelInfo = {
           name: channel.name,
           id: channel.id,
-          members: []
+          members: [],
+          oldestJoinTime: null, // Время присоединения самого раннего участника
+          channelActivityDuration: "Неизвестно"
         };
 
         channel.members.forEach((member) => {
           try {
             const joinTime = userJoinTimes.get(member.id);
-            let duration = "Неизвестно";
             
+            // Отслеживаем самое раннее время присоединения
             if (joinTime) {
-              const now = Date.now();
-              const diff = now - joinTime;
-              const hours = Math.floor(diff / 3600000);
-              const minutes = Math.floor((diff % 3600000) / 60000);
-              
-              if (hours > 0) {
-                duration = `${hours}ч ${minutes}м`;
-              } else {
-                duration = `${minutes}м`;
+              if (!channelInfo.oldestJoinTime || joinTime < channelInfo.oldestJoinTime) {
+                channelInfo.oldestJoinTime = joinTime;
               }
             }
 
@@ -3942,7 +3937,6 @@ export function getVoiceChannelActivity() {
               username: member.user ? member.user.username : "Unknown",
               displayName: member.displayName || member.user?.username || "Unknown",
               id: member.id,
-              duration: duration,
               streaming: member.voice?.streaming || false,
               selfVideo: member.voice?.selfVideo || false,
               muted: member.voice?.mute || false,
@@ -3950,15 +3944,29 @@ export function getVoiceChannelActivity() {
             };
 
             channelInfo.members.push(memberInfo);
-            console.log(`  👤 Добавлен: ${memberInfo.displayName} (${duration})`);
+            console.log(`  👤 Добавлен: ${memberInfo.displayName}`);
           } catch (memberError) {
             console.error(`⚠️ Ошибка обработки участника ${member.id}:`, memberError.message);
           }
         });
 
+        // Вычисляем общее время активности канала
+        if (channelInfo.oldestJoinTime) {
+          const now = Date.now();
+          const diff = now - channelInfo.oldestJoinTime;
+          const hours = Math.floor(diff / 3600000);
+          const minutes = Math.floor((diff % 3600000) / 60000);
+          
+          if (hours > 0) {
+            channelInfo.channelActivityDuration = `${hours}ч ${minutes}м`;
+          } else {
+            channelInfo.channelActivityDuration = `${minutes}м`;
+          }
+        }
+
         if (channelInfo.members.length > 0) {
           activeChannels.push(channelInfo);
-          console.log(`✅ Канал "${channelInfo.name}" добавлен с ${channelInfo.members.length} участниками`);
+          console.log(`✅ Канал "${channelInfo.name}" добавлен с ${channelInfo.members.length} участниками, активность: ${channelInfo.channelActivityDuration}`);
         } else {
           console.log(`⚠️ Канал "${channelInfo.name}" имеет участников, но все были пропущены из-за ошибок`);
         }
@@ -3981,7 +3989,15 @@ export function getVoiceChannelActivity() {
     let message = "🎤 <b>Активность в голосовых каналах:</b>\n\n";
 
     activeChannels.forEach((channel) => {
-      message += `🔊 <b>${channel.name}</b> (${channel.members.length} чел.)\n`;
+      // Заголовок канала с количеством участников и временем активности
+      message += `🔊 <b>${channel.name}</b> (${channel.members.length} чел.)`;
+      
+      // Показываем общее время активности канала
+      if (channel.channelActivityDuration !== "Неизвестно") {
+        message += ` • ⏱ ${channel.channelActivityDuration}`;
+      }
+      
+      message += `\n`;
       
       channel.members.forEach((member) => {
         let statusIcons = [];
@@ -3991,14 +4007,7 @@ export function getVoiceChannelActivity() {
         if (member.deafened) statusIcons.push("🔕");
         
         const status = statusIcons.length > 0 ? ` (${statusIcons.join(", ")})` : "";
-        message += `  👤 ${member.displayName}${status}`;
-        
-        // Показываем время только если оно известно
-        if (member.duration !== "Неизвестно") {
-          message += `\n     ⏱ ${member.duration}`;
-        }
-        
-        message += `\n`;
+        message += `  👤 ${member.displayName}${status}\n`;
       });
       
       message += "\n";

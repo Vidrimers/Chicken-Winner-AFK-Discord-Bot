@@ -16,7 +16,6 @@ if (localStorage.getItem("notOnServerWarning") === "true") {
   localStorage.removeItem("afkBotUserId");
   localStorage.removeItem("afkBotUserAvatar");
   localStorage.removeItem("notOnServerWarning");
-  console.log("🧹 Очищены данные пользователя после предупреждения");
 }
 
 // Функция для безопасной установки имени пользователя
@@ -91,8 +90,6 @@ async function copyToClipboard(event) {
       element.textContent = originalText;
       element.style.background = "";
     }, 1000);
-
-    console.log("✅ Скопировано в буфер:", text);
   } catch (err) {
     console.error("❌ Ошибка копирования:", err);
 
@@ -126,7 +123,6 @@ async function loadConfig() {
   try {
     const response = await fetch("/api/config");
     window.CONFIG = await response.json();
-    console.log("✅ Конфигурация загружена:", window.CONFIG);
 
     // Обновляем ссылку на Telegram бота
     const telegramBotLink = document.getElementById("telegramBotLink");
@@ -164,7 +160,6 @@ async function logout() {
 function loadSavedUserId() {
   const savedUserId = localStorage.getItem("afkBotUserId");
   if (savedUserId) {
-    console.log("💾 Загружаю сохраненный userId:", savedUserId);
     return savedUserId;
   }
   return null;
@@ -172,7 +167,6 @@ function loadSavedUserId() {
 
 function clearSavedUserId() {
   localStorage.removeItem("afkBotUserId");
-  console.log("🗑️ Сохраненный userId очищен");
   document.getElementById("userIdInput").value = "";
   location.reload();
 }
@@ -199,7 +193,6 @@ async function checkAuthStatus() {
 }
 
 async function loadUserDataAuto(userId) {
-  console.log("🔵 loadUserDataAuto вызвана с userId:", userId);
   window.currentUserId = userId;
   localStorage.setItem("afkBotUserId", userId);
   document.getElementById("loading").style.display = "block";
@@ -209,12 +202,10 @@ async function loadUserDataAuto(userId) {
 
   try {
     const response = await fetch(`/api/stats/${userId}`);
-    console.log("📡 Response status:", response.status);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
-    console.log("✅ Данные получены:", data);
 
     // Проверяем если пользователь не на сервере
     if (data.notOnServer) {
@@ -240,7 +231,7 @@ async function loadUserDataAuto(userId) {
       });
       data.stats.web_visits = (data.stats.web_visits || 0) + 1;
     } catch (error) {
-      console.log("Не удалось отправить данные о посещении");
+      // Игнорируем ошибки отправки статистики посещений
     }
 
     displayUserStats(data.stats);
@@ -336,7 +327,6 @@ async function loadUserData(skipSecurityCheck = false) {
 
   if (userId.toLowerCase() === window.CONFIG.ADMIN_LOGIN.toLowerCase()) {
     userId = window.CONFIG.ADMIN_USER_ID;
-    console.log("✅ Админ вошел по логину, используем ADMIN_USER_ID");
   } else if (userId === window.CONFIG.ADMIN_USER_ID && !skipSecurityCheck) {
     // Показываем предупреждение для попытки несанкционированного доступа
     showUnauthorizedAccessWarning();
@@ -348,7 +338,7 @@ async function loadUserData(skipSecurityCheck = false) {
         attemptedId: window.CONFIG.ADMIN_USER_ID,
         timestamp: new Date().toLocaleString("ru-RU"),
       }),
-    }).catch((err) => console.log("Ошибка отправки уведомления"));
+    }).catch((err) => console.error("Ошибка отправки уведомления:", err));
 
     return;
   }
@@ -372,8 +362,6 @@ async function loadUserData(skipSecurityCheck = false) {
       return;
     }
 
-    console.log("Полученные данные:", data);
-
     try {
       await fetch(`/api/visit/${userId}`, {
         method: "POST",
@@ -383,15 +371,11 @@ async function loadUserData(skipSecurityCheck = false) {
       });
       data.stats.web_visits = (data.stats.web_visits || 0) + 1;
     } catch (error) {
-      console.log("Не удалось отправить данные о посещении");
+      // Игнорируем ошибки отправки статистики посещений
     }
 
-    console.log("Вызываю displayUserStats...");
     displayUserStats(data.stats);
-    console.log("Вызываю displayUserAchievements...");
-    console.log("data.achievements перед вызовом:", data.achievements);
     displayUserAchievements(data.achievements);
-    console.log("Вызываю displayUserSettings...");
     displayUserSettings(data.settings);
 
     const username = data.stats.username || "Пользователь";
@@ -416,7 +400,6 @@ async function loadUserData(skipSecurityCheck = false) {
           const newAvatarUrl = freshData.stats.avatar_url || null;
 
           if (newUsername !== username) {
-            console.log("🔄 Обновление имени:", username, "→", newUsername);
             setUserDisplay(newUsername, userId);
           }
 
@@ -552,11 +535,6 @@ function displayUserSettings(settings) {
   document.getElementById("channelNotifications").value = (
     settings.channelNotifications || false
   ).toString();
-
-  console.log(
-    "📥 Установлено значение в select:",
-    document.getElementById("channelNotifications").value,
-  );
 
   // Проверяем активирована ли секретная тема на сервере
   const secretThemeActivated = settings.secretThemeActivated || false;
@@ -898,7 +876,6 @@ async function saveSettings() {
     }
 
     const data = await response.json();
-    console.log("✅ Настройки сохранены, ответ сервера:", data);
 
     // Если включены уведомления канала, проверяем нажал ли пользователь /start
     if (channelNotifications) {
@@ -969,10 +946,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const autoLogin = urlParams.get("autoLogin");
   const userIdParam = urlParams.get("userId");
 
-  console.log("📋 URL params - autoLogin:", autoLogin, "userId:", userIdParam);
-
   if (autoLogin && userIdParam) {
-    console.log("🔑 Запуск autoLogin с userId:", userIdParam);
     loadUserDataAuto(userIdParam);
   } else {
     const authOk = await checkAuthStatus();
@@ -983,10 +957,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const savedUserId = loadSavedUserId();
       if (savedUserId) {
-        console.log(
-          "📱 Автоматически загружаю сохраненного пользователя:",
-          savedUserId,
-        );
         setTimeout(() => loadUserDataAuto(savedUserId), 500);
       }
     }
@@ -998,7 +968,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 // Функция активации секретной темы
 async function activateSecretTheme() {
   if (!window.currentUserId) {
-    console.log("⚠️ Нужно войти чтобы активировать секретную тему");
     return;
   }
 
@@ -1054,8 +1023,6 @@ async function activateSecretTheme() {
     if (themeSelect) {
       themeSelect.value = "die-my-darling";
     }
-
-    console.log('🥀 Секретная тема "Die my Darling" активирована!');
   } catch (error) {
     console.error("❌ Ошибка при активации секретной темы:", error);
   }
@@ -1073,8 +1040,6 @@ async function backupDatabase() {
 
     if (response.ok) {
       const data = await response.json();
-      console.log("✅ Бэкап базы данных создан успешно!");
-      console.log("📂 Файл:", data.filename);
       alert("✅ Бэкап создан успешно!\n📂 Файл: " + data.filename);
     } else {
       const error = await response.json();
@@ -1218,7 +1183,6 @@ async function updateUserNames() {
 
     if (response.ok) {
       const data = await response.json();
-      console.log("✅ Имена обновлены:", data);
       alert(
         `✅ Обновлено имен: ${data.updated}\nВсего пользователей: ${data.total}`,
       );
@@ -1268,7 +1232,6 @@ async function downloadAvatars() {
 
     if (response.ok) {
       const data = await response.json();
-      console.log("✅ Аватарки загружены:", data);
       alert(
         `✅ Загружено аватарок: ${data.downloaded}\nОшибок: ${data.errors}\nВсего пользователей: ${data.total}`,
       );
