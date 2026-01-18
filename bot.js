@@ -31,6 +31,8 @@ const client = new Client({
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildPresences,
   ],
 });
 
@@ -3883,9 +3885,10 @@ export function getVoiceChannelActivity() {
     // Проверяем, что Discord клиент готов
     if (!client || !client.isReady()) {
       console.log("⚠️ Discord клиент еще не готов");
-      return { 
-        success: false, 
-        message: "⏳ Discord бот еще загружается, попробуйте через несколько секунд" 
+      return {
+        success: false,
+        message:
+          "⏳ Discord бот еще загружается, попробуйте через несколько секунд",
       };
     }
 
@@ -3896,7 +3899,7 @@ export function getVoiceChannelActivity() {
     }
 
     const voiceChannels = guild.channels.cache.filter(
-      (channel) => channel.type === ChannelType.GuildVoice
+      (channel) => channel.type === ChannelType.GuildVoice,
     );
 
     console.log(`📊 Всего голосовых каналов: ${voiceChannels.size}`);
@@ -3911,7 +3914,7 @@ export function getVoiceChannelActivity() {
     voiceChannels.forEach((channel) => {
       const memberCount = channel.members ? channel.members.size : 0;
       console.log(`🔊 Канал "${channel.name}": ${memberCount} участников`);
-      
+
       if (memberCount > 0) {
         totalMembers += memberCount;
         const channelInfo = {
@@ -3919,34 +3922,41 @@ export function getVoiceChannelActivity() {
           id: channel.id,
           members: [],
           oldestJoinTime: null, // Время присоединения самого раннего участника
-          channelActivityDuration: "Неизвестно"
+          channelActivityDuration: "Неизвестно",
         };
 
         channel.members.forEach((member) => {
           try {
             const joinTime = userJoinTimes.get(member.id);
-            
+
             // Отслеживаем самое раннее время присоединения
             if (joinTime) {
-              if (!channelInfo.oldestJoinTime || joinTime < channelInfo.oldestJoinTime) {
+              if (
+                !channelInfo.oldestJoinTime ||
+                joinTime < channelInfo.oldestJoinTime
+              ) {
                 channelInfo.oldestJoinTime = joinTime;
               }
             }
 
             const memberInfo = {
               username: member.user ? member.user.username : "Unknown",
-              displayName: member.displayName || member.user?.username || "Unknown",
+              displayName:
+                member.displayName || member.user?.username || "Unknown",
               id: member.id,
               streaming: member.voice?.streaming || false,
               selfVideo: member.voice?.selfVideo || false,
               muted: member.voice?.mute || false,
-              deafened: member.voice?.deaf || false
+              deafened: member.voice?.deaf || false,
             };
 
             channelInfo.members.push(memberInfo);
             console.log(`  👤 Добавлен: ${memberInfo.displayName}`);
           } catch (memberError) {
-            console.error(`⚠️ Ошибка обработки участника ${member.id}:`, memberError.message);
+            console.error(
+              `⚠️ Ошибка обработки участника ${member.id}:`,
+              memberError.message,
+            );
           }
         });
 
@@ -3956,32 +3966,44 @@ export function getVoiceChannelActivity() {
           const diff = now - channelInfo.oldestJoinTime;
           const hours = Math.floor(diff / 3600000);
           const minutes = Math.floor((diff % 3600000) / 60000);
-          
+
+          // Не показываем время если меньше минуты
           if (hours > 0) {
             channelInfo.channelActivityDuration = `${hours}ч ${minutes}м`;
-          } else {
+          } else if (minutes > 0) {
             channelInfo.channelActivityDuration = `${minutes}м`;
+          } else {
+            channelInfo.channelActivityDuration = "Неизвестно";
           }
         }
 
         if (channelInfo.members.length > 0) {
           activeChannels.push(channelInfo);
-          console.log(`✅ Канал "${channelInfo.name}" добавлен с ${channelInfo.members.length} участниками, активность: ${channelInfo.channelActivityDuration}`);
+          console.log(
+            `✅ Канал "${channelInfo.name}" добавлен с ${channelInfo.members.length} участниками, активность: ${channelInfo.channelActivityDuration}`,
+          );
         } else {
-          console.log(`⚠️ Канал "${channelInfo.name}" имеет участников, но все были пропущены из-за ошибок`);
+          console.log(
+            `⚠️ Канал "${channelInfo.name}" имеет участников, но все были пропущены из-за ошибок`,
+          );
         }
       }
     });
 
-    console.log(`📊 Итого: ${totalMembers} участников в ${activeChannels.length} каналах`);
+    console.log(
+      `📊 Итого: ${totalMembers} участников в ${activeChannels.length} каналах`,
+    );
 
     if (activeChannels.length === 0) {
-      console.log(`⚠️ activeChannels пуст, но было найдено ${totalMembers} участников`);
-      return { 
-        success: true, 
-        message: totalMembers > 0 
-          ? "⚠️ Не удалось получить информацию о пользователях в каналах. Попробуйте позже."
-          : "📭 Все голосовые каналы пусты" 
+      console.log(
+        `⚠️ activeChannels пуст, но было найдено ${totalMembers} участников`,
+      );
+      return {
+        success: true,
+        message:
+          totalMembers > 0
+            ? "⚠️ Не удалось получить информацию о пользователях в каналах. Попробуйте позже."
+            : "📭 Все голосовые каналы пусты",
       };
     }
 
@@ -3991,44 +4013,171 @@ export function getVoiceChannelActivity() {
     activeChannels.forEach((channel) => {
       // Заголовок канала с количеством участников и временем активности
       message += `🔊 <b>${channel.name}</b> (${channel.members.length} чел.)`;
-      
+
       // Показываем общее время активности канала
       if (channel.channelActivityDuration !== "Неизвестно") {
         message += ` • ⏱ ${channel.channelActivityDuration}`;
       }
-      
+
       message += `\n`;
-      
+
       channel.members.forEach((member) => {
         let statusIcons = [];
         if (member.streaming) statusIcons.push("🔴 Стрим");
         if (member.selfVideo) statusIcons.push("📹 Видео");
         if (member.muted) statusIcons.push("🔇");
         if (member.deafened) statusIcons.push("🔕");
-        
-        const status = statusIcons.length > 0 ? ` (${statusIcons.join(", ")})` : "";
+
+        const status =
+          statusIcons.length > 0 ? ` (${statusIcons.join(", ")})` : "";
         message += `  👤 ${member.displayName}${status}\n`;
       });
-      
+
       message += "\n";
     });
 
     message += `📅 ${new Date().toLocaleString("ru-RU")}`;
 
-    console.log(`✅ Информация о каналах успешно собрана: ${activeChannels.length} активных каналов`);
+    console.log(
+      `✅ Информация о каналах успешно собрана: ${activeChannels.length} активных каналов`,
+    );
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: message,
-      activeChannels: activeChannels
+      activeChannels: activeChannels,
     };
-
   } catch (error) {
     console.error("❌ Ошибка при получении информации о каналах:", error);
     console.error("Stack trace:", error.stack);
-    return { 
-      success: false, 
-      message: "❌ Ошибка при получении информации о каналах" 
+    return {
+      success: false,
+      message: "❌ Ошибка при получении информации о каналах",
+    };
+  }
+}
+
+// ===== ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ СПИСКА ОНЛАЙН ПОЛЬЗОВАТЕЛЕЙ =====
+export function getOnlineUsers() {
+  try {
+    // Проверяем, что Discord клиент готов
+    if (!client || !client.isReady()) {
+      console.log("⚠️ Discord клиент еще не готов");
+      return {
+        success: false,
+        message: "⏳ Discord бот еще загружается, попробуйте через несколько секунд",
+      };
+    }
+
+    const guild = client.guilds.cache.first();
+    if (!guild) {
+      console.log("⚠️ Сервер не найден");
+      return { success: false, message: "❌ Сервер не найден" };
+    }
+
+    // Получаем всех участников сервера
+    const members = guild.members.cache;
+    
+    if (members.size === 0) {
+      return { success: true, message: "📭 На сервере нет участников" };
+    }
+
+    // Фильтруем онлайн пользователей (не оффлайн и не боты)
+    const onlineMembers = members.filter(
+      (member) => 
+        !member.user.bot && 
+        member.presence?.status && 
+        member.presence.status !== "offline"
+    );
+
+    console.log(`👥 Всего участников: ${members.size}, онлайн: ${onlineMembers.size}`);
+
+    if (onlineMembers.size === 0) {
+      return {
+        success: true,
+        message: "📭 Нет пользователей онлайн",
+      };
+    }
+
+    // Группируем по статусам
+    const statusGroups = {
+      online: [],
+      idle: [],
+      dnd: [],
+    };
+
+    onlineMembers.forEach((member) => {
+      const status = member.presence?.status || "offline";
+      const memberInfo = {
+        displayName: member.displayName || member.user?.username || "Unknown",
+        username: member.user?.username || "Unknown",
+        id: member.id,
+        status: status,
+        activities: member.presence?.activities || [],
+      };
+
+      if (status === "online") {
+        statusGroups.online.push(memberInfo);
+      } else if (status === "idle") {
+        statusGroups.idle.push(memberInfo);
+      } else if (status === "dnd") {
+        statusGroups.dnd.push(memberInfo);
+      }
+    });
+
+    // Формируем сообщение
+    let message = `👥 <b>Пользователи онлайн:</b> ${onlineMembers.size} чел.\n\n`;
+
+    // Онлайн (зелёный)
+    if (statusGroups.online.length > 0) {
+      message += `🟢 <b>Онлайн</b> (${statusGroups.online.length})\n`;
+      statusGroups.online.forEach((member) => {
+        message += `  👤 ${member.displayName}\n`;
+        // Показываем активность если есть
+        if (member.activities.length > 0) {
+          const activity = member.activities[0];
+          if (activity.name) {
+            message += `     🎮 ${activity.name}\n`;
+          }
+        }
+      });
+      message += "\n";
+    }
+
+    // Неактивен (жёлтый)
+    if (statusGroups.idle.length > 0) {
+      message += `🟡 <b>Неактивен</b> (${statusGroups.idle.length})\n`;
+      statusGroups.idle.forEach((member) => {
+        message += `  👤 ${member.displayName}\n`;
+      });
+      message += "\n";
+    }
+
+    // Не беспокоить (красный)
+    if (statusGroups.dnd.length > 0) {
+      message += `🔴 <b>Не беспокоить</b> (${statusGroups.dnd.length})\n`;
+      statusGroups.dnd.forEach((member) => {
+        message += `  👤 ${member.displayName}\n`;
+      });
+      message += "\n";
+    }
+
+    message += `📅 ${new Date().toLocaleString("ru-RU")}`;
+
+    console.log(`✅ Информация об онлайн пользователях собрана: ${onlineMembers.size} онлайн`);
+
+    return {
+      success: true,
+      message: message,
+      onlineCount: onlineMembers.size,
+      totalCount: members.size,
+    };
+  } catch (error) {
+    console.error("❌ Ошибка при получении списка онлайн пользователей:", error);
+    console.error("Stack trace:", error.stack);
+    return {
+      success: false,
+      message: "❌ Ошибка при получении списка пользователей",
     };
   }
 }
@@ -4051,5 +4200,5 @@ client.login(process.env.DISCORD_TOKEN);
 
 // ===== ИНИЦИАЛИЗАЦИЯ TELEGRAM БОТА =====
 setTimeout(() => {
-  initTelegramBot(db, client, useLinkCode, getVoiceChannelActivity);
+  initTelegramBot(db, client, useLinkCode, getVoiceChannelActivity, getOnlineUsers);
 }, 2000); // Даем Discord боту время на запуск

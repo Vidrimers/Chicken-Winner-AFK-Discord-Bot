@@ -196,11 +196,18 @@ let telegramBot = null;
 let db = null;
 let discordClient = null;
 let getVoiceActivityHandler = null;
+let getOnlineUsersHandler = null;
 
 /**
  * Инициализация Telegram бота
  */
-export function initTelegramBot(database, client, linkCodeHandler, voiceActivityHandler) {
+export function initTelegramBot(
+  database,
+  client,
+  linkCodeHandler,
+  voiceActivityHandler,
+  onlineUsersHandler,
+) {
   if (!TELEGRAM_TOKEN) {
     console.log(
       "⚠️ TELEGRAM_BOT_TOKEN не настроен, Telegram бот не будет запущен",
@@ -211,6 +218,7 @@ export function initTelegramBot(database, client, linkCodeHandler, voiceActivity
   db = database;
   discordClient = client;
   getVoiceActivityHandler = voiceActivityHandler;
+  getOnlineUsersHandler = onlineUsersHandler;
 
   try {
     telegramBot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
@@ -296,19 +304,20 @@ export function initTelegramBot(database, client, linkCodeHandler, voiceActivity
 
         try {
           console.log(`📤 Отправка приветственного сообщения пользователю...`);
-          
-          // Создаем клавиатуру с кнопкой
+
+          // Создаем клавиатуру с кнопками
           const keyboard = {
             keyboard: [
-              [{ text: '🎤 Кто в канале' }]
+              [{ text: "🎤 Кто в канале" }],
+              [{ text: "👥 Кто онлайн" }]
             ],
             resize_keyboard: true,
-            one_time_keyboard: false
+            one_time_keyboard: false,
           };
-          
+
           await telegramBot.sendMessage(chatId, welcomeMessage, {
             parse_mode: "HTML",
-            reply_markup: keyboard
+            reply_markup: keyboard,
           });
           console.log(`✅ Приветственное сообщение отправлено с клавиатурой`);
         } catch (sendError) {
@@ -547,36 +556,97 @@ export function initTelegramBot(database, client, linkCodeHandler, voiceActivity
             console.error("❌ getVoiceActivityHandler не установлен");
             await telegramBot.sendMessage(
               chatId,
-              "❌ Функция временно недоступна"
+              "❌ Функция временно недоступна",
             );
             return;
           }
 
           console.log("📡 Запрашиваем информацию о голосовых каналах...");
-          
+
           // Получаем информацию о голосовых каналах
           const result = getVoiceActivityHandler();
-          
-          console.log(`📊 Результат: success=${result.success}, activeChannels=${result.activeChannels?.length || 0}`);
+
+          console.log(
+            `📊 Результат: success=${result.success}, activeChannels=${result.activeChannels?.length || 0}`,
+          );
 
           if (result.success) {
             await telegramBot.sendMessage(chatId, result.message, {
-              parse_mode: "HTML"
+              parse_mode: "HTML",
             });
-            console.log(`✅ Информация о каналах отправлена пользователю ${chatId}`);
+            console.log(
+              `✅ Информация о каналах отправлена пользователю ${chatId}`,
+            );
           } else {
             await telegramBot.sendMessage(
               chatId,
-              result.message || "❌ Не удалось получить информацию о каналах"
+              result.message || "❌ Не удалось получить информацию о каналах",
             );
-            console.log(`⚠️ Не удалось получить информацию о каналах: ${result.message}`);
+            console.log(
+              `⚠️ Не удалось получить информацию о каналах: ${result.message}`,
+            );
           }
         } catch (error) {
-          console.error("❌ Ошибка при обработке запроса 'Кто в канале':", error);
+          console.error(
+            "❌ Ошибка при обработке запроса 'Кто в канале':",
+            error,
+          );
           console.error("Stack trace:", error.stack);
           await telegramBot.sendMessage(
             chatId,
-            "❌ Произошла ошибка при получении информации. Попробуйте позже."
+            "❌ Произошла ошибка при получении информации. Попробуйте позже.",
+          );
+        }
+      }
+
+      // Обработка кнопки "Кто онлайн"
+      if (text === "👥 Кто онлайн") {
+        console.log(`👥 Получен запрос "Кто онлайн" от chat_id: ${chatId}`);
+
+        try {
+          if (!getOnlineUsersHandler) {
+            console.error("❌ getOnlineUsersHandler не установлен");
+            await telegramBot.sendMessage(
+              chatId,
+              "❌ Функция временно недоступна"
+            );
+            return;
+          }
+
+          console.log("📡 Запрашиваем список онлайн пользователей...");
+
+          // Получаем информацию об онлайн пользователях
+          const result = getOnlineUsersHandler();
+
+          console.log(
+            `📊 Результат: success=${result.success}, онлайн: ${result.onlineCount || 0}/${result.totalCount || 0}`,
+          );
+
+          if (result.success) {
+            await telegramBot.sendMessage(chatId, result.message, {
+              parse_mode: "HTML",
+            });
+            console.log(
+              `✅ Список онлайн пользователей отправлен пользователю ${chatId}`,
+            );
+          } else {
+            await telegramBot.sendMessage(
+              chatId,
+              result.message || "❌ Не удалось получить список пользователей",
+            );
+            console.log(
+              `⚠️ Не удалось получить список пользователей: ${result.message}`,
+            );
+          }
+        } catch (error) {
+          console.error(
+            "❌ Ошибка при обработке запроса 'Кто онлайн':",
+            error,
+          );
+          console.error("Stack trace:", error.stack);
+          await telegramBot.sendMessage(
+            chatId,
+            "❌ Произошла ошибка при получении информации. Попробуйте позже.",
           );
         }
       }
