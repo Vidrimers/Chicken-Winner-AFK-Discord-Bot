@@ -592,6 +592,91 @@ function displayUserSettings(settings) {
 
   // Проверяем статус связи с Telegram
   checkTelegramLinkStatus();
+
+  // Показываем уведомление о секретной теме (только если её нет)
+  showSecretThemeNotification(secretThemeActivated);
+}
+
+// Показать уведомление о секретной теме
+function showSecretThemeNotification(hasSecretTheme) {
+  // Считаем количество доступных секретных тем
+  const themeSelect = document.getElementById("themeSelect");
+  const allThemes = themeSelect ? themeSelect.options.length : 4; // 4 стандартные темы
+  const secretThemesCount = Math.max(0, allThemes - 4); // Вычитаем 4 стандартные темы
+
+  // Получаем сохраненное количество секретных тем
+  const savedSecretThemesCount = parseInt(
+    sessionStorage.getItem("secretThemesCount") || "0",
+  );
+
+  // Проверяем, добавилась ли новая секретная тема
+  const hasNewSecretTheme = secretThemesCount > savedSecretThemesCount;
+
+  // Сохраняем текущее количество секретных тем
+  sessionStorage.setItem("secretThemesCount", secretThemesCount.toString());
+
+  // Показываем уведомление если:
+  // 1. У пользователя нет ни одной секретной темы ИЛИ
+  // 2. Добавилась новая секретная тема
+  const shouldShow =
+    (!hasSecretTheme && secretThemesCount < 1) || hasNewSecretTheme;
+
+  // Проверяем, показывали ли уже уведомление для текущего количества тем
+  const notificationKey = `secretThemeNotification_${secretThemesCount}`;
+  if (!shouldShow || sessionStorage.getItem(notificationKey)) {
+    return;
+  }
+
+  // Формируем текст уведомления
+  let notificationText =
+    "🔍 <b>Секретная тема доступна!</b> Найди её, малютка 😏";
+  if (hasNewSecretTheme && savedSecretThemesCount > 0) {
+    notificationText = "🆕 <b>Новая секретная тема!</b> Найди её, малютка 😏";
+  }
+
+  // Создаем элемент уведомления
+  const notification = document.createElement("div");
+  notification.id = "secretThemeNotification";
+  notification.innerHTML = notificationText;
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    z-index: 10001;
+    font-weight: 500;
+    font-size: 14px;
+    text-align: center;
+    opacity: 0;
+    transition: all 0.5s ease;
+  `;
+
+  document.body.appendChild(notification);
+
+  // Анимация появления
+  setTimeout(() => {
+    notification.style.transform = "translateX(-50%) translateY(0)";
+    notification.style.opacity = "1";
+  }, 100);
+
+  // Анимация исчезновения через 4.5 секунды
+  setTimeout(() => {
+    notification.style.transform = "translateX(-50%) translateY(-100px)";
+    notification.style.opacity = "0";
+
+    // Удаляем элемент через 0.5 секунды (после завершения анимации)
+    setTimeout(() => {
+      notification.remove();
+    }, 500);
+  }, 4500);
+
+  // Помечаем, что уведомление показано для текущего количества тем
+  sessionStorage.setItem(notificationKey, "true");
 }
 
 // Проверка статуса связи с Telegram
