@@ -587,6 +587,9 @@ function showSecretThemeNotification(hasSecretTheme) {
     sessionStorage.getItem("secretThemesCount") || "0",
   );
 
+  // Проверяем, первый ли это визит (если savedSecretThemesCount = 0 и sessionStorage пустой)
+  const isFirstVisit = !sessionStorage.getItem("secretThemesCount");
+
   // Проверяем, добавилась ли новая секретная тема
   const hasNewSecretTheme = secretThemesCount > savedSecretThemesCount;
 
@@ -595,10 +598,10 @@ function showSecretThemeNotification(hasSecretTheme) {
 
   // Показываем уведомление только если:
   // 1. У пользователя НЕТ секретной темы И есть хотя бы одна секретная тема в системе
-  // 2. Добавилась новая секретная тема И у пользователя УЖЕ ЕСТЬ хотя бы одна секретная тема
+  // 2. Добавилась новая секретная тема И у пользователя УЖЕ ЕСТЬ хотя бы одна секретная тема И это НЕ первый визит
   const shouldShow =
     (!hasSecretTheme && secretThemesCount >= 1) ||
-    (hasNewSecretTheme && hasSecretTheme);
+    (hasNewSecretTheme && hasSecretTheme && !isFirstVisit);
 
   // Проверяем, показывали ли уже уведомление для текущего количества тем
   const notificationKey = `secretThemeNotification_${secretThemesCount}`;
