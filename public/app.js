@@ -597,7 +597,7 @@ function showSecretThemeNotification(hasSecretTheme) {
   // 1. У пользователя НЕТ секретной темы И есть хотя бы одна секретная тема в системе
   // 2. Добавилась новая секретная тема И у пользователя УЖЕ ЕСТЬ хотя бы одна секретная тема
   const shouldShow =
-    (!hasSecretTheme && secretThemesCount >= 1) || 
+    (!hasSecretTheme && secretThemesCount >= 1) ||
     (hasNewSecretTheme && hasSecretTheme);
 
   // Проверяем, показывали ли уже уведомление для текущего количества тем
