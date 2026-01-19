@@ -162,6 +162,25 @@ export async function sendUnauthorizedAccessNotification(
 }
 
 /**
+ * Отправка уведомления о просмотре профиля
+ */
+export async function sendProfileViewNotification(
+  viewerUsername,
+  viewerId,
+  targetUsername,
+  targetUserId,
+) {
+  const message =
+    `👀 <b>Просмотр профиля</b>\n\n` +
+    `<b>${viewerUsername}</b> (ID: <code>${viewerId}</code>)\n` +
+    `смотрит профиль\n` +
+    `<b>${targetUsername}</b> (ID: <code>${targetUserId}</code>)\n` +
+    `📅 Время: ${new Date().toLocaleString("ru-RU")}`;
+
+  await sendTelegramReport(message);
+}
+
+/**
  * Отправка уведомления о запуске/остановке бота
  */
 export async function sendBotStatusNotification(status, details = "") {
@@ -309,7 +328,7 @@ export function initTelegramBot(
           const keyboard = {
             keyboard: [
               [{ text: "🎤 Кто в канале" }],
-              [{ text: "👥 Кто онлайн" }]
+              [{ text: "👥 Кто онлайн" }],
             ],
             resize_keyboard: true,
             one_time_keyboard: false,
@@ -608,7 +627,7 @@ export function initTelegramBot(
             console.error("❌ getOnlineUsersHandler не установлен");
             await telegramBot.sendMessage(
               chatId,
-              "❌ Функция временно недоступна"
+              "❌ Функция временно недоступна",
             );
             return;
           }
@@ -639,10 +658,7 @@ export function initTelegramBot(
             );
           }
         } catch (error) {
-          console.error(
-            "❌ Ошибка при обработке запроса 'Кто онлайн':",
-            error,
-          );
+          console.error("❌ Ошибка при обработке запроса 'Кто онлайн':", error);
           console.error("Stack trace:", error.stack);
           await telegramBot.sendMessage(
             chatId,

@@ -15,6 +15,7 @@ import {
   sendUnauthorizedAccessNotification,
   sendBotStatusNotification,
   sendNotOnServerAttempt,
+  sendProfileViewNotification,
   initTelegramBot,
   registerTelegramUser,
   sendTelegramMessageToUser,
@@ -1547,6 +1548,38 @@ app.get("/api/online-status", (req, res) => {
   } catch (error) {
     console.error("❌ Ошибка при получении онлайн статусов:", error);
     res.json({});
+  }
+});
+
+// API endpoint для уведомления админа о просмотре профиля
+app.post("/api/notify/profile-view", express.json(), async (req, res) => {
+  try {
+    const { viewerId, viewerUsername, targetUserId, targetUsername } = req.body;
+
+    // Проверяем, что это не просмотр своего профиля
+    if (viewerId === targetUserId) {
+      return res.json({ success: true });
+    }
+
+    // Отправляем уведомление админу в Telegram
+    try {
+      await sendProfileViewNotification(
+        viewerUsername,
+        viewerId,
+        targetUsername,
+        targetUserId,
+      );
+      console.log(
+        `📬 Telegram уведомление админу о просмотре профиля: ${viewerUsername} → ${targetUsername}`,
+      );
+    } catch (telegramError) {
+      console.error("❌ Ошибка отправки Telegram уведомления:", telegramError);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("❌ Ошибка в API /api/notify/profile-view:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -4087,7 +4120,8 @@ export function getOnlineUsers() {
       console.log("⚠️ Discord клиент еще не готов");
       return {
         success: false,
-        message: "⏳ Discord бот еще загружается, попробуйте через несколько секунд",
+        message:
+          "⏳ Discord бот еще загружается, попробуйте через несколько секунд",
       };
     }
 
@@ -4099,20 +4133,22 @@ export function getOnlineUsers() {
 
     // Получаем всех участников сервера
     const members = guild.members.cache;
-    
+
     if (members.size === 0) {
       return { success: true, message: "📭 На сервере нет участников" };
     }
 
     // Фильтруем онлайн пользователей (не оффлайн и не боты)
     const onlineMembers = members.filter(
-      (member) => 
-        !member.user.bot && 
-        member.presence?.status && 
-        member.presence.status !== "offline"
+      (member) =>
+        !member.user.bot &&
+        member.presence?.status &&
+        member.presence.status !== "offline",
     );
 
-    console.log(`👥 Всего участников: ${members.size}, онлайн: ${onlineMembers.size}`);
+    console.log(
+      `👥 Всего участников: ${members.size}, онлайн: ${onlineMembers.size}`,
+    );
 
     if (onlineMembers.size === 0) {
       return {
@@ -4186,7 +4222,9 @@ export function getOnlineUsers() {
 
     message += `📅 ${new Date().toLocaleString("ru-RU")}`;
 
-    console.log(`✅ Информация об онлайн пользователях собрана: ${onlineMembers.size} онлайн`);
+    console.log(
+      `✅ Информация об онлайн пользователях собрана: ${onlineMembers.size} онлайн`,
+    );
 
     return {
       success: true,
@@ -4195,7 +4233,10 @@ export function getOnlineUsers() {
       totalCount: members.size,
     };
   } catch (error) {
-    console.error("❌ Ошибка при получении списка онлайн пользователей:", error);
+    console.error(
+      "❌ Ошибка при получении списка онлайн пользователей:",
+      error,
+    );
     console.error("Stack trace:", error.stack);
     return {
       success: false,
@@ -4222,5 +4263,11 @@ client.login(process.env.DISCORD_TOKEN);
 
 // ===== ИНИЦИАЛИЗАЦИЯ TELEGRAM БОТА =====
 setTimeout(() => {
-  initTelegramBot(db, client, useLinkCode, getVoiceChannelActivity, getOnlineUsers);
+  initTelegramBot(
+    db,
+    client,
+    useLinkCode,
+    getVoiceChannelActivity,
+    getOnlineUsers,
+  );
 }, 2000); // Даем Discord боту время на запуск
