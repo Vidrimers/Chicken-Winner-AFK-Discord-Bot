@@ -723,7 +723,7 @@ async function checkTelegramLinkStatus() {
       }
 
       description.textContent =
-        "Свяжите Discord аккаунт с Telegram для получения уведомлений";
+        "Свяжите профиль сайта с Telegram для получения уведомлений";
 
       // Блокируем настройку "Кто в канале"
       if (channelNotificationsSelect) {
