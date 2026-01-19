@@ -593,11 +593,12 @@ function showSecretThemeNotification(hasSecretTheme) {
   // Сохраняем текущее количество секретных тем
   sessionStorage.setItem("secretThemesCount", secretThemesCount.toString());
 
-  // Показываем уведомление если:
-  // 1. У пользователя нет ни одной секретной темы ИЛИ
-  // 2. Добавилась новая секретная тема
+  // Показываем уведомление только если:
+  // 1. У пользователя НЕТ секретной темы И есть хотя бы одна секретная тема в системе
+  // 2. Добавилась новая секретная тема И у пользователя УЖЕ ЕСТЬ хотя бы одна секретная тема
   const shouldShow =
-    (!hasSecretTheme && secretThemesCount < 1) || hasNewSecretTheme;
+    (!hasSecretTheme && secretThemesCount >= 1) || 
+    (hasNewSecretTheme && hasSecretTheme);
 
   // Проверяем, показывали ли уже уведомление для текущего количества тем
   const notificationKey = `secretThemeNotification_${secretThemesCount}`;
@@ -764,14 +765,43 @@ async function showLinkCodeModal() {
           <p style="margin-bottom: 15px; font-size: 14px; opacity: 0.8;">Код действителен ${expiresMin} минут</p>
           <p style="margin-bottom: 10px;">Отправьте команду боту @${botUsername}:</p>
           <div id="linkCommand" style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; font-family: monospace; user-select: all; margin: 10px 0; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='rgba(102, 126, 234, 0.3)'" onmouseout="this.style.background='rgba(0,0,0,0.3)'" onclick="
-            navigator.clipboard.writeText('/link ${data.code}').then(() => {
-              this.style.background='rgba(76, 175, 80, 0.3)';
-              this.innerHTML = '✅ Скопировано!';
-              setTimeout(() => {
-                this.innerHTML = '/link ${data.code}';
-                this.style.background='rgba(0,0,0,0.3)';
-              }, 2000);
-            });
+            const textToCopy = '/link ${data.code}';
+            
+            // Попытка использовать современный Clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(textToCopy).then(() => {
+                this.style.background='rgba(76, 175, 80, 0.3)';
+                this.innerHTML = '✅ Скопировано!';
+                setTimeout(() => {
+                  this.innerHTML = textToCopy;
+                  this.style.background='rgba(0,0,0,0.3)';
+                }, 2000);
+              }).catch(err => {
+                console.error('Ошибка копирования:', err);
+                this.innerHTML = '⚠️ Выделите и скопируйте вручную';
+              });
+            } else {
+              // Fallback для старых браузеров или HTTP
+              const textArea = document.createElement('textarea');
+              textArea.value = textToCopy;
+              textArea.style.position = 'fixed';
+              textArea.style.left = '-999999px';
+              document.body.appendChild(textArea);
+              textArea.select();
+              try {
+                document.execCommand('copy');
+                this.style.background='rgba(76, 175, 80, 0.3)';
+                this.innerHTML = '✅ Скопировано!';
+                setTimeout(() => {
+                  this.innerHTML = textToCopy;
+                  this.style.background='rgba(0,0,0,0.3)';
+                }, 2000);
+              } catch (err) {
+                console.error('Ошибка копирования:', err);
+                this.innerHTML = '⚠️ Выделите и скопируйте вручную';
+              }
+              document.body.removeChild(textArea);
+            }
           ">/link ${data.code}</div>
           <p style="font-size: 12px; opacity: 0.6; margin-top: 5px;">👆 Нажмите, чтобы скопировать</p>
         </div>`,
