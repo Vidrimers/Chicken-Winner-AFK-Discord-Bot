@@ -85,8 +85,18 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
             
             // Создаем достижение
             try {
-              const user = await discordClient.users.fetch(userId).catch(() => null);
-              const username = user ? user.username : 'Неизвестный пользователь';
+              const guild = discordClient.guilds.cache.first();
+              let username = 'Неизвестный пользователь';
+              
+              if (guild) {
+                try {
+                  const member = await guild.members.fetch(userId);
+                  username = member.displayName || member.user.username;
+                } catch (err) {
+                  const user = await discordClient.users.fetch(userId).catch(() => null);
+                  username = user ? user.username : 'Неизвестный пользователь';
+                }
+              }
               
               const achievementId = 'secret_theme_' + Date.now() + '_' + Math.random().toString(36).substring(7);
               const nowMoscowISO = new Date().toISOString();
@@ -199,8 +209,18 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
       log(`🎉 Секретная тема активирована для userId: ${userId}`);
 
       try {
-        const user = await discordClient.users.fetch(userId).catch(() => null);
-        const username = user ? user.username : 'Неизвестный пользователь';
+        const guild = discordClient.guilds.cache.first();
+        let username = 'Неизвестный пользователь';
+        
+        if (guild) {
+          try {
+            const member = await guild.members.fetch(userId);
+            username = member.displayName || member.user.username;
+          } catch (err) {
+            const user = await discordClient.users.fetch(userId).catch(() => null);
+            username = user ? user.username : 'Неизвестный пользователь';
+          }
+        }
 
         const achievementId = 'secret_theme_' + Date.now() + '_' + Math.random().toString(36).substring(7);
         const nowMoscowISO = new Date().toISOString();

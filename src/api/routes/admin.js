@@ -61,8 +61,18 @@ export function createAdminRouter(db, discordClient, telegram) {
       log(`✅ Специальное достижение создано: ${name} для ${userId}`);
 
       if (telegram) {
-        const user = await discordClient.users.fetch(userId).catch(() => null);
-        const username = user ? user.username : 'Неизвестный пользователь';
+        const guild = discordClient.guilds.cache.first();
+        let username = 'Неизвестный пользователь';
+        
+        if (guild) {
+          try {
+            const member = await guild.members.fetch(userId);
+            username = member.displayName || member.user.username;
+          } catch (err) {
+            const user = await discordClient.users.fetch(userId).catch(() => null);
+            username = user ? user.username : 'Неизвестный пользователь';
+          }
+        }
         
         await telegram.sendSpecialAchievement(
           username,
