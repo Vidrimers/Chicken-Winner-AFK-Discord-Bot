@@ -1132,7 +1132,11 @@ function displayUsers(users) {
     const isAdmin = user.user_id === window.CONFIG.ADMIN_USER_ID;
     const deleteBtn = isAdmin
       ? '<span style="color: #999; font-size: 12px;">Админ</span>'
-      : `<button onclick="deleteUser('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>`;
+      : `<button onclick="deleteUser('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">🗑️ Удалить</button>`;
+    
+    const deleteMessagesBtn = isAdmin
+      ? ''
+      : `<button onclick="showDeleteMessagesMenu('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">💬 Удалить сообщения</button>`;
 
     html += `
             <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333;">
@@ -1145,14 +1149,85 @@ function displayUsers(users) {
                         ⭐ Очки: ${user.rank_points || 0}
                     </div>
                 </div>
-                <div>
+                <div style="display: flex; gap: 5px;">
                     ${deleteBtn}
+                    ${deleteMessagesBtn}
                 </div>
             </div>
         `;
   });
 
   usersList.innerHTML = html;
+}
+
+// Функция для показа меню удаления сообщений
+function showDeleteMessagesMenu(userId, username) {
+  const periods = [
+    { label: '1 час', value: 1 },
+    { label: '6 часов', value: 6 },
+    { label: '1 день', value: 24 },
+    { label: '3 дня', value: 72 },
+    { label: '1 неделя', value: 168 },
+    { label: 'Все сообщения', value: 0 }
+  ];
+  
+  let buttonsHtml = '';
+  periods.forEach(period => {
+    buttonsHtml += `<button onclick="deleteUserMessages('${userId}', '${username}', ${period.value})" style="padding: 10px 15px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 14px; min-width: 120px;">${period.label}</button>`;
+  });
+  
+  const menuHtml = `
+    <div id="deleteMessagesMenu" onclick="closeDeleteMessagesMenu(event)" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; justify-content: center; align-items: center;">
+      <div onclick="event.stopPropagation()" style="background: #1a1a1a; border: 2px solid #667eea; border-radius: 10px; padding: 30px; max-width: 500px;">
+        <h3 style="color: white; margin-bottom: 20px; text-align: center;">💬 Удалить сообщения пользователя<br>"${username}"</h3>
+        <p style="color: #999; margin-bottom: 20px; text-align: center;">Выберите период:</p>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
+          ${buttonsHtml}
+        </div>
+        <button onclick="closeDeleteMessagesMenu()" style="padding: 10px 20px; background: #ff4444; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; width: 100%;">Отмена</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', menuHtml);
+}
+
+function closeDeleteMessagesMenu(event) {
+  if (event && event.target.id !== 'deleteMessagesMenu') return;
+  const menu = document.getElementById('deleteMessagesMenu');
+  if (menu) menu.remove();
+}
+
+// Функция для удаления сообщений пользователя
+async function deleteUserMessages(userId, username, hours) {
+  closeDeleteMessagesMenu();
+  
+  const periodText = hours === 0 ? 'все сообщения' : `сообщения за ${hours === 1 ? '1 час' : hours === 6 ? '6 часов' : hours === 24 ? '1 день' : hours === 72 ? '3 дня' : '1 неделю'}`;
+  
+  const confirmed = confirm(
+    `⚠️ Вы уверены что хотите удалить ${periodText} пользователя "${username}"?\n\nЭто действие необратимо!`
+  );
+  
+  if (!confirmed) return;
+  
+  try {
+    const response = await fetch('/api/admin/delete-user-messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, hours })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      alert(`✅ Удалено сообщений: ${data.deletedCount}\nОшибок: ${data.errors}`);
+    } else {
+      alert('❌ Ошибка: ' + (data.error || 'Не удалось удалить сообщения'));
+    }
+  } catch (error) {
+    console.error('Ошибка при удалении сообщений:', error);
+    alert('❌ Ошибка при удалении сообщений');
+  }
 }
 
 async function deleteUser(userId, username) {

@@ -2473,6 +2473,111 @@ app.post("/api/admin/delete-user", async (req, res) => {
   }
 });
 
+// ===== УДАЛЕНИЕ СООБЩЕНИЙ ПОЛЬЗОВАТЕЛЯ =====
+app.post("/api/admin/delete-user-messages", async (req, res) => {
+  const { userId, hours } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "Отсутствует userId" });
+  }
+
+  try {
+    const guild = client.guilds.cache.first();
+    if (!guild) {
+      return res.status(500).json({ error: "Гильдия не найдена" });
+    }
+
+    let deletedCount = 0;
+    let errors = 0;
+    const now = Date.now();
+    const cutoffTime = hours === 0 ? 0 : now - (hours * 60 * 60 * 1000);
+
+    console.log(`🗑️ Начинаем удаление сообщений пользователя ${userId} за ${hours === 0 ? 'все время' : hours + ' часов'}`);
+
+    // Получаем все текстовые каналы
+    const channels = guild.channels.cache.filter(channel => channel.isTextBased());
+
+    for (const [channelId, channel] of channels) {
+      try {
+        console.log(`📝 Проверяем канал: ${channel.name}`);
+        
+        let lastMessageId;
+        let hasMore = true;
+
+        while (hasMore) {
+          const options = { limit: 100 };
+          if (lastMessageId) {
+            options.before = lastMessageId;
+          }
+
+          const messages = await channel.messages.fetch(options);
+          
+          if (messages.size === 0) {
+            hasMore = false;
+            break;
+          }
+
+          const userMessages = messages.filter(msg => {
+            if (msg.author.id !== userId) return false;
+            if (hours === 0) return true;
+            return msg.createdTimestamp >= cutoffTime;
+          });
+
+          for (const [msgId, msg] of userMessages) {
+            try {
+              await msg.delete();
+              deletedCount++;
+              console.log(`✅ Удалено сообщение ${msgId} в канале ${channel.name}`);
+              
+              // Задержка чтобы не превысить rate limit
+              await new Promise(resolve => setTimeout(resolve, 100));
+            } catch (err) {
+              console.error(`❌ Ошибка удаления сообщения ${msgId}:`, err.message);
+              errors++;
+            }
+          }
+
+          lastMessageId = messages.last()?.id;
+
+          // Если все сообщения старше cutoffTime, прекращаем поиск
+          if (hours !== 0 && messages.last()?.createdTimestamp < cutoffTime) {
+            hasMore = false;
+          }
+
+          // Если получили меньше 100 сообщений, значит это последняя страница
+          if (messages.size < 100) {
+            hasMore = false;
+          }
+        }
+      } catch (channelError) {
+        console.error(`❌ Ошибка обработки канала ${channel.name}:`, channelError.message);
+        errors++;
+      }
+    }
+
+    console.log(`✅ Удаление завершено. Удалено: ${deletedCount}, Ошибок: ${errors}`);
+
+    // Отправляем уведомление в Telegram
+    const userStats = getUserStats(userId);
+    const userName = userStats?.username || `ID: ${userId}`;
+    const periodText = hours === 0 ? 'все сообщения' : `сообщения за ${hours}ч`;
+    
+    await sendTelegramReport(
+      `🗑️ <b>Удалены сообщения пользователя</b>\n` +
+      `👤 Пользователь: ${userName}\n` +
+      `📝 Период: ${periodText}\n` +
+      `✅ Удалено: ${deletedCount}\n` +
+      `❌ Ошибок: ${errors}\n` +
+      `📅 Время: ${formatTime(new Date())}`
+    );
+
+    res.json({ success: true, deletedCount, errors });
+  } catch (error) {
+    console.error("❌ Ошибка при удалении сообщений:", error);
+    res.status(500).json({ error: "Ошибка при удалении сообщений" });
+  }
+});
+
 // ===== БЭКАП БАЗЫ ДАННЫХ =====
 app.post("/api/admin/backup-database", async (req, res) => {
   try {
