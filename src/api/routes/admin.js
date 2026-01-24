@@ -60,42 +60,49 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
 
       log(`✅ Специальное достижение создано: ${name} для ${userId}`);
 
-      const guild = discordClient.guilds.cache.first();
-      let username = 'Неизвестный пользователь';
-      
-      if (guild) {
-        try {
-          const member = await guild.members.fetch(userId);
-          username = member.displayName || member.user.username;
-        } catch (err) {
-          const user = await discordClient.users.fetch(userId).catch(() => null);
-          username = user ? user.username : 'Неизвестный пользователь';
+      // Проверяем, нужно ли отправлять уведомления сейчас
+      const shouldNotifyNow = !specialDate || new Date(specialDate) <= new Date();
+
+      if (shouldNotifyNow) {
+        const guild = discordClient.guilds.cache.first();
+        let username = 'Неизвестный пользователь';
+        
+        if (guild) {
+          try {
+            const member = await guild.members.fetch(userId);
+            username = member.displayName || member.user.username;
+          } catch (err) {
+            const user = await discordClient.users.fetch(userId).catch(() => null);
+            username = user ? user.username : 'Неизвестный пользователь';
+          }
         }
-      }
 
-      // Отправляем уведомление в Telegram
-      if (telegram) {
-        await telegram.sendSpecialAchievement(
-          username,
-          userId,
-          emoji,
-          name,
-          description,
-          color,
-          unlockedTime,
-          db
-        );
-      }
+        // Отправляем уведомление в Telegram
+        if (telegram) {
+          await telegram.sendSpecialAchievement(
+            username,
+            userId,
+            emoji,
+            name,
+            description,
+            color,
+            unlockedTime,
+            db
+          );
+        }
 
-      // Отправляем уведомление в Discord канал
-      if (notificationService) {
-        await notificationService.sendSpecialAchievementToDiscordChannel(
-          userId,
-          username,
-          emoji,
-          name,
-          description
-        );
+        // Отправляем уведомление в Discord канал
+        if (notificationService) {
+          await notificationService.sendSpecialAchievementToDiscordChannel(
+            userId,
+            username,
+            emoji,
+            name,
+            description
+          );
+        }
+      } else {
+        log(`⏰ Достижение запланировано на ${new Date(specialDate).toLocaleString('ru-RU')}, уведомления будут отправлены позже`);
       }
 
       res.json({
