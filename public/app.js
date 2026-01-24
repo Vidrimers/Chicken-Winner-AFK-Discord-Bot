@@ -989,18 +989,131 @@ async function saveSettings() {
       }
     }
 
-    // Показываем уведомление об успешном сохранении
-    const saveBtn = document.querySelector(".save-settings-btn");
-    const originalText = saveBtn.textContent;
-    saveBtn.textContent = "✅ Сохранено!";
-    saveBtn.style.background = "#4CAF50";
+    return true;
+  } catch (error) {
+    console.error("❌ Ошибка сохранения настроек:", error);
+    return false;
+  }
+}
+
+// Автосохранение настройки при изменении
+async function autoSaveSetting(selectElement, settingName) {
+  if (!window.currentUserId) return;
+
+  const indicator = document.getElementById(`${settingName}-indicator`);
+  
+  // Показываем индикатор "Сохранение..."
+  indicator.textContent = "💾 Сохранение...";
+  indicator.className = "setting-save-indicator saving";
+
+  try {
+    // Получаем значение изменённой настройки
+    let settingValue;
+    let requestBody = {};
+
+    switch(settingName) {
+      case 'dmNotifications':
+        settingValue = document.getElementById("dmNotifications").value === "true";
+        requestBody.dmNotifications = settingValue;
+        break;
+      case 'afkTimeout':
+        settingValue = parseInt(document.getElementById("afkTimeout").value);
+        requestBody.afkTimeout = settingValue;
+        break;
+      case 'achievementNotifications':
+        settingValue = document.getElementById("achievementNotifications").value === "true";
+        requestBody.achievementNotifications = settingValue;
+        break;
+      case 'theme':
+        settingValue = document.getElementById("themeSelect").value;
+        requestBody.theme = settingValue;
+        break;
+      case 'channelNotifications':
+        settingValue = document.getElementById("channelNotifications").value === "true";
+        requestBody.channelNotifications = settingValue;
+        break;
+    }
+
+    // Добавляем имя настройки для логирования на бэкенде
+    requestBody.settingName = settingName;
+
+    console.log(`📤 Сохраняем настройку ${settingName}:`, requestBody);
+
+    // Отправляем только изменённую настройку
+    const response = await fetch(`/api/settings/${window.currentUserId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error('Ошибка сохранения');
+    }
+
+    const data = await response.json();
+
+    // Показываем "Сохранено"
+    indicator.textContent = "✅ Сохранено";
+    indicator.className = "setting-save-indicator saved";
+
+    // Скрываем через 2 секунды
+    setTimeout(() => {
+      indicator.className = "setting-save-indicator";
+      indicator.textContent = "";
+    }, 2000);
+
+    // Восстанавливаем секретную тему в селекте если она была активирована
+    if (settingName === 'theme') {
+      const themeSelect = document.getElementById("themeSelect");
+      const secretThemeActivated = localStorage.getItem("secretThemeActivated") === "true";
+      
+      if (secretThemeActivated && themeSelect && !themeSelect.querySelector('option[value="die-my-darling"]')) {
+        const option = document.createElement("option");
+        option.value = "die-my-darling";
+        option.textContent = "🥀 Die my Darling";
+        themeSelect.appendChild(option);
+      }
+    }
+
+    // Если включены уведомления канала, показываем подсказку
+    if (settingName === 'channelNotifications' && settingValue) {
+      const botUsername = window.CONFIG?.TELEGRAM_BOT_USERNAME || "your_bot";
+      setTimeout(() => {
+        showCustomAlert(
+          "ℹ️ Важно!",
+          `Чтобы получать уведомления "Кто в канале", убедитесь что вы:\n\n` +
+            `1️⃣ Нажали /start в боте @${botUsername}\n` +
+            `2️⃣ Ваш Telegram username совпадает с Discord username\n\n` +
+            `Если имена разные, уведомления могут не приходить.`,
+          [
+            {
+              text: "📱 Открыть бота",
+              color: "#667eea",
+              action: () => {
+                window.open(`https://t.me/${botUsername}`, "_blank");
+              },
+            },
+            {
+              text: "Понятно",
+              color: "#666",
+              action: null,
+            },
+          ],
+        );
+      }, 500);
+    }
+
+  } catch (error) {
+    console.error("❌ Ошибка автосохранения:", error);
+    indicator.textContent = "❌ Ошибка";
+    indicator.className = "setting-save-indicator error";
 
     setTimeout(() => {
-      saveBtn.textContent = originalText;
-      saveBtn.style.background = "";
-    }, 2000);
-  } catch (error) {
-    alert("Ошибка сохранения настроек");
+      indicator.className = "setting-save-indicator";
+      indicator.textContent = "";
+    }, 3000);
   }
 }
 

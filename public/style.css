@@ -451,6 +451,40 @@ body.modal-open {
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+/* Индикатор сохранения настроек */
+.setting-save-indicator {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  min-height: 32px;
+}
+
+.setting-save-indicator.saving {
+  opacity: 1;
+  background: rgba(255, 193, 7, 0.1);
+  color: #ff9800;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.setting-save-indicator.saved {
+  opacity: 1;
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.setting-save-indicator.error {
+  opacity: 1;
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
 .save-settings-btn {
   grid-column: 1 / -1;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

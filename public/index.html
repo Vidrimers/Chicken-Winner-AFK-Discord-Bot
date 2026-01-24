@@ -762,10 +762,11 @@
                   <p class="setting-card-description">
                     Получать личные сообщения при перемещении в AFK
                   </p>
-                  <select id="dmNotifications" class="setting-select">
+                  <select id="dmNotifications" class="setting-select" onchange="autoSaveSetting(this, 'dmNotifications')">
                     <option value="true">✅ Включены</option>
                     <option value="false">❌ Отключены</option>
                   </select>
+                  <div class="setting-save-indicator" id="dmNotifications-indicator"></div>
                 </div>
               </div>
 
@@ -776,7 +777,7 @@
                   <p class="setting-card-description">
                     Через сколько минут неактивности переместить в AFK канал
                   </p>
-                  <select id="afkTimeout" class="setting-select">
+                  <select id="afkTimeout" class="setting-select" onchange="autoSaveSetting(this, 'afkTimeout')">
                     <option
                       value="10"
                       class="admin-option"
@@ -788,6 +789,7 @@
                     <option value="30">30 минут</option>
                     <option value="45">45 минут</option>
                   </select>
+                  <div class="setting-save-indicator" id="afkTimeout-indicator"></div>
                 </div>
               </div>
 
@@ -798,10 +800,11 @@
                   <p class="setting-card-description">
                     Получать уведомления при разблокировке новых достижений
                   </p>
-                  <select id="achievementNotifications" class="setting-select">
+                  <select id="achievementNotifications" class="setting-select" onchange="autoSaveSetting(this, 'achievementNotifications')">
                     <option value="true">✅ Включены</option>
                     <option value="false">❌ Отключены</option>
                   </select>
+                  <div class="setting-save-indicator" id="achievementNotifications-indicator"></div>
                 </div>
               </div>
 
@@ -827,7 +830,7 @@
                     <select
                       id="themeSelect"
                       class="setting-select"
-                      onchange="previewTheme(this.value)"
+                      onchange="autoSaveSetting(this, 'theme'); previewTheme(this.value);"
                     >
                       <option value="standard">🎨 Стандарт</option>
                       <option value="metal">⚙️ Металл</option>
@@ -835,6 +838,7 @@
                       <option value="steam">🎮 Стим</option>
                     </select>
                   </div>
+                  <div class="setting-save-indicator" id="theme-indicator"></div>
                 </div>
               </div>
 
@@ -863,10 +867,12 @@
                     class="setting-select"
                     disabled
                     style="opacity: 0.5; cursor: not-allowed"
+                    onchange="autoSaveSetting(this, 'channelNotifications')"
                   >
                     <option value="true">✅ Включено</option>
                     <option value="false">❌ Отключено</option>
                   </select>
+                  <div class="setting-save-indicator" id="channelNotifications-indicator"></div>
                 </div>
               </div>
 
@@ -960,10 +966,6 @@
                   </button>
                 </div>
               </div>
-
-              <button class="save-settings-btn" onclick="saveSettings()">
-                💾 Сохранить настройки
-              </button>
             </div>
 
             <!-- Админ-панель -->

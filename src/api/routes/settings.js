@@ -20,6 +20,7 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
       achievementNotifications,
       theme,
       channelNotifications,
+      settingName, // Имя изменённой настройки
     } = req.body;
 
     try {
@@ -28,10 +29,12 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
       const currentDM = db.getUserDMSetting(userId);
       const currentTimeout = db.getUserTimeout(userId);
       let settingsChanged = false;
+      let changedSettingText = ''; // Текст изменённой настройки
 
       if (dmNotifications !== undefined && dmNotifications !== currentDM) {
         db.setUserDMSetting(userId, dmNotifications);
         settingsChanged = true;
+        changedSettingText = `📩 ЛС уведомления: ${dmNotifications ? '✅ включены' : '❌ отключены'}`;
       }
 
       if (
@@ -41,6 +44,8 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
       ) {
         db.setUserTimeout(userId, afkTimeout);
         settingsChanged = true;
+        const timeoutDisplay = afkTimeout < 15 ? `${afkTimeout} секунд` : `${afkTimeout} минут`;
+        changedSettingText = `⏱️ Таймер AFK: ${timeoutDisplay}`;
       }
 
       if (achievementNotifications !== undefined) {
@@ -48,11 +53,21 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
         if (achievementNotifications !== currentAchievementNotifications) {
           db.setUserAchievementNotificationSetting(userId, achievementNotifications);
           settingsChanged = true;
+          changedSettingText = `🏆 Уведомления о достижениях: ${achievementNotifications ? '✅ включены' : '❌ отключены'}`;
         }
       }
 
       if (theme !== undefined) {
         db.exec(`UPDATE user_settings SET theme = '${theme}' WHERE user_id = '${userId}'`);
+        
+        const themeNames = {
+          standard: '🎨 Стандарт',
+          metal: '⚙️ Металл',
+          discord: '💬 Дискорд',
+          steam: '🎮 Стим',
+          'die-my-darling': '💀 Die My Darling',
+        };
+        changedSettingText = `🎨 Тема оформления: ${themeNames[theme] || theme}`;
         
         // Если выбрана секретная тема, активируем флаг
         if (theme === 'die-my-darling') {
@@ -121,6 +136,7 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
         if (channelNotifications !== currentChannelNotifications) {
           db.setUserChannelNotificationSetting(userId, channelNotifications);
           settingsChanged = true;
+          changedSettingText = `🔔 Уведомления "Кто в канале": ${channelNotifications ? '✅ включены' : '❌ отключены'}`;
         }
       }
 
@@ -138,40 +154,9 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
 
           await achievements.checkAll(userId, username);
 
-          // Формируем текст настроек для Telegram
-          const dmStatus = dmNotifications !== undefined
-            ? (dmNotifications ? '✅ включены' : '❌ отключены')
-            : (currentDM ? '✅ включены' : '❌ отключены');
-
-          const timeoutValue = afkTimeout !== undefined ? afkTimeout : currentTimeout;
-          const timeoutDisplay = timeoutValue < 15 ? `${timeoutValue} секунд` : `${timeoutValue} минут`;
-
-          const achievementStatus = achievementNotifications !== undefined
-            ? (achievementNotifications ? '✅ включены' : '❌ отключены')
-            : (db.getUserAchievementNotificationSetting(userId) ? '✅ включены' : '❌ отключены');
-
-          const themeValue = theme !== undefined ? theme : db.getUserTheme(userId);
-          const themeNames = {
-            standard: '🎨 Стандарт',
-            metal: '⚙️ Металл',
-            discord: '💬 Дискорд',
-            steam: '🎮 Стим',
-          };
-          const themeDisplay = themeNames[themeValue] || themeValue;
-
-          const channelStatus = channelNotifications !== undefined
-            ? (channelNotifications ? '✅ включены' : '❌ отключены')
-            : (db.getUserChannelNotificationSetting(userId) ? '✅ включены' : '❌ отключены');
-
-          const settingsText =
-            `📩 ЛС уведомления: ${dmStatus}\n` +
-            `⏱️ Таймер AFK: ${timeoutDisplay}\n` +
-            `🏆 Уведомления о достижениях: ${achievementStatus}\n` +
-            `🔔 Уведомления "Кто в канале": ${channelStatus}\n` +
-            `🎨 Тема оформления: ${themeDisplay}`;
-
-          if (telegram) {
-            await telegram.sendSettingsChange(username, userId, settingsText);
+          // Отправляем уведомление только об изменённой настройке
+          if (telegram && changedSettingText) {
+            await telegram.sendSettingsChange(username, userId, changedSettingText);
           }
         } catch (error) {
           logError(`Ошибка при проверке достижений через веб-панель: ${error.message}`);
