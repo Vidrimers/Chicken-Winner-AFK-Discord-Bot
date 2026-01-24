@@ -89,7 +89,7 @@ async function main() {
     const app = createExpressServer();
 
     // Регистрация API роутов
-    registerRoutes(app, db, discordClient, achievements, telegramWrapper);
+    registerRoutes(app, db, discordClient, achievements, telegramWrapper, notificationService);
 
     // Запуск сервера
     await startServer(app, SERVER_CONFIG.PORT);

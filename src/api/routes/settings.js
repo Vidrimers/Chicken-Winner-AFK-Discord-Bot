@@ -5,7 +5,7 @@ import { formatTime } from '../../utils/time.js';
 /**
  * Роуты для настроек пользователей
  */
-export function createSettingsRouter(db, discordClient, achievements, telegram) {
+export function createSettingsRouter(db, discordClient, achievements, telegram, notificationService) {
   const router = Router();
 
   /**
@@ -120,6 +120,7 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
                  VALUES (?, ?, ?)`
               ).run(userId, achievementId, nowMoscowISO);
               
+              // Отправляем уведомление в Telegram
               if (telegram) {
                 await telegram.sendSpecialAchievement(
                   username,
@@ -130,6 +131,17 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
                   '#8b0000',
                   nowMoscowISO,
                   db
+                );
+              }
+
+              // Отправляем уведомление в Discord канал
+              if (notificationService) {
+                await notificationService.sendSpecialAchievementToDiscordChannel(
+                  userId,
+                  username,
+                  '🎨',
+                  'Секретная тема',
+                  'Открыл секретную тему'
                 );
               }
             } catch (achievementError) {
@@ -244,6 +256,7 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
            VALUES (?, ?, ?)`
         ).run(userId, achievementId, nowMoscowISO);
 
+        // Отправляем уведомление в Telegram
         if (telegram) {
           await telegram.sendSpecialAchievement(
             username,
@@ -254,6 +267,17 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
             '#8b0000',
             nowMoscowISO,
             db
+          );
+        }
+
+        // Отправляем уведомление в Discord канал
+        if (notificationService) {
+          await notificationService.sendSpecialAchievementToDiscordChannel(
+            userId,
+            username,
+            '🎨',
+            'Секретная тема',
+            'Открыл секретную тему'
           );
         }
       } catch (achievementError) {

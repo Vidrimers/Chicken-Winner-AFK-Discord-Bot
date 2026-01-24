@@ -5,7 +5,7 @@ import { formatTime } from '../../utils/time.js';
 /**
  * Роуты для админ-панели
  */
-export function createAdminRouter(db, discordClient, telegram) {
+export function createAdminRouter(db, discordClient, telegram, notificationService) {
   const router = Router();
 
   /**
@@ -60,20 +60,21 @@ export function createAdminRouter(db, discordClient, telegram) {
 
       log(`✅ Специальное достижение создано: ${name} для ${userId}`);
 
-      if (telegram) {
-        const guild = discordClient.guilds.cache.first();
-        let username = 'Неизвестный пользователь';
-        
-        if (guild) {
-          try {
-            const member = await guild.members.fetch(userId);
-            username = member.displayName || member.user.username;
-          } catch (err) {
-            const user = await discordClient.users.fetch(userId).catch(() => null);
-            username = user ? user.username : 'Неизвестный пользователь';
-          }
+      const guild = discordClient.guilds.cache.first();
+      let username = 'Неизвестный пользователь';
+      
+      if (guild) {
+        try {
+          const member = await guild.members.fetch(userId);
+          username = member.displayName || member.user.username;
+        } catch (err) {
+          const user = await discordClient.users.fetch(userId).catch(() => null);
+          username = user ? user.username : 'Неизвестный пользователь';
         }
-        
+      }
+
+      // Отправляем уведомление в Telegram
+      if (telegram) {
         await telegram.sendSpecialAchievement(
           username,
           userId,
@@ -83,6 +84,17 @@ export function createAdminRouter(db, discordClient, telegram) {
           color,
           unlockedTime,
           db
+        );
+      }
+
+      // Отправляем уведомление в Discord канал
+      if (notificationService) {
+        await notificationService.sendSpecialAchievementToDiscordChannel(
+          userId,
+          username,
+          emoji,
+          name,
+          description
         );
       }
 

@@ -89,4 +89,28 @@ export class AchievementNotificationService {
       logError(`Не удалось отправить в канал: ${err.message}`);
     }
   }
+
+  /**
+   * Отправить уведомление о специальном достижении в канал Discord
+   */
+  async sendSpecialAchievementToDiscordChannel(userId, username, emoji, name, description) {
+    try {
+      const channel = this.client.channels.cache.get(DISCORD_CONFIG.ACHIEVEMENTS_CHANNEL_ID);
+      if (!channel) {
+        return;
+      }
+
+      const messageText =
+        `🏆 **Новое специальное достижение!**\n\n` +
+        `👤 **Пользователь:** <@${userId}>\n` +
+        `🎯 **Достижение:** ${emoji} ${name}\n` +
+        `📝 **Описание:** ${description}\n` +
+        `📅 **Время:** ${formatTime(new Date())}`;
+
+      await channel.send(messageText);
+      log(`✅ Уведомление о специальном достижении отправлено в Discord канал`);
+    } catch (err) {
+      logError(`Не удалось отправить специальное достижение в канал: ${err.message}`);
+    }
+  }
 }

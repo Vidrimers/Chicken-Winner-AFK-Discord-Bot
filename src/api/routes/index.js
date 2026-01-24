@@ -9,7 +9,7 @@ import { USER_IDS, DISCORD_CONFIG, SERVER_CONFIG } from '../../config.js';
 /**
  * Зарегистрировать все API роуты
  */
-export function registerRoutes(app, db, discordClient, achievements, telegram) {
+export function registerRoutes(app, db, discordClient, achievements, telegram, notificationService) {
   // Config роут - для загрузки конфигурации на фронтенде
   app.get('/api/config', (req, res) => {
     res.json({
@@ -91,7 +91,7 @@ export function registerRoutes(app, db, discordClient, achievements, telegram) {
   });
 
   // Settings роуты
-  const settingsRouter = createSettingsRouter(db, discordClient, achievements, telegram);
+  const settingsRouter = createSettingsRouter(db, discordClient, achievements, telegram, notificationService);
   app.use('/api/settings', settingsRouter);
   app.use('/api', settingsRouter); // Для /api/activate-secret-theme
 
@@ -128,7 +128,7 @@ export function registerRoutes(app, db, discordClient, achievements, telegram) {
   app.use('/api/telegram-link', telegramRouter);
 
   // Admin роуты
-  const adminRouter = createAdminRouter(db, discordClient, telegram);
+  const adminRouter = createAdminRouter(db, discordClient, telegram, notificationService);
   app.use('/api/admin', adminRouter);
 
   // Achievements роуты
