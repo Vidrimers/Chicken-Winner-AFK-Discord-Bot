@@ -2,11 +2,12 @@
   "name": "afk-discord-bot",
   "version": "2.0.0",
   "description": "Advanced AFK Discord Bot with Stats & Achievements",
-  "main": "bot.js",
+  "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "start": "node bot.js",
-    "dev": "node bot.js"
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
+    "start:old": "node bot.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.5.0",

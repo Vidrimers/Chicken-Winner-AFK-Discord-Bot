@@ -15,5 +15,6 @@ replacements.txt
 *.db
 backup/
 avatars/
+.kiro/
 
 DISCORD_OAUTH_SETUP.md
