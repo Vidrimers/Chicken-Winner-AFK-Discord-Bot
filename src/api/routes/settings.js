@@ -103,7 +103,8 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
                   'Секретная тема',
                   'Открыл секретную тему',
                   '#8b0000',
-                  nowMoscowISO
+                  nowMoscowISO,
+                  db
                 );
               }
             } catch (achievementError) {
@@ -246,7 +247,8 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
             'Секретная тема',
             'Открыл секретную тему',
             '#8b0000',
-            nowMoscowISO
+            nowMoscowISO,
+            db
           );
         }
       } catch (achievementError) {

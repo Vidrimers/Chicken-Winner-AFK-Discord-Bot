@@ -10,6 +10,14 @@ export class DatabaseManager {
     this.cache = new Map();
     this.statements = new Map();
     success(`База данных подключена: ${dbPath}`);
+    
+    // Создаем таблицу для отслеживания удаленных пользователей
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS deleted_users (
+        user_id TEXT PRIMARY KEY,
+        deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
   }
 
   /**
@@ -250,9 +258,24 @@ export class DatabaseManager {
       this.prepare('DELETE FROM voice_sessions WHERE user_id = ?').run(userId);
       this.prepare('DELETE FROM user_settings WHERE user_id = ?').run(userId);
       this.prepare('DELETE FROM telegram_users WHERE user_id = ?').run(userId);
+      // Удаляем специальные достижения пользователя
+      this.prepare("DELETE FROM achievements WHERE user_id = ? AND type = 'special'").run(userId);
+      
+      // Добавляем запись об удалении пользователя (чтобы не создавать его заново)
+      this.prepare(
+        `INSERT OR REPLACE INTO deleted_users (user_id, deleted_at) VALUES (?, CURRENT_TIMESTAMP)`
+      ).run(userId);
     });
 
     transaction();
+  }
+  
+  // Проверить был ли пользователь удален
+  isUserDeleted(userId) {
+    const result = this.prepare(
+      'SELECT user_id FROM deleted_users WHERE user_id = ?'
+    ).get(userId);
+    return !!result;
   }
 
   // ===== ACHIEVEMENTS CHECKER =====

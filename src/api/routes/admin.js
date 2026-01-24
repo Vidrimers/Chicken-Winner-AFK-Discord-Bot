@@ -71,7 +71,8 @@ export function createAdminRouter(db, discordClient, telegram) {
           name,
           description,
           color,
-          unlockedTime
+          unlockedTime,
+          db
         );
       }
 
@@ -232,12 +233,103 @@ export function createAdminRouter(db, discordClient, telegram) {
       res.json({
         success: true,
         message: `Пользователь ${username} успешно удален`,
+        deletedUserId: userId, // Возвращаем ID для очистки на фронтенде
       });
     } catch (error) {
       logError(`Ошибка при удалении пользователя: ${error.message}`);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
+
+  /**
+   * POST /api/admin/restore-user
+   * Восстановить удаленного пользователя
+   */
+  router.post('/restore-user', async (req, res) => {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    try {
+      // Удаляем из списка удаленных
+      db.prepare('DELETE FROM deleted_users WHERE user_id = ?').run(userId);
+      
+      log(`🔄 Пользователь ${userId} восстановлен после удаления`);
+      
+      // Пытаемся обновить имя и аватарку сразу после восстановления
+      try {
+        const guild = discordClient.guilds.cache.first();
+        if (guild) {
+          const member = await guild.members.fetch(userId).catch(() => null);
+          if (member) {
+            const username = member.displayName || member.user.username;
+            const discordAvatarUrl = member.user.displayAvatarURL({
+              format: 'png',
+              size: 128,
+            });
+            
+            // Загружаем аватарку
+            const localAvatarPath = await downloadAvatar(userId, discordAvatarUrl);
+            
+            // Обновляем имя и аватарку если пользователь уже создан
+            db.prepare('UPDATE user_stats SET username = ?, avatar_url = ? WHERE user_id = ?')
+              .run(username, localAvatarPath, userId);
+            
+            log(`✅ Имя и аватарка восстановленного пользователя обновлены: ${username}`);
+          }
+        }
+      } catch (updateError) {
+        logError(`Ошибка обновления данных: ${updateError.message}`);
+      }
+
+      res.json({
+        success: true,
+        message: 'Пользователь восстановлен',
+      });
+    } catch (error) {
+      logError(`Ошибка при восстановлении пользователя: ${error.message}`);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * Скачать аватар пользователя
+   */
+  async function downloadAvatar(userId, avatarUrl) {
+    try {
+      if (!avatarUrl || avatarUrl.includes('nopic.png') || avatarUrl.startsWith('/avatars/')) {
+        return '/avatars/nopic.png';
+      }
+
+      const fs = await import('fs');
+      const path = await import('path');
+      const https = await import('https');
+
+      const avatarsDir = './avatars';
+      if (!fs.existsSync(avatarsDir)) {
+        fs.mkdirSync(avatarsDir, { recursive: true });
+      }
+
+      const localPath = path.join(avatarsDir, `${userId}.png`);
+
+      return new Promise((resolve) => {
+        https.get(avatarUrl, (response) => {
+          const fileStream = fs.createWriteStream(localPath);
+          response.pipe(fileStream);
+          fileStream.on('finish', () => {
+            fileStream.close();
+            resolve(`/avatars/${userId}.png`);
+          });
+        }).on('error', () => {
+          resolve('/avatars/nopic.png');
+        });
+      });
+    } catch (err) {
+      return '/avatars/nopic.png';
+    }
+  }
 
   /**
    * POST /api/admin/backup-database

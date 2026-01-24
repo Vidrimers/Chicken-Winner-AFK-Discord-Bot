@@ -14,6 +14,15 @@ export function createStatsRouter(db, discordClient, telegram) {
   router.get('/:userId', async (req, res) => {
     try {
       const userId = req.params.userId;
+      
+      // Проверяем был ли пользователь удален
+      if (db.isUserDeleted(userId)) {
+        return res.json({
+          userDeleted: true,
+          message: 'Пользователь был удален из базы данных',
+        });
+      }
+      
       let stats = db.getUserStats(userId);
 
       // Если пользователя нет в БД, создаем его

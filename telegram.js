@@ -57,15 +57,18 @@ export async function sendAchievementNotification(
  */
 export async function sendSpecialAchievementNotification(
   username,
+  userId,
   emoji,
   name,
   description,
   color,
   specialDate,
+  db = null,
 ) {
   let message =
     `🏆 <b>Новое специальное достижение!</b>\n` +
     `👤 Пользователь: ${username}\n` +
+    `🆔 ID: <code>${userId}</code>\n` +
     `🎯 Достижение: ${emoji} ${name}\n` +
     `📝 Описание: ${description}\n`;
 
@@ -86,6 +89,27 @@ export async function sendSpecialAchievementNotification(
   message += `📅 Создано: ${new Date().toLocaleString("ru-RU")}`;
 
   await sendTelegramReport(message);
+  
+  // Отправляем уведомление пользователю если он связан с Telegram
+  if (db) {
+    try {
+      const telegramUser = db.prepare(
+        'SELECT telegram_chat_id FROM telegram_users WHERE user_id = ? AND started_bot = 1'
+      ).get(userId);
+      
+      if (telegramUser && telegramUser.telegram_chat_id) {
+        const userMessage =
+          `🏆 <b>Вы получили специальное достижение!</b>\n\n` +
+          `${emoji} <b>${name}</b>\n` +
+          `${description}\n\n` +
+          `🎉 Поздравляем!`;
+        
+        await sendTelegramMessageToUser(telegramUser.telegram_chat_id, userMessage);
+      }
+    } catch (error) {
+      console.error('Ошибка отправки уведомления пользователю:', error);
+    }
+  }
 }
 
 /**

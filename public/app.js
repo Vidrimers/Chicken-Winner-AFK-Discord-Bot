@@ -207,6 +207,33 @@ async function loadUserDataAuto(userId) {
     }
     const data = await response.json();
 
+    // Проверяем если пользователь был удален
+    if (data.userDeleted) {
+      localStorage.removeItem("afkBotUserId");
+      localStorage.removeItem("afkBotUserAvatar");
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("manualInputSection").style.display = "flex";
+      
+      const restore = confirm(
+        "⚠️ Ваш аккаунт был удален из базы данных.\n\n" +
+        "Хотите восстановить аккаунт и войти заново?\n\n" +
+        "Нажмите OK для восстановления или Отмена для выхода."
+      );
+      
+      if (restore) {
+        // Восстанавливаем аккаунт
+        await fetch(`/api/admin/restore-user`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: userId }),
+        });
+        
+        // Перезагружаем данные
+        location.reload();
+      }
+      return;
+    }
+
     // Проверяем если пользователь не на сервере
     if (data.notOnServer) {
       showNotOnServerWarning();
@@ -292,7 +319,19 @@ function deleteUserFromDB(userId, username) {
     .then((data) => {
       if (data.success) {
         alert('✅ Пользователь "' + username + '" полностью удален из БД!');
-        loadLeaderboard();
+        
+        // Если удален текущий пользователь - разлогиниваем через сервер
+        if (data.deletedUserId === window.currentUserId) {
+          // Устанавливаем флаг что пользователь был удален
+          localStorage.setItem("userWasDeleted", "true");
+          localStorage.removeItem("afkBotUserId");
+          localStorage.removeItem("afkBotUserAvatar");
+          alert("⚠️ Вы удалили свой собственный аккаунт. Сейчас вы будете разлогинены.");
+          // Делаем logout через сервер чтобы уничтожить сессию
+          window.location.href = "/logout";
+        } else {
+          loadLeaderboard();
+        }
       } else {
         alert(
           "❌ Ошибка: " + (data.message || "Не удалось удалить пользователя"),
@@ -980,6 +1019,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   const logoActivate = document.querySelector(".header-logo-img-activate");
   if (logoActivate) {
     logoActivate.addEventListener("click", activateSecretTheme);
+  }
+
+  // Проверяем флаг удаления пользователя ПЕРЕД автологином
+  if (localStorage.getItem("userWasDeleted") === "true") {
+    localStorage.removeItem("userWasDeleted");
+    localStorage.removeItem("afkBotUserId");
+    localStorage.removeItem("afkBotUserAvatar");
+    console.log("🗑️ Пользователь был удален, автологин отключен");
+    
+    // Показываем поле ввода ID
+    document.getElementById("manualInputSection").style.display = "flex";
+    
+    // Показываем сообщение
+    alert("⚠️ Ваш аккаунт был удален из базы данных. Пожалуйста, войдите заново.");
+    
+    loadLeaderboard();
+    return; // Прерываем выполнение, не делаем автологин
   }
 
   const urlParams = new URLSearchParams(window.location.search);
