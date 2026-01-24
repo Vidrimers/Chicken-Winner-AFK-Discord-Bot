@@ -2488,7 +2488,7 @@ app.post("/api/admin/delete-user-messages", async (req, res) => {
     }
 
     let deletedCount = 0;
-    let errors = 0;
+    let errorsList = [];
     const now = Date.now();
     const cutoffTime = hours === 0 ? 0 : now - (hours * 60 * 60 * 1000);
 
@@ -2532,8 +2532,9 @@ app.post("/api/admin/delete-user-messages", async (req, res) => {
               // Задержка чтобы не превысить rate limit
               await new Promise(resolve => setTimeout(resolve, 100));
             } catch (err) {
+              const errorMsg = `Канал "${channel.name}": ${err.message}`;
               console.error(`❌ Ошибка удаления сообщения ${msgId}:`, err.message);
-              errors++;
+              errorsList.push(errorMsg);
             }
           }
 
@@ -2550,28 +2551,36 @@ app.post("/api/admin/delete-user-messages", async (req, res) => {
           }
         }
       } catch (channelError) {
+        const errorMsg = `Канал "${channel.name}": ${channelError.message}`;
         console.error(`❌ Ошибка обработки канала ${channel.name}:`, channelError.message);
-        errors++;
+        errorsList.push(errorMsg);
       }
     }
 
-    console.log(`✅ Удаление завершено. Удалено: ${deletedCount}, Ошибок: ${errors}`);
+    console.log(`✅ Удаление завершено. Удалено: ${deletedCount}, Ошибок: ${errorsList.length}`);
 
     // Отправляем уведомление в Telegram
     const userStats = getUserStats(userId);
     const userName = userStats?.username || `ID: ${userId}`;
     const periodText = hours === 0 ? 'все сообщения' : `сообщения за ${hours}ч`;
     
-    await sendTelegramReport(
-      `🗑️ <b>Удалены сообщения пользователя</b>\n` +
+    let telegramMsg = `🗑️ <b>Удалены сообщения пользователя</b>\n` +
       `👤 Пользователь: ${userName}\n` +
       `📝 Период: ${periodText}\n` +
       `✅ Удалено: ${deletedCount}\n` +
-      `❌ Ошибок: ${errors}\n` +
-      `📅 Время: ${formatTime(new Date())}`
-    );
+      `❌ Ошибок: ${errorsList.length}\n` +
+      `📅 Время: ${formatTime(new Date())}`;
+    
+    if (errorsList.length > 0) {
+      telegramMsg += `\n\n<b>Список ошибок:</b>\n` + errorsList.slice(0, 5).map(e => `• ${e}`).join('\n');
+      if (errorsList.length > 5) {
+        telegramMsg += `\n... и еще ${errorsList.length - 5} ошибок`;
+      }
+    }
+    
+    await sendTelegramReport(telegramMsg);
 
-    res.json({ success: true, deletedCount, errors });
+    res.json({ success: true, deletedCount, errors: errorsList.length, errorsList });
   } catch (error) {
     console.error("❌ Ошибка при удалении сообщений:", error);
     res.status(500).json({ error: "Ошибка при удалении сообщений" });

@@ -1220,13 +1220,88 @@ async function deleteUserMessages(userId, username, hours) {
     const data = await response.json();
     
     if (response.ok) {
-      alert(`✅ Удалено сообщений: ${data.deletedCount}\nОшибок: ${data.errors}`);
+      showDeleteMessagesResultModal(username, periodText, data.deletedCount, data.errorsList || []);
     } else {
       alert('❌ Ошибка: ' + (data.error || 'Не удалось удалить сообщения'));
     }
   } catch (error) {
     console.error('Ошибка при удалении сообщений:', error);
     alert('❌ Ошибка при удалении сообщений');
+  }
+}
+
+// Функция для показа модального окна с результатами удаления сообщений
+function showDeleteMessagesResultModal(username, periodText, deletedCount, errorsList) {
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'deleteMessagesResultModal';
+  modal.style.display = 'flex';
+  
+  const hasErrors = errorsList.length > 0;
+  const statusIcon = hasErrors ? '⚠️' : '✅';
+  const statusText = hasErrors ? 'Удаление завершено с ошибками' : 'Удаление успешно завершено';
+  const statusClass = hasErrors ? 'warning' : 'success';
+  
+  modal.innerHTML = `
+    <div class="modal-content delete-result-modal">
+      <div class="modal-header">
+        <h2>${statusIcon} Результаты удаления сообщений</h2>
+        <span class="close" onclick="closeDeleteMessagesResultModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="delete-result-status ${statusClass}">
+          <div class="status-icon">${statusIcon}</div>
+          <div class="status-text">${statusText}</div>
+        </div>
+        
+        <div class="delete-result-info">
+          <div class="info-row">
+            <span class="info-label">👤 Пользователь:</span>
+            <span class="info-value">${username}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">📝 Период:</span>
+            <span class="info-value">${periodText}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">✅ Удалено сообщений:</span>
+            <span class="info-value success-count">${deletedCount}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">❌ Ошибок:</span>
+            <span class="info-value error-count">${errorsList.length}</span>
+          </div>
+        </div>
+        
+        ${hasErrors ? `
+          <div class="delete-result-errors">
+            <h3>📋 Список ошибок:</h3>
+            <div class="errors-list">
+              ${errorsList.map(err => `<div class="error-item">• ${err}</div>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        <button class="close-result-btn" onclick="closeDeleteMessagesResultModal()">Закрыть</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Закрытие по клику вне модального окна
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeDeleteMessagesResultModal();
+    }
+  });
+}
+
+// Функция для закрытия модального окна с результатами
+function closeDeleteMessagesResultModal() {
+  const modal = document.getElementById('deleteMessagesResultModal');
+  if (modal) {
+    modal.remove();
   }
 }
 
