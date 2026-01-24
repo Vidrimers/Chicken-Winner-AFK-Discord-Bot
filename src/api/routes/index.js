@@ -21,6 +21,16 @@ export function registerRoutes(app, db, discordClient, achievements, telegram) {
     });
   });
 
+  // Session роут - проверка текущей сессии
+  app.get('/api/session', (req, res) => {
+    const userId = req.query.userId || req.session?.userId;
+    if (userId) {
+      res.json({ userId });
+    } else {
+      res.json({ userId: null });
+    }
+  });
+
   // Stats роуты
   const statsRouter = createStatsRouter(db, discordClient, telegram);
   app.use('/api/stats', statsRouter);

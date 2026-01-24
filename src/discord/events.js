@@ -11,7 +11,7 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
   const messageHandler = new MessageHandler(db, achievements, telegram);
 
   // Событие готовности
-  client.once('ready', () => {
+  client.once('clientReady', () => {
     success(`Discord бот запущен как ${client.user.tag}`);
     log(`Подключен к ${client.guilds.cache.size} серверам`);
   });
