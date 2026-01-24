@@ -552,6 +552,7 @@ function displayUserSettings(settings) {
     }
   }
 
+  // Добавляем секретную тему в селект если активирована
   if (
     secretThemeActivated &&
     themeSelect &&
@@ -571,40 +572,45 @@ function displayUserSettings(settings) {
   // Проверяем статус связи с Telegram
   checkTelegramLinkStatus();
 
-  // Показываем уведомление о секретной теме (только если её нет)
+  // Показываем уведомление о секретной теме
+  // Передаем информацию о том, активирована ли тема у пользователя
   showSecretThemeNotification(secretThemeActivated);
 }
 
 // Показать уведомление о секретной теме
 function showSecretThemeNotification(hasSecretTheme) {
-  // Считаем количество доступных секретных тем
+  // Определяем количество секретных тем в системе
+  // Сейчас у нас только одна секретная тема: "die-my-darling"
+  const totalSecretThemes = 1;
+  
+  // Считаем сколько секретных тем доступно пользователю
   const themeSelect = document.getElementById("themeSelect");
   const allThemes = themeSelect ? themeSelect.options.length : 4; // 4 стандартные темы
-  const secretThemesCount = Math.max(0, allThemes - 4); // Вычитаем 4 стандартные темы
+  const userSecretThemesCount = Math.max(0, allThemes - 4); // Вычитаем 4 стандартные темы
 
   // Получаем сохраненное количество секретных тем
   const savedSecretThemesCount = parseInt(
     sessionStorage.getItem("secretThemesCount") || "0",
   );
 
-  // Проверяем, первый ли это визит (если savedSecretThemesCount = 0 и sessionStorage пустой)
+  // Проверяем, первый ли это визит
   const isFirstVisit = !sessionStorage.getItem("secretThemesCount");
 
   // Проверяем, добавилась ли новая секретная тема
-  const hasNewSecretTheme = secretThemesCount > savedSecretThemesCount;
+  const hasNewSecretTheme = userSecretThemesCount > savedSecretThemesCount;
 
   // Сохраняем текущее количество секретных тем
-  sessionStorage.setItem("secretThemesCount", secretThemesCount.toString());
+  sessionStorage.setItem("secretThemesCount", userSecretThemesCount.toString());
 
   // Показываем уведомление только если:
   // 1. У пользователя НЕТ секретной темы И есть хотя бы одна секретная тема в системе
-  // 2. Добавилась новая секретная тема И у пользователя УЖЕ ЕСТЬ хотя бы одна секретная тема И это НЕ первый визит
+  // 2. Добавилась новая секретная тема И это НЕ первый визит
   const shouldShow =
-    (!hasSecretTheme && secretThemesCount >= 1) ||
-    (hasNewSecretTheme && hasSecretTheme && !isFirstVisit);
+    (!hasSecretTheme && totalSecretThemes >= 1) ||
+    (hasNewSecretTheme && !isFirstVisit);
 
   // Проверяем, показывали ли уже уведомление для текущего количества тем
-  const notificationKey = `secretThemeNotification_${secretThemesCount}`;
+  const notificationKey = `secretThemeNotification_${userSecretThemesCount}`;
   if (!shouldShow || sessionStorage.getItem(notificationKey)) {
     return;
   }
@@ -863,6 +869,7 @@ async function showLinkCodeModal() {
 function applyTheme(theme) {
   document.body.setAttribute("data-theme", theme);
 }
+
 // Функция для предпросмотра темы (без сохранения)
 function previewTheme(theme) {
   applyTheme(theme);

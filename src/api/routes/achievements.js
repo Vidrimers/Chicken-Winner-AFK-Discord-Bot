@@ -4,14 +4,14 @@ import { log, error as logError } from '../../utils/logger.js';
 /**
  * Роуты для достижений
  */
-export function createAchievementsRouter(db) {
+export function createAchievementsRouter(db, telegram) {
   const router = Router();
 
   /**
-   * GET /api/achievements
+   * GET /achievements
    * Получить все обычные достижения
    */
-  router.get('/', (req, res) => {
+  router.get('/achievements', (req, res) => {
     try {
       // Возвращаем список всех обычных достижений из definitions
       // Это будет использоваться фронтендом для отображения
@@ -23,10 +23,10 @@ export function createAchievementsRouter(db) {
   });
 
   /**
-   * GET /api/special-achievements
+   * GET /special-achievements
    * Получить все специальные достижения
    */
-  router.get('/special', (req, res) => {
+  router.get('/special-achievements', (req, res) => {
     try {
       const stmt = db.prepare(`
         SELECT DISTINCT a.achievement_id, a.emoji, a.name, a.description, a.type, a.color, a.special_date, a.user_id, ua.unlocked_at
@@ -44,7 +44,7 @@ export function createAchievementsRouter(db) {
   });
 
   /**
-   * POST /api/notify/profile-view
+   * POST /notify/profile-view
    * Уведомить о просмотре профиля
    */
   router.post('/notify/profile-view', async (req, res) => {
@@ -55,12 +55,16 @@ export function createAchievementsRouter(db) {
         return res.json({ success: true });
       }
 
-      // Здесь можно добавить логику уведомления через telegram
       log(`📬 ${viewerUsername} просмотрел профиль ${targetUsername}`);
+
+      // Отправляем уведомление в Telegram
+      if (telegram && telegram.sendProfileView) {
+        await telegram.sendProfileView(viewerUsername, viewerId, targetUsername, targetUserId);
+      }
 
       res.json({ success: true });
     } catch (error) {
-      logError(`Ошибка в API /api/notify/profile-view: ${error.message}`);
+      logError(`Ошибка в API /notify/profile-view: ${error.message}`);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

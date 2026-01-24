@@ -164,8 +164,8 @@ export class DatabaseManager {
     const specialAchievements = this.prepare(
       `SELECT a.*, ua.unlocked_at
        FROM achievements a
-       LEFT JOIN user_achievements ua ON a.achievement_id = ua.achievement_id AND ua.user_id = ?
-       WHERE a.type = 'special' AND (ua.manually_deleted = 0 OR ua.manually_deleted IS NULL)`
+       INNER JOIN user_achievements ua ON a.achievement_id = ua.achievement_id AND ua.user_id = ?
+       WHERE a.type = 'special' AND ua.manually_deleted = 0`
     ).all(userId);
 
     return [...regularAchievements, ...specialAchievements];

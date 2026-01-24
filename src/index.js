@@ -9,7 +9,18 @@ import { createDiscordClient, connectDiscord } from './discord/client.js';
 import { registerDiscordEvents } from './discord/events.js';
 import { createExpressServer, startServer } from './api/server.js';
 import { registerRoutes } from './api/routes/index.js';
-import { initTelegramBot } from '../telegram.js';
+import { 
+  initTelegramBot, 
+  sendBotStatusNotification,
+  sendTelegramReport,
+  sendAchievementNotification,
+  sendSettingsChangeNotification,
+  sendTelegramMessageToUser,
+  sendProfileViewNotification,
+  sendAchievementDeleteNotification,
+  sendUserDeleteNotification,
+  sendSpecialAchievementNotification
+} from '../telegram.js';
 
 // Загружаем переменные окружения
 dotenv.config();
@@ -31,20 +42,45 @@ async function main() {
     // Создание Discord клиента
     const discordClient = createDiscordClient();
 
-    // Инициализация Telegram (будет инициализирован позже)
-    let telegramService = null;
+    // Создаем обертку для Telegram сервиса
+    const telegramWrapper = {
+      sendReport: sendTelegramReport,
+      sendAchievement: sendAchievementNotification,
+      sendSettingsChange: sendSettingsChangeNotification,
+      sendProfileView: sendProfileViewNotification,
+      sendAchievementDeleteNotification: sendAchievementDeleteNotification,
+      sendUserDelete: sendUserDeleteNotification,
+      sendSpecialAchievement: sendSpecialAchievementNotification,
+      notifyChannelActivity: async (message) => {
+        try {
+          // Получаем всех пользователей с включенными уведомлениями
+          const usersWithNotifications = db.prepare(`
+            SELECT us.user_id, tu.telegram_chat_id 
+            FROM user_settings us
+            JOIN telegram_users tu ON us.user_id = tu.user_id
+            WHERE us.channel_notifications = 1 AND tu.started_bot = 1
+          `).all();
+
+          for (const user of usersWithNotifications) {
+            await sendTelegramMessageToUser(user.telegram_chat_id, message);
+          }
+        } catch (error) {
+          logError(`Ошибка отправки уведомлений о канале: ${error.message}`);
+        }
+      }
+    };
 
     // Создание системы достижений
     const notificationService = new AchievementNotificationService(
       discordClient,
-      telegramService,
+      telegramWrapper,
       db
     );
     const achievements = new AchievementSystem(db, notificationService);
     const achievementChecker = new AchievementChecker(db, achievements);
 
     // Регистрация обработчиков Discord событий
-    registerDiscordEvents(discordClient, db, achievements, telegramService);
+    registerDiscordEvents(discordClient, db, achievements, telegramWrapper);
 
     // Подключение к Discord
     await connectDiscord(discordClient);
@@ -53,7 +89,7 @@ async function main() {
     const app = createExpressServer();
 
     // Регистрация API роутов
-    registerRoutes(app, db, discordClient, achievements, telegramService);
+    registerRoutes(app, db, discordClient, achievements, telegramWrapper);
 
     // Запуск сервера
     await startServer(app, SERVER_CONFIG.PORT);
@@ -263,7 +299,7 @@ async function main() {
         };
 
         // Инициализируем Telegram бота
-        telegramService = initTelegramBot(
+        initTelegramBot(
           db,
           discordClient,
           useLinkCode,
@@ -271,10 +307,12 @@ async function main() {
           getOnlineUsers
         );
 
-        // Обновляем ссылку на telegram в notification service
-        notificationService.telegram = telegramService;
-
         success('Telegram бот инициализирован');
+        
+        // Отправляем уведомление о запуске бота
+        sendBotStatusNotification('started', `Версия: 2.0.0 (Refactored)`).catch((err) => {
+          logError(`Ошибка отправки уведомления о запуске: ${err.message}`);
+        });
       } catch (error) {
         logError(`Ошибка при инициализации Telegram: ${error.message}`);
       }
@@ -284,8 +322,10 @@ async function main() {
     process.on('SIGINT', async () => {
       log('🛑 Закрытие бота...');
       
-      if (telegramService && telegramService.sendBotStatus) {
-        await telegramService.sendBotStatus('stopped');
+      try {
+        await sendBotStatusNotification('stopped');
+      } catch (error) {
+        logError(`Ошибка отправки уведомления об остановке: ${error.message}`);
       }
       
       db.close();

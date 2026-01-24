@@ -8,43 +8,10 @@ export function createTelegramRouter(db, telegramService) {
   const router = Router();
 
   /**
-   * POST /api/register-telegram/:userId
-   * Зарегистрировать Telegram chat ID
-   */
-  router.post('/register-telegram/:userId', async (req, res) => {
-    const userId = req.params.userId;
-    const { telegramChatId } = req.body;
-
-    try {
-      if (!telegramChatId) {
-        return res.status(400).json({ error: 'Telegram chat ID is required' });
-      }
-
-      if (telegramService && telegramService.registerUser) {
-        const success = telegramService.registerUser(userId, telegramChatId);
-        
-        if (success) {
-          res.json({
-            success: true,
-            message: 'Telegram chat ID registered successfully',
-          });
-        } else {
-          res.status(500).json({ error: 'Failed to register Telegram chat ID' });
-        }
-      } else {
-        res.status(503).json({ error: 'Telegram service not available' });
-      }
-    } catch (error) {
-      logError(`Ошибка при регистрации Telegram chat ID: ${error.message}`);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  /**
    * POST /api/telegram-link/generate/:userId
    * Сгенерировать код для связывания с Telegram
    */
-  router.post('/telegram-link/generate/:userId', async (req, res) => {
+  router.post('/generate/:userId', async (req, res) => {
     const userId = req.params.userId;
 
     try {
@@ -64,7 +31,7 @@ export function createTelegramRouter(db, telegramService) {
    * GET /api/telegram-link/status/:userId
    * Проверить статус связи с Telegram
    */
-  router.get('/telegram-link/status/:userId', async (req, res) => {
+  router.get('/status/:userId', async (req, res) => {
     const userId = req.params.userId;
 
     try {
@@ -80,14 +47,38 @@ export function createTelegramRouter(db, telegramService) {
    * DELETE /api/telegram-link/unlink/:userId
    * Отвязать Telegram аккаунт
    */
-  router.delete('/telegram-link/unlink/:userId', async (req, res) => {
+  router.delete('/unlink/:userId', async (req, res) => {
     const userId = req.params.userId;
 
     try {
+      // Получаем информацию перед удалением
+      const telegramUser = db.prepare(
+        'SELECT telegram_chat_id FROM telegram_users WHERE user_id = ?'
+      ).get(userId);
+      
+      const userStats = db.prepare(
+        'SELECT username FROM user_stats WHERE user_id = ?'
+      ).get(userId);
+      
+      const username = userStats ? userStats.username : 'Неизвестный пользователь';
+      const chatId = telegramUser ? telegramUser.telegram_chat_id : 'N/A';
+
+      // Удаляем связь
       db.prepare('DELETE FROM telegram_users WHERE user_id = ?').run(userId);
       db.setUserChannelNotificationSetting(userId, false);
 
       log(`🔓 Telegram аккаунт отвязан для userId: ${userId}`);
+
+      // Отправляем уведомление админу
+      if (telegramService) {
+        await telegramService.sendReport(
+          `🔓 <b>Telegram аккаунт отвязан</b>\n\n` +
+          `👤 Discord: ${username}\n` +
+          `🆔 Discord ID: <code>${userId}</code>\n` +
+          `💬 Telegram Chat ID: <code>${chatId}</code>\n` +
+          `📅 Время: ${new Date().toLocaleString('ru-RU')}`
+        );
+      }
 
       res.json({
         success: true,

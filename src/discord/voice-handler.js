@@ -366,20 +366,24 @@ export class VoiceStateHandler {
     if (originalChannelId && newState.channel?.id === DISCORD_CONFIG.AFK_CHANNEL_ID) {
       const originalChannel = newState.guild.channels.cache.get(originalChannelId);
       if (originalChannel?.type === 2) {
-        await newState.setChannel(originalChannel);
-        log(`✅ ${username} возвращен в ${originalChannel.name}`);
+        try {
+          await newState.member.voice.setChannel(originalChannel);
+          log(`✅ ${username} возвращен в ${originalChannel.name}`);
 
-        if (this.telegram) {
-          await this.telegram.sendReport(
-            `↩️ <b>Пользователь возвращен из AFK</b>\n` +
-            `👤 Пользователь: ${username}\n` +
-            `📺 Из канала: 😡 Токсичный канал\n` +
-            `📺 В канал: ${originalChannel.name}\n` +
-            `📅 Время: ${formatTime(new Date())}`
-          );
+          if (this.telegram) {
+            await this.telegram.sendReport(
+              `↩️ <b>Пользователь возвращен из AFK</b>\n` +
+              `👤 Пользователь: ${username}\n` +
+              `📺 Из канала: 😡 Токсичный канал\n` +
+              `📺 В канал: ${originalChannel.name}\n` +
+              `📅 Время: ${formatTime(new Date())}`
+            );
+          }
+
+          userOriginalChannels.delete(userId);
+        } catch (err) {
+          logError(`Ошибка при возврате из AFK: ${err.message}`);
         }
-
-        userOriginalChannels.delete(userId);
       }
     }
   }

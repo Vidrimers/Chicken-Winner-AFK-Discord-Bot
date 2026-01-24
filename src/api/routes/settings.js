@@ -53,6 +53,65 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
 
       if (theme !== undefined) {
         db.exec(`UPDATE user_settings SET theme = '${theme}' WHERE user_id = '${userId}'`);
+        
+        // Если выбрана секретная тема, активируем флаг
+        if (theme === 'die-my-darling') {
+          const result = db.prepare(
+            'SELECT secret_theme_activated FROM user_settings WHERE user_id = ?'
+          ).get(userId);
+          
+          // Активируем только если еще не активирована
+          if (!result || !result.secret_theme_activated) {
+            db.prepare(
+              'UPDATE user_settings SET secret_theme_activated = 1 WHERE user_id = ?'
+            ).run(userId);
+            
+            log(`🎉 Секретная тема активирована для userId: ${userId}`);
+            
+            // Создаем достижение
+            try {
+              const user = await discordClient.users.fetch(userId).catch(() => null);
+              const username = user ? user.username : 'Неизвестный пользователь';
+              
+              const achievementId = 'secret_theme_' + Date.now() + '_' + Math.random().toString(36).substring(7);
+              const nowMoscowISO = new Date().toISOString();
+              
+              db.prepare(
+                `INSERT INTO achievements (achievement_id, user_id, emoji, name, description, type, color, special_date)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+              ).run(
+                achievementId,
+                userId,
+                '🎨',
+                'Секретная тема',
+                'Открыл секретную тему',
+                'special',
+                '#8b0000',
+                nowMoscowISO
+              );
+              
+              db.prepare(
+                `INSERT OR IGNORE INTO user_achievements (user_id, achievement_id, unlocked_at)
+                 VALUES (?, ?, ?)`
+              ).run(userId, achievementId, nowMoscowISO);
+              
+              if (telegram) {
+                await telegram.sendSpecialAchievement(
+                  username,
+                  userId,
+                  '🎨',
+                  'Секретная тема',
+                  'Открыл секретную тему',
+                  '#8b0000',
+                  nowMoscowISO
+                );
+              }
+            } catch (achievementError) {
+              logError(`Ошибка при создании достижения: ${achievementError.message}`);
+            }
+          }
+        }
+        
         settingsChanged = true;
       }
 
@@ -126,7 +185,7 @@ export function createSettingsRouter(db, discordClient, achievements, telegram) 
   });
 
   /**
-   * POST /api/activate-secret-theme/:userId
+   * POST /activate-secret-theme/:userId
    * Активировать секретную тему
    */
   router.post('/activate-secret-theme/:userId', async (req, res) => {

@@ -98,14 +98,73 @@ export function createAdminRouter(db, discordClient, telegram) {
     }
 
     try {
-      db.deleteAchievement(userId, achievementId);
-      log(`🗑️ Достижение ${achievementId} удалено у пользователя ${userId}`);
+      // Получаем информацию о достижении перед удалением
+      let achievementName = achievementId;
+      let achievementPoints = 0;
 
+      // Проверяем обычные достижения
+      const regularAchievements = {
+        first_join: { name: '🎤 Малыш заговорил', points: 10 },
+        first_afk: { name: '😴 Первый сон', points: 5 },
+        first_message: { name: '💬 Первые буквы', points: 10 },
+        first_settings: { name: '⚙️ Первые настройки', points: 10 },
+        first_web_visit: { name: '🌐 Первый серфер', points: 15 },
+        first_stream: { name: '📡 Первый стример', points: 20 },
+        voice_starter: { name: '🎧 Алло, это я', points: 50 },
+        voice_addict: { name: '🎧 Заболтал до сотки', points: 100 },
+        voice_god: { name: '🎧 Звезда эфира', points: 1000 },
+        chatty_beginner: { name: '💬 Разговорчивый новичок', points: 25 },
+        chatty_user: { name: '💬 Болтун', points: 75 },
+        flooter: { name: '💬 Флудер', points: 100 },
+        linguist: { name: '💬 Лингвист', points: 150 },
+        session_beginner: { name: '🎯 Начинающий участник', points: 15 },
+        session_veteran: { name: '🎯 Опытный участник', points: 40 },
+        session_master: { name: '🎯 Мастер сессий', points: 75 },
+        frequent_guest: { name: '🎯 Частый гость', points: 150 },
+        permanent_resident: { name: '🎯 Постоянный житель', points: 350 },
+        session_lord: { name: '🎯 Властелин сессий', points: 1000 },
+        afk_beginner: { name: '😴 AFK новичок', points: 10 },
+        afk_veteran: { name: '😴 AFK ветеран', points: 50 },
+        afk_master: { name: '😴 AFK Специалист', points: 100 },
+        afk_time_lord: { name: '😴 AFK Повелитель времени', points: 1000 },
+        no_afk_week: { name: '💪 Железная воля', points: 50 },
+        mute_master: { name: '🎙️ Мастер тишины', points: 25 },
+        long_session: { name: '⏰ Марафонец', points: 75 },
+        settings_explorer: { name: '⚙️ Исследователь настроек', points: 30 },
+        mention_responder: { name: '📢 Отзывчивый', points: 100 },
+        stream_viewer_1: { name: '📺 Одним глазком', points: 10 },
+        stream_viewer_2: { name: '📺 Зритель со стажем', points: 50 },
+        stream_viewer_3: { name: '📺 Топовый зритель', points: 100 },
+        stream_viewer_4: { name: '📺 Киберфанат', points: 200 },
+        stream_viewer_5: { name: '📺 Бессмертный зритель', points: 500 },
+        stream_viewer_6: { name: '📺 Легенда трансляций', points: 1000 }
+      };
+
+      if (regularAchievements[achievementId]) {
+        achievementName = regularAchievements[achievementId].name;
+        achievementPoints = regularAchievements[achievementId].points;
+      } else {
+        // Проверяем специальные достижения
+        const specialAch = db.prepare(
+          'SELECT emoji, name FROM achievements WHERE achievement_id = ?'
+        ).get(achievementId);
+        
+        if (specialAch) {
+          achievementName = `${specialAch.emoji} ${specialAch.name}`;
+          achievementPoints = 0; // Специальные достижения не дают очков
+        }
+      }
+
+      // Удаляем достижение
+      db.deleteAchievement(userId, achievementId);
+      log(`🗑️ Достижение ${achievementName} удалено у пользователя ${userId}`);
+
+      // Отправляем уведомление в Telegram
       if (telegram) {
         const user = await discordClient.users.fetch(userId).catch(() => null);
         const username = user ? user.username : 'Неизвестный пользователь';
         
-        await telegram.sendAchievementDelete(username, userId, achievementId);
+        await telegram.sendAchievementDeleteNotification(username, achievementName, achievementPoints);
       }
 
       res.json({
@@ -251,7 +310,8 @@ export function createAdminRouter(db, discordClient, telegram) {
       res.json({
         success: true,
         message: `Обновлено ${updatedCount} имен`,
-        updatedCount,
+        updated: updatedCount,
+        total: allUsers.length,
       });
     } catch (error) {
       logError(`Ошибка при обновлении имен: ${error.message}`);
@@ -274,6 +334,7 @@ export function createAdminRouter(db, discordClient, telegram) {
 
       const allUsers = db.prepare('SELECT user_id FROM user_stats').all();
       let downloadedCount = 0;
+      let errorCount = 0;
 
       for (const user of allUsers) {
         try {
@@ -291,7 +352,7 @@ export function createAdminRouter(db, discordClient, telegram) {
             }
           }
         } catch (err) {
-          // Пропускаем
+          errorCount++;
         }
       }
 
@@ -300,11 +361,148 @@ export function createAdminRouter(db, discordClient, telegram) {
       res.json({
         success: true,
         message: `Загружено ${downloadedCount} аватарок`,
-        downloadedCount,
+        downloaded: downloadedCount,
+        errors: errorCount,
+        total: allUsers.length,
       });
     } catch (error) {
       logError(`Ошибка при загрузке аватарок: ${error.message}`);
       res.status(500).json({ error: 'Failed to download avatars' });
+    }
+  });
+
+  /**
+   * POST /api/admin/delete-user-messages
+   * Удалить сообщения пользователя в Discord
+   */
+  router.post('/delete-user-messages', async (req, res) => {
+    const { userId, hours } = req.body;
+
+    if (!userId || hours === undefined) {
+      return res.status(400).json({ error: 'Отсутствуют обязательные поля' });
+    }
+
+    try {
+      log(`🗑️ Удаление сообщений пользователя ${userId} за ${hours === 0 ? 'все время' : hours + ' часов'}...`);
+
+      const guild = discordClient.guilds.cache.first();
+      if (!guild) {
+        return res.status(500).json({ error: 'Guild not found' });
+      }
+
+      // Вычисляем временную метку
+      const now = Date.now();
+      const cutoffTime = hours === 0 ? 0 : now - (hours * 60 * 60 * 1000);
+
+      let deletedCount = 0;
+      const errorsList = [];
+      const skippedChannels = [];
+
+      // Получаем все текстовые каналы
+      const textChannels = guild.channels.cache.filter(channel => channel.type === 0); // 0 = GUILD_TEXT
+
+      log(`  📊 Найдено текстовых каналов: ${textChannels.size}`);
+
+      for (const [channelId, channel] of textChannels) {
+        try {
+          log(`  📝 Проверка канала: ${channel.name}`);
+          
+          // Проверяем права на просмотр канала
+          if (!channel.viewable) {
+            const errorMsg = `Нет доступа к каналу`;
+            errorsList.push(`#${channel.name}: ${errorMsg}`);
+            logError(`  ⚠️ ${errorMsg}`);
+            continue;
+          }
+
+          // Проверяем права на управление сообщениями
+          const permissions = channel.permissionsFor(discordClient.user);
+          if (!permissions || !permissions.has('ManageMessages')) {
+            const errorMsg = `Нет прав на удаление сообщений`;
+            errorsList.push(`#${channel.name}: ${errorMsg}`);
+            logError(`  ⚠️ ${errorMsg}`);
+            continue;
+          }
+          
+          // Получаем сообщения пользователя
+          let messages = await channel.messages.fetch({ limit: 100 });
+          let userMessages = messages.filter(msg => 
+            msg.author.id === userId && 
+            (hours === 0 || msg.createdTimestamp >= cutoffTime)
+          );
+
+          if (userMessages.size === 0) {
+            log(`  ℹ️ Нет сообщений пользователя в ${channel.name}`);
+            continue;
+          }
+
+          // Удаляем сообщения
+          let channelDeletedCount = 0;
+          let channelErrorCount = 0;
+
+          for (const [msgId, msg] of userMessages) {
+            try {
+              const messageAge = now - msg.createdTimestamp;
+              const twoWeeks = 14 * 24 * 60 * 60 * 1000;
+
+              if (messageAge > twoWeeks) {
+                // Сообщение старше 2 недель - удаляем по одному
+                await msg.delete();
+                deletedCount++;
+                channelDeletedCount++;
+                // Задержка чтобы не превысить rate limit
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              } else {
+                // Сообщение новее 2 недель
+                await msg.delete();
+                deletedCount++;
+                channelDeletedCount++;
+              }
+            } catch (err) {
+              channelErrorCount++;
+              const errorMsg = `Ошибка удаления сообщения: ${err.message}`;
+              errorsList.push(`#${channel.name}: ${errorMsg}`);
+              logError(`  ❌ ${errorMsg}`);
+            }
+          }
+
+          log(`  ✅ Удалено ${channelDeletedCount}/${userMessages.size} сообщений в ${channel.name}${channelErrorCount > 0 ? ` (ошибок: ${channelErrorCount})` : ''}`);
+        } catch (err) {
+          const errorMsg = `Ошибка доступа к каналу: ${err.message}`;
+          errorsList.push(`#${channel.name}: ${errorMsg}`);
+          logError(`  ❌ ${errorMsg}`);
+        }
+      }
+
+      log(`✅ Всего удалено сообщений: ${deletedCount}`);
+      log(`📊 Проверено каналов: ${textChannels.size}`);
+      log(`❌ Ошибок: ${errorsList.length}`);
+
+      if (telegram) {
+        const user = await discordClient.users.fetch(userId).catch(() => null);
+        const username = user ? user.username : 'Неизвестный пользователь';
+        
+        const periodText = hours === 0 ? 'все сообщения' : `сообщения за ${hours} ч.`;
+        await telegram.sendReport(
+          `🗑️ <b>Удалены сообщения пользователя</b>\n\n` +
+          `👤 Пользователь: ${username}\n` +
+          `🆔 ID: <code>${userId}</code>\n` +
+          `📊 Период: ${periodText}\n` +
+          `✅ Удалено: ${deletedCount} сообщений\n` +
+          `❌ Ошибок: ${errorsList.length}\n` +
+          `📅 Время: ${new Date().toLocaleString('ru-RU')}`
+        );
+      }
+
+      res.json({
+        success: true,
+        message: `Удалено ${deletedCount} сообщений`,
+        deletedCount,
+        errorsList,
+      });
+    } catch (error) {
+      logError(`Ошибка при удалении сообщений: ${error.message}`);
+      res.status(500).json({ error: 'Ошибка при удалении сообщений' });
     }
   });
 

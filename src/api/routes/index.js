@@ -4,60 +4,142 @@ import { createTelegramRouter } from './telegram.js';
 import { createAdminRouter } from './admin.js';
 import { createAchievementsRouter } from './achievements.js';
 import { success } from '../../utils/logger.js';
+import { USER_IDS, DISCORD_CONFIG, SERVER_CONFIG } from '../../config.js';
 
 /**
  * Зарегистрировать все API роуты
  */
 export function registerRoutes(app, db, discordClient, achievements, telegram) {
+  // Config роут - для загрузки конфигурации на фронтенде
+  app.get('/api/config', (req, res) => {
+    res.json({
+      ADMIN_USER_ID: USER_IDS.ADMIN_USER_ID,
+      ADMIN_LOGIN: process.env.ADMIN_LOGIN || 'admin',
+      SERVER_IP: SERVER_CONFIG.SERVER_IP || 'localhost',
+      PORT: SERVER_CONFIG.PORT,
+      TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME || ''
+    });
+  });
+
   // Stats роуты
   const statsRouter = createStatsRouter(db, discordClient, telegram);
   app.use('/api/stats', statsRouter);
+  
+  // Дополнительные stats endpoints
   app.get('/api/leaderboard', (req, res) => {
-    statsRouter.handle({ ...req, params: {}, url: '/leaderboard' }, res);
+    try {
+      const topUsers = db.getTopUsers(20);
+      res.json(topUsers);
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   });
+  
   app.get('/api/online-status', (req, res) => {
-    statsRouter.handle({ ...req, params: {}, url: '/online-status' }, res);
+    try {
+      const guild = discordClient.guilds.cache.first();
+      if (!guild) {
+        return res.json({});
+      }
+
+      const onlineStatuses = {};
+      guild.members.cache.forEach((member) => {
+        if (member.presence?.status && member.presence.status !== 'offline') {
+          onlineStatuses[member.id] = member.presence.status;
+        }
+      });
+
+      res.json(onlineStatuses);
+    } catch (error) {
+      res.json({});
+    }
   });
-  app.post('/api/visit/:userId', (req, res) => {
-    statsRouter.handle({ ...req, url: '/visit/' + req.params.userId }, res);
+  
+  app.post('/api/visit/:userId', async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      
+      db.initUserStats(userId, 'Web User');
+      db.incrementUserStat(userId, 'web_visits');
+
+      const stats = db.getUserStats(userId);
+      if (stats && stats.web_visits === 1) {
+        const guild = discordClient.guilds.cache.first();
+        if (guild) {
+          const member = await guild.members.fetch(userId).catch(() => null);
+          if (member) {
+            const username = member.displayName || member.user.username;
+            await achievements.checkAndUnlock(userId, username, 'first_web_visit');
+          }
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   });
 
   // Settings роуты
   const settingsRouter = createSettingsRouter(db, discordClient, achievements, telegram);
   app.use('/api/settings', settingsRouter);
-  app.post('/api/activate-secret-theme/:userId', (req, res) => {
-    settingsRouter.handle({ ...req, url: '/activate-secret-theme/' + req.params.userId }, res);
-  });
+  app.use('/api', settingsRouter); // Для /api/activate-secret-theme
 
   // Telegram роуты
   const telegramRouter = createTelegramRouter(db, telegram);
-  app.post('/api/register-telegram/:userId', (req, res) => {
-    telegramRouter.handle({ ...req, url: '/register-telegram/' + req.params.userId }, res);
+  app.post('/api/register-telegram/:userId', async (req, res) => {
+    const userId = req.params.userId;
+    const { telegramChatId } = req.body;
+
+    try {
+      if (!telegramChatId) {
+        return res.status(400).json({ error: 'Telegram chat ID is required' });
+      }
+
+      if (telegram && telegram.registerUser) {
+        const success = telegram.registerUser(userId, telegramChatId);
+        
+        if (success) {
+          res.json({
+            success: true,
+            message: 'Telegram chat ID registered successfully',
+          });
+        } else {
+          res.status(500).json({ error: 'Failed to register Telegram chat ID' });
+        }
+      } else {
+        res.status(503).json({ error: 'Telegram service not available' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   });
-  app.post('/api/telegram-link/generate/:userId', (req, res) => {
-    telegramRouter.handle({ ...req, url: '/telegram-link/generate/' + req.params.userId }, res);
-  });
-  app.get('/api/telegram-link/status/:userId', (req, res) => {
-    telegramRouter.handle({ ...req, url: '/telegram-link/status/' + req.params.userId }, res);
-  });
-  app.delete('/api/telegram-link/unlink/:userId', (req, res) => {
-    telegramRouter.handle({ ...req, url: '/telegram-link/unlink/' + req.params.userId }, res);
-  });
+  
+  app.use('/api/telegram-link', telegramRouter);
 
   // Admin роуты
   const adminRouter = createAdminRouter(db, discordClient, telegram);
   app.use('/api/admin', adminRouter);
 
   // Achievements роуты
-  const achievementsRouter = createAchievementsRouter(db);
-  app.get('/api/achievements', (req, res) => {
-    achievementsRouter.handle({ ...req, params: {}, url: '/' }, res);
-  });
-  app.get('/api/special-achievements', (req, res) => {
-    achievementsRouter.handle({ ...req, params: {}, url: '/special' }, res);
-  });
-  app.post('/api/notify/profile-view', (req, res) => {
-    achievementsRouter.handle({ ...req, params: {}, url: '/notify/profile-view' }, res);
+  const achievementsRouter = createAchievementsRouter(db, telegram);
+  app.use('/api/achievements', achievementsRouter);
+  app.use('/api', achievementsRouter);
+
+  // Logout роут
+  app.get('/logout', (req, res) => {
+    // Очищаем сессию если она есть
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Ошибка при очистке сессии:', err);
+        }
+      });
+    }
+    // Очищаем куки
+    res.clearCookie('connect.sid');
+    // Редирект на главную
+    res.redirect('/');
   });
 
   success('API роуты зарегистрированы');
