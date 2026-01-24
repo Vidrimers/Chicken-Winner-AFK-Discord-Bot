@@ -34,11 +34,15 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
   router.post('/create-achievement', async (req, res) => {
     const { emoji, name, description, type, userId, specialDate, color } = req.body;
 
+    log(`📝 Запрос на создание достижения: ${name} для ${userId}`);
+
     if (!emoji || !name || !description || !type || !userId) {
+      logError('❌ Отсутствуют обязательные поля');
       return res.status(400).json({ error: 'Отсутствуют обязательные поля' });
     }
 
     if (type !== 'special') {
+      logError('❌ Тип должен быть "special"');
       return res.status(400).json({ error: 'Тип должен быть "special"' });
     }
 

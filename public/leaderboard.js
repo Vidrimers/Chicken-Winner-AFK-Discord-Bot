@@ -272,6 +272,16 @@ function displayUserModal(
           displayColor = ach.color || "#ffd700";
         }
 
+        // Показываем запланированную дату для админа
+        let scheduledInfo = '';
+        if (isAdmin && ach.special_date) {
+          const scheduledDate = new Date(ach.special_date);
+          const now = new Date();
+          if (scheduledDate > now) {
+            scheduledInfo = `<small style="color: #ff9800; font-weight: bold;">⏰ Запланировано на: ${scheduledDate.toLocaleString("ru-RU")}</small><br>`;
+          }
+        }
+
         achievementsHtml += `
                     <div class="modal-achievement special-achievement" style="
                         background: linear-gradient(135deg, ${displayColor}22 0%, ${displayColor}11 100%);
@@ -279,6 +289,7 @@ function displayUserModal(
                     ">
                         <h4 style="color: ${displayColor};">${displayEmoji} ${displayName} ✨</h4>
                         <p style="margin: 8px 0; color: #555;">${displayDescription}</p>
+                        ${scheduledInfo}
                         <small style="color: #666; font-weight: bold;">🎉 Получено: ${new Date(ach.unlocked_at).toLocaleDateString("ru-RU")}</small>
                         ${deleteBtn}
                     </div>

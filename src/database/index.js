@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { success, error as logError } from '../utils/logger.js';
+import { runMigrations } from './migrations.js';
 
 /**
  * Database класс для работы с SQLite
@@ -18,6 +19,9 @@ export class DatabaseManager {
         deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Запускаем миграции
+    runMigrations(this.db);
   }
 
   /**
@@ -199,9 +203,21 @@ export class DatabaseManager {
   }
 
   deleteAchievement(userId, achievementId) {
+    // Помечаем как удаленное в user_achievements
     this.prepare(
       'UPDATE user_achievements SET manually_deleted = 1 WHERE user_id = ? AND achievement_id = ?'
     ).run(userId, achievementId);
+    
+    // Если это специальное достижение, удаляем его из таблицы achievements
+    const specialAch = this.prepare(
+      'SELECT type FROM achievements WHERE achievement_id = ? AND user_id = ?'
+    ).get(achievementId, userId);
+    
+    if (specialAch && specialAch.type === 'special') {
+      this.prepare(
+        'DELETE FROM achievements WHERE achievement_id = ? AND user_id = ?'
+      ).run(achievementId, userId);
+    }
   }
 
   // ===== TELEGRAM =====

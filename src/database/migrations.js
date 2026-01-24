@@ -5,6 +5,24 @@
 export function runMigrations(db) {
   console.log('🔄 Запуск миграций базы данных...');
 
+  // Добавляем колонку notified в user_achievements если её нет
+  try {
+    const tableInfo = db.prepare("PRAGMA table_info(user_achievements)").all();
+    const hasNotified = tableInfo.some(col => col.name === 'notified');
+    
+    if (!hasNotified) {
+      db.exec('ALTER TABLE user_achievements ADD COLUMN notified INTEGER DEFAULT 0');
+      console.log('✅ Добавлена колонка notified в user_achievements');
+      
+      // Помечаем все существующие достижения как уже уведомленные
+      // чтобы не отправлять уведомления о старых достижениях
+      db.exec('UPDATE user_achievements SET notified = 1 WHERE notified = 0');
+      console.log('✅ Все существующие достижения помечены как уведомленные');
+    }
+  } catch (error) {
+    console.error(`❌ Ошибка добавления колонки notified: ${error.message}`);
+  }
+
   // Индексы для оптимизации запросов
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_user_stats_rank ON user_stats(rank_points DESC)',

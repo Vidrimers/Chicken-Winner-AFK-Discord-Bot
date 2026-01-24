@@ -1,4 +1,12 @@
 function openCreateSpecialAchievementModal() {
+    // Устанавливаем текущую дату и время по умолчанию
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0]; // Формат: YYYY-MM-DD
+    const timeStr = now.toTimeString().slice(0, 5); // Формат: HH:MM
+    
+    document.getElementById('specialAchievementDate').value = dateStr;
+    document.getElementById('specialAchievementTime').value = timeStr;
+    
     document.getElementById('createSpecialAchievementModal').style.display = 'block';
     document.body.classList.add('modal-open');
     updateSpecialAchievementPreview();

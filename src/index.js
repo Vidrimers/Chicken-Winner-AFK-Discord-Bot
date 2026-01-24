@@ -318,6 +318,105 @@ async function main() {
       }
     }, 2000);
 
+    // Проверка запланированных достижений каждую минуту
+    setInterval(async () => {
+      try {
+        // Получаем локальное время в формате YYYY-MM-DDTHH:MM
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const localTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        
+        log(`🔍 Проверка запланированных достижений (текущее время: ${localTime})...`);
+        
+        // Находим достижения, которые запланированы и время уже наступило
+        const scheduledAchievements = db.prepare(`
+          SELECT a.achievement_id, a.user_id, a.emoji, a.name, a.description, a.special_date
+          FROM achievements a
+          INNER JOIN user_achievements ua ON a.achievement_id = ua.achievement_id AND a.user_id = ua.user_id
+          WHERE a.type = 'special' 
+            AND a.special_date IS NOT NULL 
+            AND a.special_date <= ?
+            AND ua.notified = 0
+            AND ua.manually_deleted = 0
+        `).all(localTime);
+
+        if (scheduledAchievements.length > 0) {
+          log(`📅 Найдено ${scheduledAchievements.length} запланированных достижений для отправки уведомлений`);
+        } else {
+          log(`✅ Нет запланированных достижений для отправки`);
+        }
+
+        for (const achievement of scheduledAchievements) {
+          try {
+            log(`📤 Отправка уведомлений для достижения "${achievement.name}" (${achievement.achievement_id})`);
+            
+            const guild = discordClient.guilds.cache.first();
+            let username = 'Неизвестный пользователь';
+            
+            if (guild) {
+              try {
+                const member = await guild.members.fetch(achievement.user_id);
+                username = member.displayName || member.user.username;
+              } catch (err) {
+                const user = await discordClient.users.fetch(achievement.user_id).catch(() => null);
+                username = user ? user.username : 'Неизвестный пользователь';
+              }
+            }
+
+            // Отправляем уведомление в Telegram
+            if (telegramWrapper && telegramWrapper.sendSpecialAchievement) {
+              log(`📱 Отправка в Telegram для ${username}...`);
+              await telegramWrapper.sendSpecialAchievement(
+                username,
+                achievement.user_id,
+                achievement.emoji,
+                achievement.name,
+                achievement.description,
+                null, // color
+                achievement.special_date,
+                db
+              );
+              log(`✅ Telegram уведомление отправлено`);
+            } else {
+              logError(`❌ telegramWrapper не доступен`);
+            }
+
+            // Отправляем уведомление в Discord канал
+            if (notificationService) {
+              log(`💬 Отправка в Discord канал для ${username}...`);
+              await notificationService.sendSpecialAchievementToDiscordChannel(
+                achievement.user_id,
+                username,
+                achievement.emoji,
+                achievement.name,
+                achievement.description
+              );
+              log(`✅ Discord уведомление отправлено`);
+            } else {
+              logError(`❌ notificationService не доступен`);
+            }
+
+            // Помечаем что уведомление отправлено
+            db.prepare(`
+              UPDATE user_achievements 
+              SET notified = 1 
+              WHERE user_id = ? AND achievement_id = ?
+            `).run(achievement.user_id, achievement.achievement_id);
+
+            log(`✅ Уведомления отправлены для достижения "${achievement.name}" пользователю ${username}`);
+          } catch (err) {
+            logError(`Ошибка отправки уведомления о достижении ${achievement.achievement_id}: ${err.message}`);
+          }
+        }
+      } catch (error) {
+        logError(`Ошибка проверки запланированных достижений: ${error.message}`);
+      }
+    }, 60000); // Проверяем каждую минуту
+
     // Обработка завершения
     process.on('SIGINT', async () => {
       log('🛑 Закрытие бота...');
