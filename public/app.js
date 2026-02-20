@@ -1349,14 +1349,23 @@ function showDeleteMessagesMenu(userId, username) {
   
   let buttonsHtml = '';
   periods.forEach(period => {
-    buttonsHtml += `<button onclick="deleteUserMessages('${userId}', '${username}', ${period.value})" style="padding: 10px 15px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 14px; min-width: 120px;">${period.label}</button>`;
+    buttonsHtml += `<button onclick="deleteUserMessagesWithOptions('${userId}', '${username}', ${period.value})" style="padding: 10px 15px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 14px; min-width: 120px;">${period.label}</button>`;
   });
   
   const menuHtml = `
     <div id="deleteMessagesMenu" onclick="closeDeleteMessagesMenu(event)" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; justify-content: center; align-items: center;">
       <div onclick="event.stopPropagation()" style="background: #1a1a1a; border: 2px solid #667eea; border-radius: 10px; padding: 30px; max-width: 500px;">
         <h3 style="color: white; margin-bottom: 20px; text-align: center;">💬 Удалить сообщения пользователя<br>"${username}"</h3>
-        <p style="color: #999; margin-bottom: 20px; text-align: center;">Выберите период:</p>
+        <p style="color: #999; margin-bottom: 15px; text-align: center;">Выберите период:</p>
+        
+        <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <label style="display: flex; align-items: center; cursor: pointer; color: white;">
+            <input type="checkbox" id="includeVoiceChats" style="width: 18px; height: 18px; margin-right: 10px; cursor: pointer;">
+            <span style="font-size: 14px;">🎤 Включая чаты голосовых каналов</span>
+          </label>
+          <p style="color: #888; font-size: 12px; margin: 8px 0 0 28px;">По умолчанию удаляются только сообщения из текстовых каналов</p>
+        </div>
+        
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;">
           ${buttonsHtml}
         </div>
@@ -1374,14 +1383,21 @@ function closeDeleteMessagesMenu(event) {
   if (menu) menu.remove();
 }
 
+// Функция-обёртка для удаления сообщений с учётом чекбокса
+function deleteUserMessagesWithOptions(userId, username, hours) {
+  const includeVoiceChats = document.getElementById('includeVoiceChats')?.checked || false;
+  deleteUserMessages(userId, username, hours, includeVoiceChats);
+}
+
 // Функция для удаления сообщений пользователя
-async function deleteUserMessages(userId, username, hours) {
+async function deleteUserMessages(userId, username, hours, includeVoiceChats = false) {
   closeDeleteMessagesMenu();
   
   const periodText = hours === 0 ? 'все сообщения' : `сообщения за ${hours === 1 ? '1 час' : hours === 6 ? '6 часов' : hours === 24 ? '1 день' : hours === 72 ? '3 дня' : '1 неделю'}`;
+  const voiceChatsText = includeVoiceChats ? '\n\n🎤 Включая чаты голосовых каналов' : '';
   
   const confirmed = confirm(
-    `⚠️ Вы уверены что хотите удалить ${periodText} пользователя "${username}"?\n\nЭто действие необратимо!`
+    `⚠️ Вы уверены что хотите удалить ${periodText} пользователя "${username}"?${voiceChatsText}\n\nЭто действие необратимо!`
   );
   
   if (!confirmed) return;
@@ -1390,7 +1406,7 @@ async function deleteUserMessages(userId, username, hours) {
     const response = await fetch('/api/admin/delete-user-messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, hours })
+      body: JSON.stringify({ userId, hours, includeVoiceChats })
     });
     
     const data = await response.json();

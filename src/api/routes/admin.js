@@ -501,14 +501,14 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
    * Удалить сообщения пользователя в Discord
    */
   router.post('/delete-user-messages', async (req, res) => {
-    const { userId, hours } = req.body;
+    const { userId, hours, includeVoiceChats } = req.body;
 
     if (!userId || hours === undefined) {
       return res.status(400).json({ error: 'Отсутствуют обязательные поля' });
     }
 
     try {
-      log(`🗑️ Удаление сообщений пользователя ${userId} за ${hours === 0 ? 'все время' : hours + ' часов'}...`);
+      log(`🗑️ Удаление сообщений пользователя ${userId} за ${hours === 0 ? 'все время' : hours + ' часов'}${includeVoiceChats ? ' (включая голосовые каналы)' : ''}...`);
 
       const guild = discordClient.guilds.cache.first();
       if (!guild) {
@@ -523,14 +523,21 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
       const errorsList = [];
       const skippedChannels = [];
 
-      // Получаем все текстовые каналы
-      const textChannels = guild.channels.cache.filter(channel => channel.type === 0); // 0 = GUILD_TEXT
+      // Получаем текстовые каналы и опционально голосовые
+      let channels;
+      if (includeVoiceChats) {
+        // 0 = GUILD_TEXT, 2 = GUILD_VOICE
+        channels = guild.channels.cache.filter(channel => channel.type === 0 || channel.type === 2);
+        log(`  📊 Найдено каналов: ${channels.size} (текстовые + голосовые)`);
+      } else {
+        channels = guild.channels.cache.filter(channel => channel.type === 0); // 0 = GUILD_TEXT
+        log(`  📊 Найдено текстовых каналов: ${channels.size}`);
+      }
 
-      log(`  📊 Найдено текстовых каналов: ${textChannels.size}`);
-
-      for (const [channelId, channel] of textChannels) {
+      for (const [channelId, channel] of channels) {
         try {
-          log(`  📝 Проверка канала: ${channel.name}`);
+          const channelTypeEmoji = channel.type === 2 ? '🎤' : '📝';
+          log(`  ${channelTypeEmoji} Проверка канала: ${channel.name}`);
           
           // Проверяем права на просмотр канала
           if (!channel.viewable) {
@@ -600,7 +607,7 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
       }
 
       log(`✅ Всего удалено сообщений: ${deletedCount}`);
-      log(`📊 Проверено каналов: ${textChannels.size}`);
+      log(`📊 Проверено каналов: ${channels.size}`);
       log(`❌ Ошибок: ${errorsList.length}`);
 
       if (telegram) {
