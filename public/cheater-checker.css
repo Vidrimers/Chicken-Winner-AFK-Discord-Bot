@@ -593,6 +593,19 @@
   text-decoration: underline;
 }
 
+/* Иконки внутри кнопок и заголовков наследуют цвет текста */
+.check-btn .icon,
+.mass-check-btn .icon,
+.start-mass-btn .icon,
+.back-btn .icon,
+.info-btn .icon,
+.card-action-btn .icon,
+.modal-box-header .icon,
+.info-modal-body h3 .icon,
+.checker-header .icon {
+  color: inherit;
+}
+
 /* Диалог подтверждения */
 .confirm-box {
   max-width: 400px;

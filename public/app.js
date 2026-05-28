@@ -2170,7 +2170,7 @@ function showCustomAlert(title, message, buttons = []) {
 
   // Заголовок
   const titleElement = document.createElement("h2");
-  titleElement.textContent = title;
+  titleElement.innerHTML = title;
   titleElement.style.cssText = `
         color: white;
         margin: 0 0 15px 0;
@@ -2341,7 +2341,10 @@ function closeBugReportModal() {
 
 async function sendBugReport() {
   const text = document.getElementById('bugReportText').value.trim();
-  if (!text) { alert('Опишите проблему'); return; }
+  if (!text) {
+    showCustomAlert('<svg class="icon" aria-hidden="true"><use href="#icon-warning"></use></svg> Внимание', 'Пожалуйста, опишите проблему', [{ text: 'OK', color: '#ff9800', action: null }]);
+    return;
+  }
 
   try {
     const res = await fetch('/api/bug-report', {
@@ -2356,12 +2359,24 @@ async function sendBugReport() {
     const data = await res.json();
     if (data.success) {
       closeBugReportModal();
-      alert('✅ Спасибо! Ваш отчёт отправлен администратору.');
+      showCustomAlert(
+        '<svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg> Отправлено',
+        'Спасибо! Ваш отчёт об ошибке отправлен администратору.',
+        [{ text: 'OK', color: '#4CAF50', action: null }]
+      );
     } else {
-      alert(data.error || 'Ошибка отправки');
+      showCustomAlert(
+        '<svg class="icon" aria-hidden="true"><use href="#icon-cross"></use></svg> Ошибка',
+        data.error || 'Ошибка при отправке багрепорта',
+        [{ text: 'OK', color: '#666', action: null }]
+      );
     }
   } catch (err) {
-    alert('Ошибка соединения');
+    showCustomAlert(
+      '<svg class="icon" aria-hidden="true"><use href="#icon-cross"></use></svg> Ошибка',
+      'Ошибка соединения с сервером. Попробуйте позже.',
+      [{ text: 'OK', color: '#666', action: null }]
+    );
   }
 }
 

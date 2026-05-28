@@ -22,6 +22,18 @@
 .icon-lg { width: 1.5em; height: 1.5em; }
 .icon-xl { width: 2em; height: 2em; }
 
+/* Иконки внутри кнопок, ссылок и заголовков наследуют цвет текста */
+button .icon,
+a .icon,
+h1 .icon,
+h2 .icon,
+h3 .icon,
+.admin-btn .icon,
+.setting-card-icon .icon,
+.modal-box-header .icon {
+  color: inherit;
+}
+
 /* ============================================================
    Переменные --icon-color для каждой темы проекта
    ============================================================ */

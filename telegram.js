@@ -668,6 +668,13 @@ export function initTelegramBot(
     telegramBot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
     console.log("✅ Telegram бот запущен");
 
+    // Регистрируем команды для кнопки Menu в Telegram
+    telegramBot.setMyCommands([
+      { command: 'menu', description: 'Главное меню' },
+      { command: 'start', description: 'Запустить бота' },
+      { command: 'link', description: 'Связать с Discord (код)' }
+    ]).catch(err => console.error('Ошибка setMyCommands:', err.message));
+
     // Обработчик команды /start
     telegramBot.onText(/\/start/, async (msg) => {
       const chatId = msg.chat.id;
@@ -775,9 +782,10 @@ export function initTelegramBot(
           const guild = discordClient.guilds.cache.first();
 
           try {
-            console.log(`📥 Загрузка списка участников сервера...`);
-            const members = await guild.members.fetch();
-            console.log(`✅ Загружено ${members.size} участников`);
+            console.log(`🔍 Поиск пользователя Discord в кеше...`);
+            // Используем кеш вместо fetch() чтобы не получать rate limit
+            const members = guild.members.cache;
+            console.log(`📋 В кеше ${members.size} участников`);
 
             const foundMember = members.find((member) => {
               const username = member.user.username.toLowerCase();
@@ -1107,7 +1115,11 @@ export function initTelegramBot(
             return;
           }
 
-          const username = getDiscordUsername(discordId);
+          // Получаем username: сначала из Discord, если нет — из Telegram
+          let username = getDiscordUsername(discordId);
+          if (username === 'Unknown') {
+            username = msg.from?.username || msg.from?.first_name || 'Telegram User';
+          }
 
           try {
             const id = db.createBugReport(discordId, username, text.trim());
