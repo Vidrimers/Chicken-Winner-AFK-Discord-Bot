@@ -258,7 +258,12 @@ function getLinkedDiscordId(chatId) {
   const result = db.prepare(
     'SELECT user_id FROM telegram_users WHERE telegram_chat_id = ? AND started_bot = 1'
   ).get(chatId.toString());
-  return result ? result.user_id : null;
+  if (!result) return null;
+  // Возвращаем только настоящий Discord ID (17-20 цифр), а не префикс telegram_XXX
+  if (/^\d{17,20}$/.test(result.user_id)) {
+    return result.user_id;
+  }
+  return null;
 }
 
 /**
