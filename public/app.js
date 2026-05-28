@@ -2383,7 +2383,30 @@ async function sendBugReport() {
 async function openBugReportsModal() {
   document.getElementById('bugReportsListModal').style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  await loadBugReportsList('new');
+  // Сначала загружаем все багрепорты чтобы выбрать правильный фильтр
+  await loadBugReportsListAuto();
+}
+
+async function loadBugReportsListAuto() {
+  try {
+    const res = await fetch('/api/bug-reports', { headers: { 'x-user-id': window.currentUserId } });
+    const reports = await res.json();
+    
+    // Автовыбор фильтра по приоритету: new → in_progress → new (пустой)
+    const hasNew = reports.some(r => r.status === 'new');
+    const hasInProgress = reports.some(r => r.status === 'in_progress');
+    
+    let filterToShow = 'new';
+    if (hasNew) {
+      filterToShow = 'new';
+    } else if (hasInProgress) {
+      filterToShow = 'in_progress';
+    }
+    
+    await loadBugReportsList(filterToShow);
+  } catch (err) {
+    document.getElementById('bugReportsList').innerHTML = '<p style="color:#aaa;text-align:center">Ошибка загрузки</p>';
+  }
 }
 
 function closeBugReportsListModal() {
@@ -2450,6 +2473,8 @@ async function changeBugReportStatus(id, status) {
     });
     const activeFilter = document.querySelector('.bug-filter-btn.active');
     loadBugReportsList(activeFilter?.dataset.status || 'new');
+    // Обновляем бейдж и иконку после смены статуса
+    loadBugReportBadge();
   } catch (err) {
     alert('Ошибка обновления статуса');
   }
@@ -2464,6 +2489,8 @@ async function deleteBugReportAdmin(id) {
     });
     const activeFilter = document.querySelector('.bug-filter-btn.active');
     loadBugReportsList(activeFilter?.dataset.status || 'new');
+    // Обновляем бейдж и иконку после удаления
+    loadBugReportBadge();
   } catch (err) {
     alert('Ошибка удаления');
   }
@@ -2476,18 +2503,60 @@ function escapeHtmlBug(text) {
   return div.innerHTML;
 }
 
-// Загрузка бейджа количества новых багрепортов (для админа)
+// Загрузка бейджа количества новых багрепортов (для админа) + обновление состояния иконки
 async function loadBugReportBadge() {
   if (!window.currentUserId || window.currentUserId !== window.CONFIG?.ADMIN_USER_ID) return;
   try {
-    const res = await fetch('/api/bug-reports/count', { headers: { 'x-user-id': window.currentUserId } });
-    const data = await res.json();
+    // Получаем все багрепорты для определения состояния
+    const res = await fetch('/api/bug-reports', { headers: { 'x-user-id': window.currentUserId } });
+    const reports = await res.json();
+    
+    if (!Array.isArray(reports)) return;
+    
+    const newCount = reports.filter(r => r.status === 'new').length;
+    const inProgressCount = reports.filter(r => r.status === 'in_progress').length;
+    
+    // Обновляем бейдж (показываем количество новых)
     const badge = document.getElementById('bugReportBadge');
-    if (badge && data.count > 0) {
-      badge.textContent = data.count;
-      badge.style.display = 'inline-block';
-    } else if (badge) {
-      badge.style.display = 'none';
+    if (badge) {
+      if (newCount > 0) {
+        badge.textContent = newCount;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
     }
+    
+    // Обновляем состояние иконки кнопки "Баги"
+    updateBugReportIconState(newCount > 0, inProgressCount > 0);
   } catch (err) {}
+}
+
+// Обновление иконки кнопки "Баги" в зависимости от состояния
+function updateBugReportIconState(hasNew, hasInProgress) {
+  const bugBtn = document.getElementById('bugReportsBtn');
+  if (!bugBtn) return;
+  
+  const svgIcon = bugBtn.querySelector('.admin-btn-icon svg');
+  if (!svgIcon) return;
+  
+  // Сброс
+  svgIcon.style.animation = '';
+  svgIcon.style.transformOrigin = '';
+  svgIcon.style.color = '';
+  bugBtn.classList.remove('bug-btn--new', 'bug-btn--in-progress');
+  
+  if (hasNew) {
+    // Есть новые → красная пульсация
+    bugBtn.classList.add('bug-btn--new');
+    svgIcon.style.color = '#f44336';
+    svgIcon.style.animation = 'bug-pulse 1.2s ease-in-out infinite';
+    svgIcon.style.transformOrigin = 'center';
+  } else if (hasInProgress) {
+    // Нет новых, но есть в работе → зелёное вращение
+    bugBtn.classList.add('bug-btn--in-progress');
+    svgIcon.style.color = '#4caf50';
+    svgIcon.style.animation = 'bug-spin 2s linear infinite';
+    svgIcon.style.transformOrigin = 'center';
+  }
 }
