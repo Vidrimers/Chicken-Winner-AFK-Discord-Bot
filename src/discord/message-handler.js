@@ -1,16 +1,18 @@
-import { DISCORD_CONFIG, SERVER_CONFIG } from '../config.js';
+import { DISCORD_CONFIG, SERVER_CONFIG, STEAM_CONFIG } from '../config.js';
 import { formatDuration } from '../utils/time.js';
 import { log } from '../utils/logger.js';
 import { ACHIEVEMENTS } from '../achievements/definitions.js';
+import { VacHandler } from './vac-handler.js';
 
 /**
  * Класс для обработки сообщений
  */
 export class MessageHandler {
-  constructor(db, achievements, telegram) {
+  constructor(db, achievements, telegram, discordClient) {
     this.db = db;
     this.achievements = achievements;
     this.telegram = telegram;
+    this.vacHandler = new VacHandler(db, discordClient);
   }
 
   /**
@@ -156,6 +158,30 @@ export class MessageHandler {
     if (content === '.!. time 45' || content === '.!. время 45') {
       await this.handleTimeCommand(message, userId, username, 45);
       return;
+    }
+
+    // VAC-чекер команды (только в указанном канале)
+    if (message.channel.id === STEAM_CONFIG.VAC_WATCH_CHANNEL_ID) {
+      // Справка по VAC-чекеру
+      if (content === '.!. vac-help') {
+        await this.vacHandler.handleHelpCommand(message);
+        return;
+      }
+
+      // Проверка Steam URL
+      if (content.startsWith('.!. https://steamcommunity.com/') || content.startsWith('.!. http://steamcommunity.com/')) {
+        const url = message.content.trim().split(/\s+/).pop();
+        await this.vacHandler.handleCheckCommand(message, url);
+        return;
+      }
+
+      // Список забаненных .!. vac N
+      if (content.startsWith('.!. vac ')) {
+        const parts = content.split(' ');
+        const count = parseInt(parts[parts.length - 1], 10);
+        await this.vacHandler.handleVacListCommand(message, count);
+        return;
+      }
     }
 
     // Команда помощи

@@ -320,6 +320,76 @@ export class DatabaseManager {
     ).all();
   }
 
+  // ===== CHEATER CHECKS =====
+
+  upsertCheaterCheck(profile) {
+    return this.prepare(
+      `INSERT OR REPLACE INTO cheater_checks 
+       (steam_id, persona_name, avatar_url, profile_url, vac_banned, number_of_vac_bans, 
+        number_of_game_bans, days_since_last_ban, community_banned, economy_ban, 
+        checked_by_discord_id, checked_by_username, checked_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+    ).run(
+      profile.steamId,
+      profile.personaName || null,
+      profile.avatarUrl || null,
+      profile.profileUrl,
+      profile.vacBanned ? 1 : 0,
+      profile.numberOfVacBans || 0,
+      profile.numberOfGameBans || 0,
+      profile.daysSinceLastBan || 0,
+      profile.communityBanned ? 1 : 0,
+      profile.economyBan || 'none',
+      profile.checkedByDiscordId,
+      profile.checkedByUsername || null
+    );
+  }
+
+  getCheaterChecks({ limit = 50, offset = 0, filter = 'all' } = {}) {
+    let sql = 'SELECT * FROM cheater_checks';
+    const params = [];
+
+    if (filter === 'banned') {
+      sql += ' WHERE vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != \'none\'';
+    } else if (filter === 'clean') {
+      sql += ' WHERE vac_banned = 0 AND number_of_game_bans = 0 AND community_banned = 0 AND economy_ban = \'none\'';
+    }
+
+    sql += ' ORDER BY checked_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    return this.db.prepare(sql).all(...params);
+  }
+
+  getCheaterChecksCount(filter = 'all') {
+    let sql = 'SELECT COUNT(*) as count FROM cheater_checks';
+
+    if (filter === 'banned') {
+      sql += ' WHERE vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != \'none\'';
+    } else if (filter === 'clean') {
+      sql += ' WHERE vac_banned = 0 AND number_of_game_bans = 0 AND community_banned = 0 AND economy_ban = \'none\'';
+    }
+
+    const result = this.db.prepare(sql).get();
+    return result.count;
+  }
+
+  getBannedProfiles(limit = 10) {
+    return this.prepare(
+      `SELECT * FROM cheater_checks 
+       WHERE vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != 'none'
+       ORDER BY checked_at DESC LIMIT ?`
+    ).all(limit);
+  }
+
+  deleteCheaterCheck(steamId) {
+    return this.prepare('DELETE FROM cheater_checks WHERE steam_id = ?').run(steamId);
+  }
+
+  getCheaterCheckBySteamId(steamId) {
+    return this.prepare('SELECT * FROM cheater_checks WHERE steam_id = ?').get(steamId);
+  }
+
   close() {
     this.db.close();
   }

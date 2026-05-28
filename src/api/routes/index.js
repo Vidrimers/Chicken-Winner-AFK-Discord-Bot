@@ -3,6 +3,7 @@ import { createSettingsRouter } from './settings.js';
 import { createTelegramRouter } from './telegram.js';
 import { createAdminRouter } from './admin.js';
 import { createAchievementsRouter } from './achievements.js';
+import { createCheaterCheckerRouter } from './cheater-checker.js';
 import { success } from '../../utils/logger.js';
 import { USER_IDS, DISCORD_CONFIG, SERVER_CONFIG } from '../../config.js';
 
@@ -130,6 +131,10 @@ export function registerRoutes(app, db, discordClient, achievements, telegram, n
   // Admin роуты
   const adminRouter = createAdminRouter(db, discordClient, telegram, notificationService);
   app.use('/api/admin', adminRouter);
+
+  // Cheater Checker роуты
+  const cheaterCheckerRouter = createCheaterCheckerRouter(db, discordClient);
+  app.use('/api/cheater-checker', cheaterCheckerRouter);
 
   // Achievements роуты
   const achievementsRouter = createAchievementsRouter(db, telegram);

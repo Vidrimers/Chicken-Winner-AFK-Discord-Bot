@@ -34,6 +34,13 @@ export const TELEGRAM_CONFIG = {
   BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
 };
 
+// ===== STEAM CONFIGURATION =====
+export const STEAM_CONFIG = {
+  STEAM_API_KEY: process.env.STEAM_API_KEY,
+  VAC_WATCH_CHANNEL_ID: process.env.VAC_WATCH_CHANNEL_ID,
+  VAC_THREAD_ID: process.env.VAC_THREAD_ID,
+};
+
 // ===== VALIDATION =====
 export function validateConfig() {
   const required = [

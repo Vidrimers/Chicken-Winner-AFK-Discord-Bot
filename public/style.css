@@ -169,6 +169,16 @@ body.modal-open {
   color: #667eea;
 }
 
+.cheater-checker-tab {
+  text-decoration: none;
+  color: inherit;
+}
+
+.cheater-checker-tab:hover {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
 .tab-content {
   display: none;
 }

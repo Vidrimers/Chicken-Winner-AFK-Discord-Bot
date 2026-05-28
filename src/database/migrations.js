@@ -41,5 +41,46 @@ export function runMigrations(db) {
     }
   });
 
+  // Создание таблицы cheater_checks для хранения результатов проверок Steam-профилей
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS cheater_checks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        steam_id TEXT NOT NULL,
+        persona_name TEXT,
+        avatar_url TEXT,
+        profile_url TEXT NOT NULL,
+        vac_banned INTEGER DEFAULT 0,
+        number_of_vac_bans INTEGER DEFAULT 0,
+        number_of_game_bans INTEGER DEFAULT 0,
+        days_since_last_ban INTEGER DEFAULT 0,
+        community_banned INTEGER DEFAULT 0,
+        economy_ban TEXT DEFAULT 'none',
+        checked_by_discord_id TEXT NOT NULL,
+        checked_by_username TEXT,
+        checked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(steam_id)
+      )
+    `);
+    console.log('✅ Таблица cheater_checks создана/проверена');
+  } catch (error) {
+    console.error(`❌ Ошибка создания таблицы cheater_checks: ${error.message}`);
+  }
+
+  // Индексы для таблицы cheater_checks
+  const cheaterCheckIndexes = [
+    'CREATE INDEX IF NOT EXISTS idx_cheater_checks_steam_id ON cheater_checks(steam_id)',
+    'CREATE INDEX IF NOT EXISTS idx_cheater_checks_banned ON cheater_checks(vac_banned, number_of_game_bans, community_banned)',
+    'CREATE INDEX IF NOT EXISTS idx_cheater_checks_date ON cheater_checks(checked_at DESC)',
+  ];
+
+  cheaterCheckIndexes.forEach((sql) => {
+    try {
+      db.exec(sql);
+    } catch (error) {
+      console.error(`❌ Ошибка создания индекса cheater_checks: ${error.message}`);
+    }
+  });
+
   console.log('✅ Миграции завершены');
 }

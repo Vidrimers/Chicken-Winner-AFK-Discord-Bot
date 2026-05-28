@@ -8,7 +8,7 @@ import { formatTime } from '../utils/time.js';
  */
 export function registerDiscordEvents(client, db, achievements, telegram) {
   const voiceHandler = new VoiceStateHandler(db, achievements, telegram);
-  const messageHandler = new MessageHandler(db, achievements, telegram);
+  const messageHandler = new MessageHandler(db, achievements, telegram, client);
 
   // Событие готовности
   client.once('clientReady', () => {

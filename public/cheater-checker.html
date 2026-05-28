@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>Чекер читеров — Steam VAC Checker</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="/cheater-checker.css" />
+    <script src="/cheater-checker.js" defer></script>
+  </head>
+  <body>
+    <div class="checker-container">
+      <!-- Шапка -->
+      <header class="checker-header">
+        <a href="/" class="back-btn">← Назад</a>
+        <div class="header-title">
+          <h1>Чекер читеров</h1>
+          <button class="info-btn" id="infoBtn" title="Информация">?</button>
+        </div>
+      </header>
+
+      <!-- Сообщение для неавторизованных -->
+      <div class="auth-warning" id="authWarning" style="display: none">
+        <p>🔒 Войдите для проверки профилей</p>
+      </div>
+
+      <!-- Секция ввода -->
+      <section class="input-section" id="inputSection">
+        <button class="mass-check-btn" id="massCheckBtn">Массовая проверка</button>
+        <input
+          type="text"
+          class="steam-input"
+          id="steamUrlInput"
+          placeholder="Вставьте ссылку на Steam-профиль"
+        />
+        <button class="check-btn" id="checkBtn">Проверить</button>
+      </section>
+
+      <!-- Loading indicator -->
+      <div class="loading-indicator" id="loadingIndicator" style="display: none">
+        <div class="spinner"></div>
+        <span>Проверка профиля...</span>
+      </div>
+
+      <!-- Результаты в двух колонках -->
+      <section class="results-section">
+        <div class="results-grid">
+          <!-- Колонка забаненных -->
+          <div class="results-column banned-column">
+            <h2 class="column-title banned-title">🔴 С ограничениями</h2>
+            <div class="cards-container" id="bannedCards"></div>
+          </div>
+          <!-- Колонка чистых -->
+          <div class="results-column clean-column">
+            <h2 class="column-title clean-title">🟢 Чистые</h2>
+            <div class="cards-container" id="cleanCards"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Модалка массовой проверки -->
+    <div class="modal-overlay" id="massCheckModal" style="display: none">
+      <div class="modal-box">
+        <div class="modal-box-header">
+          <h2>Массовая проверка</h2>
+          <button class="modal-close-btn" id="massCheckCloseBtn">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <p>Вставьте ссылки на Steam-профили (по одной на строку, максимум 20):</p>
+          <textarea
+            class="mass-textarea"
+            id="massTextarea"
+            rows="10"
+            placeholder="https://steamcommunity.com/id/player1&#10;https://steamcommunity.com/profiles/76561198..."
+          ></textarea>
+          <div class="mass-counter">
+            <span id="urlCounter">0</span>/20
+          </div>
+          <button class="start-mass-btn" id="startMassCheckBtn">Начать проверку</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Информационная модалка -->
+    <div class="modal-overlay" id="infoModal" style="display: none">
+      <div class="modal-box">
+        <div class="modal-box-header">
+          <h2>ℹ️ О чекере читеров</h2>
+          <button class="modal-close-btn" id="infoCloseBtn">&times;</button>
+        </div>
+        <div class="modal-box-body info-modal-body">
+          <h3>📋 Назначение</h3>
+          <p>Проверка Steam-профилей на наличие VAC-банов, игровых банов и других ограничений.</p>
+
+          <h3>🔍 Используемые сервисы</h3>
+          <p>Steam Web API (GetPlayerBans, GetPlayerSummaries, ResolveVanityURL)</p>
+
+          <h3>📊 Проверяемые данные</h3>
+          <ul>
+            <li>VAC-баны (количество)</li>
+            <li>Игровые баны</li>
+            <li>Коммьюнити-бан</li>
+            <li>Торговый бан</li>
+            <li>Дни с последнего бана</li>
+          </ul>
+
+          <h3>🔗 Поддерживаемые форматы ссылок</h3>
+          <ul>
+            <li><code>https://steamcommunity.com/id/USERNAME</code></li>
+            <li><code>https://steamcommunity.com/profiles/STEAMID64</code></li>
+          </ul>
+
+          <h3>🤖 Discord-команды</h3>
+          <ul>
+            <li><code>.!. &lt;steam_url&gt;</code> — проверить один профиль</li>
+            <li><code>.!. vac N</code> — показать последние N забаненных (1-100)</li>
+            <li><code>.!. vac-help</code> — справка</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Кастомный диалог подтверждения удаления -->
+    <div class="modal-overlay" id="confirmDialog" style="display: none">
+      <div class="modal-box confirm-box">
+        <div class="modal-box-header confirm-header">
+          <h2>⚠️ Подтверждение</h2>
+        </div>
+        <div class="modal-box-body confirm-body">
+          <p id="confirmText">Удалить запись о профиле?</p>
+          <div class="confirm-buttons">
+            <button class="confirm-delete-btn" id="confirmDeleteBtn">Удалить</button>
+            <button class="confirm-cancel-btn" id="confirmCancelBtn">Отмена</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Уведомление -->
+    <div class="notification" id="notification" style="display: none">
+      <span id="notificationText"></span>
+    </div>
+  </body>
+</html>
