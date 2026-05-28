@@ -1,6 +1,10 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import { checkProfiles } from './src/steam/steamApi.js';
+import { STEAM_CONFIG } from './src/config.js';
+import { EmbedBuilder } from 'discord.js';
+
 // Telegram bot settings
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "137981675";
@@ -241,6 +245,318 @@ let discordClient = null;
 let getVoiceActivityHandler = null;
 let getOnlineUsersHandler = null;
 
+// Состояния пользователей для пошаговых диалогов
+const userStates = new Map(); // chatId → state string
+
+
+// ===== HELPER FUNCTIONS =====
+
+/**
+ * Получить связанный Discord ID по Telegram chat ID
+ */
+function getLinkedDiscordId(chatId) {
+  const result = db.prepare(
+    'SELECT user_id FROM telegram_users WHERE telegram_chat_id = ? AND started_bot = 1'
+  ).get(chatId.toString());
+  return result ? result.user_id : null;
+}
+
+/**
+ * Получить Discord username по user_id
+ */
+function getDiscordUsername(discordId) {
+  const result = db.prepare('SELECT username FROM user_stats WHERE user_id = ?').get(discordId);
+  return result ? result.username : 'Unknown';
+}
+
+// ===== INLINE MENU FUNCTIONS =====
+
+/**
+ * Отправка главного меню с inline-кнопками
+ */
+async function sendMainMenu(chatId) {
+  const menuButtons = {
+    inline_keyboard: [
+      [
+        { text: '🎤 Кто в канале', callback_data: 'menu_voice' },
+        { text: '👥 Кто онлайн', callback_data: 'menu_online' }
+      ],
+      [
+        { text: '🔍 Чекер читеров', callback_data: 'menu_checker' }
+      ]
+    ]
+  };
+
+  await telegramBot.sendMessage(chatId, '<b>📱 Главное меню</b>\n\nВыберите действие:', {
+    parse_mode: 'HTML',
+    reply_markup: menuButtons
+  });
+}
+
+/**
+ * Отправка подменю чекера читеров
+ */
+async function sendCheckerMenu(chatId) {
+  const checkerButtons = {
+    inline_keyboard: [
+      [
+        { text: '📋 Мои добавленные', callback_data: 'checker_my_added' }
+      ],
+      [
+        { text: '🔎 Проверить читера', callback_data: 'checker_check' }
+      ],
+      [
+        { text: '◀️ Назад', callback_data: 'back_to_menu' }
+      ]
+    ]
+  };
+
+  await telegramBot.sendMessage(chatId, '<b>🔍 Чекер читеров</b>\n\nВыберите действие:', {
+    parse_mode: 'HTML',
+    reply_markup: checkerButtons
+  });
+}
+
+/**
+ * Обработка голосовой активности (для inline кнопки)
+ */
+async function handleVoiceActivity(chatId) {
+  try {
+    if (!getVoiceActivityHandler) {
+      await telegramBot.sendMessage(chatId, '❌ Функция временно недоступна');
+      return;
+    }
+
+    const result = getVoiceActivityHandler();
+
+    if (result.success) {
+      await telegramBot.sendMessage(chatId, result.message, { parse_mode: 'HTML' });
+    } else {
+      await telegramBot.sendMessage(chatId, result.message || '❌ Не удалось получить информацию о каналах');
+    }
+  } catch (error) {
+    console.error('❌ Ошибка при обработке "Кто в канале":', error);
+    await telegramBot.sendMessage(chatId, '❌ Произошла ошибка при получении информации. Попробуйте позже.');
+  }
+}
+
+/**
+ * Обработка онлайн пользователей (для inline кнопки)
+ */
+async function handleOnlineUsers(chatId) {
+  try {
+    if (!getOnlineUsersHandler) {
+      await telegramBot.sendMessage(chatId, '❌ Функция временно недоступна');
+      return;
+    }
+
+    const result = getOnlineUsersHandler();
+
+    if (result.success) {
+      await telegramBot.sendMessage(chatId, result.message, { parse_mode: 'HTML' });
+    } else {
+      await telegramBot.sendMessage(chatId, result.message || '❌ Не удалось получить список пользователей');
+    }
+  } catch (error) {
+    console.error('❌ Ошибка при обработке "Кто онлайн":', error);
+    await telegramBot.sendMessage(chatId, '❌ Произошла ошибка при получении информации. Попробуйте позже.');
+  }
+}
+
+/**
+ * Обработка "Мои добавленные" — показывает профили, добавленные пользователем
+ */
+async function handleMyAdded(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId) {
+    await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+    return;
+  }
+
+  try {
+    const profiles = db.prepare(
+      'SELECT persona_name, vac_banned, number_of_game_bans, checked_at FROM cheater_checks WHERE checked_by_discord_id = ? ORDER BY checked_at DESC LIMIT 20'
+    ).all(discordId);
+
+    if (!profiles || profiles.length === 0) {
+      const backButton = {
+        inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'menu_checker' }]]
+      };
+      await telegramBot.sendMessage(chatId, '📭 Вы ещё не добавляли профили', {
+        reply_markup: backButton
+      });
+      return;
+    }
+
+    let message = '<b>📋 Ваши добавленные профили:</b>\n\n';
+
+    profiles.forEach((p, i) => {
+      const status = (p.vac_banned || p.number_of_game_bans > 0) ? '🔴' : '🟢';
+      const vacText = p.vac_banned ? 'VAC' : '';
+      const gameText = p.number_of_game_bans > 0 ? `Game(${p.number_of_game_bans})` : '';
+      const banInfo = [vacText, gameText].filter(Boolean).join(', ') || 'Чисто';
+      const date = p.checked_at ? new Date(p.checked_at).toLocaleDateString('ru-RU') : '—';
+
+      message += `${i + 1}. ${status} <b>${p.persona_name || 'Unknown'}</b>\n`;
+      message += `   Статус: ${banInfo} | Дата: ${date}\n\n`;
+    });
+
+    const backButton = {
+      inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'menu_checker' }]]
+    };
+
+    await telegramBot.sendMessage(chatId, message, {
+      parse_mode: 'HTML',
+      reply_markup: backButton
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения добавленных профилей:', error);
+    await telegramBot.sendMessage(chatId, '❌ Произошла ошибка при получении данных. Попробуйте позже.');
+  }
+}
+
+/**
+ * Обработка проверки Steam-профиля по URL
+ */
+async function handleSteamUrlCheck(chatId, url) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId) {
+    await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+    return;
+  }
+
+  const discordUsername = getDiscordUsername(discordId);
+
+  await telegramBot.sendMessage(chatId, '⏳ Проверяю профиль... Это может занять несколько секунд.');
+
+  try {
+    const { results, errors } = await checkProfiles([url]);
+
+    if (errors.length > 0 && results.length === 0) {
+      await telegramBot.sendMessage(chatId, `❌ Ошибка проверки:\n${errors.join('\n')}`);
+      return;
+    }
+
+    if (results.length === 0) {
+      await telegramBot.sendMessage(chatId, '❌ Не удалось получить данные профиля.');
+      return;
+    }
+
+    const profile = results[0];
+
+    // Сохраняем в БД
+    db.upsertCheaterCheck({
+      ...profile,
+      checkedByDiscordId: discordId,
+      checkedByUsername: discordUsername,
+    });
+
+    // Формируем сообщение с результатом
+    const isBanned = profile.vacBanned || profile.numberOfGameBans > 0 || profile.communityBanned || (profile.economyBan && profile.economyBan !== 'none');
+    const statusEmoji = isBanned ? '🔴' : '🟢';
+    const statusText = isBanned ? 'ЗАБАНЕН' : 'ЧИСТО';
+
+    let resultMessage = `${statusEmoji} <b>${profile.personaName}</b> — ${statusText}\n\n`;
+    resultMessage += `🔗 <a href="${profile.profileUrl}">Профиль Steam</a>\n`;
+    resultMessage += `🆔 SteamID64: <code>${profile.steamId}</code>\n\n`;
+    resultMessage += `<b>Детали:</b>\n`;
+    resultMessage += `• VAC-бан: ${profile.vacBanned ? `Да (${profile.numberOfVacBans} бан(ов))` : 'Нет'}\n`;
+    resultMessage += `• Игровые баны: ${profile.numberOfGameBans > 0 ? profile.numberOfGameBans : 'Нет'}\n`;
+    resultMessage += `• Дней с последнего бана: ${profile.daysSinceLastBan > 0 ? profile.daysSinceLastBan : '—'}\n`;
+    resultMessage += `• Коммьюнити-бан: ${profile.communityBanned ? 'Да' : 'Нет'}\n`;
+    resultMessage += `• Торговый бан: ${profile.economyBan !== 'none' ? profile.economyBan : 'Нет'}\n`;
+
+    const resultButtons = {
+      inline_keyboard: [
+        [{ text: '📢 Опубликовать в Discord', callback_data: `checker_publish_${profile.steamId}` }],
+        [{ text: '🔎 Проверить ещё', callback_data: 'checker_check' }],
+        [{ text: '◀️ Назад в меню', callback_data: 'back_to_menu' }]
+      ]
+    };
+
+    await telegramBot.sendMessage(chatId, resultMessage, {
+      parse_mode: 'HTML',
+      reply_markup: resultButtons,
+      disable_web_page_preview: true
+    });
+
+    if (errors.length > 0) {
+      await telegramBot.sendMessage(chatId, `⚠️ Предупреждения:\n${errors.join('\n')}`);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка проверки Steam профиля:', error);
+    await telegramBot.sendMessage(chatId, '❌ Произошла ошибка при проверке. Попробуйте позже.');
+  }
+}
+
+/**
+ * Публикация профиля в Discord
+ */
+async function handlePublishToDiscord(chatId, steamId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId) {
+    await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+    return;
+  }
+
+  try {
+    const profile = db.getCheaterCheckBySteamId(steamId);
+    if (!profile) {
+      await telegramBot.sendMessage(chatId, '❌ Профиль не найден в базе данных.');
+      return;
+    }
+
+    const threadId = STEAM_CONFIG.VAC_THREAD_ID;
+    if (!threadId) {
+      await telegramBot.sendMessage(chatId, '❌ VAC_THREAD_ID не настроен на сервере.');
+      return;
+    }
+
+    // Цвета embed
+    const EMBED_COLORS = {
+      BANNED: 0xFF0000,
+      RESTRICTED: 0xFFAA00,
+      CLEAN: 0x00CC44,
+    };
+
+    let color = EMBED_COLORS.CLEAN;
+    if (profile.vac_banned || profile.number_of_game_bans > 0) {
+      color = EMBED_COLORS.BANNED;
+    } else if (profile.community_banned || (profile.economy_ban && profile.economy_ban !== 'none')) {
+      color = EMBED_COLORS.RESTRICTED;
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle(profile.persona_name || 'Unknown')
+      .setURL(profile.profile_url)
+      .setThumbnail(profile.avatar_url || null)
+      .setColor(color)
+      .addFields(
+        { name: 'SteamID64', value: profile.steam_id, inline: true },
+        { name: 'VAC-бан', value: profile.vac_banned ? `Да (${profile.number_of_vac_bans} бан(ов))` : 'Нет', inline: true },
+        { name: 'Игровые баны', value: profile.number_of_game_bans > 0 ? `${profile.number_of_game_bans}` : 'Нет', inline: true },
+        { name: 'Дней с последнего бана', value: profile.days_since_last_ban > 0 ? `${profile.days_since_last_ban}` : '—', inline: true },
+        { name: 'Коммьюнити-бан', value: profile.community_banned ? 'Да' : 'Нет', inline: true },
+        { name: 'Торговый бан', value: profile.economy_ban !== 'none' ? profile.economy_ban : 'Нет', inline: true },
+      )
+      .setFooter({ text: `Checked by ${profile.checked_by_username || 'Unknown'} (via Telegram)` })
+      .setTimestamp();
+
+    const channel = await discordClient.channels.fetch(threadId).catch(() => null);
+    if (!channel) {
+      await telegramBot.sendMessage(chatId, '❌ Не удалось найти Discord канал.');
+      return;
+    }
+
+    await channel.send({ embeds: [embed] });
+    await telegramBot.sendMessage(chatId, '✅ Опубликовано в Discord');
+  } catch (error) {
+    console.error('❌ Ошибка публикации в Discord:', error);
+    await telegramBot.sendMessage(chatId, '❌ Не удалось опубликовать в Discord. Попробуйте позже.');
+  }
+}
+
+
 /**
  * Инициализация Telegram бота
  */
@@ -307,7 +623,6 @@ export function initTelegramBot(
         if (db) {
           try {
             if (wasRegistered) {
-              // Обновляем только флаг started_bot, сохраняя created_at
               db.prepare(
                 `UPDATE telegram_users SET started_bot = 1 WHERE telegram_chat_id = ?`,
               ).run(chatId.toString());
@@ -315,7 +630,6 @@ export function initTelegramBot(
                 `✅ Флаг started_bot обновлен для существующего пользователя`,
               );
             } else {
-              // Создаем новую запись
               db.prepare(
                 `INSERT OR REPLACE INTO telegram_users (user_id, telegram_chat_id, started_bot, created_at) 
                  VALUES ('telegram_' || ?, ?, 1, CURRENT_TIMESTAMP)`,
@@ -348,21 +662,14 @@ export function initTelegramBot(
         try {
           console.log(`📤 Отправка приветственного сообщения пользователю...`);
 
-          // Создаем клавиатуру с кнопками
-          const keyboard = {
-            keyboard: [
-              [{ text: "🎤 Кто в канале" }],
-              [{ text: "👥 Кто онлайн" }],
-            ],
-            resize_keyboard: true,
-            one_time_keyboard: false,
-          };
-
           await telegramBot.sendMessage(chatId, welcomeMessage, {
             parse_mode: "HTML",
-            reply_markup: keyboard,
           });
-          console.log(`✅ Приветственное сообщение отправлено с клавиатурой`);
+
+          // Отправляем главное меню
+          await sendMainMenu(chatId);
+
+          console.log(`✅ Приветственное сообщение и меню отправлены`);
         } catch (sendError) {
           console.error(
             `❌ Ошибка отправки приветственного сообщения: ${sendError.message}`,
@@ -384,7 +691,6 @@ export function initTelegramBot(
 
           try {
             console.log(`📥 Загрузка списка участников сервера...`);
-            // Пытаемся найти пользователя по Telegram username
             const members = await guild.members.fetch();
             console.log(`✅ Загружено ${members.size} участников`);
 
@@ -410,7 +716,6 @@ export function initTelegramBot(
                 `✅ Найден пользователь Discord: ${discordUsername} (${discordUserId})`,
               );
 
-              // Сохраняем связь Discord ID с Telegram chat ID
               if (db) {
                 try {
                   db.prepare(
@@ -486,6 +791,11 @@ export function initTelegramBot(
       }
     });
 
+    // Обработчик команды /menu
+    telegramBot.onText(/\/menu/, async (msg) => {
+      await sendMainMenu(msg.chat.id);
+    });
+
     // Обработчик команды /link для связывания аккаунтов через код
     telegramBot.onText(/\/link (.+)/, async (msg, match) => {
       const chatId = msg.chat.id;
@@ -509,7 +819,6 @@ export function initTelegramBot(
         const result = linkCodeHandler(code, chatId.toString());
 
         if (result.success) {
-          // Получаем username из Discord
           let discordUsername = "Discord пользователь";
           if (discordClient && db) {
             const userStat = db
@@ -535,7 +844,6 @@ export function initTelegramBot(
             `✅ Аккаунт успешно связан: Discord ${result.userId} ↔ Telegram ${chatId}`,
           );
 
-          // Уведомляем админа
           await sendTelegramReport(
             `🔗 <b>Аккаунты связаны через код</b>\n\n` +
               `👤 Telegram: @${telegramUsername}\n` +
@@ -580,7 +888,81 @@ export function initTelegramBot(
       }
     });
 
-    // Обработчик текстовых сообщений (для кнопки "Кто в канале")
+    // ===== CALLBACK QUERY HANDLER (inline кнопки) =====
+    telegramBot.on('callback_query', async (query) => {
+      const chatId = query.message.chat.id;
+      const data = query.data;
+
+      try {
+        await telegramBot.answerCallbackQuery(query.id);
+      } catch (e) {
+        // Игнорируем ошибку если callback уже отвечен
+      }
+
+      console.log(`🔘 Callback query: ${data} от chat_id: ${chatId}`);
+
+      try {
+        switch (data) {
+          case 'menu_voice':
+            await handleVoiceActivity(chatId);
+            break;
+
+          case 'menu_online':
+            await handleOnlineUsers(chatId);
+            break;
+
+          case 'menu_checker': {
+            // Проверяем привязку перед показом меню чекера
+            const discordId = getLinkedDiscordId(chatId);
+            if (!discordId) {
+              await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+              return;
+            }
+            await sendCheckerMenu(chatId);
+            break;
+          }
+
+          case 'checker_my_added':
+            await handleMyAdded(chatId);
+            break;
+
+          case 'checker_check': {
+            // Проверяем привязку
+            const discordIdCheck = getLinkedDiscordId(chatId);
+            if (!discordIdCheck) {
+              await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+              return;
+            }
+            userStates.set(chatId, 'awaiting_steam_url');
+            const cancelButton = {
+              inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'menu_checker' }]]
+            };
+            await telegramBot.sendMessage(chatId, '🔗 Отправьте ссылку на Steam-профиль для проверки\n\nПримеры:\n• https://steamcommunity.com/id/username\n• https://steamcommunity.com/profiles/76561198xxxxxxxxx', {
+              reply_markup: cancelButton
+            });
+            break;
+          }
+
+          case 'back_to_menu':
+            userStates.delete(chatId);
+            await sendMainMenu(chatId);
+            break;
+
+          default:
+            // Обработка публикации в Discord
+            if (data.startsWith('checker_publish_')) {
+              const steamId = data.replace('checker_publish_', '');
+              await handlePublishToDiscord(chatId, steamId);
+            }
+            break;
+        }
+      } catch (error) {
+        console.error(`❌ Ошибка обработки callback_query (${data}):`, error);
+        await telegramBot.sendMessage(chatId, '❌ Произошла ошибка. Попробуйте позже.');
+      }
+    });
+
+    // Обработчик текстовых сообщений
     telegramBot.on("message", async (msg) => {
       // Пропускаем команды (они обрабатываются отдельно)
       if (msg.text && msg.text.startsWith("/")) {
@@ -590,105 +972,24 @@ export function initTelegramBot(
       const chatId = msg.chat.id;
       const text = msg.text;
 
-      // Обработка кнопки "Кто в канале"
-      if (text === "🎤 Кто в канале") {
-        console.log(`🎤 Получен запрос "Кто в канале" от chat_id: ${chatId}`);
-
-        try {
-          if (!getVoiceActivityHandler) {
-            console.error("❌ getVoiceActivityHandler не установлен");
-            await telegramBot.sendMessage(
-              chatId,
-              "❌ Функция временно недоступна",
-            );
-            return;
-          }
-
-          console.log("📡 Запрашиваем информацию о голосовых каналах...");
-
-          // Получаем информацию о голосовых каналах
-          const result = getVoiceActivityHandler();
-
-          console.log(
-            `📊 Результат: success=${result.success}, activeChannels=${result.activeChannels?.length || 0}`,
-          );
-
-          if (result.success) {
-            await telegramBot.sendMessage(chatId, result.message, {
-              parse_mode: "HTML",
-            });
-            console.log(
-              `✅ Информация о каналах отправлена пользователю ${chatId}`,
-            );
-          } else {
-            await telegramBot.sendMessage(
-              chatId,
-              result.message || "❌ Не удалось получить информацию о каналах",
-            );
-            console.log(
-              `⚠️ Не удалось получить информацию о каналах: ${result.message}`,
-            );
-          }
-        } catch (error) {
-          console.error(
-            "❌ Ошибка при обработке запроса 'Кто в канале':",
-            error,
-          );
-          console.error("Stack trace:", error.stack);
-          await telegramBot.sendMessage(
-            chatId,
-            "❌ Произошла ошибка при получении информации. Попробуйте позже.",
-          );
+      // Проверяем состояние пользователя (ожидание Steam URL)
+      if (userStates.get(chatId) === 'awaiting_steam_url') {
+        userStates.delete(chatId);
+        if (text) {
+          await handleSteamUrlCheck(chatId, text.trim());
         }
+        return;
       }
 
-      // Обработка кнопки "Кто онлайн"
+      // Fallback: обработка старых кнопок клавиатуры (для пользователей с кешированной клавиатурой)
+      if (text === "🎤 Кто в канале") {
+        console.log(`🎤 Получен запрос "Кто в канале" от chat_id: ${chatId}`);
+        await handleVoiceActivity(chatId);
+      }
+
       if (text === "👥 Кто онлайн") {
         console.log(`👥 Получен запрос "Кто онлайн" от chat_id: ${chatId}`);
-
-        try {
-          if (!getOnlineUsersHandler) {
-            console.error("❌ getOnlineUsersHandler не установлен");
-            await telegramBot.sendMessage(
-              chatId,
-              "❌ Функция временно недоступна",
-            );
-            return;
-          }
-
-          console.log("📡 Запрашиваем список онлайн пользователей...");
-
-          // Получаем информацию об онлайн пользователях
-          const result = getOnlineUsersHandler();
-
-          console.log(
-            `📊 Результат: success=${result.success}, онлайн: ${result.onlineCount || 0}/${result.totalCount || 0}`,
-          );
-
-          if (result.success) {
-            await telegramBot.sendMessage(chatId, result.message, {
-              parse_mode: "HTML",
-            });
-            console.log(
-              `✅ Список онлайн пользователей отправлен пользователю ${chatId}`,
-            );
-          } else {
-            await telegramBot.sendMessage(
-              chatId,
-              result.message || "❌ Не удалось получить список пользователей",
-            );
-            console.log(
-              `⚠️ Не удалось получить список пользователей: ${result.message}`,
-            );
-          }
-        } catch (error) {
-          console.error("❌ Ошибка при обработке запроса 'Кто онлайн':", error);
-          console.error("Stack trace:", error.stack);
-          await telegramBot.sendMessage(
-            chatId,
-            "❌ Произошла ошибка при получении информации. Попробуйте позже.",
-          );
-        }
+        await handleOnlineUsers(chatId);
       }
     });
 
