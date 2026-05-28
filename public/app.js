@@ -2532,29 +2532,23 @@ async function loadBugReportBadge() {
   } catch (err) {}
 }
 
-// Обновление иконки кнопки "Баги" в зависимости от состояния
+// Обновление иконки таба "Настройки" в зависимости от состояния багрепортов
 function updateBugReportIconState(hasNew, hasInProgress) {
-  const bugBtn = document.getElementById('bugReportsBtn');
-  if (!bugBtn) return;
-  
-  const svgIcon = bugBtn.querySelector('.admin-btn-icon svg');
+  const svgIcon = document.getElementById('settingsTabIcon');
   if (!svgIcon) return;
   
   // Сброс
   svgIcon.style.animation = '';
   svgIcon.style.transformOrigin = '';
   svgIcon.style.color = '';
-  bugBtn.classList.remove('bug-btn--new', 'bug-btn--in-progress');
   
   if (hasNew) {
     // Есть новые → красная пульсация
-    bugBtn.classList.add('bug-btn--new');
     svgIcon.style.color = '#f44336';
     svgIcon.style.animation = 'bug-pulse 1.2s ease-in-out infinite';
     svgIcon.style.transformOrigin = 'center';
   } else if (hasInProgress) {
     // Нет новых, но есть в работе → зелёное вращение
-    bugBtn.classList.add('bug-btn--in-progress');
     svgIcon.style.color = '#4caf50';
     svgIcon.style.animation = 'bug-spin 2s linear infinite';
     svgIcon.style.transformOrigin = 'center';

@@ -811,3 +811,32 @@ body[data-theme="die-my-darling"] .profile-card.banned {
 body[data-theme="die-my-darling"] .profile-card.clean {
     border-left-color: #4a8b4a;
 }
+
+/* Кнопки карточек на всех темах */
+body[data-theme="metal"] .profile-link-btn,
+body[data-theme="metal"] .discord-publish-btn {
+    background: rgba(180, 180, 180, 0.2);
+    color: #e0e0e0;
+    border-color: rgba(180, 180, 180, 0.4);
+}
+
+body[data-theme="discord"] .profile-link-btn,
+body[data-theme="discord"] .discord-publish-btn {
+    background: rgba(88, 101, 242, 0.25);
+    color: #b0c0ff;
+    border-color: rgba(88, 101, 242, 0.5);
+}
+
+body[data-theme="steam"] .profile-link-btn,
+body[data-theme="steam"] .discord-publish-btn {
+    background: rgba(102, 192, 244, 0.2);
+    color: #a0d8f8;
+    border-color: rgba(102, 192, 244, 0.4);
+}
+
+body[data-theme="die-my-darling"] .profile-link-btn,
+body[data-theme="die-my-darling"] .discord-publish-btn {
+    background: rgba(139, 0, 0, 0.3);
+    color: #ffa0a0;
+    border-color: rgba(139, 0, 0, 0.5);
+}
