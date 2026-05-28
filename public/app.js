@@ -739,7 +739,7 @@ async function checkTelegramLinkStatus() {
 
     if (data.linked) {
       statusDiv.style.display = "block";
-      btn.textContent = "✅ Аккаунты связаны";
+      btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg> Аккаунты связаны';
       btn.style.background = "#4CAF50";
       btn.style.cursor = "default";
       btn.onclick = null;
@@ -766,7 +766,7 @@ async function checkTelegramLinkStatus() {
       }
     } else {
       statusDiv.style.display = "none";
-      btn.textContent = "🔗 Связать с Telegram";
+      btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связать с Telegram';
       btn.style.background =
         "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
       btn.style.cursor = "pointer";

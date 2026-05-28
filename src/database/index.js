@@ -393,10 +393,11 @@ export class DatabaseManager {
   // ===== BUG REPORTS =====
 
   createBugReport(userId, username, bugText) {
-    const result = this.prepare(
-      'INSERT INTO bug_reports (user_id, username, bug_text) VALUES (?, ?, ?) RETURNING id'
-    ).get(userId, username, bugText);
-    return result.id;
+    const stmt = this.prepare(
+      'INSERT INTO bug_reports (user_id, username, bug_text) VALUES (?, ?, ?)'
+    );
+    const info = stmt.run(userId, username, bugText);
+    return info.lastInsertRowid;
   }
 
   getBugReports(status = null) {
