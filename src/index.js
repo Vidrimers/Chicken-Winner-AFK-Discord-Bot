@@ -419,6 +419,62 @@ async function main() {
       }
     }, 60000); // Проверяем каждую минуту
 
+    // Ежедневная перепроверка всех профилей из БД на изменение статуса банов
+    setInterval(async () => {
+      try {
+        log('🔄 Ежедневная перепроверка профилей из БД...');
+        const allProfiles = db.getCheaterChecks({ limit: 100, offset: 0, filter: 'all' });
+        
+        if (allProfiles.length === 0) {
+          log('📭 Нет профилей для перепроверки');
+          return;
+        }
+
+        const { checkProfiles } = await import('./steam/steamApi.js');
+        const urls = allProfiles.map(p => p.profile_url).filter(Boolean);
+        
+        // Проверяем пакетами по 20 с задержкой
+        const batchSize = 20;
+        let updated = 0;
+
+        for (let i = 0; i < urls.length; i += batchSize) {
+          const batch = urls.slice(i, i + batchSize);
+          const { results } = await checkProfiles(batch);
+
+          for (const profile of results) {
+            const existing = db.getCheaterCheckBySteamId(profile.steamId);
+            if (existing) {
+              // Проверяем изменились ли данные
+              const changed = 
+                existing.vac_banned !== (profile.vacBanned ? 1 : 0) ||
+                existing.number_of_game_bans !== (profile.numberOfGameBans || 0) ||
+                existing.community_banned !== (profile.communityBanned ? 1 : 0) ||
+                existing.economy_ban !== (profile.economyBan || 'none');
+
+              if (changed) {
+                db.upsertCheaterCheck({
+                  ...profile,
+                  checkedByDiscordId: existing.checked_by_discord_id,
+                  checkedByUsername: existing.checked_by_username
+                });
+                updated++;
+                log(`🔄 Обновлён профиль ${profile.personaName} (${profile.steamId}) — статус бана изменился`);
+              }
+            }
+          }
+
+          // Задержка между пакетами
+          if (i + batchSize < urls.length) {
+            await new Promise(r => setTimeout(r, 3000));
+          }
+        }
+
+        log(`✅ Перепроверка завершена. Обновлено: ${updated} из ${allProfiles.length}`);
+      } catch (error) {
+        logError(`Ошибка ежедневной перепроверки: ${error.message}`);
+      }
+    }, 24 * 60 * 60 * 1000); // Каждые 24 часа
+
     // Обработка завершения
     process.on('SIGINT', async () => {
       log('🛑 Закрытие бота...');

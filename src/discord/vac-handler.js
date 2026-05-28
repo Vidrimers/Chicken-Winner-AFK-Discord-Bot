@@ -152,7 +152,7 @@ export class VacHandler {
 
   /**
    * Обработка команды .!. vac N
-   * Выводит последние N забаненных профилей из БД пакетами по 5
+   * Сканирует последние N сообщений в канале, находит Steam-ссылки, проверяет новые
    */
   async handleVacListCommand(message, count) {
     // Валидация count
@@ -161,33 +161,111 @@ export class VacHandler {
       return;
     }
 
-    // Предупреждение при N > 50
-    if (count > 50) {
-      await message.reply(`⚠️ Запрошено ${count} записей. Это может занять некоторое время...`);
-    }
+    await message.react('🔍');
 
-    const profiles = this.db.getBannedProfiles(count);
+    try {
+      // Сканируем последние N сообщений в канале
+      const messages = await message.channel.messages.fetch({ limit: count });
+      
+      // Извлекаем Steam-ссылки из сообщений
+      const steamUrlRegex = /https?:\/\/steamcommunity\.com\/(id|profiles)\/[^\s]+/gi;
+      const foundUrls = new Set(); // Set для уникальности
+      
+      messages.forEach(msg => {
+        if (msg.author.bot) return; // Пропускаем сообщения ботов
+        const matches = msg.content.match(steamUrlRegex);
+        if (matches) {
+          matches.forEach(url => foundUrls.add(url.replace(/[,;]$/, ''))); // Убираем запятые/точки с запятой в конце
+        }
+      });
 
-    if (profiles.length === 0) {
-      await message.reply('📭 Забаненных профилей в базе не найдено.');
-      return;
-    }
-
-    // Отправляем пакетами по 5 с задержкой 2 секунды
-    const batchSize = 5;
-    for (let i = 0; i < profiles.length; i += batchSize) {
-      const batch = profiles.slice(i, i + batchSize);
-      const embeds = batch.map(profile => this.buildProfileEmbed(profile));
-
-      await message.channel.send({ embeds });
-
-      // Задержка между пакетами (кроме последнего)
-      if (i + batchSize < profiles.length) {
-        await delay(2000);
+      if (foundUrls.size === 0) {
+        await message.reactions.cache.get('🔍')?.remove();
+        await message.reply(`📭 В последних ${count} сообщениях Steam-ссылок не найдено.`);
+        return;
       }
-    }
 
-    await message.channel.send(`✅ Показано ${profiles.length} из ${count} запрошенных забаненных профилей.`);
+      // Фильтруем: пропускаем те, что уже есть в БД без изменений
+      const urlsToCheck = [];
+      const alreadyInDb = [];
+
+      for (const url of foundUrls) {
+        // Пытаемся извлечь steamId из URL для проверки в БД
+        const { parseSteamUrl } = await import('../steam/urlParser.js');
+        const parsed = parseSteamUrl(url);
+        
+        if (parsed && parsed.type === 'steamid64') {
+          const existing = this.db.getCheaterCheckBySteamId(parsed.value);
+          if (existing) {
+            alreadyInDb.push(existing);
+            continue; // Пропускаем — уже в базе
+          }
+        }
+        
+        urlsToCheck.push(url);
+      }
+
+      let newResults = [];
+      let errors = [];
+
+      // Проверяем только новые ссылки через Steam API
+      if (urlsToCheck.length > 0) {
+        const result = await checkProfiles(urlsToCheck);
+        newResults = result.results || [];
+        errors = result.errors || [];
+
+        // Сохраняем новые результаты в БД
+        for (const profile of newResults) {
+          this.db.upsertCheaterCheck({
+            ...profile,
+            checkedByDiscordId: message.author.id,
+            checkedByUsername: message.author.username
+          });
+        }
+      }
+
+      await message.reactions.cache.get('🔍')?.remove();
+
+      // Отправляем результаты только для новых (не дублируем уже проверенных)
+      if (newResults.length === 0 && alreadyInDb.length > 0) {
+        await message.reply(`✅ Найдено ${foundUrls.size} ссылок в ${count} сообщениях.\n📋 Все ${alreadyInDb.length} уже проверены ранее — новых нет.`);
+        return;
+      }
+
+      if (newResults.length === 0 && alreadyInDb.length === 0) {
+        await message.reply(`📭 Не удалось проверить ни одного профиля.${errors.length > 0 ? '\n⚠️ ' + errors.join(', ') : ''}`);
+        return;
+      }
+
+      // Отправляем embed'ы для новых результатов пакетами по 5
+      const batchSize = 5;
+      for (let i = 0; i < newResults.length; i += batchSize) {
+        const batch = newResults.slice(i, i + batchSize);
+        const embeds = batch.map(profile => this.buildProfileEmbed(profile, message.author.username));
+
+        await message.channel.send({ embeds });
+
+        if (i + batchSize < newResults.length) {
+          await delay(2000);
+        }
+      }
+
+      let summary = `✅ Проверено: ${newResults.length} новых профилей`;
+      if (alreadyInDb.length > 0) {
+        summary += ` | Пропущено (уже в базе): ${alreadyInDb.length}`;
+      }
+      if (errors.length > 0) {
+        summary += `\n⚠️ Ошибки: ${errors.join(', ')}`;
+      }
+      await message.channel.send(summary);
+      await message.react('✅');
+
+    } catch (err) {
+      await message.reactions.cache.get('🔍')?.remove();
+      await message.react('❌');
+      await message.reply('❌ Ошибка при сканировании сообщений.');
+      console.error('Ошибка handleVacListCommand:', err);
+    }
   }
 
   /**
@@ -206,7 +284,7 @@ export class VacHandler {
         },
         {
           name: '📋 Команды',
-          value: '`.!. <steam_url>` — проверить профиль\n`.!. vac N` — последние N забаненных (1-100)\n`.!. vac-help` — эта справка'
+          value: '`.!. <steam_url>` — проверить профиль\n`.!. vac N` — сканировать последние N сообщений в чате и проверить найденные ссылки\n`.!. vac-help` — эта справка'
         },
         {
           name: '🔗 Форматы ссылок',
