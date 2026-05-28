@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AFK Bot — Icon Library</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0e0f13; --surface: #16181f; --border: #242630;
+      --text: #e8eaf0; --muted: #6b7280; --accent: #6c8fff;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; padding: 48px 32px; }
+    header { margin-bottom: 40px; }
+    header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+    header p { margin-top: 8px; color: var(--muted); font-size: 14px; }
+    .controls { display: flex; align-items: center; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+    .size-btn { background: var(--surface); border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: border-color 0.15s, color 0.15s; }
+    .size-btn:hover, .size-btn.active { border-color: var(--accent); color: var(--accent); }
+    .color-wrap { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+    input[type="color"] { width: 28px; height: 28px; border: none; background: none; cursor: pointer; padding: 0; border-radius: 4px; }
+    .search-wrap { margin-left: auto; }
+    .search-input { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 6px 14px; border-radius: 6px; font-size: 13px; outline: none; width: 220px; transition: border-color 0.15s; }
+    .search-input::placeholder { color: var(--muted); }
+    .search-input:focus { border-color: var(--accent); }
+    section { margin-bottom: 48px; }
+    section h2 { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+    .icon-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px 12px 14px; display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; transition: border-color 0.15s, background 0.15s; position: relative; user-select: none; }
+    .icon-card:hover { border-color: var(--accent); background: #1c1f2b; }
+    .icon-card svg { transition: color 0.2s; flex-shrink: 0; }
+    .icon-card .name { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.4; word-break: break-all; }
+    .icon-card.hidden { display: none; }
+    section.empty { display: none; }
+    .copy-hint { position: absolute; top: 6px; right: 8px; font-size: 9px; color: var(--accent); opacity: 0; transition: opacity 0.15s; }
+    .icon-card:hover .copy-hint { opacity: 1; }
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--accent); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: transform 0.25s cubic-bezier(.34,1.56,.64,1); pointer-events: none; z-index: 999; white-space: nowrap; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .counter { display: inline-block; background: var(--surface); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-size: 12px; color: var(--accent); margin-left: 8px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>AFK Bot — Icon Library</h1>
+  <p id="subtitle">Загрузка иконок...</p>
+  <div class="controls">
+    <span style="font-size:13px;color:var(--muted)">Размер:</span>
+    <button class="size-btn" data-size="16">16px</button>
+    <button class="size-btn active" data-size="24">24px</button>
+    <button class="size-btn" data-size="32">32px</button>
+    <button class="size-btn" data-size="48">48px</button>
+    <div class="color-wrap">
+      <span>Цвет:</span>
+      <input type="color" id="colorPicker" value="#e8eaf0" />
+    </div>
+    <div class="search-wrap">
+      <input type="text" class="search-input" id="searchInput" placeholder="Поиск иконки..." />
+    </div>
+  </div>
+</header>
+<div id="gallery"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  // Категории иконок
+  var CATEGORIES = {
+    'Навигация': ['icon-stats', 'icon-trophy', 'icon-settings', 'icon-medal', 'icon-search', 'icon-profile'],
+    'Статусы': ['icon-star', 'icon-clock', 'icon-bell', 'icon-microphone', 'icon-sleep', 'icon-mute', 'icon-stream', 'icon-chat', 'icon-globe', 'icon-tv', 'icon-crown', 'icon-fire'],
+    'Действия': ['icon-bug', 'icon-delete', 'icon-warning', 'icon-check', 'icon-cross', 'icon-edit', 'icon-link', 'icon-shield', 'icon-eye', 'icon-info', 'icon-question', 'icon-back', 'icon-refresh', 'icon-download'],
+    'Сервисы': ['icon-telegram', 'icon-discord', 'icon-steam'],
+    'Разное': ['icon-paint', 'icon-gamepad', 'icon-bolt', 'icon-place-1', 'icon-place-2', 'icon-place-3']
+  };
+
+  // Инлайн-спрайт (загружается из файла рядом)
+  var spriteUrl = 'icons-sprite.svg';
+  var currentSize = 24;
+  var currentColor = '#e8eaf0';
+
+  function loadSprite() {
+    return fetch(spriteUrl).then(function(r) { return r.text(); });
+  }
+
+  function getSymbolIds(svgText) {
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(svgText, 'image/svg+xml');
+    var symbols = doc.querySelectorAll('symbol[id]');
+    var ids = [];
+    symbols.forEach(function(s) { ids.push(s.id); });
+    return ids;
+  }
+
+  function injectSprite(svgText) {
+    var div = document.createElement('div');
+    div.style.display = 'none';
+    div.innerHTML = svgText;
+    document.body.insertBefore(div, document.body.firstChild);
+  }
+
+  function buildGallery(ids) {
+    var gallery = document.getElementById('gallery');
+    gallery.innerHTML = '';
+    var total = 0;
+
+    Object.keys(CATEGORIES).forEach(function(cat) {
+      var section = document.createElement('section');
+      section.setAttribute('data-category', cat);
+      var h2 = document.createElement('h2');
+      h2.textContent = cat;
+      section.appendChild(h2);
+
+      var grid = document.createElement('div');
+      grid.className = 'grid';
+
+      CATEGORIES[cat].forEach(function(id) {
+        if (ids.indexOf(id) === -1) return;
+        total++;
+        var card = document.createElement('div');
+        card.className = 'icon-card';
+        card.setAttribute('data-id', id);
+        card.innerHTML =
+          '<span class="copy-hint">copy</span>' +
+          '<svg width="' + currentSize + '" height="' + currentSize + '" style="color:' + currentColor + '" aria-hidden="true"><use href="#' + id + '"></use></svg>' +
+          '<span class="name">' + id.replace('icon-', '') + '</span>';
+        card.addEventListener('click', function() { copySnippet(id); });
+        grid.appendChild(card);
+      });
+
+      section.appendChild(grid);
+      gallery.appendChild(section);
+    });
+
+    document.getElementById('subtitle').textContent = total + ' иконок • Клик — скопировать код использования';
+  }
+
+  function copySnippet(id) {
+    var snippet = '<svg class="icon" aria-hidden="true"><use href="#' + id + '"></use></svg>';
+    navigator.clipboard.writeText(snippet).then(function() {
+      showToast('Скопировано: ' + id);
+    });
+  }
+
+  function showToast(msg) {
+    var toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(function() { toast.classList.remove('show'); }, 1800);
+  }
+
+  function updateSize(size) {
+    currentSize = size;
+    document.querySelectorAll('.icon-card svg').forEach(function(svg) {
+      svg.setAttribute('width', size);
+      svg.setAttribute('height', size);
+    });
+  }
+
+  function updateColor(color) {
+    currentColor = color;
+    document.querySelectorAll('.icon-card svg').forEach(function(svg) {
+      svg.style.color = color;
+    });
+  }
+
+  function filterIcons(query) {
+    var q = query.toLowerCase().trim();
+    document.querySelectorAll('.icon-card').forEach(function(card) {
+      var id = card.getAttribute('data-id');
+      var match = !q || id.toLowerCase().indexOf(q) !== -1;
+      card.classList.toggle('hidden', !match);
+    });
+    // Скрыть пустые секции
+    document.querySelectorAll('#gallery section').forEach(function(sec) {
+      var visible = sec.querySelectorAll('.icon-card:not(.hidden)');
+      sec.classList.toggle('empty', visible.length === 0);
+    });
+  }
+
+  // Инициализация
+  loadSprite().then(function(svgText) {
+    injectSprite(svgText);
+    var ids = getSymbolIds(svgText);
+    buildGallery(ids);
+  });
+
+  // Обработчики
+  document.querySelectorAll('.size-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.size-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      updateSize(parseInt(btn.dataset.size));
+    });
+  });
+
+  document.getElementById('colorPicker').addEventListener('input', function(e) {
+    updateColor(e.target.value);
+  });
+
+  document.getElementById('searchInput').addEventListener('input', function(e) {
+    filterIcons(e.target.value);
+  });
+})();
+</script>
+</body>
+</html>

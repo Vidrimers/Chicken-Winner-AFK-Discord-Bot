@@ -10,9 +10,24 @@
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/theme.css" />
     <link rel="stylesheet" href="/cheater-checker.css" />
+    <link rel="stylesheet" href="/icons/icons.css" />
     <script src="/cheater-checker.js" defer></script>
   </head>
   <body>
+    <script>
+      (function() {
+        fetch('/icons/icons-sprite.svg')
+          .then(function(r) { return r.text(); })
+          .then(function(svg) {
+            var div = document.createElement('div');
+            div.style.display = 'none';
+            div.setAttribute('aria-hidden', 'true');
+            div.innerHTML = svg;
+            document.body.insertBefore(div, document.body.firstChild);
+          })
+          .catch(function(err) { console.warn('SVG sprite load failed:', err); });
+      })();
+    </script>
     <div class="checker-container">
       <!-- Шапка -->
       <header class="checker-header">

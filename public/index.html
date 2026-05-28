@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/theme.css" />
     <link rel="stylesheet" href="/media.css" />
+    <link rel="stylesheet" href="/icons/icons.css" />
     <script src="/app.js" defer></script>
     <script src="/achievements.js" defer></script>
     <script src="/leaderboard.js" defer></script>
@@ -19,6 +20,20 @@
     <link rel="prefetch" href="/cheater-checker.js" />
   </head>
   <body>
+    <script>
+      (function() {
+        fetch('/icons/icons-sprite.svg')
+          .then(function(r) { return r.text(); })
+          .then(function(svg) {
+            var div = document.createElement('div');
+            div.style.display = 'none';
+            div.setAttribute('aria-hidden', 'true');
+            div.innerHTML = svg;
+            document.body.insertBefore(div, document.body.firstChild);
+          })
+          .catch(function(err) { console.warn('SVG sprite load failed:', err); });
+      })();
+    </script>
     <div class="container">
       <div class="header">
         <h1>
@@ -735,14 +750,14 @@
         <div id="userContent" style="display: none">
           <div class="tabs">
             <div class="tab active" onclick="switchTab('stats')">
-              📊 Статистика
+              <svg class="icon" aria-hidden="true"><use href="#icon-stats"></use></svg> Статистика
             </div>
             <div class="tab" onclick="switchTab('achievements')">
-              🏆 Достижения
+              <svg class="icon" aria-hidden="true"><use href="#icon-trophy"></use></svg> Достижения
             </div>
-            <div class="tab" onclick="switchTab('settings')">⚙️ Настройки</div>
-            <div class="tab" onclick="switchTab('leaderboard')">🏅 Рейтинг</div>
-            <a href="/cheater-checker.html" class="tab cheater-checker-tab">🔍 Чекер читеров</a>
+            <div class="tab" onclick="switchTab('settings')"><svg class="icon" aria-hidden="true"><use href="#icon-settings"></use></svg> Настройки</div>
+            <div class="tab" onclick="switchTab('leaderboard')"><svg class="icon" aria-hidden="true"><use href="#icon-medal"></use></svg> Рейтинг</div>
+            <a href="/cheater-checker.html" class="tab cheater-checker-tab"><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg> Чекер читеров</a>
           </div>
 
           <div id="stats" class="tab-content active">
@@ -775,7 +790,7 @@
               </div>
 
               <div class="setting-card">
-                <div class="setting-card-icon">⏰</div>
+                <div class="setting-card-icon"><svg class="icon" aria-hidden="true"><use href="#icon-clock"></use></svg></div>
                 <div class="setting-card-content">
                   <h3 class="setting-card-title">Время до AFK</h3>
                   <p class="setting-card-description">
@@ -798,7 +813,7 @@
               </div>
 
               <div class="setting-card">
-                <div class="setting-card-icon">🏆</div>
+                <div class="setting-card-icon"><svg class="icon" aria-hidden="true"><use href="#icon-trophy"></use></svg></div>
                 <div class="setting-card-content">
                   <h3 class="setting-card-title">Уведомления о достижениях</h3>
                   <p class="setting-card-description">
@@ -847,7 +862,7 @@
               </div>
 
               <div class="setting-card">
-                <div class="setting-card-icon">🔔</div>
+                <div class="setting-card-icon"><svg class="icon" aria-hidden="true"><use href="#icon-bell"></use></svg></div>
                 <div class="setting-card-content">
                   <h3 class="setting-card-title">Кто в канале</h3>
                   <p class="setting-card-description">
@@ -984,7 +999,7 @@
                   onclick="openCreateSpecialAchievementModal()"
                   class="admin-btn"
                 >
-                  <span class="admin-btn-icon">⭐</span>
+                  <span class="admin-btn-icon"><svg class="icon" aria-hidden="true"><use href="#icon-star"></use></svg></span>
                   <span class="admin-btn-text"
                     >Создать специальное достижение</span
                   >
@@ -1026,7 +1041,7 @@
                   onclick="openBugReportsModal()"
                   class="admin-btn"
                 >
-                  <span class="admin-btn-icon">🐛</span>
+                  <span class="admin-btn-icon"><svg class="icon" aria-hidden="true"><use href="#icon-bug"></use></svg></span>
                   <span class="admin-btn-text">Баги <span id="bugReportBadge" class="bug-badge" style="display:none">0</span></span>
                 </button>
               </div>
@@ -1047,13 +1062,13 @@
     </div>
 
     <!-- Кнопка "Сообщить об ошибке" для всех залогиненных пользователей -->
-    <button id="bugReportFloatingBtn" onclick="openBugReportModal()" style="display:none;position:fixed;bottom:20px;right:20px;padding:12px 18px;border:none;border-radius:50px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 15px rgba(102,126,234,0.4);font-size:14px;">🐛 Баг</button>
+    <button id="bugReportFloatingBtn" onclick="openBugReportModal()" style="display:none;position:fixed;bottom:20px;right:20px;padding:12px 18px;border:none;border-radius:50px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 15px rgba(102,126,234,0.4);font-size:14px;"><svg class="icon" aria-hidden="true"><use href="#icon-bug"></use></svg> Баг</button>
 
     <!-- Модальное окно отправки багрепорта -->
     <div class="modal-overlay" id="bugReportModal" style="display:none" onclick="if(event.target===this)closeBugReportModal()">
       <div class="modal-box">
         <div class="modal-box-header">
-          <h2>🐛 Сообщить об ошибке</h2>
+          <h2><svg class="icon" aria-hidden="true"><use href="#icon-bug"></use></svg> Сообщить об ошибке</h2>
           <button class="modal-close-btn" onclick="closeBugReportModal()">&times;</button>
         </div>
         <div class="modal-box-body">
@@ -1067,7 +1082,7 @@
     <div class="modal-overlay" id="bugReportsListModal" style="display:none" onclick="if(event.target===this)closeBugReportsListModal()">
       <div class="modal-box" style="max-width:700px">
         <div class="modal-box-header">
-          <h2>🐛 Багрепорты</h2>
+          <h2><svg class="icon" aria-hidden="true"><use href="#icon-bug"></use></svg> Багрепорты</h2>
           <button class="modal-close-btn" onclick="closeBugReportsListModal()">&times;</button>
         </div>
         <div class="modal-box-body">
