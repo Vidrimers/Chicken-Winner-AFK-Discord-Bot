@@ -283,6 +283,9 @@ async function sendMainMenu(chatId) {
       ],
       [
         { text: '🔍 Чекер читеров', callback_data: 'menu_checker' }
+      ],
+      [
+        { text: '🐛 Багрепорт', callback_data: 'menu_bugreport' }
       ]
     ]
   };
@@ -553,6 +556,88 @@ async function handlePublishToDiscord(chatId, steamId) {
   } catch (error) {
     console.error('❌ Ошибка публикации в Discord:', error);
     await telegramBot.sendMessage(chatId, '❌ Не удалось опубликовать в Discord. Попробуйте позже.');
+  }
+}
+
+
+/**
+ * Отправка подменю багрепортов
+ */
+async function sendBugReportMenu(chatId) {
+  const bugReportButtons = {
+    inline_keyboard: [
+      [
+        { text: '📋 Мои багрепорты', callback_data: 'bugreport_my' }
+      ],
+      [
+        { text: '✍️ Написать багрепорт', callback_data: 'bugreport_write' }
+      ],
+      [
+        { text: '◀️ Назад', callback_data: 'back_to_menu' }
+      ]
+    ]
+  };
+
+  await telegramBot.sendMessage(chatId, '<b>🐛 Багрепорт</b>\n\nВыберите действие:', {
+    parse_mode: 'HTML',
+    reply_markup: bugReportButtons
+  });
+}
+
+/**
+ * Обработка "Мои багрепорты" — показывает багрепорты пользователя
+ */
+async function handleMyBugReports(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId) {
+    await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+    return;
+  }
+
+  try {
+    const reports = db.getBugReportsByUser(discordId);
+
+    if (!reports || reports.length === 0) {
+      const backButton = {
+        inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'menu_bugreport' }]]
+      };
+      await telegramBot.sendMessage(chatId, '📭 У вас нет багрепортов', {
+        reply_markup: backButton
+      });
+      return;
+    }
+
+    const statusIcons = { new: '🆕', in_progress: '🔄', resolved: '✅', rejected: '❌' };
+    const statusTexts = { new: 'Новый', in_progress: 'В работе', resolved: 'Решено', rejected: 'Отклонено' };
+
+    let message = '<b>📋 Ваши багрепорты:</b>\n\n';
+
+    reports.slice(0, 10).forEach((r, i) => {
+      const icon = statusIcons[r.status] || '❓';
+      const statusText = statusTexts[r.status] || r.status;
+      const date = new Date(r.created_at).toLocaleDateString('ru-RU');
+      const preview = r.bug_text.length > 60 ? r.bug_text.substring(0, 60) + '...' : r.bug_text;
+
+      message += `${i + 1}. ${icon} <b>#${r.id}</b> — ${statusText}\n`;
+      message += `   📝 ${preview}\n`;
+      message += `   📅 ${date}\n\n`;
+    });
+
+    if (reports.length > 10) {
+      message += `\n<i>Показаны последние 10 из ${reports.length}</i>`;
+    }
+
+    const backButton = {
+      inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'menu_bugreport' }]]
+    };
+
+    await telegramBot.sendMessage(chatId, message, {
+      parse_mode: 'HTML',
+      reply_markup: backButton
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения багрепортов:', error);
+    await telegramBot.sendMessage(chatId, '❌ Произошла ошибка при получении данных. Попробуйте позже.');
   }
 }
 
@@ -948,6 +1033,37 @@ export function initTelegramBot(
             await sendMainMenu(chatId);
             break;
 
+          case 'menu_bugreport': {
+            const discordIdBug = getLinkedDiscordId(chatId);
+            if (!discordIdBug) {
+              await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+              return;
+            }
+            await sendBugReportMenu(chatId);
+            break;
+          }
+
+          case 'bugreport_my':
+            await handleMyBugReports(chatId);
+            break;
+
+          case 'bugreport_write': {
+            const discordIdWrite = getLinkedDiscordId(chatId);
+            if (!discordIdWrite) {
+              await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+              return;
+            }
+            userStates.set(chatId, 'awaiting_bug_text');
+            const cancelBugButton = {
+              inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'menu_bugreport' }]]
+            };
+            await telegramBot.sendMessage(chatId, '✍️ Опишите проблему или ошибку, которую вы обнаружили:\n\n<i>Просто напишите текст сообщением</i>', {
+              parse_mode: 'HTML',
+              reply_markup: cancelBugButton
+            });
+            break;
+          }
+
           default:
             // Обработка публикации в Discord
             if (data.startsWith('checker_publish_')) {
@@ -977,6 +1093,46 @@ export function initTelegramBot(
         userStates.delete(chatId);
         if (text) {
           await handleSteamUrlCheck(chatId, text.trim());
+        }
+        return;
+      }
+
+      // Проверяем состояние пользователя (ожидание текста багрепорта)
+      if (userStates.get(chatId) === 'awaiting_bug_text') {
+        userStates.delete(chatId);
+        if (text) {
+          const discordId = getLinkedDiscordId(chatId);
+          if (!discordId) {
+            await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом.');
+            return;
+          }
+
+          const username = getDiscordUsername(discordId);
+
+          try {
+            const id = db.createBugReport(discordId, username, text.trim());
+            console.log(`🐛 Новый багрепорт #${id} от ${username} (${discordId}) через Telegram`);
+
+            // Уведомляем админа
+            const adminMessage =
+              `🐛 <b>Новый багрепорт #${id}</b> (через Telegram)\n\n` +
+              `👤 Пользователь: ${username}\n` +
+              `🆔 ID: <code>${discordId}</code>\n` +
+              `📝 Текст: ${text.trim().substring(0, 500)}${text.trim().length > 500 ? '...' : ''}\n` +
+              `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
+
+            await sendTelegramReport(adminMessage);
+
+            const backButton = {
+              inline_keyboard: [[{ text: '◀️ Назад в меню', callback_data: 'back_to_menu' }]]
+            };
+            await telegramBot.sendMessage(chatId, '✅ Спасибо! Ваш отчёт об ошибке #' + id + ' отправлен администратору.', {
+              reply_markup: backButton
+            });
+          } catch (error) {
+            console.error('❌ Ошибка создания багрепорта через Telegram:', error);
+            await telegramBot.sendMessage(chatId, '❌ Произошла ошибка при отправке. Попробуйте позже.');
+          }
         }
         return;
       }

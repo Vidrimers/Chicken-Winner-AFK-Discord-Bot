@@ -45,6 +45,8 @@ async function main() {
     // Создаем обертку для Telegram сервиса
     const telegramWrapper = {
       sendReport: sendTelegramReport,
+      sendTelegramReport: sendTelegramReport,
+      sendTelegramMessageToUser: sendTelegramMessageToUser,
       sendAchievement: sendAchievementNotification,
       sendSettingsChange: sendSettingsChangeNotification,
       sendProfileView: sendProfileViewNotification,

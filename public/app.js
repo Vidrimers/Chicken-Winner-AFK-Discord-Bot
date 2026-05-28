@@ -278,7 +278,12 @@ async function loadUserDataAuto(userId) {
       document.querySelectorAll(".admin-option").forEach((option) => {
         option.style.display = "block";
       });
+      loadBugReportBadge();
     }
+
+    // Показываем кнопку "Баг" для всех залогиненных пользователей
+    const bugFloatingBtn = document.getElementById('bugReportFloatingBtn');
+    if (bugFloatingBtn) bugFloatingBtn.style.display = 'block';
   } catch (error) {
     console.error("❌ Ошибка загрузки данных:", error);
     document.getElementById("loading").style.display = "none";
@@ -464,9 +469,14 @@ async function loadUserData(skipSecurityCheck = false) {
       document.querySelectorAll(".admin-option").forEach((option) => {
         option.style.display = "block";
       });
+      loadBugReportBadge();
     } else {
       document.getElementById("adminPanel").style.display = "none";
     }
+
+    // Показываем кнопку "Баг" для всех залогиненных пользователей
+    const bugFloatingBtn2 = document.getElementById('bugReportFloatingBtn');
+    if (bugFloatingBtn2) bugFloatingBtn2.style.display = 'block';
 
     document.getElementById("loading").style.display = "none";
     document.getElementById("userContent").style.display = "block";
@@ -2314,4 +2324,155 @@ async function unlinkTelegram() {
       },
     ],
   );
+}
+
+// ===== BUG REPORTS =====
+
+function openBugReportModal() {
+  document.getElementById('bugReportModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('bugReportText').value = '';
+}
+
+function closeBugReportModal() {
+  document.getElementById('bugReportModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function sendBugReport() {
+  const text = document.getElementById('bugReportText').value.trim();
+  if (!text) { alert('Опишите проблему'); return; }
+
+  try {
+    const res = await fetch('/api/bug-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: window.currentUserId,
+        username: window.currentUsername || 'Unknown',
+        bugText: text
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeBugReportModal();
+      alert('✅ Спасибо! Ваш отчёт отправлен администратору.');
+    } else {
+      alert(data.error || 'Ошибка отправки');
+    }
+  } catch (err) {
+    alert('Ошибка соединения');
+  }
+}
+
+async function openBugReportsModal() {
+  document.getElementById('bugReportsListModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  await loadBugReportsList('new');
+}
+
+function closeBugReportsListModal() {
+  document.getElementById('bugReportsListModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function loadBugReportsList(status) {
+  try {
+    const url = status ? `/api/bug-reports?status=${status}` : '/api/bug-reports';
+    const res = await fetch(url, { headers: { 'x-user-id': window.currentUserId } });
+    const reports = await res.json();
+    renderBugReports(reports);
+
+    // Обновляем кнопки фильтров
+    document.querySelectorAll('.bug-filter-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.status === status);
+    });
+  } catch (err) {
+    document.getElementById('bugReportsList').innerHTML = '<p style="color:#aaa;text-align:center">Ошибка загрузки</p>';
+  }
+}
+
+function filterBugReports(status) {
+  loadBugReportsList(status);
+}
+
+function renderBugReports(reports) {
+  const container = document.getElementById('bugReportsList');
+  if (!reports || reports.length === 0) {
+    container.innerHTML = '<p style="color:#aaa;text-align:center;padding:20px;">Нет багрепортов</p>';
+    return;
+  }
+
+  container.innerHTML = reports.map(r => {
+    const date = new Date(r.created_at).toLocaleString('ru-RU');
+    return `
+      <div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:15px;margin-bottom:10px;border:1px solid rgba(255,255,255,0.1);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="color:#667eea;font-weight:600;">#${r.id} — ${escapeHtmlBug(r.username)}</span>
+          <span style="color:#aaa;font-size:0.8rem;">${date}</span>
+        </div>
+        <p style="color:#e0e0e0;margin:8px 0;white-space:pre-wrap;word-break:break-word;">${escapeHtmlBug(r.bug_text)}</p>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+          <select onchange="changeBugReportStatus(${r.id}, this.value)" style="padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:#e0e0e0;font-size:0.85rem;">
+            <option value="new" ${r.status==='new'?'selected':''}>🆕 Новый</option>
+            <option value="in_progress" ${r.status==='in_progress'?'selected':''}>🔄 В работе</option>
+            <option value="resolved" ${r.status==='resolved'?'selected':''}>✅ Решено</option>
+            <option value="rejected" ${r.status==='rejected'?'selected':''}>❌ Отклонено</option>
+          </select>
+          <button onclick="deleteBugReportAdmin(${r.id})" style="padding:6px 12px;border-radius:6px;border:1px solid #ff4444;background:rgba(255,68,68,0.2);color:#ff4444;cursor:pointer;font-size:0.85rem;">🗑️</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function changeBugReportStatus(id, status) {
+  try {
+    await fetch(`/api/bug-reports/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-user-id': window.currentUserId },
+      body: JSON.stringify({ status })
+    });
+    const activeFilter = document.querySelector('.bug-filter-btn.active');
+    loadBugReportsList(activeFilter?.dataset.status || 'new');
+  } catch (err) {
+    alert('Ошибка обновления статуса');
+  }
+}
+
+async function deleteBugReportAdmin(id) {
+  if (!confirm('Удалить этот багрепорт?')) return;
+  try {
+    await fetch(`/api/bug-reports/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-user-id': window.currentUserId }
+    });
+    const activeFilter = document.querySelector('.bug-filter-btn.active');
+    loadBugReportsList(activeFilter?.dataset.status || 'new');
+  } catch (err) {
+    alert('Ошибка удаления');
+  }
+}
+
+// Экранирование HTML для багрепортов
+function escapeHtmlBug(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Загрузка бейджа количества новых багрепортов (для админа)
+async function loadBugReportBadge() {
+  if (!window.currentUserId || window.currentUserId !== window.CONFIG?.ADMIN_USER_ID) return;
+  try {
+    const res = await fetch('/api/bug-reports/count', { headers: { 'x-user-id': window.currentUserId } });
+    const data = await res.json();
+    const badge = document.getElementById('bugReportBadge');
+    if (badge && data.count > 0) {
+      badge.textContent = data.count;
+      badge.style.display = 'inline-block';
+    } else if (badge) {
+      badge.style.display = 'none';
+    }
+  } catch (err) {}
 }

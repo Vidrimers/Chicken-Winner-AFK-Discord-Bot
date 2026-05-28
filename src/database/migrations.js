@@ -82,5 +82,37 @@ export function runMigrations(db) {
     }
   });
 
+  // Создание таблицы bug_reports для системы багрепортов
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS bug_reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        username TEXT NOT NULL,
+        bug_text TEXT NOT NULL,
+        status TEXT DEFAULT 'new',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ Таблица bug_reports создана/проверена');
+  } catch (error) {
+    console.error(`❌ Ошибка создания таблицы bug_reports: ${error.message}`);
+  }
+
+  // Индексы для таблицы bug_reports
+  const bugReportIndexes = [
+    'CREATE INDEX IF NOT EXISTS idx_bug_reports_status ON bug_reports(status)',
+    'CREATE INDEX IF NOT EXISTS idx_bug_reports_user ON bug_reports(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_bug_reports_date ON bug_reports(created_at DESC)',
+  ];
+
+  bugReportIndexes.forEach((sql) => {
+    try {
+      db.exec(sql);
+    } catch (error) {
+      console.error(`❌ Ошибка создания индекса bug_reports: ${error.message}`);
+    }
+  });
+
   console.log('✅ Миграции завершены');
 }

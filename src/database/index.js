@@ -390,6 +390,51 @@ export class DatabaseManager {
     return this.prepare('SELECT * FROM cheater_checks WHERE steam_id = ?').get(steamId);
   }
 
+  // ===== BUG REPORTS =====
+
+  createBugReport(userId, username, bugText) {
+    const result = this.prepare(
+      'INSERT INTO bug_reports (user_id, username, bug_text) VALUES (?, ?, ?) RETURNING id'
+    ).get(userId, username, bugText);
+    return result.id;
+  }
+
+  getBugReports(status = null) {
+    if (status) {
+      return this.prepare(
+        'SELECT * FROM bug_reports WHERE status = ? ORDER BY created_at DESC'
+      ).all(status);
+    }
+    return this.prepare('SELECT * FROM bug_reports ORDER BY created_at DESC').all();
+  }
+
+  getBugReportsByUser(userId) {
+    return this.prepare(
+      'SELECT * FROM bug_reports WHERE user_id = ? ORDER BY created_at DESC'
+    ).all(userId);
+  }
+
+  updateBugReportStatus(id, status) {
+    return this.prepare(
+      'UPDATE bug_reports SET status = ? WHERE id = ?'
+    ).run(status, id);
+  }
+
+  deleteBugReport(id) {
+    return this.prepare('DELETE FROM bug_reports WHERE id = ?').run(id);
+  }
+
+  getBugReportCount(status = 'new') {
+    const result = this.prepare(
+      'SELECT COUNT(*) as count FROM bug_reports WHERE status = ?'
+    ).get(status);
+    return result.count;
+  }
+
+  getBugReportById(id) {
+    return this.prepare('SELECT * FROM bug_reports WHERE id = ?').get(id);
+  }
+
   close() {
     this.db.close();
   }

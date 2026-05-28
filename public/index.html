@@ -1021,6 +1021,14 @@
                   <span class="admin-btn-icon">📥</span>
                   <span class="admin-btn-text">Загрузить аватарки</span>
                 </button>
+                <button
+                  id="bugReportsBtn"
+                  onclick="openBugReportsModal()"
+                  class="admin-btn"
+                >
+                  <span class="admin-btn-icon">🐛</span>
+                  <span class="admin-btn-text">Баги <span id="bugReportBadge" class="bug-badge" style="display:none">0</span></span>
+                </button>
               </div>
             </div>
           </div>
@@ -1037,5 +1045,42 @@
         </div>
       </div>
     </div>
+
+    <!-- Кнопка "Сообщить об ошибке" для всех залогиненных пользователей -->
+    <button id="bugReportFloatingBtn" onclick="openBugReportModal()" style="display:none;position:fixed;bottom:20px;right:20px;padding:12px 18px;border:none;border-radius:50px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 15px rgba(102,126,234,0.4);font-size:14px;">🐛 Баг</button>
+
+    <!-- Модальное окно отправки багрепорта -->
+    <div class="modal-overlay" id="bugReportModal" style="display:none" onclick="if(event.target===this)closeBugReportModal()">
+      <div class="modal-box">
+        <div class="modal-box-header">
+          <h2>🐛 Сообщить об ошибке</h2>
+          <button class="modal-close-btn" onclick="closeBugReportModal()">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <textarea id="bugReportText" rows="6" placeholder="Опишите проблему..." style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:#e0e0e0;font-size:14px;resize:vertical;box-sizing:border-box;"></textarea>
+          <button onclick="sendBugReport()" style="width:100%;margin-top:12px;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;cursor:pointer;font-size:14px;">Отправить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно списка багрепортов (админ) -->
+    <div class="modal-overlay" id="bugReportsListModal" style="display:none" onclick="if(event.target===this)closeBugReportsListModal()">
+      <div class="modal-box" style="max-width:700px">
+        <div class="modal-box-header">
+          <h2>🐛 Багрепорты</h2>
+          <button class="modal-close-btn" onclick="closeBugReportsListModal()">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <div class="bug-filters" id="bugFilters" style="display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap;">
+            <button class="bug-filter-btn active" data-status="new" onclick="filterBugReports('new')">🆕 Новые</button>
+            <button class="bug-filter-btn" data-status="in_progress" onclick="filterBugReports('in_progress')">🔄 В работе</button>
+            <button class="bug-filter-btn" data-status="resolved" onclick="filterBugReports('resolved')">✅ Решено</button>
+            <button class="bug-filter-btn" data-status="rejected" onclick="filterBugReports('rejected')">❌ Отклонено</button>
+          </div>
+          <div id="bugReportsList"></div>
+        </div>
+      </div>
+    </div>
+
   </body>
 </html>
