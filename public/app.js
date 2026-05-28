@@ -33,7 +33,7 @@ function setUserDisplay(username, userId) {
   }
 
   if (labelElement) {
-    labelElement.textContent = "👤 Имя на сервере";
+    labelElement.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-profile"></use></svg> Имя на сервере';
   }
 
   showingUsername = true;
@@ -55,10 +55,10 @@ function toggleUserInfo() {
     showingUsername = !showingUsername;
 
     if (showingUsername) {
-      label.textContent = "👤 Имя на сервере";
+      label.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-profile"></use></svg> Имя на сервере';
       value.textContent = window.currentUsername;
     } else {
-      label.textContent = "👤 ID пользователя";
+      label.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-profile"></use></svg> ID пользователя';
       value.textContent = window.currentUserId;
     }
   }, 150); // Половина времени анимации
@@ -1318,21 +1318,21 @@ function displayUsers(users) {
     const isAdmin = user.user_id === window.CONFIG.ADMIN_USER_ID;
     const deleteBtn = isAdmin
       ? '<span style="color: #999; font-size: 12px;">Админ</span>'
-      : `<button onclick="deleteUser('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">🗑️ Удалить</button>`;
+      : `<button onclick="deleteUser('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;"><svg class="icon" aria-hidden="true"><use href="#icon-delete"></use></svg> Удалить</button>`;
     
     const deleteMessagesBtn = isAdmin
       ? ''
-      : `<button onclick="showDeleteMessagesMenu('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">💬 Удалить сообщения</button>`;
+      : `<button onclick="showDeleteMessagesMenu('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"><svg class="icon" aria-hidden="true"><use href="#icon-chat"></use></svg> Удалить сообщения</button>`;
 
     html += `
             <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333;">
                 <div>
-                    <div style="color: white; font-weight: bold; margin-bottom: 5px;">👤 ${user.username}</div>
+                    <div style="color: white; font-weight: bold; margin-bottom: 5px;"><svg class="icon" aria-hidden="true"><use href="#icon-profile"></use></svg> ${user.username}</div>
                     <div style="color: #999; font-size: 12px;">ID: ${user.user_id}</div>
                     <div style="color: #667eea; font-size: 12px; margin-top: 5px;">
-                        📊 Сессий: ${user.total_sessions || 0} | 
-                        ⏱️ Время: ${Math.floor((user.total_voice_time || 0) / 3600)}ч | 
-                        ⭐ Очки: ${user.rank_points || 0}
+                        <svg class="icon" aria-hidden="true"><use href="#icon-stats"></use></svg> Сессий: ${user.total_sessions || 0} | 
+                        <svg class="icon" aria-hidden="true"><use href="#icon-clock"></use></svg> Время: ${Math.floor((user.total_voice_time || 0) / 3600)}ч | 
+                        <svg class="icon" aria-hidden="true"><use href="#icon-star"></use></svg> Очки: ${user.rank_points || 0}
                     </div>
                 </div>
                 <div style="display: flex; gap: 5px;">
@@ -1365,13 +1365,13 @@ function showDeleteMessagesMenu(userId, username) {
   const menuHtml = `
     <div id="deleteMessagesMenu" onclick="closeDeleteMessagesMenu(event)" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; justify-content: center; align-items: center;">
       <div onclick="event.stopPropagation()" style="background: #1a1a1a; border: 2px solid #667eea; border-radius: 10px; padding: 30px; max-width: 500px;">
-        <h3 style="color: white; margin-bottom: 20px; text-align: center;">💬 Удалить сообщения пользователя<br>"${username}"</h3>
+        <h3 style="color: white; margin-bottom: 20px; text-align: center;"><svg class="icon" aria-hidden="true"><use href="#icon-chat"></use></svg> Удалить сообщения пользователя<br>"${username}"</h3>
         <p style="color: #999; margin-bottom: 15px; text-align: center;">Выберите период:</p>
         
         <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
           <label style="display: flex; align-items: center; cursor: pointer; color: white;">
             <input type="checkbox" id="includeVoiceChats" style="width: 18px; height: 18px; margin-right: 10px; cursor: pointer;">
-            <span style="font-size: 14px;">🎤 Включая чаты голосовых каналов</span>
+            <span style="font-size: 14px;"><svg class="icon" aria-hidden="true"><use href="#icon-microphone"></use></svg> Включая чаты голосовых каналов</span>
           </label>
           <p style="color: #888; font-size: 12px; margin: 8px 0 0 28px;">По умолчанию удаляются только сообщения из текстовых каналов</p>
         </div>
@@ -1458,7 +1458,7 @@ function showDeleteMessagesResultModal(username, periodText, deletedCount, error
         
         <div class="delete-result-info">
           <div class="info-row">
-            <span class="info-label">👤 Пользователь:</span>
+            <span class="info-label"><svg class="icon" aria-hidden="true"><use href="#icon-profile"></use></svg> Пользователь:</span>
             <span class="info-value">${username}</span>
           </div>
           <div class="info-row">
@@ -2419,7 +2419,7 @@ function renderBugReports(reports) {
             <option value="resolved" ${r.status==='resolved'?'selected':''}>✅ Решено</option>
             <option value="rejected" ${r.status==='rejected'?'selected':''}>❌ Отклонено</option>
           </select>
-          <button onclick="deleteBugReportAdmin(${r.id})" style="padding:6px 12px;border-radius:6px;border:1px solid #ff4444;background:rgba(255,68,68,0.2);color:#ff4444;cursor:pointer;font-size:0.85rem;">🗑️</button>
+          <button onclick="deleteBugReportAdmin(${r.id})" style="padding:6px 12px;border-radius:6px;border:1px solid #ff4444;background:rgba(255,68,68,0.2);color:#ff4444;cursor:pointer;font-size:0.85rem;"><svg class="icon" aria-hidden="true"><use href="#icon-delete"></use></svg></button>
         </div>
       </div>
     `;

@@ -105,17 +105,17 @@
     <div class="modal-overlay" id="infoModal" style="display: none">
       <div class="modal-box">
         <div class="modal-box-header">
-          <h2>ℹ️ О чекере читеров</h2>
+          <h2><svg class="icon" aria-hidden="true"><use href="#icon-info"></use></svg> О чекере читеров</h2>
           <button class="modal-close-btn" id="infoCloseBtn">&times;</button>
         </div>
         <div class="modal-box-body info-modal-body">
-          <h3>📋 Назначение</h3>
+          <h3><svg class="icon" aria-hidden="true"><use href="#icon-info"></use></svg> Назначение</h3>
           <p>Проверка Steam-профилей на наличие VAC-банов, игровых банов и других ограничений.</p>
 
-          <h3>🔍 Используемые сервисы</h3>
+          <h3><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg> Используемые сервисы</h3>
           <p>Steam Web API (GetPlayerBans, GetPlayerSummaries, ResolveVanityURL)</p>
 
-          <h3>📊 Проверяемые данные</h3>
+          <h3><svg class="icon" aria-hidden="true"><use href="#icon-stats"></use></svg> Проверяемые данные</h3>
           <ul>
             <li>VAC-баны (количество)</li>
             <li>Игровые баны</li>
@@ -124,20 +124,20 @@
             <li>Дни с последнего бана</li>
           </ul>
 
-          <h3>🔗 Поддерживаемые форматы ссылок</h3>
+          <h3><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Поддерживаемые форматы ссылок</h3>
           <ul>
             <li><code>https://steamcommunity.com/id/USERNAME</code></li>
             <li><code>https://steamcommunity.com/profiles/STEAMID64</code></li>
           </ul>
 
-          <h3>🤖 Discord-команды</h3>
+          <h3><svg class="icon" aria-hidden="true"><use href="#icon-discord"></use></svg> Discord-команды</h3>
           <ul>
             <li><code>.!. &lt;steam_url&gt;</code> — проверить один профиль</li>
             <li><code>.!. vac N</code> — показать последние N забаненных (1-100)</li>
             <li><code>.!. vac-help</code> — справка</li>
           </ul>
 
-          <h3>🔎 Сторонние ресурсы для ручной проверки</h3>
+          <h3><svg class="icon" aria-hidden="true"><use href="#icon-globe"></use></svg> Сторонние ресурсы для ручной проверки</h3>
           <ul>
             <li><a href="https://steamid.io" target="_blank" rel="noopener">steamid.io</a> — информация о профиле и SteamID</li>
             <li><a href="https://vacbanned.com" target="_blank" rel="noopener">vacbanned.com</a> — все виды банов</li>
@@ -151,7 +151,7 @@
     <div class="modal-overlay" id="confirmDialog" style="display: none">
       <div class="modal-box confirm-box">
         <div class="modal-box-header confirm-header">
-          <h2>⚠️ Подтверждение</h2>
+          <h2><svg class="icon" aria-hidden="true"><use href="#icon-warning"></use></svg> Подтверждение</h2>
         </div>
         <div class="modal-box-body confirm-body">
           <p id="confirmText">Удалить запись о профиле?</p>

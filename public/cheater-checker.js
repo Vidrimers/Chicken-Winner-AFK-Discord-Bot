@@ -187,7 +187,7 @@ function createProfileCard(profile, isBanned) {
   const checkedByDiscordId = profile.checked_by_discord_id || '';
   const canPublish = (currentUserId === CONFIG.ADMIN_USER_ID) || (currentUserId === checkedByDiscordId);
   const publishBtn = canPublish
-    ? `<button class="card-action-btn discord-publish-btn" data-steam-id="${steamId}">📢 Дискорд</button>`
+    ? `<button class="card-action-btn discord-publish-btn" data-steam-id="${steamId}"><svg class="icon" aria-hidden="true"><use href="#icon-discord"></use></svg> Дискорд</button>`
     : '';
 
   return `
@@ -230,7 +230,7 @@ function createProfileCard(profile, isBanned) {
         </div>
       </div>
       <div class="card-actions">
-        <a href="${profileUrl}" target="_blank" rel="noopener" class="card-action-btn profile-link-btn">🔗 Профиль</a>
+        <a href="${profileUrl}" target="_blank" rel="noopener" class="card-action-btn profile-link-btn"><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Профиль</a>
         ${publishBtn}
       </div>
     </div>

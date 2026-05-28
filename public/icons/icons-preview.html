@@ -36,13 +36,58 @@
     .icon-card:hover .copy-hint { opacity: 1; }
     .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--accent); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; transition: transform 0.25s cubic-bezier(.34,1.56,.64,1); pointer-events: none; z-index: 999; white-space: nowrap; }
     .toast.show { transform: translateX(-50%) translateY(0); }
-    .counter { display: inline-block; background: var(--surface); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; font-size: 12px; color: var(--accent); margin-left: 8px; }
   </style>
 </head>
 <body>
+
+<!-- Инлайн SVG-спрайт (для работы через file:///) -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-stats" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Статистика</title><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="3" y1="20" x2="21" y2="20"/></symbol>
+  <symbol id="icon-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Достижения</title><path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"/><path d="M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"/><path d="M6 3h12v7a6 6 0 0 1-12 0V3z"/><path d="M9 21h6"/><path d="M12 16v5"/></symbol>
+  <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Настройки</title><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="icon-medal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Рейтинг</title><circle cx="12" cy="15" r="6"/><path d="M8.21 13.89L7 3h10l-1.21 10.89"/><path d="M12 9v6"/><path d="M9 15h6"/></symbol>
+  <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Поиск</title><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="icon-profile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Профиль</title><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="icon-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Звезда</title><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+  <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Время</title><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Уведомления</title><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+  <symbol id="icon-microphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Голосовой канал</title><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="8" y1="21" x2="16" y2="21"/></symbol>
+  <symbol id="icon-sleep" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>AFK</title><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/><path d="M14 5l1 2h2l-1.5 1.5L16 11l-2-1-2 1 .5-2.5L11 7h2l1-2z"/></symbol>
+  <symbol id="icon-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Мут</title><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 12.3 4.6"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="2" y1="2" x2="22" y2="22"/></symbol>
+  <symbol id="icon-stream" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Стрим</title><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M7.76 16.24a6 6 0 0 1 0-8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 19.07a10 10 0 0 1 0-14.14"/></symbol>
+  <symbol id="icon-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Сообщения</title><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+  <symbol id="icon-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Веб-панель</title><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></symbol>
+  <symbol id="icon-tv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Стрим-канал</title><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="18" x2="12" y2="21"/></symbol>
+  <symbol id="icon-crown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Админ/Лидер</title><path d="M2 18l3-12 5 5 2-8 2 8 5-5 3 12H2z"/><line x1="2" y1="18" x2="22" y2="18"/></symbol>
+  <symbol id="icon-fire" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Серия</title><path d="M12 22c4.97 0 8-3.58 8-8 0-5.5-4-8-4-8s.5 2-2 4c-1.5 1.2-2 .5-2-1 0 0-3 2.5-3 6 0 1.5.5 2.5.5 2.5S8 16.5 8 14c0 0-4 3-4 8 0 0 3.03 0 8 0z"/></symbol>
+  <symbol id="icon-bug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Баг-репорт</title><rect x="8" y="6" width="8" height="14" rx="4"/><path d="M6 10H2"/><path d="M6 14H2"/><path d="M6 18H3"/><path d="M18 10h4"/><path d="M18 14h4"/><path d="M18 18h3"/><path d="M8 6a4 4 0 0 1 8 0"/><line x1="12" y1="6" x2="12" y2="20"/></symbol>
+  <symbol id="icon-delete" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Удалить</title><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 3h4a1 1 0 0 1 1 1v2H9V4a1 1 0 0 1 1-1z"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></symbol>
+  <symbol id="icon-warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Предупреждение</title><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Успех</title><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="icon-cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Ошибка</title><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Редактировать</title><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+  <symbol id="icon-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Ссылка</title><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Защита/VAC</title><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Видимость</title><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Информация</title><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+  <symbol id="icon-question" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Помощь</title><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="icon-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Назад</title><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></symbol>
+  <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Обновить</title><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></symbol>
+  <symbol id="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Скачать</title><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="icon-telegram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Telegram</title><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4L22 2z"/></symbol>
+  <symbol id="icon-discord" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Discord</title><path d="M9.5 4C7 4 5 5.5 5 5.5S3 9 3 13s2 7.5 2 7.5l2-2h10l2 2s2-3.5 2-7.5-2-7.5-2-7.5S17 4 14.5 4h-5z"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/></symbol>
+  <symbol id="icon-steam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Steam</title><circle cx="12" cy="12" r="10"/><circle cx="14" cy="9" r="3"/><path d="M2 17l7-4"/><circle cx="9" cy="15" r="2"/></symbol>
+  <symbol id="icon-paint" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Темы</title><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4c3.1 0 5.6-2.5 5.6-5.6C23 6.3 18 2 12 2z"/><circle cx="7.5" cy="11" r="1.5"/><circle cx="10" cy="7" r="1.5"/><circle cx="15" cy="7" r="1.5"/><circle cx="18" cy="11" r="1.5"/></symbol>
+  <symbol id="icon-gamepad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Игры</title><rect x="2" y="6" width="20" height="12" rx="6"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="4" y1="12" x2="8" y2="12"/><circle cx="16" cy="10" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+  <symbol id="icon-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>Молния</title><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="icon-place-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>1 место</title><circle cx="12" cy="14" r="7"/><path d="M8.21 9.89L7 3h10l-1.21 6.89"/><path d="M12 11v6"/><path d="M10 11h2"/></symbol>
+  <symbol id="icon-place-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>2 место</title><circle cx="12" cy="14" r="7"/><path d="M8.21 9.89L7 3h10l-1.21 6.89"/><path d="M10 11a2 2 0 0 1 4 0c0 1-1.5 2-2 3h4"/><path d="M10 17h4"/></symbol>
+  <symbol id="icon-place-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><title>3 место</title><circle cx="12" cy="14" r="7"/><path d="M8.21 9.89L7 3h10l-1.21 6.89"/><path d="M10 11h3a1.5 1.5 0 0 1 0 3h-1"/><path d="M10 17h3a1.5 1.5 0 0 0 0-3"/></symbol>
+</svg>
+
 <header>
   <h1>AFK Bot — Icon Library</h1>
-  <p id="subtitle">Загрузка иконок...</p>
+  <p>30 иконок • Клик — скопировать код использования</p>
   <div class="controls">
     <span style="font-size:13px;color:var(--muted)">Размер:</span>
     <button class="size-btn" data-size="16">16px</button>
@@ -63,44 +108,21 @@
 
 <script>
 (function () {
-  // Категории иконок
   var CATEGORIES = {
-    'Навигация': ['icon-stats', 'icon-trophy', 'icon-settings', 'icon-medal', 'icon-search', 'icon-profile'],
-    'Статусы': ['icon-star', 'icon-clock', 'icon-bell', 'icon-microphone', 'icon-sleep', 'icon-mute', 'icon-stream', 'icon-chat', 'icon-globe', 'icon-tv', 'icon-crown', 'icon-fire'],
-    'Действия': ['icon-bug', 'icon-delete', 'icon-warning', 'icon-check', 'icon-cross', 'icon-edit', 'icon-link', 'icon-shield', 'icon-eye', 'icon-info', 'icon-question', 'icon-back', 'icon-refresh', 'icon-download'],
-    'Сервисы': ['icon-telegram', 'icon-discord', 'icon-steam'],
-    'Разное': ['icon-paint', 'icon-gamepad', 'icon-bolt', 'icon-place-1', 'icon-place-2', 'icon-place-3']
+    'Навигация': ['icon-stats','icon-trophy','icon-settings','icon-medal','icon-search','icon-profile','icon-back','icon-globe'],
+    'Голосовые каналы': ['icon-microphone','icon-mute','icon-sleep','icon-stream','icon-tv','icon-chat'],
+    'Статусы': ['icon-star','icon-clock','icon-bell','icon-crown','icon-fire','icon-shield','icon-eye','icon-check','icon-cross','icon-warning','icon-info','icon-question'],
+    'Действия': ['icon-bug','icon-delete','icon-edit','icon-link','icon-refresh','icon-download'],
+    'Сервисы': ['icon-telegram','icon-discord','icon-steam'],
+    'Темы / Разное': ['icon-paint','icon-gamepad','icon-bolt','icon-place-1','icon-place-2','icon-place-3']
   };
 
-  // Инлайн-спрайт (загружается из файла рядом)
-  var spriteUrl = 'icons-sprite.svg';
   var currentSize = 24;
   var currentColor = '#e8eaf0';
 
-  function loadSprite() {
-    return fetch(spriteUrl).then(function(r) { return r.text(); });
-  }
-
-  function getSymbolIds(svgText) {
-    var parser = new DOMParser();
-    var doc = parser.parseFromString(svgText, 'image/svg+xml');
-    var symbols = doc.querySelectorAll('symbol[id]');
-    var ids = [];
-    symbols.forEach(function(s) { ids.push(s.id); });
-    return ids;
-  }
-
-  function injectSprite(svgText) {
-    var div = document.createElement('div');
-    div.style.display = 'none';
-    div.innerHTML = svgText;
-    document.body.insertBefore(div, document.body.firstChild);
-  }
-
-  function buildGallery(ids) {
+  function buildGallery() {
     var gallery = document.getElementById('gallery');
     gallery.innerHTML = '';
-    var total = 0;
 
     Object.keys(CATEGORIES).forEach(function(cat) {
       var section = document.createElement('section');
@@ -113,8 +135,6 @@
       grid.className = 'grid';
 
       CATEGORIES[cat].forEach(function(id) {
-        if (ids.indexOf(id) === -1) return;
-        total++;
         var card = document.createElement('div');
         card.className = 'icon-card';
         card.setAttribute('data-id', id);
@@ -129,15 +149,15 @@
       section.appendChild(grid);
       gallery.appendChild(section);
     });
-
-    document.getElementById('subtitle').textContent = total + ' иконок • Клик — скопировать код использования';
   }
 
   function copySnippet(id) {
     var snippet = '<svg class="icon" aria-hidden="true"><use href="#' + id + '"></use></svg>';
-    navigator.clipboard.writeText(snippet).then(function() {
-      showToast('Скопировано: ' + id);
-    });
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(snippet).then(function() { showToast('Скопировано: ' + id); });
+    } else {
+      showToast(id);
+    }
   }
 
   function showToast(msg) {
@@ -166,10 +186,8 @@
     var q = query.toLowerCase().trim();
     document.querySelectorAll('.icon-card').forEach(function(card) {
       var id = card.getAttribute('data-id');
-      var match = !q || id.toLowerCase().indexOf(q) !== -1;
-      card.classList.toggle('hidden', !match);
+      card.classList.toggle('hidden', q && id.toLowerCase().indexOf(q) === -1);
     });
-    // Скрыть пустые секции
     document.querySelectorAll('#gallery section').forEach(function(sec) {
       var visible = sec.querySelectorAll('.icon-card:not(.hidden)');
       sec.classList.toggle('empty', visible.length === 0);
@@ -177,13 +195,8 @@
   }
 
   // Инициализация
-  loadSprite().then(function(svgText) {
-    injectSprite(svgText);
-    var ids = getSymbolIds(svgText);
-    buildGallery(ids);
-  });
+  buildGallery();
 
-  // Обработчики
   document.querySelectorAll('.size-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       document.querySelectorAll('.size-btn').forEach(function(b) { b.classList.remove('active'); });

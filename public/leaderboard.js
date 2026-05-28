@@ -224,7 +224,7 @@ function displayUserModal(
       const achievement = window.ACHIEVEMENTS[ach.achievement_id];
       if (achievement) {
         const deleteBtn = isAdmin
-          ? `<button onclick="deleteUserAchievement('${userId}', '${ach.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>`
+          ? `<button onclick="deleteUserAchievement('${userId}', '${ach.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"><svg class="icon" aria-hidden="true"><use href="#icon-delete"></use></svg> Удалить</button>`
           : "";
         achievementsHtml += `
                     <div class="modal-achievement">
@@ -241,13 +241,13 @@ function displayUserModal(
     if (specialAchievements.length > 0) {
       achievementsHtml += `
                 <div style="grid-column: 1 / -1; margin-top: 20px; border-top: 3px solid #ffd700; padding-top: 20px;">
-                    <h3 style="text-align: center; color: #ffd700; margin-bottom: 15px;">⭐ Специальные достижения ⭐</h3>
+                    <h3 style="text-align: center; color: #ffd700; margin-bottom: 15px;"><svg class="icon" aria-hidden="true"><use href="#icon-star"></use></svg> Специальные достижения <svg class="icon" aria-hidden="true"><use href="#icon-star"></use></svg></h3>
                 </div>
             `;
 
       specialAchievements.forEach((ach) => {
         const deleteBtn = isAdmin
-          ? `<button onclick="deleteUserAchievement('${userId}', '${ach.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>`
+          ? `<button onclick="deleteUserAchievement('${userId}', '${ach.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"><svg class="icon" aria-hidden="true"><use href="#icon-delete"></use></svg> Удалить</button>`
           : "";
 
         // Для best_admin используем кастомные данные если есть, иначе дефолтные
@@ -307,15 +307,15 @@ function displayUserModal(
                         ${statusIndicator}
                     </div>
                     <div class="modal-header-name-block" style="flex: 1; text-align: center;">
-                        <h2>👤 Профиль пользователя</h2>
+                        <h2><svg class="icon" aria-hidden="true"><use href="#icon-profile"></use></svg> Профиль пользователя</h2>
                         <h3>#${rank} ${username}</h3>
                     </div>
                     <button class="close-btn" onclick="closeModal()">×</button>
                 </div>
                 
                 <div class="modal-tabs" style="flex-shrink: 0;">
-                    <button class="modal-tab-button active" onclick="switchModalTab('achievements')">🏆 Достижения</button>
-                    <button class="modal-tab-button" onclick="switchModalTab('stats')">📊 Статистика</button>
+                    <button class="modal-tab-button active" onclick="switchModalTab('achievements')"><svg class="icon" aria-hidden="true"><use href="#icon-trophy"></use></svg> Достижения</button>
+                    <button class="modal-tab-button" onclick="switchModalTab('stats')"><svg class="icon" aria-hidden="true"><use href="#icon-stats"></use></svg> Статистика</button>
                 </div>
                 
                 <div class="modal-body" style="flex: 1; overflow-y: auto; overflow-x: hidden;">
