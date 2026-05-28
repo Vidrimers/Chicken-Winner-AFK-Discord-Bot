@@ -334,6 +334,9 @@ export class MessageHandler {
 \`.!. time 30\` - Таймер AFK 30 минут
 \`.!. time 45\` - Таймер AFK 45 минут
 
+🔍 **VAC Чекер:**
+\`.!. vac-help\` - Справка по чекеру читеров
+
 🌐 **Веб-панель:** http://${SERVER_CONFIG.IP}:${SERVER_CONFIG.PORT}
     `);
   }

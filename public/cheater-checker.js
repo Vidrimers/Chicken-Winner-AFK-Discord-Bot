@@ -24,6 +24,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await fetchUsername();
   }
 
+  // Загружаем тему пользователя
+  await loadUserTheme();
+
   // Проверяем авторизацию
   updateAuthState();
 
@@ -58,6 +61,29 @@ async function fetchUsername() {
     }
   } catch (err) {
     // Игнорируем — username не критичен
+  }
+}
+
+/**
+ * Загрузка и применение темы пользователя
+ */
+async function loadUserTheme() {
+  if (!currentUserId) return;
+
+  try {
+    const response = await fetch(`/api/stats/${currentUserId}`);
+    if (response.ok) {
+      const data = await response.json();
+      // Загружаем тему
+      const theme = data.settings?.theme || 'standard';
+      document.body.setAttribute('data-theme', theme);
+      // Загружаем username из статистики пользователя
+      if (data.stats?.username && data.stats.username !== 'Web User') {
+        currentUsername = data.stats.username;
+      }
+    }
+  } catch (err) {
+    // Игнорируем — тема по умолчанию останется
   }
 }
 
@@ -157,6 +183,13 @@ function createProfileCard(profile, isBanned) {
   const communityBanned = profile.community_banned ? 'Да' : 'Нет';
   const economyBan = (profile.economy_ban && profile.economy_ban !== 'none') ? profile.economy_ban : 'Нет';
 
+  // Кнопка публикации в Discord (только для админа или того, кто добавил)
+  const checkedByDiscordId = profile.checked_by_discord_id || '';
+  const canPublish = (currentUserId === CONFIG.ADMIN_USER_ID) || (currentUserId === checkedByDiscordId);
+  const publishBtn = canPublish
+    ? `<button class="card-action-btn discord-publish-btn" data-steam-id="${steamId}">📢 Дискорд</button>`
+    : '';
+
   return `
     <div class="profile-card ${statusClass}" data-steam-id="${steamId}">
       <div class="card-header">
@@ -198,7 +231,7 @@ function createProfileCard(profile, isBanned) {
       </div>
       <div class="card-actions">
         <a href="${profileUrl}" target="_blank" rel="noopener" class="card-action-btn profile-link-btn">🔗 Профиль</a>
-        <button class="card-action-btn discord-publish-btn" data-steam-id="${steamId}">📢 Дискорд</button>
+        ${publishBtn}
       </div>
     </div>
   `;

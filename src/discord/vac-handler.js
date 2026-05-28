@@ -214,7 +214,11 @@ export class VacHandler {
         },
         {
           name: '🌐 Веб-версия',
-          value: `http://${SERVER_CONFIG.IP}:${SERVER_CONFIG.PORT}/cheater-checker.html`
+          value: `Проверить читера также можно на сайте:\nhttp://${SERVER_CONFIG.IP}:${SERVER_CONFIG.PORT}/cheater-checker.html`
+        },
+        {
+          name: '📢 Публикация в Discord',
+          value: 'Опубликовать результат проверки в Discord может администратор или тот, кто добавил читера на сайт'
         }
       )
       .setFooter({ text: 'Steam VAC Checker • Powered by Steam Web API' });
