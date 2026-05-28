@@ -15,7 +15,10 @@ export function createBugReportsRouter(db, telegram) {
     try {
       const { userId, username, bugText } = req.body;
 
+      log(`🐛 POST /api/bug-report получен: userId=${userId}, username=${username}, bugText длина=${bugText?.length}`);
+
       if (!userId || !username || !bugText) {
+        log(`🐛 Ошибка валидации: userId=${!!userId}, username=${!!username}, bugText=${!!bugText}`);
         return res.status(400).json({ error: 'Все поля обязательны' });
       }
 
@@ -41,6 +44,7 @@ export function createBugReportsRouter(db, telegram) {
       res.json({ success: true, id });
     } catch (error) {
       logError(`Ошибка создания багрепорта: ${error.message}`);
+      logError(error.stack);
       res.status(500).json({ error: 'Ошибка сервера' });
     }
   });
