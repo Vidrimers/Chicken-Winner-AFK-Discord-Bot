@@ -219,6 +219,10 @@ export class VacHandler {
         {
           name: '📢 Публикация в Discord',
           value: 'Опубликовать результат проверки в Discord может администратор или тот, кто добавил читера на сайт'
+        },
+        {
+          name: '🔎 Сторонние ресурсы для ручной проверки',
+          value: '[steamid.io](https://steamid.io) — информация о профиле и SteamID\n[vacbanned.com](https://vacbanned.com) — все виды банов\n[convars.com](https://convars.com) — статистика CS2 и баны'
         }
       )
       .setFooter({ text: 'Steam VAC Checker • Powered by Steam Web API' });

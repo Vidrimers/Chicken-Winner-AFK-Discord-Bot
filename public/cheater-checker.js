@@ -267,6 +267,7 @@ function bindEvents() {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) {
         overlay.style.display = 'none';
+        document.body.style.overflow = '';
       }
     });
   });
@@ -366,12 +367,14 @@ async function handleSingleCheck() {
 
 function openMassCheckModal() {
   document.getElementById('massCheckModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
   document.getElementById('massTextarea').value = '';
   updateUrlCounter();
 }
 
 function closeMassCheckModal() {
   document.getElementById('massCheckModal').style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 /**
@@ -580,10 +583,12 @@ async function confirmDelete() {
 
 function openInfoModal() {
   document.getElementById('infoModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
 }
 
 function closeInfoModal() {
   document.getElementById('infoModal').style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 // ===== УТИЛИТЫ =====

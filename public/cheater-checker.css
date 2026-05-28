@@ -582,6 +582,17 @@
   color: #a0b0ff;
 }
 
+.info-modal-body a {
+  color: #667eea;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.info-modal-body a:hover {
+  color: #a0b0ff;
+  text-decoration: underline;
+}
+
 /* Диалог подтверждения */
 .confirm-box {
   max-width: 400px;
