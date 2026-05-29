@@ -300,7 +300,7 @@ export class VacHandler {
         },
         {
           name: '🔎 Сторонние ресурсы для ручной проверки',
-          value: '[steamid.io](https://steamid.io) — информация о профиле и SteamID\n[vacbanned.com](https://vacbanned.com) — все виды банов\n[convars.com](https://convars.com) — статистика CS2 и баны'
+          value: '[steamid.io](https://steamid.io) — информация о профиле и SteamID\n[bansearch.com](https://bansearch.com/) — проверяет VAC-баны, game-баны, BattlEye, FaceIT, Easy Anti-Cheat и infiSTAR одновременно на одной странице, запрашивая данные у официальных провайдеров в реальном времени\n[vac-ban.com](https://vac-ban.com/) — помимо стандартных банов показывает анализ риска читерства, интеграцию с FACEIT ELO, Leetify, а также интерактивную карту сети из 770+ забаненных профессиональных CS2 игроков\n[vacbanchecker](https://vacbanchecker.skincade.com/) — база из 15+ миллионов профилей, проверяет VAC, game ban, trade ban и community ban\n[vacwatch.net](https://vacwatch.net/) — трекер, позволяет следить за аккаунтами и получать уведомления при появлении бана\n[sihrep.com](https://sihrep.com/ru) — специализируется на репутации трейдеров скинами: рейтинг, отзывы, VAC-статус, FACEIT и стоимость аккаунта\n'
         }
       )
       .setFooter({ text: 'Steam VAC Checker • Powered by Steam Web API' });
