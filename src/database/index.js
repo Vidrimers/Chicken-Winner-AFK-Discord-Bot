@@ -393,10 +393,12 @@ export class DatabaseManager {
   // ===== BUG REPORTS =====
 
   createBugReport(userId, username, bugText) {
+    console.log(`[DB] createBugReport вызван: userId=${userId}, username=${username}`);
     const stmt = this.prepare(
       'INSERT INTO bug_reports (user_id, username, bug_text) VALUES (?, ?, ?)'
     );
     const info = stmt.run(userId, username, bugText);
+    console.log(`[DB] createBugReport результат: lastInsertRowid=${info.lastInsertRowid}, changes=${info.changes}`);
     return info.lastInsertRowid;
   }
 
