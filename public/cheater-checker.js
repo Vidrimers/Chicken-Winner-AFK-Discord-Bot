@@ -376,35 +376,56 @@ function bindEvents() {
       }
     });
   });
+
+  // Делегирование событий для карточек профилей
+  bindCardDelegation();
 }
 
 /**
  * Привязка обработчиков к карточкам (после рендера)
  */
+/**
+ * Привязка обработчиков через делегирование событий (вызывается ОДИН раз)
+ */
 function bindCardEvents() {
-  // Раскрытие деталей по клику на имя
-  document.querySelectorAll('.card-name').forEach(el => {
-    el.addEventListener('click', () => {
-      const steamId = el.dataset.steamId;
-      const details = document.getElementById(`details-${steamId}`);
-      if (details) {
-        details.classList.toggle('visible');
-        el.classList.toggle('expanded');
+  // Эта функция теперь пустая — делегирование настроено в bindEvents() однократно
+}
+
+/**
+ * Делегирование событий для карточек (вызывается один раз в bindEvents)
+ */
+function bindCardDelegation() {
+  // Делегируем клики на оба контейнера колонок
+  ['bannedCards', 'cleanCards'].forEach(containerId => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    container.addEventListener('click', (e) => {
+      // Клик по имени → раскрытие деталей
+      const nameEl = e.target.closest('.card-name');
+      if (nameEl) {
+        const steamId = nameEl.dataset.steamId;
+        const details = document.getElementById(`details-${steamId}`);
+        if (details) {
+          details.classList.toggle('visible');
+          nameEl.classList.toggle('expanded');
+        }
+        return;
       }
-    });
-  });
-
-  // Публикация в Discord
-  document.querySelectorAll('.discord-publish-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      publishToDiscord(btn.dataset.steamId);
-    });
-  });
-
-  // Удаление (admin)
-  document.querySelectorAll('.card-delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      showConfirmDialog(btn.dataset.steamId, btn.dataset.name);
+      
+      // Клик по кнопке "Дискорд"
+      const publishBtn = e.target.closest('.discord-publish-btn');
+      if (publishBtn) {
+        publishToDiscord(publishBtn.dataset.steamId);
+        return;
+      }
+      
+      // Клик по кнопке удаления (admin)
+      const deleteBtn = e.target.closest('.card-delete-btn');
+      if (deleteBtn) {
+        showConfirmDialog(deleteBtn.dataset.steamId, deleteBtn.dataset.name);
+        return;
+      }
     });
   });
 }
