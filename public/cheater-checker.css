@@ -711,24 +711,51 @@
   }
 }
 
-/* Кнопка "Показать ещё" */
-.load-more-btn {
-  width: 100%;
-  padding: 12px;
-  margin-top: 12px;
-  border: 1px solid rgba(102, 126, 234, 0.3);
-  border-radius: 10px;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
+/* Пагинация */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 15px;
+  flex-wrap: wrap;
 }
 
-.load-more-btn:hover {
+.pagination button {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination button:hover {
   background: rgba(102, 126, 234, 0.2);
   border-color: #667eea;
+  color: #667eea;
+}
+
+.pagination button.active {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border-color: transparent;
+}
+
+.pagination button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pagination button.arrow {
+  font-size: 1rem;
+  font-weight: bold;
 }
 
 /* Адаптивная вёрстка */

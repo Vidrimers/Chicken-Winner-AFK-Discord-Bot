@@ -123,14 +123,13 @@ async function loadProfiles() {
 /**
  * Отрисовка профилей в двух колонках с пагинацией
  */
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 5;
 let bannedPage = 1;
 let cleanPage = 1;
 let allBannedProfiles = [];
 let allCleanProfiles = [];
 
 function renderProfiles(profilesList) {
-  // Разделяем на забаненных и чистых
   allBannedProfiles = profilesList.filter(p => isBannedProfile(p));
   allCleanProfiles = profilesList.filter(p => !isBannedProfile(p));
   
@@ -146,15 +145,13 @@ function renderBannedPage() {
   const container = document.getElementById('bannedCards');
   container.innerHTML = '';
   
-  const toShow = allBannedProfiles.slice(0, bannedPage * PAGE_SIZE);
+  const start = (bannedPage - 1) * PAGE_SIZE;
+  const toShow = allBannedProfiles.slice(start, start + PAGE_SIZE);
   toShow.forEach(profile => {
     container.insertAdjacentHTML('beforeend', createProfileCard(profile, true));
   });
   
-  // Кнопка "Показать ещё"
-  const btn = document.getElementById('loadMoreBanned');
-  btn.style.display = allBannedProfiles.length > bannedPage * PAGE_SIZE ? 'block' : 'none';
-  
+  renderPagination('banned', allBannedProfiles.length, bannedPage);
   bindCardEvents();
 }
 
@@ -162,24 +159,47 @@ function renderCleanPage() {
   const container = document.getElementById('cleanCards');
   container.innerHTML = '';
   
-  const toShow = allCleanProfiles.slice(0, cleanPage * PAGE_SIZE);
+  const start = (cleanPage - 1) * PAGE_SIZE;
+  const toShow = allCleanProfiles.slice(start, start + PAGE_SIZE);
   toShow.forEach(profile => {
     container.insertAdjacentHTML('beforeend', createProfileCard(profile, false));
   });
   
-  // Кнопка "Показать ещё"
-  const btn = document.getElementById('loadMoreClean');
-  btn.style.display = allCleanProfiles.length > cleanPage * PAGE_SIZE ? 'block' : 'none';
-  
+  renderPagination('clean', allCleanProfiles.length, cleanPage);
   bindCardEvents();
 }
 
-function loadMoreCards(type) {
+function renderPagination(type, total, currentPage) {
+  const container = document.getElementById(`${type}Pagination`);
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  let html = '';
+  
+  // Стрелка назад
+  html += `<button class="arrow" ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage('${type}', ${currentPage - 1})">←</button>`;
+  
+  // Номера страниц
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage('${type}', ${i})">${i}</button>`;
+  }
+  
+  // Стрелка вперёд
+  html += `<button class="arrow" ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage('${type}', ${currentPage + 1})">→</button>`;
+  
+  container.innerHTML = html;
+}
+
+function goToPage(type, page) {
   if (type === 'banned') {
-    bannedPage++;
+    bannedPage = page;
     renderBannedPage();
   } else {
-    cleanPage++;
+    cleanPage = page;
     renderCleanPage();
   }
 }
@@ -196,14 +216,12 @@ function filterProfileCards(query) {
   const q = query.toLowerCase().trim();
   
   if (!q) {
-    // Показываем все
     renderBannedPage();
     renderCleanPage();
     updateCounters();
     return;
   }
   
-  // Фильтруем
   const filteredBanned = allBannedProfiles.filter(p => 
     (p.persona_name || '').toLowerCase().includes(q) || 
     (p.steam_id || '').includes(q)
@@ -213,7 +231,6 @@ function filterProfileCards(query) {
     (p.steam_id || '').includes(q)
   );
   
-  // Рендерим отфильтрованные
   const bannedContainer = document.getElementById('bannedCards');
   const cleanContainer = document.getElementById('cleanCards');
   
@@ -223,11 +240,10 @@ function filterProfileCards(query) {
   cleanContainer.innerHTML = '';
   filteredClean.forEach(p => cleanContainer.insertAdjacentHTML('beforeend', createProfileCard(p, false)));
   
-  // Скрываем кнопки пагинации при поиске
-  document.getElementById('loadMoreBanned').style.display = 'none';
-  document.getElementById('loadMoreClean').style.display = 'none';
+  // Скрываем пагинацию при поиске
+  document.getElementById('bannedPagination').innerHTML = '';
+  document.getElementById('cleanPagination').innerHTML = '';
   
-  // Обновляем счётчики
   document.getElementById('bannedCount').textContent = `(${filteredBanned.length})`;
   document.getElementById('cleanCount').textContent = `(${filteredClean.length})`;
   
