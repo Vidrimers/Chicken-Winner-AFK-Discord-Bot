@@ -67,6 +67,31 @@ export function registerRoutes(app, db, discordClient, achievements, telegram, n
       res.json({});
     }
   });
+
+  // Список участников Discord-сервера (без ботов)
+  app.get('/api/guild-members', (req, res) => {
+    try {
+      const guild = discordClient.guilds.cache.first();
+      if (!guild) {
+        return res.json([]);
+      }
+
+      const members = [];
+      guild.members.cache.forEach((member) => {
+        if (member.user.bot) return;
+        members.push({
+          user_id: member.id,
+          username: member.displayName || member.user.username
+        });
+      });
+
+      // Сортировка по имени
+      members.sort((a, b) => a.username.localeCompare(b.username));
+      res.json(members);
+    } catch (error) {
+      res.json([]);
+    }
+  });
   
   app.post('/api/visit/:userId', async (req, res) => {
     try {

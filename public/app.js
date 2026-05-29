@@ -2560,6 +2560,9 @@ function updateBugReportIconState(hasNew, hasInProgress) {
 async function openBlocklistModal() {
   document.getElementById('blocklistModal').style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  // Сбрасываем поле поиска
+  const searchInput = document.getElementById('blocklistSearchInput');
+  if (searchInput) searchInput.value = '';
   await loadBlocklistContent();
 }
 
@@ -2567,6 +2570,10 @@ function closeBlocklistModal() {
   document.getElementById('blocklistModal').style.display = 'none';
   document.body.style.overflow = '';
 }
+
+// Глобальное состояние для чёрного списка
+let blocklistAllUsers = [];
+let blocklistBlocked = [];
 
 async function loadBlocklistContent() {
   const container = document.getElementById('blocklistContent');
@@ -2576,37 +2583,63 @@ async function loadBlocklistContent() {
   }
 
   try {
-    // Получаем всех пользователей и текущий чёрный список параллельно
+    // Получаем участников Discord-сервера и текущий чёрный список параллельно
     const [usersRes, blocklistRes] = await Promise.all([
-      fetch('/api/admin/users'),
+      fetch('/api/guild-members'),
       fetch(`/api/blocklist/${window.currentUserId}`)
     ]);
     
     const users = await usersRes.json();
-    const blocklist = await blocklistRes.json(); // массив заблокированных user IDs
+    const blocklist = await blocklistRes.json();
     
     if (!users || users.length === 0) {
-      container.innerHTML = '<p style="color:#aaa;text-align:center">Нет пользователей</p>';
+      container.innerHTML = '<p style="color:#aaa;text-align:center">Нет пользователей на сервере</p>';
       return;
     }
 
-    // Убираем текущего пользователя из списка
-    const otherUsers = users.filter(u => u.user_id !== window.currentUserId);
+    // Сохраняем в глобальные переменные для поиска
+    blocklistAllUsers = users.filter(u => u.user_id !== window.currentUserId);
+    blocklistBlocked = blocklist;
     
-    container.innerHTML = otherUsers.map(user => {
-      const isBlocked = blocklist.includes(user.user_id);
-      return `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.05);border-radius:8px;border:1px solid rgba(255,255,255,0.1);">
-          <span style="color:#e0e0e0;font-weight:500;">${user.username || user.user_id}</span>
-          <button onclick="toggleBlockUser('${user.user_id}', ${isBlocked})" style="padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:0.85rem;font-weight:500;${isBlocked ? 'background:rgba(76,175,80,0.2);color:#4caf50;border:1px solid rgba(76,175,80,0.4);' : 'background:rgba(244,67,54,0.2);color:#f44336;border:1px solid rgba(244,67,54,0.4);'}">
-            ${isBlocked ? 'Разблокировать' : 'Заблокировать'}
-          </button>
-        </div>
-      `;
-    }).join('');
+    renderBlocklistUsers(blocklistAllUsers);
   } catch (err) {
     container.innerHTML = '<p style="color:#f44336;text-align:center">Ошибка загрузки</p>';
   }
+}
+
+function renderBlocklistUsers(users) {
+  const container = document.getElementById('blocklistContent');
+  
+  if (users.length === 0) {
+    container.innerHTML = '<p style="color:#aaa;text-align:center;padding:20px;">Никого не найдено</p>';
+    return;
+  }
+  
+  container.innerHTML = users.map(user => {
+    const isBlocked = blocklistBlocked.includes(user.user_id);
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.05);border-radius:8px;border:1px solid rgba(255,255,255,0.1);">
+        <span style="color:#e0e0e0;font-weight:500;">${escapeHtmlBug(user.username)}</span>
+        <button onclick="toggleBlockUser('${user.user_id}', ${isBlocked})" style="padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:0.85rem;font-weight:500;${isBlocked ? 'background:rgba(76,175,80,0.2);color:#4caf50;border:1px solid rgba(76,175,80,0.4);' : 'background:rgba(244,67,54,0.2);color:#f44336;border:1px solid rgba(244,67,54,0.4);'}">
+          ${isBlocked ? 'Разблокировать' : 'Заблокировать'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function filterBlocklistUsers(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) {
+    renderBlocklistUsers(blocklistAllUsers);
+    return;
+  }
+  
+  const filtered = blocklistAllUsers.filter(u => 
+    u.username.toLowerCase().includes(q) || 
+    u.user_id.includes(q)
+  );
+  renderBlocklistUsers(filtered);
 }
 
 async function toggleBlockUser(blockedUserId, isCurrentlyBlocked) {

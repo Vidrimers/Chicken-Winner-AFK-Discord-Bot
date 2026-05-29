@@ -1119,6 +1119,7 @@
         </div>
         <div class="modal-box-body">
           <p style="color:#aaa;margin-bottom:15px;">Выберите пользователей, которых хотите скрыть из "Кто в канале" и "Кто онлайн" в Telegram боте:</p>
+          <input type="text" id="blocklistSearchInput" placeholder="Поиск по имени или ID..." oninput="filterBlocklistUsers(this.value)" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:#e0e0e0;font-size:14px;margin-bottom:12px;box-sizing:border-box;" />
           <div id="blocklistContent" style="max-height:400px;overflow-y:auto;">
             <p style="color:#aaa;text-align:center">Загрузка...</p>
           </div>
