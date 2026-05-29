@@ -4,7 +4,7 @@
 .checker-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 0 20px;
   min-height: 100vh;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -14,7 +14,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 25px;
+  padding: 5px 25px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 15px;
   margin-bottom: 20px;
@@ -89,7 +89,7 @@
   display: flex;
   gap: 10px;
   align-items: center;
-  padding: 20px 25px;
+  padding: 10px 25px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   margin-bottom: 20px;
@@ -230,7 +230,7 @@
 .profile-card {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
-  padding: 15px;
+  padding: 5px 15px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
 }
@@ -761,11 +761,11 @@
 /* Адаптивная вёрстка */
 @media (max-width: 768px) {
   .checker-container {
-    padding: 10px;
+    padding: 5px 10px;
   }
 
   .checker-header {
-    padding: 15px;
+    padding: 5px 15px;
     flex-direction: row;
     gap: 10px;
   }
@@ -776,7 +776,7 @@
 
   .input-section {
     flex-direction: column;
-    padding: 15px;
+    padding: 10px 15px;
   }
 
   .steam-input {
