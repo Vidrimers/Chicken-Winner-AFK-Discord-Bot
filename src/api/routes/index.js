@@ -68,16 +68,36 @@ export function registerRoutes(app, db, discordClient, achievements, telegram, n
     }
   });
 
-  // Список участников Discord-сервера (без ботов)
-  app.get('/api/guild-members', (req, res) => {
+  // Список участников Discord-сервера (без ботов) — с кешированием
+  let guildMembersCache = null;
+  let guildMembersCacheTime = 0;
+  const GUILD_MEMBERS_CACHE_TTL = 5 * 60 * 1000; // 5 минут
+
+  app.get('/api/guild-members', async (req, res) => {
     try {
       const guild = discordClient.guilds.cache.first();
       if (!guild) {
         return res.json([]);
       }
 
+      // Проверяем кеш
+      const now = Date.now();
+      if (guildMembersCache && (now - guildMembersCacheTime) < GUILD_MEMBERS_CACHE_TTL) {
+        return res.json(guildMembersCache);
+      }
+
+      // Загружаем всех участников (это вызывает один большой fetch, попадает в rate limit Discord)
+      // Используем cache как fallback если fetch не сработал
+      let allMembers;
+      try {
+        allMembers = await guild.members.fetch({ time: 30000 });
+      } catch (fetchErr) {
+        console.error('Ошибка fetch участников, используем cache:', fetchErr.message);
+        allMembers = guild.members.cache;
+      }
+
       const members = [];
-      guild.members.cache.forEach((member) => {
+      allMembers.forEach((member) => {
         if (member.user.bot) return;
         members.push({
           user_id: member.id,
@@ -85,10 +105,15 @@ export function registerRoutes(app, db, discordClient, achievements, telegram, n
         });
       });
 
-      // Сортировка по имени
       members.sort((a, b) => a.username.localeCompare(b.username));
+      
+      // Сохраняем в кеш
+      guildMembersCache = members;
+      guildMembersCacheTime = now;
+      
       res.json(members);
     } catch (error) {
+      console.error('Ошибка /api/guild-members:', error.message);
       res.json([]);
     }
   });

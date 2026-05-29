@@ -2601,10 +2601,20 @@ async function loadBlocklistContent() {
     blocklistAllUsers = users.filter(u => u.user_id !== window.currentUserId);
     blocklistBlocked = blocklist;
     
+    // Обновляем счётчики
+    updateBlocklistStats();
+    
     renderBlocklistUsers(blocklistAllUsers);
   } catch (err) {
     container.innerHTML = '<p style="color:#f44336;text-align:center">Ошибка загрузки</p>';
   }
+}
+
+function updateBlocklistStats() {
+  const totalEl = document.getElementById('blocklistTotalCount');
+  const blockedEl = document.getElementById('blocklistBlockedCount');
+  if (totalEl) totalEl.textContent = blocklistAllUsers.length;
+  if (blockedEl) blockedEl.textContent = blocklistBlocked.length;
 }
 
 function renderBlocklistUsers(users) {
@@ -2646,14 +2656,24 @@ async function toggleBlockUser(blockedUserId, isCurrentlyBlocked) {
   try {
     if (isCurrentlyBlocked) {
       await fetch(`/api/blocklist/${window.currentUserId}/${blockedUserId}`, { method: 'DELETE' });
+      blocklistBlocked = blocklistBlocked.filter(id => id !== blockedUserId);
     } else {
       await fetch(`/api/blocklist/${window.currentUserId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blockedUserId })
       });
+      blocklistBlocked.push(blockedUserId);
     }
-    await loadBlocklistContent(); // Обновляем список
+    
+    // Обновляем счётчики и перерисовываем (с учётом активного поиска)
+    updateBlocklistStats();
+    const searchInput = document.getElementById('blocklistSearchInput');
+    if (searchInput && searchInput.value.trim()) {
+      filterBlocklistUsers(searchInput.value);
+    } else {
+      renderBlocklistUsers(blocklistAllUsers);
+    }
   } catch (err) {
     alert('Ошибка');
   }
