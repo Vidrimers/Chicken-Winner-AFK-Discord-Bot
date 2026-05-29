@@ -121,27 +121,116 @@ async function loadProfiles() {
 }
 
 /**
- * Отрисовка профилей в двух колонках
+ * Отрисовка профилей в двух колонках с пагинацией
  */
+const PAGE_SIZE = 20;
+let bannedPage = 1;
+let cleanPage = 1;
+let allBannedProfiles = [];
+let allCleanProfiles = [];
+
 function renderProfiles(profilesList) {
+  // Разделяем на забаненных и чистых
+  allBannedProfiles = profilesList.filter(p => isBannedProfile(p));
+  allCleanProfiles = profilesList.filter(p => !isBannedProfile(p));
+  
+  bannedPage = 1;
+  cleanPage = 1;
+  
+  renderBannedPage();
+  renderCleanPage();
+  updateCounters();
+}
+
+function renderBannedPage() {
+  const container = document.getElementById('bannedCards');
+  container.innerHTML = '';
+  
+  const toShow = allBannedProfiles.slice(0, bannedPage * PAGE_SIZE);
+  toShow.forEach(profile => {
+    container.insertAdjacentHTML('beforeend', createProfileCard(profile, true));
+  });
+  
+  // Кнопка "Показать ещё"
+  const btn = document.getElementById('loadMoreBanned');
+  btn.style.display = allBannedProfiles.length > bannedPage * PAGE_SIZE ? 'block' : 'none';
+  
+  bindCardEvents();
+}
+
+function renderCleanPage() {
+  const container = document.getElementById('cleanCards');
+  container.innerHTML = '';
+  
+  const toShow = allCleanProfiles.slice(0, cleanPage * PAGE_SIZE);
+  toShow.forEach(profile => {
+    container.insertAdjacentHTML('beforeend', createProfileCard(profile, false));
+  });
+  
+  // Кнопка "Показать ещё"
+  const btn = document.getElementById('loadMoreClean');
+  btn.style.display = allCleanProfiles.length > cleanPage * PAGE_SIZE ? 'block' : 'none';
+  
+  bindCardEvents();
+}
+
+function loadMoreCards(type) {
+  if (type === 'banned') {
+    bannedPage++;
+    renderBannedPage();
+  } else {
+    cleanPage++;
+    renderCleanPage();
+  }
+}
+
+function updateCounters() {
+  document.getElementById('bannedCount').textContent = `(${allBannedProfiles.length})`;
+  document.getElementById('cleanCount').textContent = `(${allCleanProfiles.length})`;
+}
+
+/**
+ * Мгновенный поиск по нику или SteamID
+ */
+function filterProfileCards(query) {
+  const q = query.toLowerCase().trim();
+  
+  if (!q) {
+    // Показываем все
+    renderBannedPage();
+    renderCleanPage();
+    updateCounters();
+    return;
+  }
+  
+  // Фильтруем
+  const filteredBanned = allBannedProfiles.filter(p => 
+    (p.persona_name || '').toLowerCase().includes(q) || 
+    (p.steam_id || '').includes(q)
+  );
+  const filteredClean = allCleanProfiles.filter(p => 
+    (p.persona_name || '').toLowerCase().includes(q) || 
+    (p.steam_id || '').includes(q)
+  );
+  
+  // Рендерим отфильтрованные
   const bannedContainer = document.getElementById('bannedCards');
   const cleanContainer = document.getElementById('cleanCards');
-
+  
   bannedContainer.innerHTML = '';
+  filteredBanned.forEach(p => bannedContainer.insertAdjacentHTML('beforeend', createProfileCard(p, true)));
+  
   cleanContainer.innerHTML = '';
-
-  profilesList.forEach(profile => {
-    const isBanned = isBannedProfile(profile);
-    const cardHtml = createProfileCard(profile, isBanned);
-
-    if (isBanned) {
-      bannedContainer.insertAdjacentHTML('beforeend', cardHtml);
-    } else {
-      cleanContainer.insertAdjacentHTML('beforeend', cardHtml);
-    }
-  });
-
-  // Привязываем обработчики к новым карточкам
+  filteredClean.forEach(p => cleanContainer.insertAdjacentHTML('beforeend', createProfileCard(p, false)));
+  
+  // Скрываем кнопки пагинации при поиске
+  document.getElementById('loadMoreBanned').style.display = 'none';
+  document.getElementById('loadMoreClean').style.display = 'none';
+  
+  // Обновляем счётчики
+  document.getElementById('bannedCount').textContent = `(${filteredBanned.length})`;
+  document.getElementById('cleanCount').textContent = `(${filteredClean.length})`;
+  
   bindCardEvents();
 }
 

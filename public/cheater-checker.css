@@ -711,6 +711,26 @@
   }
 }
 
+/* Кнопка "Показать ещё" */
+.load-more-btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 10px;
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.load-more-btn:hover {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: #667eea;
+}
+
 /* Адаптивная вёрстка */
 @media (max-width: 768px) {
   .checker-container {

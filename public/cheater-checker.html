@@ -61,18 +61,25 @@
         <span>Проверка профиля...</span>
       </div>
 
+      <!-- Поиск -->
+      <div class="search-section" style="margin-bottom:15px;">
+        <input type="text" class="steam-input" id="profileSearchInput" placeholder="Поиск по нику или SteamID..." style="width:100%;" oninput="filterProfileCards(this.value)">
+      </div>
+
       <!-- Результаты в двух колонках -->
       <section class="results-section">
         <div class="results-grid">
           <!-- Колонка забаненных -->
           <div class="results-column banned-column">
-            <h2 class="column-title banned-title">🔴 С ограничениями</h2>
+            <h2 class="column-title banned-title">🔴 С ограничениями <span id="bannedCount" style="opacity:0.7;font-size:0.8em;">(0)</span></h2>
             <div class="cards-container" id="bannedCards"></div>
+            <button class="load-more-btn" id="loadMoreBanned" style="display:none" onclick="loadMoreCards('banned')">Показать ещё</button>
           </div>
           <!-- Колонка чистых -->
           <div class="results-column clean-column">
-            <h2 class="column-title clean-title">🟢 Чистые</h2>
+            <h2 class="column-title clean-title">🟢 Чистые <span id="cleanCount" style="opacity:0.7;font-size:0.8em;">(0)</span></h2>
             <div class="cards-container" id="cleanCards"></div>
+            <button class="load-more-btn" id="loadMoreClean" style="display:none" onclick="loadMoreCards('clean')">Показать ещё</button>
           </div>
         </div>
       </section>
