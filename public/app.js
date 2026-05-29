@@ -2554,3 +2554,74 @@ function updateBugReportIconState(hasNew, hasInProgress) {
     svgIcon.style.transformOrigin = 'center';
   }
 }
+
+// ===== BLOCKLIST =====
+
+async function openBlocklistModal() {
+  document.getElementById('blocklistModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  await loadBlocklistContent();
+}
+
+function closeBlocklistModal() {
+  document.getElementById('blocklistModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function loadBlocklistContent() {
+  const container = document.getElementById('blocklistContent');
+  if (!window.currentUserId) {
+    container.innerHTML = '<p style="color:#aaa;text-align:center">Войдите в систему</p>';
+    return;
+  }
+
+  try {
+    // Получаем всех пользователей и текущий чёрный список параллельно
+    const [usersRes, blocklistRes] = await Promise.all([
+      fetch('/api/admin/users'),
+      fetch(`/api/blocklist/${window.currentUserId}`)
+    ]);
+    
+    const users = await usersRes.json();
+    const blocklist = await blocklistRes.json(); // массив заблокированных user IDs
+    
+    if (!users || users.length === 0) {
+      container.innerHTML = '<p style="color:#aaa;text-align:center">Нет пользователей</p>';
+      return;
+    }
+
+    // Убираем текущего пользователя из списка
+    const otherUsers = users.filter(u => u.user_id !== window.currentUserId);
+    
+    container.innerHTML = otherUsers.map(user => {
+      const isBlocked = blocklist.includes(user.user_id);
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.05);border-radius:8px;border:1px solid rgba(255,255,255,0.1);">
+          <span style="color:#e0e0e0;font-weight:500;">${user.username || user.user_id}</span>
+          <button onclick="toggleBlockUser('${user.user_id}', ${isBlocked})" style="padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:0.85rem;font-weight:500;${isBlocked ? 'background:rgba(76,175,80,0.2);color:#4caf50;border:1px solid rgba(76,175,80,0.4);' : 'background:rgba(244,67,54,0.2);color:#f44336;border:1px solid rgba(244,67,54,0.4);'}">
+            ${isBlocked ? 'Разблокировать' : 'Заблокировать'}
+          </button>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    container.innerHTML = '<p style="color:#f44336;text-align:center">Ошибка загрузки</p>';
+  }
+}
+
+async function toggleBlockUser(blockedUserId, isCurrentlyBlocked) {
+  try {
+    if (isCurrentlyBlocked) {
+      await fetch(`/api/blocklist/${window.currentUserId}/${blockedUserId}`, { method: 'DELETE' });
+    } else {
+      await fetch(`/api/blocklist/${window.currentUserId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockedUserId })
+      });
+    }
+    await loadBlocklistContent(); // Обновляем список
+  } catch (err) {
+    alert('Ошибка');
+  }
+}

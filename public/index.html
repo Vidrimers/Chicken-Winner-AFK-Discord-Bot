@@ -896,6 +896,19 @@
               </div>
 
               <div class="setting-card">
+                <div class="setting-card-icon"><svg class="icon" aria-hidden="true"><use href="#icon-eye"></use></svg></div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">Чёрный список в ТГ боте</h3>
+                  <p class="setting-card-description">
+                    Скрыть пользователей из "Кто в канале" и "Кто онлайн" в Telegram
+                  </p>
+                  <button id="openBlocklistBtn" class="setting-select" style="cursor:pointer;text-align:center;font-weight:600;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;padding:12px;width:100%;margin-top:10px;" onclick="openBlocklistModal()">
+                    <svg class="icon" aria-hidden="true"><use href="#icon-eye"></use></svg> Управление чёрным списком
+                  </button>
+                </div>
+              </div>
+
+              <div class="setting-card">
                 <div class="setting-card-icon"><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg></div>
                 <div class="setting-card-content">
                   <h3 class="setting-card-title">Связь с Telegram</h3>
@@ -1093,6 +1106,22 @@
             <button class="bug-filter-btn" data-status="rejected" onclick="filterBugReports('rejected')">❌ Отклонено</button>
           </div>
           <div id="bugReportsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно чёрного списка -->
+    <div class="modal-overlay" id="blocklistModal" style="display:none" onclick="if(event.target===this)closeBlocklistModal()">
+      <div class="modal-box" style="max-width:600px">
+        <div class="modal-box-header">
+          <h2><svg class="icon" aria-hidden="true"><use href="#icon-eye"></use></svg> Чёрный список</h2>
+          <button class="modal-close-btn" onclick="closeBlocklistModal()">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <p style="color:#aaa;margin-bottom:15px;">Выберите пользователей, которых хотите скрыть из "Кто в канале" и "Кто онлайн" в Telegram боте:</p>
+          <div id="blocklistContent" style="max-height:400px;overflow-y:auto;">
+            <p style="color:#aaa;text-align:center">Загрузка...</p>
+          </div>
         </div>
       </div>
     </div>

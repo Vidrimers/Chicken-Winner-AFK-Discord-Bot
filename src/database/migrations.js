@@ -114,5 +114,22 @@ export function runMigrations(db) {
     }
   });
 
+  // Создание таблицы user_blocklist для чёрного списка в ТГ боте
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS user_blocklist (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        blocked_user_id TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, blocked_user_id)
+      )
+    `);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_blocklist_user ON user_blocklist(user_id)');
+    console.log('✅ Таблица user_blocklist создана/проверена');
+  } catch (error) {
+    console.error(`❌ Ошибка создания таблицы user_blocklist: ${error.message}`);
+  }
+
   console.log('✅ Миграции завершены');
 }

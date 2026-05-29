@@ -438,6 +438,20 @@ export class DatabaseManager {
     return this.prepare('SELECT * FROM bug_reports WHERE id = ?').get(id);
   }
 
+  // ===== USER BLOCKLIST =====
+
+  getUserBlocklist(userId) {
+    return this.prepare('SELECT blocked_user_id FROM user_blocklist WHERE user_id = ?').all(userId);
+  }
+
+  addToBlocklist(userId, blockedUserId) {
+    this.prepare('INSERT OR IGNORE INTO user_blocklist (user_id, blocked_user_id) VALUES (?, ?)').run(userId, blockedUserId);
+  }
+
+  removeFromBlocklist(userId, blockedUserId) {
+    this.prepare('DELETE FROM user_blocklist WHERE user_id = ? AND blocked_user_id = ?').run(userId, blockedUserId);
+  }
+
   close() {
     this.db.close();
   }

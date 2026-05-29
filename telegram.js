@@ -255,15 +255,16 @@ const userStates = new Map(); // chatId → state string
  * Получить связанный Discord ID по Telegram chat ID
  */
 function getLinkedDiscordId(chatId) {
-  const result = db.prepare(
+  // Ищем все записи для этого chat_id и возвращаем настоящий Discord ID (17-20 цифр)
+  const results = db.prepare(
     'SELECT user_id FROM telegram_users WHERE telegram_chat_id = ? AND started_bot = 1'
-  ).get(chatId.toString());
-  if (!result) return null;
-  // Возвращаем только настоящий Discord ID (17-20 цифр), а не префикс telegram_XXX
-  if (/^\d{17,20}$/.test(result.user_id)) {
-    return result.user_id;
-  }
-  return null;
+  ).all(chatId.toString());
+  
+  if (!results || results.length === 0) return null;
+  
+  // Ищем запись с настоящим Discord ID (17-20 цифр)
+  const realDiscord = results.find(r => /^\d{17,20}$/.test(r.user_id));
+  return realDiscord ? realDiscord.user_id : null;
 }
 
 /**
@@ -338,7 +339,32 @@ async function handleVoiceActivity(chatId) {
     const result = getVoiceActivityHandler();
 
     if (result.success) {
-      await telegramBot.sendMessage(chatId, result.message, { parse_mode: 'HTML' });
+      // Фильтруем заблокированных пользователей
+      const discordId = getLinkedDiscordId(chatId);
+      let message = result.message;
+      
+      if (discordId && db) {
+        const blocklist = db.getUserBlocklist(discordId);
+        const blockedIds = blocklist.map(b => b.blocked_user_id);
+        
+        if (blockedIds.length > 0) {
+          // Получаем имена заблокированных пользователей
+          const blockedNames = blockedIds.map(id => {
+            const stats = db.prepare('SELECT username FROM user_stats WHERE user_id = ?').get(id);
+            return stats ? stats.username : null;
+          }).filter(Boolean);
+          
+          // Убираем строки с заблокированными пользователями
+          if (blockedNames.length > 0) {
+            const lines = message.split('\n');
+            message = lines.filter(line => {
+              return !blockedNames.some(name => line.includes(name));
+            }).join('\n');
+          }
+        }
+      }
+      
+      await telegramBot.sendMessage(chatId, message, { parse_mode: 'HTML' });
     } else {
       await telegramBot.sendMessage(chatId, result.message || '❌ Не удалось получить информацию о каналах');
     }
@@ -361,7 +387,32 @@ async function handleOnlineUsers(chatId) {
     const result = getOnlineUsersHandler();
 
     if (result.success) {
-      await telegramBot.sendMessage(chatId, result.message, { parse_mode: 'HTML' });
+      // Фильтруем заблокированных пользователей
+      const discordId = getLinkedDiscordId(chatId);
+      let message = result.message;
+      
+      if (discordId && db) {
+        const blocklist = db.getUserBlocklist(discordId);
+        const blockedIds = blocklist.map(b => b.blocked_user_id);
+        
+        if (blockedIds.length > 0) {
+          // Получаем имена заблокированных пользователей
+          const blockedNames = blockedIds.map(id => {
+            const stats = db.prepare('SELECT username FROM user_stats WHERE user_id = ?').get(id);
+            return stats ? stats.username : null;
+          }).filter(Boolean);
+          
+          // Убираем строки с заблокированными пользователями
+          if (blockedNames.length > 0) {
+            const lines = message.split('\n');
+            message = lines.filter(line => {
+              return !blockedNames.some(name => line.includes(name));
+            }).join('\n');
+          }
+        }
+      }
+      
+      await telegramBot.sendMessage(chatId, message, { parse_mode: 'HTML' });
     } else {
       await telegramBot.sendMessage(chatId, result.message || '❌ Не удалось получить список пользователей');
     }

@@ -5,6 +5,7 @@ import { createAdminRouter } from './admin.js';
 import { createAchievementsRouter } from './achievements.js';
 import { createCheaterCheckerRouter } from './cheater-checker.js';
 import { createBugReportsRouter } from './bug-reports.js';
+import { createBlocklistRouter } from './blocklist.js';
 import { success } from '../../utils/logger.js';
 import { USER_IDS, DISCORD_CONFIG, SERVER_CONFIG } from '../../config.js';
 
@@ -91,6 +92,10 @@ export function registerRoutes(app, db, discordClient, achievements, telegram, n
       res.status(500).json({ error: 'Internal server error' });
     }
   });
+
+  // Blocklist роуты (ВАЖНО: должны быть ДО settingsRouter)
+  const blocklistRouter = createBlocklistRouter(db);
+  app.use('/api/blocklist', blocklistRouter);
 
   // Bug Reports роуты (ВАЖНО: должны быть ДО settingsRouter чтобы /api/bug-report не перехватывался)
   const bugReportsRouter = createBugReportsRouter(db, telegram);
