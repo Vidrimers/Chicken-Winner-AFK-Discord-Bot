@@ -613,9 +613,15 @@ function displayUserSettings(settings) {
     themeSelect.appendChild(option);
   }
 
-  // Загружаем тему
+  // Загружаем тему (ПОСЛЕ добавления опций в селект)
   const theme = settings.theme || "standard";
-  document.getElementById("themeSelect").value = theme;
+  if (themeSelect) {
+    themeSelect.value = theme;
+    // Если value не установился (опция не найдена) — fallback на standard
+    if (themeSelect.value !== theme) {
+      themeSelect.value = "standard";
+    }
+  }
   applyTheme(theme);
 
   // Проверяем статус связи с Telegram

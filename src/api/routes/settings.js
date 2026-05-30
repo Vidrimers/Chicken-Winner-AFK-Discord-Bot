@@ -209,14 +209,15 @@ export function createSettingsRouter(db, discordClient, achievements, telegram, 
       }
 
       db.prepare(
-        `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated)
+        `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated, channel_notifications)
          VALUES (?, 
                  COALESCE((SELECT dm_notifications FROM user_settings WHERE user_id = ?), 1),
                  COALESCE((SELECT afk_timeout FROM user_settings WHERE user_id = ?), 15),
                  COALESCE((SELECT achievement_notifications FROM user_settings WHERE user_id = ?), 1),
                  COALESCE((SELECT theme FROM user_settings WHERE user_id = ?), 'standard'),
-                 1)`
-      ).run(userId, userId, userId, userId, userId);
+                 1,
+                 COALESCE((SELECT channel_notifications FROM user_settings WHERE user_id = ?), 0))`
+      ).run(userId, userId, userId, userId, userId, userId);
 
       log(`🎉 Секретная тема активирована для userId: ${userId}`);
 
