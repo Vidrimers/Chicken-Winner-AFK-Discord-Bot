@@ -19,7 +19,8 @@ import {
   sendProfileViewNotification,
   sendAchievementDeleteNotification,
   sendUserDeleteNotification,
-  sendSpecialAchievementNotification
+  sendSpecialAchievementNotification,
+  sendBlocklistAddNotification
 } from '../telegram.js';
 
 // Загружаем переменные окружения
@@ -53,6 +54,7 @@ async function main() {
       sendAchievementDeleteNotification: sendAchievementDeleteNotification,
       sendUserDelete: sendUserDeleteNotification,
       sendSpecialAchievement: sendSpecialAchievementNotification,
+      sendBlocklistAddNotification: sendBlocklistAddNotification,
       notifyChannelActivity: async (message) => {
         try {
           // Получаем всех пользователей с включенными уведомлениями

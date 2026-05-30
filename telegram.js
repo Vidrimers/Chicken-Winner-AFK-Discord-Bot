@@ -236,6 +236,19 @@ export async function sendNotOnServerAttempt(userId, timestamp) {
   await sendTelegramReport(message);
 }
 
+/**
+ * Уведомление о добавлении пользователя в чёрный список
+ */
+export async function sendBlocklistAddNotification(addedByUsername, addedByUserId, blockedUsername, blockedUserId) {
+  const message =
+    `🚫 <b>Добавление в чёрный список</b>\n\n` +
+    `👤 Кто добавил: ${addedByUsername} (<code>${addedByUserId}</code>)\n` +
+    `🙈 Кого добавил: ${blockedUsername} (<code>${blockedUserId}</code>)\n` +
+    `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
+
+  await sendTelegramReport(message);
+}
+
 // ===== TELEGRAM BOT =====
 import TelegramBot from "node-telegram-bot-api";
 

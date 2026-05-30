@@ -144,7 +144,7 @@ export function registerRoutes(app, db, discordClient, achievements, telegram, n
   });
 
   // Blocklist роуты (ВАЖНО: должны быть ДО settingsRouter)
-  const blocklistRouter = createBlocklistRouter(db);
+  const blocklistRouter = createBlocklistRouter(db, telegram);
   app.use('/api/blocklist', blocklistRouter);
 
   // Bug Reports роуты (ВАЖНО: должны быть ДО settingsRouter чтобы /api/bug-report не перехватывался)
