@@ -961,38 +961,8 @@ async function saveSettings() {
 
     const data = await response.json();
 
-    // Если включены уведомления канала, проверяем нажал ли пользователь /start
-    if (channelNotifications) {
-      const hasStarted = data.settings?.channelNotifications === true;
-      if (hasStarted) {
-        // Проверяем, связан ли аккаунт с Telegram
-        // Если нет - показываем подсказку
-        const botUsername = window.CONFIG?.TELEGRAM_BOT_USERNAME || "your_bot";
-        setTimeout(() => {
-          showCustomAlert(
-            "ℹ️ Важно!",
-            `Чтобы получать уведомления "Кто в канале", убедитесь что вы:\n\n` +
-              `1️⃣ Нажали /start в боте @${botUsername}\n` +
-              `2️⃣ Ваш Telegram username совпадает с Discord username\n\n` +
-              `Если имена разные, уведомления могут не приходить.`,
-            [
-              {
-                text: "📱 Открыть бота",
-                color: "#667eea",
-                action: () => {
-                  window.open(`https://t.me/${botUsername}`, "_blank");
-                },
-              },
-              {
-                text: "Понятно",
-                color: "#666",
-                action: null,
-              },
-            ],
-          );
-        }, 500);
-      }
-    }
+    // Уведомления канала включены — Telegram уже привязан (иначе кнопка заблокирована)
+    // Дополнительная подсказка не нужна
 
     return true;
   } catch (error) {
@@ -1082,33 +1052,8 @@ async function autoSaveSetting(selectElement, settingName) {
       }
     }
 
-    // Если включены уведомления канала, показываем подсказку
-    if (settingName === 'channelNotifications' && settingValue) {
-      const botUsername = window.CONFIG?.TELEGRAM_BOT_USERNAME || "your_bot";
-      setTimeout(() => {
-        showCustomAlert(
-          "ℹ️ Важно!",
-          `Чтобы получать уведомления "Кто в канале", убедитесь что вы:\n\n` +
-            `1️⃣ Нажали /start в боте @${botUsername}\n` +
-            `2️⃣ Ваш Telegram username совпадает с Discord username\n\n` +
-            `Если имена разные, уведомления могут не приходить.`,
-          [
-            {
-              text: "📱 Открыть бота",
-              color: "#667eea",
-              action: () => {
-                window.open(`https://t.me/${botUsername}`, "_blank");
-              },
-            },
-            {
-              text: "Понятно",
-              color: "#666",
-              action: null,
-            },
-          ],
-        );
-      }, 500);
-    }
+    // Уведомления канала включены — Telegram уже привязан (иначе кнопка заблокирована)
+    // Дополнительная подсказка не нужна
 
   } catch (error) {
     console.error("❌ Ошибка автосохранения:", error);
