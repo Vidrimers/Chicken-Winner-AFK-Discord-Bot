@@ -144,16 +144,27 @@ function loginWithDiscord() {
 }
 
 async function logout() {
-  if (confirm("Вы уверены, что хотите выйти?")) {
-    // Скрываем аватарку
-    hideUserAvatar();
-
-    // Очищаем localStorage перед редиректом
-    localStorage.removeItem("afkBotUserId");
-    localStorage.removeItem("afkBotUserAvatar");
-    console.log("🗑️ localStorage очищен при выходе");
-    window.location.href = "/logout";
-  }
+  showCustomAlert(
+    '🚪 Выход',
+    'Вы уверены, что хотите выйти?',
+    [
+      {
+        text: 'Выйти',
+        color: '#ff4444',
+        action: () => {
+          hideUserAvatar();
+          localStorage.removeItem("afkBotUserId");
+          localStorage.removeItem("afkBotUserAvatar");
+          window.location.href = "/logout";
+        }
+      },
+      {
+        text: 'Отмена',
+        color: '#555',
+        action: null
+      }
+    ]
+  );
 }
 
 // ===== ФУНКЦИИ ДЛЯ РАБОТЫ С localStorage =====
