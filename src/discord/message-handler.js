@@ -12,7 +12,7 @@ export class MessageHandler {
     this.db = db;
     this.achievements = achievements;
     this.telegram = telegram;
-    this.vacHandler = new VacHandler(db, discordClient);
+    this.vacHandler = new VacHandler(db, discordClient, telegram);
   }
 
   /**

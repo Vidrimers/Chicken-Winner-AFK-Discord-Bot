@@ -21,9 +21,10 @@ function delay(ms) {
  * Обработчик Discord-команд для проверки Steam-профилей
  */
 export class VacHandler {
-  constructor(db, discordClient) {
+  constructor(db, discordClient, telegram = null) {
     this.db = db;
     this.client = discordClient;
+    this.telegram = telegram;
   }
 
   /**
@@ -133,6 +134,19 @@ export class VacHandler {
           checkedByUsername: discordDisplayName
         });
 
+        // Уведомление админу
+        if (this.telegram && this.telegram.sendNewCheaterNotification) {
+          try {
+            await this.telegram.sendNewCheaterNotification(discordDisplayName, 'discord', [{
+              personaName: profile.personaName || profile.steamId,
+              profileUrl: profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`,
+              steamId: profile.steamId,
+            }]);
+          } catch (err) {
+            console.error('[VacHandler] Ошибка отправки уведомления:', err.message);
+          }
+        }
+
         // Строим и отправляем embed
         const embed = this.buildProfileEmbed(profile, discordDisplayName);
         await message.reply({ embeds: [embed] });
@@ -225,6 +239,20 @@ export class VacHandler {
             checkedByDiscordId: message.author.id,
             checkedByUsername: discordDisplayName2
           });
+        }
+
+        // Уведомление админу о новых профилях
+        if (newResults.length > 0 && this.telegram && this.telegram.sendNewCheaterNotification) {
+          try {
+            const profiles = newResults.map(p => ({
+              personaName: p.personaName || p.steamId,
+              profileUrl: p.profileUrl || `https://steamcommunity.com/profiles/${p.steamId}`,
+              steamId: p.steamId,
+            }));
+            await this.telegram.sendNewCheaterNotification(discordDisplayName2, 'discord', profiles);
+          } catch (err) {
+            console.error('[VacHandler] Ошибка отправки уведомления:', err.message);
+          }
         }
       }
 

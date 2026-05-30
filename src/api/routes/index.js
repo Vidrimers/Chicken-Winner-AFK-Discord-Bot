@@ -193,7 +193,7 @@ export function registerRoutes(app, db, discordClient, achievements, telegram, n
   app.use('/api/admin', adminRouter);
 
   // Cheater Checker роуты
-  const cheaterCheckerRouter = createCheaterCheckerRouter(db, discordClient);
+  const cheaterCheckerRouter = createCheaterCheckerRouter(db, discordClient, telegram);
   app.use('/api/cheater-checker', cheaterCheckerRouter);
 
   // Achievements роуты

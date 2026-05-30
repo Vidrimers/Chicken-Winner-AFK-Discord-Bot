@@ -237,9 +237,33 @@ export async function sendNotOnServerAttempt(userId, timestamp) {
 }
 
 /**
- * Уведомление о добавлении пользователя в чёрный список
+ * Уведомление о добавлении нового потенциального читера
+ * @param {string} addedByUsername - кто добавил
+ * @param {string} source - источник: 'web', 'discord', 'telegram'
+ * @param {Array} profiles - массив профилей [{personaName, profileUrl, steamId}]
  */
-export async function sendBlocklistAddNotification(addedByUsername, addedByUserId, blockedUsername, blockedUserId) {
+export async function sendNewCheaterNotification(addedByUsername, source, profiles) {
+  const sourceEmoji = { web: '🌐', discord: '💬', telegram: '📱' }[source] || '❓';
+  const sourceLabel = { web: 'Сайт', discord: 'Discord', telegram: 'Telegram' }[source] || source;
+
+  let message = `🕵️ <b>Новый потенциальный читер</b> ${sourceEmoji} ${sourceLabel}\n`;
+  message += `👤 Добавил: <b>${addedByUsername}</b>\n\n`;
+
+  if (profiles.length === 1) {
+    const p = profiles[0];
+    message += `🎮 <a href="${p.profileUrl}">${p.personaName}</a>\n`;
+    message += `🆔 <code>${p.steamId}</code>`;
+  } else {
+    message += `📋 Профилей: ${profiles.length}\n`;
+    profiles.forEach((p, i) => {
+      message += `${i + 1}. <a href="${p.profileUrl}">${p.personaName}</a> <code>${p.steamId}</code>\n`;
+    });
+  }
+
+  await sendTelegramReport(message);
+}
+
+
   const message =
     `🚫 <b>Добавление в чёрный список</b>\n\n` +
     `👤 Кто добавил: ${addedByUsername} (<code>${addedByUserId}</code>)\n` +
@@ -488,6 +512,17 @@ async function handleSteamUrlCheck(chatId, url) {
       checkedByDiscordId: discordId,
       checkedByUsername: discordUsername,
     });
+
+    // Уведомление админу
+    try {
+      await sendNewCheaterNotification(discordUsername, 'telegram', [{
+        personaName: profile.personaName || profile.steamId,
+        profileUrl: profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`,
+        steamId: profile.steamId,
+      }]);
+    } catch (err) {
+      console.error('[TG] Ошибка отправки уведомления о читере:', err.message);
+    }
 
     // Формируем сообщение с результатом
     const isBanned = profile.vacBanned || profile.numberOfGameBans > 0 || profile.communityBanned || (profile.economyBan && profile.economyBan !== 'none');

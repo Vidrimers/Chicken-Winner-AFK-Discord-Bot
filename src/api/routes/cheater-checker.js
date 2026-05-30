@@ -42,7 +42,7 @@ const EMBED_COLORS = {
 /**
  * Роуты для cheater checker API
  */
-export function createCheaterCheckerRouter(db, discordClient) {
+export function createCheaterCheckerRouter(db, discordClient, telegram) {
   const router = Router();
 
   // Rate limiters
@@ -80,6 +80,20 @@ export function createCheaterCheckerRouter(db, discordClient) {
           checkedByDiscordId,
           checkedByUsername: checkedByUsername || 'Unknown',
         });
+      }
+
+      // Уведомление админу о новых профилях
+      if (results.length > 0 && telegram && telegram.sendNewCheaterNotification) {
+        try {
+          const profiles = results.map(p => ({
+            personaName: p.personaName || p.steamId,
+            profileUrl: p.profileUrl || `https://steamcommunity.com/profiles/${p.steamId}`,
+            steamId: p.steamId,
+          }));
+          await telegram.sendNewCheaterNotification(checkedByUsername || 'Unknown', 'web', profiles);
+        } catch (err) {
+          console.error('[CheaterChecker] Ошибка отправки уведомления:', err.message);
+        }
       }
 
       res.json({ results, errors });
