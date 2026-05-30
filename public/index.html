@@ -167,6 +167,7 @@
               id="userIdInput"
               placeholder="Discord ID"
               style="flex: 1"
+              onkeydown="if(event.key==='Enter') loadUserData()"
             />
             <button
               onclick="loadUserData()"
@@ -197,6 +198,54 @@
             >
               Выход
             </button>
+          </div>
+
+          <!-- Блок ввода кода из Telegram -->
+          <div
+            id="tgCodeSection"
+            style="display: none; flex-direction: column; gap: 10px; padding: 10px;"
+          >
+            <p style="margin: 0; font-size: 14px; opacity: 0.85; text-align: center;">
+              📱 Код отправлен в Telegram. Введите его ниже:
+            </p>
+            <div style="display: flex; gap: 10px;">
+              <input
+                type="text"
+                id="tgCodeInput"
+                placeholder="6-значный код"
+                maxlength="6"
+                inputmode="numeric"
+                style="flex: 1; text-align: center; font-size: 20px; letter-spacing: 6px;"
+                onkeydown="if(event.key==='Enter') verifyTgCode()"
+              />
+              <button
+                onclick="verifyTgCode()"
+                style="
+                  padding: 10px 20px;
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  color: white;
+                  border: none;
+                  border-radius: 5px;
+                  cursor: pointer;
+                "
+              >
+                Войти
+              </button>
+              <button
+                onclick="cancelTgLogin()"
+                style="
+                  padding: 10px 16px;
+                  background: #555;
+                  color: white;
+                  border: none;
+                  border-radius: 5px;
+                  cursor: pointer;
+                "
+              >
+                ✕
+              </button>
+            </div>
+            <p id="tgCodeError" style="margin: 0; font-size: 13px; color: #ff6b6b; text-align: center; display: none;"></p>
           </div>
         </div>
 

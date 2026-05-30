@@ -6,6 +6,7 @@ import { createAchievementsRouter } from './achievements.js';
 import { createCheaterCheckerRouter } from './cheater-checker.js';
 import { createBugReportsRouter } from './bug-reports.js';
 import { createBlocklistRouter } from './blocklist.js';
+import { createAuthRouter } from './auth.js';
 import { success } from '../../utils/logger.js';
 import { USER_IDS, DISCORD_CONFIG, SERVER_CONFIG } from '../../config.js';
 
@@ -33,6 +34,10 @@ export function registerRoutes(app, db, discordClient, achievements, telegram, n
       res.json({ userId: null });
     }
   });
+
+  // Auth роуты (вход через Discord ID + Telegram-код)
+  const authRouter = createAuthRouter(db, telegram);
+  app.use('/api/auth', authRouter);
 
   // Stats роуты
   const statsRouter = createStatsRouter(db, discordClient, telegram);

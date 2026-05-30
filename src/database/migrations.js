@@ -131,5 +131,22 @@ export function runMigrations(db) {
     console.error(`❌ Ошибка создания таблицы user_blocklist: ${error.message}`);
   }
 
+  // Создание таблицы login_codes для входа через Telegram-код
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS login_codes (
+        code TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        expires_at DATETIME NOT NULL,
+        used INTEGER DEFAULT 0
+      )
+    `);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_login_codes_user ON login_codes(user_id)');
+    console.log('✅ Таблица login_codes создана/проверена');
+  } catch (error) {
+    console.error(`❌ Ошибка создания таблицы login_codes: ${error.message}`);
+  }
+
   console.log('✅ Миграции завершены');
 }

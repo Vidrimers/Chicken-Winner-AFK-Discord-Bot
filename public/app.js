@@ -387,6 +387,88 @@ async function loadUserData(skipSecurityCheck = false) {
     return;
   }
 
+  // Запрашиваем вход — проверяем нужен ли TG-код
+  try {
+    const authRes = await fetch("/api/auth/request-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    const authData = await authRes.json();
+
+    if (authData.error) {
+      document.getElementById("loading").style.display = "none";
+      alert("❌ " + authData.error);
+      return;
+    }
+
+    if (authData.requiresCode) {
+      // Показываем блок ввода TG-кода
+      window._pendingLoginUserId = userId;
+      document.getElementById("manualInputSection").style.display = "none";
+      document.getElementById("tgCodeSection").style.display = "flex";
+      document.getElementById("tgCodeInput").value = "";
+      document.getElementById("tgCodeError").style.display = "none";
+      document.getElementById("tgCodeInput").focus();
+      return;
+    }
+
+    // TG не привязан — входим напрямую
+    await _doLogin(userId);
+  } catch (error) {
+    console.error("Ошибка при запросе входа:", error);
+    alert("❌ Ошибка соединения с сервером");
+  }
+}
+
+// Проверка TG-кода и вход
+async function verifyTgCode() {
+  const userId = window._pendingLoginUserId;
+  const code = document.getElementById("tgCodeInput").value.trim();
+  const errorEl = document.getElementById("tgCodeError");
+
+  if (!userId || !code) return;
+
+  errorEl.style.display = "none";
+
+  try {
+    const res = await fetch("/api/auth/verify-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, code }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      errorEl.textContent = "❌ " + data.error;
+      errorEl.style.display = "block";
+      document.getElementById("tgCodeInput").value = "";
+      document.getElementById("tgCodeInput").focus();
+      return;
+    }
+
+    // Код верный — скрываем блок кода и входим
+    document.getElementById("tgCodeSection").style.display = "none";
+    window._pendingLoginUserId = null;
+    await _doLogin(userId);
+  } catch (error) {
+    console.error("Ошибка при проверке кода:", error);
+    errorEl.textContent = "❌ Ошибка соединения с сервером";
+    errorEl.style.display = "block";
+  }
+}
+
+// Отмена ввода TG-кода
+function cancelTgLogin() {
+  window._pendingLoginUserId = null;
+  document.getElementById("tgCodeSection").style.display = "none";
+  document.getElementById("tgCodeInput").value = "";
+  document.getElementById("tgCodeError").style.display = "none";
+  document.getElementById("manualInputSection").style.display = "flex";
+}
+
+// Основная логика загрузки профиля (вынесена из loadUserData)
+async function _doLogin(userId) {
   window.currentUserId = userId;
   localStorage.setItem("afkBotUserId", userId);
   document.getElementById("loading").style.display = "block";
