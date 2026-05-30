@@ -728,7 +728,6 @@ async function checkTelegramLinkStatus() {
 
     const statusDiv = document.getElementById("telegramLinkStatus");
     const btn = document.getElementById("telegramLinkBtn");
-    const unlinkBtn = document.getElementById("telegramUnlinkBtn");
     const description = document.getElementById("telegramLinkDescription");
     const channelNotificationsSelect = document.getElementById(
       "channelNotifications",
@@ -739,15 +738,10 @@ async function checkTelegramLinkStatus() {
 
     if (data.linked) {
       statusDiv.style.display = "block";
-      btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-check"></use></svg> Аккаунты связаны';
-      btn.style.background = "#4CAF50";
-      btn.style.cursor = "default";
-      btn.onclick = null;
-
-      // Показываем кнопку отвязки
-      if (unlinkBtn) {
-        unlinkBtn.style.display = "block";
-      }
+      btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Отвязать';
+      btn.style.background = "#f44336";
+      btn.style.cursor = "pointer";
+      btn.onclick = unlinkTelegram;
 
       description.textContent = "Ваш Discord аккаунт связан с Telegram";
 
@@ -766,16 +760,11 @@ async function checkTelegramLinkStatus() {
       }
     } else {
       statusDiv.style.display = "none";
-      btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связать с Telegram';
+      btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связать';
       btn.style.background =
         "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
       btn.style.cursor = "pointer";
       btn.onclick = showLinkCodeModal;
-
-      // Скрываем кнопку отвязки
-      if (unlinkBtn) {
-        unlinkBtn.style.display = "none";
-      }
 
       description.textContent =
         "Свяжите профиль сайта с Telegram для получения уведомлений";
