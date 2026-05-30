@@ -195,14 +195,42 @@ function renderPagination(type, total, currentPage) {
     return;
   }
   
+  // Строим список страниц с многоточием
+  // Всегда показываем: первую, последнюю, текущую и по 2 соседа с каждой стороны
+  const delta = 2;
+  const pages = [];
+  
+  for (let i = 1; i <= totalPages; i++) {
+    if (
+      i === 1 ||
+      i === totalPages ||
+      (i >= currentPage - delta && i <= currentPage + delta)
+    ) {
+      pages.push(i);
+    }
+  }
+  
+  // Вставляем многоточие между несмежными страницами
+  const pagesWithEllipsis = [];
+  for (let i = 0; i < pages.length; i++) {
+    if (i > 0 && pages[i] - pages[i - 1] > 1) {
+      pagesWithEllipsis.push('...');
+    }
+    pagesWithEllipsis.push(pages[i]);
+  }
+  
   let html = '';
   
   // Стрелка назад
   html += `<button class="arrow" ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage('${type}', ${currentPage - 1})">←</button>`;
   
-  // Номера страниц
-  for (let i = 1; i <= totalPages; i++) {
-    html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage('${type}', ${i})">${i}</button>`;
+  // Номера страниц с многоточием
+  for (const page of pagesWithEllipsis) {
+    if (page === '...') {
+      html += `<span class="pagination-ellipsis">…</span>`;
+    } else {
+      html += `<button class="${page === currentPage ? 'active' : ''}" onclick="goToPage('${type}', ${page})">${page}</button>`;
+    }
   }
   
   // Стрелка вперёд
