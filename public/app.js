@@ -2688,6 +2688,14 @@ async function toggleBlockUser(blockedUserId, isCurrentlyBlocked) {
     } else {
       renderBlocklistUsers(blocklistAllUsers);
     }
+
+    // Показываем подтверждение
+    const msg = isCurrentlyBlocked ? '✅ Пользователь разблокирован' : '🚫 Пользователь заблокирован';
+    const indicator = document.createElement('div');
+    indicator.textContent = msg;
+    indicator.style.cssText = 'position:fixed;bottom:70px;right:20px;background:#333;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;z-index:9999;opacity:1;transition:opacity 0.5s';
+    document.body.appendChild(indicator);
+    setTimeout(() => { indicator.style.opacity = '0'; setTimeout(() => indicator.remove(), 500); }, 2000);
   } catch (err) {
     console.error('Ошибка toggleBlockUser:', err);
     alert('Ошибка соединения с сервером');
