@@ -2701,46 +2701,21 @@ function initBlocklistClearableInput() {
   const clearBtn = document.getElementById('blocklistSearchClearBtn');
   if (!input || !clearBtn) return;
 
-  let blurredWithValue = false;
-
   // Показываем/скрываем крестик при вводе
   input.addEventListener('input', () => {
     clearBtn.style.display = input.value.length > 0 ? 'flex' : 'none';
-    blurredWithValue = false;
   });
 
-  // Запоминаем состояние при потере фокуса
-  input.addEventListener('blur', () => {
-    if (input.value.trim() !== '') blurredWithValue = true;
-  });
-
-  // При получении фокуса сбрасываем флаг
+  // При получении фокуса — выделяем весь текст
   input.addEventListener('focus', () => {
-    blurredWithValue = false;
-  });
-
-  // Авто-очистка при первом нажатии после blur с текстом
-  input.addEventListener('keydown', (e) => {
-    if (
-      blurredWithValue &&
-      e.key.length === 1 &&
-      !e.ctrlKey && !e.metaKey && !e.altKey
-    ) {
-      e.preventDefault(); // блокируем стандартную вставку символа
-      input.value = e.key; // вставляем только новый символ
-      blurredWithValue = false;
-      clearBtn.style.display = 'flex';
-      // Двигаем курсор в конец
-      input.setSelectionRange(input.value.length, input.value.length);
-      // Вызываем input-событие чтобы сработали слушатели
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+    if (input.value.length > 0) {
+      setTimeout(() => input.select(), 0);
     }
   });
 
   // Клик по крестику — очищаем поле и сбрасываем фильтр
   clearBtn.addEventListener('click', () => {
     input.value = '';
-    blurredWithValue = false;
     clearBtn.style.display = 'none';
     filterBlocklistUsers('');
     input.focus();

@@ -827,49 +827,23 @@ function initClearableInput(inputId, clearBtnId, onClear) {
   const clearBtn = document.getElementById(clearBtnId);
   if (!input || !clearBtn) return;
 
-  // Флаг: был ли убран фокус с непустым значением
-  let blurredWithValue = false;
-
   // Показываем/скрываем крестик при вводе
   input.addEventListener('input', () => {
     toggleClearBtn(input, clearBtn);
-    blurredWithValue = false; // пользователь уже редактирует — сбрасываем флаг
   });
 
-  // Запоминаем состояние при потере фокуса
-  input.addEventListener('blur', () => {
-    if (input.value.trim() !== '') {
-      blurredWithValue = true;
-    }
-  });
-
-  // При получении фокуса сбрасываем флаг (пользователь кликнул снова)
+  // При получении фокуса — выделяем весь текст.
+  // Браузер автоматически заменит выделение при вводе нового символа.
   input.addEventListener('focus', () => {
-    blurredWithValue = false;
-  });
-
-  // Авто-очистка: при первом нажатии клавиши после blur с текстом
-  input.addEventListener('keydown', (e) => {
-    if (
-      blurredWithValue &&
-      e.key.length === 1 && // только печатаемые символы
-      !e.ctrlKey && !e.metaKey && !e.altKey
-    ) {
-      e.preventDefault(); // блокируем стандартную вставку символа
-      input.value = e.key; // вставляем только новый символ
-      blurredWithValue = false;
-      toggleClearBtn(input, clearBtn);
-      // Двигаем курсор в конец
-      input.setSelectionRange(input.value.length, input.value.length);
-      // Вызываем input-событие чтобы сработали слушатели (например filterProfileCards)
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+    if (input.value.length > 0) {
+      // setTimeout нужен для Firefox и мобильных — select() без него игнорируется при клике мышью
+      setTimeout(() => input.select(), 0);
     }
   });
 
   // Клик по крестику — очищаем поле
   clearBtn.addEventListener('click', () => {
     input.value = '';
-    blurredWithValue = false;
     toggleClearBtn(input, clearBtn);
     if (onClear) onClear('');
     input.focus();
