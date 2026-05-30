@@ -452,6 +452,17 @@ async function main() {
                 existing.economy_ban !== (profile.economyBan || 'none');
 
               if (changed) {
+                // Определяем был ли профиль "чистым" до обновления
+                const wasClean = existing.vac_banned === 0 &&
+                  existing.number_of_game_bans === 0 &&
+                  existing.community_banned === 0 &&
+                  existing.economy_ban === 'none';
+
+                // Определяем стал ли профиль "с ограничениями" (но не забанен)
+                const isNowRestricted = !profile.vacBanned &&
+                  (profile.numberOfGameBans || 0) === 0 &&
+                  (profile.communityBanned || (profile.economyBan && profile.economyBan !== 'none'));
+
                 db.upsertCheaterCheck({
                   ...profile,
                   checkedByDiscordId: existing.checked_by_discord_id,
@@ -459,6 +470,44 @@ async function main() {
                 });
                 updated++;
                 log(`🔄 Обновлён профиль ${profile.personaName} (${profile.steamId}) — статус бана изменился`);
+
+                // Уведомление: чистый → с ограничениями
+                if (wasClean && isNowRestricted) {
+                  const profileName = profile.personaName || profile.steamId;
+                  const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
+                  const restrictionDetails = [];
+                  if (profile.communityBanned) restrictionDetails.push('Коммьюнити-бан');
+                  if (profile.economyBan && profile.economyBan !== 'none') restrictionDetails.push(`Торговый бан: ${profile.economyBan}`);
+
+                  // Уведомление админу
+                  const adminMessage =
+                    `⚠️ <b>Потенциальный читер получил ограничения!</b>\n\n` +
+                    `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
+                    `🆔 SteamID: ${profile.steamId}\n` +
+                    `🚫 Ограничения: ${restrictionDetails.join(', ')}\n` +
+                    `👁 Добавил: ${existing.checked_by_username || 'Неизвестно'}\n` +
+                    `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
+
+                  await sendTelegramReport(adminMessage);
+                  log(`📨 Отправлено уведомление админу: ${profileName} получил ограничения`);
+
+                  // Уведомление тому, кто добавил профиль (если связан с Telegram)
+                  if (existing.checked_by_discord_id) {
+                    const telegramChatId = db.getTelegramChatId(existing.checked_by_discord_id);
+                    if (telegramChatId) {
+                      const userMessage =
+                        `⚠️ <b>Обновление по потенциальному читеру</b>\n\n` +
+                        `Профиль, который вы добавили, получил ограничения:\n\n` +
+                        `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
+                        `🆔 SteamID: ${profile.steamId}\n` +
+                        `🚫 Ограничения: ${restrictionDetails.join(', ')}\n` +
+                        `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
+
+                      await sendTelegramMessageToUser(telegramChatId, userMessage);
+                      log(`📨 Отправлено уведомление пользователю (${existing.checked_by_discord_id}): ${profileName} получил ограничения`);
+                    }
+                  }
+                }
               }
             }
           }
