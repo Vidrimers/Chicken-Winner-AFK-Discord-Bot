@@ -1,7 +1,27 @@
 import { Router } from 'express';
 
-export function createBlocklistRouter(db, telegram) {
+export function createBlocklistRouter(db, telegram, discordClient) {
   const router = Router();
+
+  // Вспомогательная функция: получить имя пользователя из БД или Discord
+  async function resolveUsername(userId) {
+    const stats = db.prepare('SELECT username FROM user_stats WHERE user_id = ?').get(userId);
+    if (stats?.username) return stats.username;
+
+    // Fallback: ищем в кэше Guild
+    if (discordClient) {
+      try {
+        const guild = discordClient.guilds.cache.first();
+        if (guild) {
+          const member = guild.members.cache.get(userId)
+            || await guild.members.fetch(userId).catch(() => null);
+          if (member) return member.displayName || member.user.username;
+        }
+      } catch (_) {}
+    }
+
+    return null; // имя не найдено — вернём null, вызывающий подставит ID
+  }
 
   // GET /api/blocklist/:userId — получить чёрный список пользователя
   router.get('/:userId', (req, res) => {
@@ -25,11 +45,8 @@ export function createBlocklistRouter(db, telegram) {
     // Уведомление админу в Telegram
     if (telegram && telegram.sendBlocklistAddNotification) {
       try {
-        // Получаем имена из user_stats (если есть)
-        const adderStats = db.prepare('SELECT username FROM user_stats WHERE user_id = ?').get(userId);
-        const blockedStats = db.prepare('SELECT username FROM user_stats WHERE user_id = ?').get(blockedUserId);
-        const adderName = adderStats?.username || userId;
-        const blockedName = blockedStats?.username || blockedUserId;
+        const adderName = (await resolveUsername(userId)) || userId;
+        const blockedName = (await resolveUsername(blockedUserId)) || blockedUserId;
 
         await telegram.sendBlocklistAddNotification(adderName, userId, blockedName, blockedUserId);
       } catch (err) {
