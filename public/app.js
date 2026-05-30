@@ -2392,6 +2392,9 @@ async function loadBugReportsListAuto() {
     const res = await fetch('/api/bug-reports', { headers: { 'x-user-id': window.currentUserId } });
     const reports = await res.json();
     
+    // Обновляем счётчики на кнопках фильтров
+    updateBugFilterCounts(reports);
+    
     // Автовыбор фильтра по приоритету: new → in_progress → new (пустой)
     const hasNew = reports.some(r => r.status === 'new');
     const hasInProgress = reports.some(r => r.status === 'in_progress');
@@ -2407,6 +2410,23 @@ async function loadBugReportsListAuto() {
   } catch (err) {
     document.getElementById('bugReportsList').innerHTML = '<p style="color:#aaa;text-align:center">Ошибка загрузки</p>';
   }
+}
+
+function updateBugFilterCounts(reports) {
+  const counts = { new: 0, in_progress: 0, resolved: 0, rejected: 0 };
+  reports.forEach(r => {
+    if (counts[r.status] !== undefined) counts[r.status]++;
+  });
+  const labels = {
+    new: '🆕 Новые',
+    in_progress: '🔄 В работе',
+    resolved: '✅ Решено',
+    rejected: '❌ Отклонено'
+  };
+  document.querySelectorAll('.bug-filter-btn').forEach(btn => {
+    const s = btn.dataset.status;
+    btn.textContent = `${labels[s]} (${counts[s]})`;
+  });
 }
 
 function closeBugReportsListModal() {
@@ -2471,8 +2491,13 @@ async function changeBugReportStatus(id, status) {
       headers: { 'Content-Type': 'application/json', 'x-user-id': window.currentUserId },
       body: JSON.stringify({ status })
     });
+    // Перезагружаем с пересчётом счётчиков, сохраняя активный фильтр
     const activeFilter = document.querySelector('.bug-filter-btn.active');
-    loadBugReportsList(activeFilter?.dataset.status || 'new');
+    const currentStatus = activeFilter?.dataset.status || 'new';
+    const res = await fetch('/api/bug-reports', { headers: { 'x-user-id': window.currentUserId } });
+    const reports = await res.json();
+    updateBugFilterCounts(reports);
+    loadBugReportsList(currentStatus);
     // Обновляем бейдж и иконку после смены статуса
     loadBugReportBadge();
   } catch (err) {
@@ -2487,8 +2512,13 @@ async function deleteBugReportAdmin(id) {
       method: 'DELETE',
       headers: { 'x-user-id': window.currentUserId }
     });
+    // Перезагружаем с пересчётом счётчиков, сохраняя активный фильтр
     const activeFilter = document.querySelector('.bug-filter-btn.active');
-    loadBugReportsList(activeFilter?.dataset.status || 'new');
+    const currentStatus = activeFilter?.dataset.status || 'new';
+    const res = await fetch('/api/bug-reports', { headers: { 'x-user-id': window.currentUserId } });
+    const reports = await res.json();
+    updateBugFilterCounts(reports);
+    loadBugReportsList(currentStatus);
     // Обновляем бейдж и иконку после удаления
     loadBugReportBadge();
   } catch (err) {
