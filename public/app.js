@@ -2658,11 +2658,20 @@ function renderBlocklistUsers(users) {
     container.innerHTML = '<p style="color:#aaa;text-align:center;padding:20px;">Никого не найдено</p>';
     return;
   }
+
+  // Заблокированные сверху, остальные по алфавиту
+  const sorted = [...users].sort((a, b) => {
+    const aBlocked = blocklistBlocked.includes(a.user_id);
+    const bBlocked = blocklistBlocked.includes(b.user_id);
+    if (aBlocked && !bBlocked) return -1;
+    if (!aBlocked && bBlocked) return 1;
+    return a.username.localeCompare(b.username);
+  });
   
-  container.innerHTML = users.map(user => {
+  container.innerHTML = sorted.map(user => {
     const isBlocked = blocklistBlocked.includes(user.user_id);
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.05);border-radius:8px;border:1px solid rgba(255,255,255,0.1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;margin-bottom:8px;background:${isBlocked ? 'rgba(244,67,54,0.08)' : 'rgba(255,255,255,0.05)'};border-radius:8px;border:1px solid ${isBlocked ? 'rgba(244,67,54,0.3)' : 'rgba(255,255,255,0.1)';}">
         <span style="color:#e0e0e0;font-weight:500;">${escapeHtmlBug(user.username)}</span>
         <button onclick="toggleBlockUser('${user.user_id}', ${isBlocked})" style="padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:0.85rem;font-weight:500;${isBlocked ? 'background:rgba(76,175,80,0.2);color:#4caf50;border:1px solid rgba(76,175,80,0.4);' : 'background:rgba(244,67,54,0.2);color:#f44336;border:1px solid rgba(244,67,54,0.4);'}">
           ${isBlocked ? 'Разблокировать' : 'Заблокировать'}
