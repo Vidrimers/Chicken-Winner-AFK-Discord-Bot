@@ -2588,6 +2588,10 @@ function updateBugReportIconState(hasNew, hasInProgress) {
 // ===== BLOCKLIST =====
 
 async function openBlocklistModal() {
+  if (!window.currentUserId) {
+    alert('Войдите в систему перед открытием чёрного списка');
+    return;
+  }
   document.getElementById('blocklistModal').style.display = 'flex';
   document.body.style.overflow = 'hidden';
   // Сбрасываем поле поиска
@@ -2683,16 +2687,31 @@ function filterBlocklistUsers(query) {
 }
 
 async function toggleBlockUser(blockedUserId, isCurrentlyBlocked) {
+  if (!window.currentUserId) {
+    alert('Ошибка: пользователь не авторизован');
+    return;
+  }
   try {
+    let response;
     if (isCurrentlyBlocked) {
-      await fetch(`/api/blocklist/${window.currentUserId}/${blockedUserId}`, { method: 'DELETE' });
-      blocklistBlocked = blocklistBlocked.filter(id => id !== blockedUserId);
+      response = await fetch(`/api/blocklist/${window.currentUserId}/${blockedUserId}`, { method: 'DELETE' });
     } else {
-      await fetch(`/api/blocklist/${window.currentUserId}`, {
+      response = await fetch(`/api/blocklist/${window.currentUserId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ blockedUserId })
       });
+    }
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      alert('Ошибка сервера: ' + (err.error || response.status));
+      return;
+    }
+
+    if (isCurrentlyBlocked) {
+      blocklistBlocked = blocklistBlocked.filter(id => id !== blockedUserId);
+    } else {
       blocklistBlocked.push(blockedUserId);
     }
     
@@ -2705,6 +2724,7 @@ async function toggleBlockUser(blockedUserId, isCurrentlyBlocked) {
       renderBlocklistUsers(blocklistAllUsers);
     }
   } catch (err) {
-    alert('Ошибка');
+    console.error('Ошибка toggleBlockUser:', err);
+    alert('Ошибка соединения с сервером');
   }
 }
