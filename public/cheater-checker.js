@@ -382,6 +382,10 @@ function bindEvents() {
 
   // Делегирование событий для карточек профилей
   bindCardDelegation();
+
+  // Инпуты с крестиком и авто-очисткой
+  initClearableInput('steamUrlInput', 'steamUrlClearBtn');
+  initClearableInput('profileSearchInput', 'profileSearchClearBtn', (val) => filterProfileCards(val));
 }
 
 /**
@@ -807,5 +811,74 @@ async function sendBugReport() {
     }
   } catch (err) {
     showNotification('Ошибка соединения с сервером', 'error');
+  }
+}
+
+// ===== ИНПУТЫ С КРЕСТИКОМ И АВТО-ОЧИСТКОЙ =====
+
+/**
+ * Инициализация инпута с кнопкой очистки и авто-очисткой при повторном вводе.
+ * @param {string} inputId   - id инпута
+ * @param {string} clearBtnId - id кнопки-крестика
+ * @param {Function} [onClear] - колбэк при очистке (например, сброс фильтра)
+ */
+function initClearableInput(inputId, clearBtnId, onClear) {
+  const input = document.getElementById(inputId);
+  const clearBtn = document.getElementById(clearBtnId);
+  if (!input || !clearBtn) return;
+
+  // Флаг: был ли убран фокус с непустым значением
+  let blurredWithValue = false;
+
+  // Показываем/скрываем крестик при вводе
+  input.addEventListener('input', () => {
+    toggleClearBtn(input, clearBtn);
+    blurredWithValue = false; // пользователь уже редактирует — сбрасываем флаг
+  });
+
+  // Запоминаем состояние при потере фокуса
+  input.addEventListener('blur', () => {
+    if (input.value.trim() !== '') {
+      blurredWithValue = true;
+    }
+  });
+
+  // При получении фокуса сбрасываем флаг (пользователь кликнул снова)
+  input.addEventListener('focus', () => {
+    blurredWithValue = false;
+  });
+
+  // Авто-очистка: при первом нажатии клавиши после blur с текстом
+  input.addEventListener('keydown', (e) => {
+    if (
+      blurredWithValue &&
+      e.key.length === 1 && // только печатаемые символы
+      !e.ctrlKey && !e.metaKey && !e.altKey
+    ) {
+      input.value = '';
+      blurredWithValue = false;
+      toggleClearBtn(input, clearBtn);
+      if (onClear) onClear('');
+    }
+  });
+
+  // Клик по крестику — очищаем поле
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    blurredWithValue = false;
+    toggleClearBtn(input, clearBtn);
+    if (onClear) onClear('');
+    input.focus();
+  });
+}
+
+/**
+ * Показать/скрыть кнопку очистки в зависимости от значения инпута
+ */
+function toggleClearBtn(input, clearBtn) {
+  if (input.value.length > 0) {
+    clearBtn.classList.add('visible');
+  } else {
+    clearBtn.classList.remove('visible');
   }
 }

@@ -758,6 +758,53 @@
   font-weight: bold;
 }
 
+/* ===== Инпут с крестиком очистки ===== */
+
+.input-clear-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+.input-clear-wrapper .steam-input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 38px; /* место под крестик */
+}
+
+.input-clear-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: none; /* скрыт пока поле пустое */
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.input-clear-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.input-clear-btn.visible {
+  display: flex;
+}
+
 /* Адаптивная вёрстка */
 @media (max-width: 768px) {
   .checker-container {

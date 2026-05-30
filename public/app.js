@@ -2543,7 +2543,16 @@ async function openBlocklistModal() {
   document.body.style.overflow = 'hidden';
   // Сбрасываем поле поиска
   const searchInput = document.getElementById('blocklistSearchInput');
-  if (searchInput) searchInput.value = '';
+  if (searchInput) {
+    searchInput.value = '';
+    const clearBtn = document.getElementById('blocklistSearchClearBtn');
+    if (clearBtn) clearBtn.style.display = 'none';
+  }
+  // Инициализируем крестик и авто-очистку (один раз)
+  if (!openBlocklistModal._clearInited) {
+    initBlocklistClearableInput();
+    openBlocklistModal._clearInited = true;
+  }
   await loadBlocklistContent();
 }
 
@@ -2683,4 +2692,53 @@ async function toggleBlockUser(blockedUserId, isCurrentlyBlocked) {
     console.error('Ошибка toggleBlockUser:', err);
     alert('Ошибка соединения с сервером');
   }
+}
+
+// ===== BLOCKLIST ИНПУТ С КРЕСТИКОМ И АВТО-ОЧИСТКОЙ =====
+
+function initBlocklistClearableInput() {
+  const input = document.getElementById('blocklistSearchInput');
+  const clearBtn = document.getElementById('blocklistSearchClearBtn');
+  if (!input || !clearBtn) return;
+
+  let blurredWithValue = false;
+
+  // Показываем/скрываем крестик при вводе
+  input.addEventListener('input', () => {
+    clearBtn.style.display = input.value.length > 0 ? 'flex' : 'none';
+    blurredWithValue = false;
+  });
+
+  // Запоминаем состояние при потере фокуса
+  input.addEventListener('blur', () => {
+    if (input.value.trim() !== '') blurredWithValue = true;
+  });
+
+  // При получении фокуса сбрасываем флаг
+  input.addEventListener('focus', () => {
+    blurredWithValue = false;
+  });
+
+  // Авто-очистка при первом нажатии после blur с текстом
+  input.addEventListener('keydown', (e) => {
+    if (
+      blurredWithValue &&
+      e.key.length === 1 &&
+      !e.ctrlKey && !e.metaKey && !e.altKey
+    ) {
+      input.value = '';
+      blurredWithValue = false;
+      clearBtn.style.display = 'none';
+      filterBlocklistUsers('');
+    }
+  });
+
+  // Клик по крестику — очищаем поле и сбрасываем фильтр
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    blurredWithValue = false;
+    clearBtn.style.display = 'none';
+    filterBlocklistUsers('');
+    input.focus();
+  });
 }

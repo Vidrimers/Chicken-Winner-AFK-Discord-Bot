@@ -48,12 +48,15 @@
       <!-- Секция ввода -->
       <section class="input-section" id="inputSection">
         <button class="mass-check-btn" id="massCheckBtn">Массовая проверка</button>
-        <input
-          type="text"
-          class="steam-input"
-          id="steamUrlInput"
-          placeholder="Вставьте ссылку на Steam-профиль"
-        />
+        <div class="input-clear-wrapper">
+          <input
+            type="text"
+            class="steam-input"
+            id="steamUrlInput"
+            placeholder="Вставьте ссылку на Steam-профиль"
+          />
+          <button class="input-clear-btn" id="steamUrlClearBtn" title="Очистить" aria-label="Очистить поле">×</button>
+        </div>
         <button class="check-btn" id="checkBtn">Проверить</button>
       </section>
 
@@ -65,7 +68,10 @@
 
       <!-- Поиск -->
       <div class="search-section" style="margin-bottom:15px;">
-        <input type="text" class="steam-input" id="profileSearchInput" placeholder="Поиск по нику или SteamID..." style="width:100%;" oninput="filterProfileCards(this.value)">
+        <div class="input-clear-wrapper" style="min-width:0;">
+          <input type="text" class="steam-input" id="profileSearchInput" placeholder="Поиск по нику или SteamID..." style="width:100%;" oninput="filterProfileCards(this.value)">
+          <button class="input-clear-btn" id="profileSearchClearBtn" title="Очистить" aria-label="Очистить поиск">×</button>
+        </div>
       </div>
 
       <!-- Результаты в двух колонках -->
