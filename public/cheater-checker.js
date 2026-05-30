@@ -459,7 +459,7 @@ async function handleSingleCheck() {
       body: JSON.stringify({
         urls: [url],
         checkedByDiscordId: currentUserId,
-        checkedByUsername: currentUsername || 'Web User',
+        checkedByUsername: currentUsername && currentUsername !== 'Web User' ? currentUsername : (currentUserId || 'Unknown'),
       }),
     });
 
@@ -551,7 +551,7 @@ async function handleMassCheck() {
       body: JSON.stringify({
         urls,
         checkedByDiscordId: currentUserId,
-        checkedByUsername: currentUsername || 'Web User',
+        checkedByUsername: currentUsername && currentUsername !== 'Web User' ? currentUsername : (currentUserId || 'Unknown'),
       }),
     });
 
@@ -584,11 +584,7 @@ async function handleMassCheck() {
  * Добавление новых карточек результатов (API формат → DB формат)
  */
 function addResultCards(results) {
-  const bannedContainer = document.getElementById('bannedCards');
-  const cleanContainer = document.getElementById('cleanCards');
-
   results.forEach(result => {
-    // Конвертируем формат API в формат отображения
     const profile = {
       steam_id: result.steamId,
       persona_name: result.personaName,
@@ -601,27 +597,29 @@ function addResultCards(results) {
       community_banned: result.communityBanned ? 1 : 0,
       economy_ban: result.economyBan || 'none',
       checked_by_discord_id: result.checkedByDiscordId || currentUserId,
-      checked_by_username: result.checkedByUsername || currentUsername || 'Web User',
+      checked_by_username: result.checkedByUsername && result.checkedByUsername !== 'Web User' ? result.checkedByUsername : (currentUsername && currentUsername !== 'Web User' ? currentUsername : currentUserId),
     };
 
-    // Удаляем старую карточку если есть (обновление)
-    const existingCard = document.querySelector(`.profile-card[data-steam-id="${profile.steam_id}"]`);
-    if (existingCard) {
-      existingCard.remove();
-    }
-
     const isBanned = isBannedProfile(profile);
-    const cardHtml = createProfileCard(profile, isBanned);
 
+    // Удаляем из массивов если уже есть (обновление)
+    allBannedProfiles = allBannedProfiles.filter(p => p.steam_id !== profile.steam_id);
+    allCleanProfiles = allCleanProfiles.filter(p => p.steam_id !== profile.steam_id);
+
+    // Добавляем в начало нужного массива
     if (isBanned) {
-      bannedContainer.insertAdjacentHTML('afterbegin', cardHtml);
+      allBannedProfiles.unshift(profile);
     } else {
-      cleanContainer.insertAdjacentHTML('afterbegin', cardHtml);
+      allCleanProfiles.unshift(profile);
     }
   });
 
-  // Перепривязываем обработчики
-  bindCardEvents();
+  // Сбрасываем на первую страницу и перерисовываем
+  bannedPage = 1;
+  cleanPage = 1;
+  renderBannedPage();
+  renderCleanPage();
+  updateCounters();
 }
 
 // ===== ПУБЛИКАЦИЯ В DISCORD =====

@@ -123,15 +123,18 @@ export class VacHandler {
       if (results.length > 0) {
         const profile = results[0];
 
+        // Берём displayName с сервера из БД (то же имя что на сайте)
+        const discordDisplayName = this.db.getUserStats(message.author.id)?.username || message.member?.displayName || message.author.username;
+
         // Сохраняем в БД
         this.db.upsertCheaterCheck({
           ...profile,
           checkedByDiscordId: message.author.id,
-          checkedByUsername: message.author.username
+          checkedByUsername: discordDisplayName
         });
 
         // Строим и отправляем embed
-        const embed = this.buildProfileEmbed(profile, message.author.username);
+        const embed = this.buildProfileEmbed(profile, discordDisplayName);
         await message.reply({ embeds: [embed] });
 
         // Убираем 🔍, ставим ✅
@@ -215,11 +218,12 @@ export class VacHandler {
         errors = result.errors || [];
 
         // Сохраняем новые результаты в БД
+        const discordDisplayName2 = this.db.getUserStats(message.author.id)?.username || message.member?.displayName || message.author.username;
         for (const profile of newResults) {
           this.db.upsertCheaterCheck({
             ...profile,
             checkedByDiscordId: message.author.id,
-            checkedByUsername: message.author.username
+            checkedByUsername: discordDisplayName2
           });
         }
       }
