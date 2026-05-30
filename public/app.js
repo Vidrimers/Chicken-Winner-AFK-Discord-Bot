@@ -2726,10 +2726,14 @@ function initBlocklistClearableInput() {
       e.key.length === 1 &&
       !e.ctrlKey && !e.metaKey && !e.altKey
     ) {
-      input.value = '';
+      e.preventDefault(); // блокируем стандартную вставку символа
+      input.value = e.key; // вставляем только новый символ
       blurredWithValue = false;
-      clearBtn.style.display = 'none';
-      filterBlocklistUsers('');
+      clearBtn.style.display = 'flex';
+      // Двигаем курсор в конец
+      input.setSelectionRange(input.value.length, input.value.length);
+      // Вызываем input-событие чтобы сработали слушатели
+      input.dispatchEvent(new Event('input', { bubbles: true }));
     }
   });
 

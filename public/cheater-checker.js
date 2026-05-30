@@ -855,10 +855,14 @@ function initClearableInput(inputId, clearBtnId, onClear) {
       e.key.length === 1 && // только печатаемые символы
       !e.ctrlKey && !e.metaKey && !e.altKey
     ) {
-      input.value = '';
+      e.preventDefault(); // блокируем стандартную вставку символа
+      input.value = e.key; // вставляем только новый символ
       blurredWithValue = false;
       toggleClearBtn(input, clearBtn);
-      if (onClear) onClear('');
+      // Двигаем курсор в конец
+      input.setSelectionRange(input.value.length, input.value.length);
+      // Вызываем input-событие чтобы сработали слушатели (например filterProfileCards)
+      input.dispatchEvent(new Event('input', { bubbles: true }));
     }
   });
 
