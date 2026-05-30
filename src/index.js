@@ -129,7 +129,7 @@ async function main() {
         };
 
         // Функция для получения активности голосовых каналов
-        const getVoiceChannelActivity = () => {
+        const getVoiceChannelActivity = (blockedIds = []) => {
           try {
             if (!discordClient || !discordClient.isReady()) {
               return {
@@ -144,7 +144,7 @@ async function main() {
             }
 
             const voiceChannels = guild.channels.cache.filter(
-              (channel) => channel.type === 2 && channel.members.size > 0
+              (channel) => channel.type === 2 && channel.members.filter(m => !blockedIds.includes(m.id)).size > 0
             );
 
             if (voiceChannels.size === 0) {
@@ -154,17 +154,20 @@ async function main() {
               };
             }
 
-            let message = `🎤 <b>Активные голосовые каналы:</b> ${voiceChannels.size}\n\n`;
             const activeChannels = [];
+            let message = '';
 
             voiceChannels.forEach((channel) => {
-              message += `📺 <b>${channel.name}</b> (${channel.members.size} чел.)\n`;
+              const visibleMembers = channel.members.filter(m => !blockedIds.includes(m.id));
+              if (visibleMembers.size === 0) return;
+
+              message += `📺 <b>${channel.name}</b> (${visibleMembers.size} чел.)\n`;
               activeChannels.push({
                 name: channel.name,
-                memberCount: channel.members.size,
+                memberCount: visibleMembers.size,
               });
 
-              channel.members.forEach((member) => {
+              visibleMembers.forEach((member) => {
                 const statusIcons = [];
                 if (member.voice.selfMute) statusIcons.push('🎙️❌');
                 if (member.voice.selfDeaf) statusIcons.push('🔇');
@@ -176,6 +179,11 @@ async function main() {
               message += '\n';
             });
 
+            if (!message) {
+              return { success: true, message: '📭 Нет активных голосовых каналов' };
+            }
+
+            message = `🎤 <b>Активные голосовые каналы:</b> ${activeChannels.length}\n\n` + message;
             message += `📅 ${new Date().toLocaleString('ru-RU')}`;
 
             return {
@@ -193,7 +201,7 @@ async function main() {
         };
 
         // Функция для получения онлайн пользователей
-        const getOnlineUsers = () => {
+        const getOnlineUsers = (blockedIds = []) => {
           try {
             if (!discordClient || !discordClient.isReady()) {
               return {
@@ -216,7 +224,8 @@ async function main() {
               (member) =>
                 !member.user.bot &&
                 member.presence?.status &&
-                member.presence.status !== 'offline'
+                member.presence.status !== 'offline' &&
+                !blockedIds.includes(member.id)
             );
 
             if (onlineMembers.size === 0) {
