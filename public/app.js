@@ -2434,7 +2434,7 @@ async function loadBugReportsList(status) {
     const url = status ? `/api/bug-reports?status=${status}` : '/api/bug-reports';
     const res = await fetch(url, { headers: { 'x-user-id': window.currentUserId } });
     const reports = await res.json();
-    renderBugReports(reports);
+    renderBugReports(reports, status);
 
     // Обновляем кнопки фильтров
     document.querySelectorAll('.bug-filter-btn').forEach(btn => {
@@ -2449,10 +2449,17 @@ function filterBugReports(status) {
   loadBugReportsList(status);
 }
 
-function renderBugReports(reports) {
+function renderBugReports(reports, status) {
   const container = document.getElementById('bugReportsList');
   if (!reports || reports.length === 0) {
-    container.innerHTML = '<p style="color:#aaa;text-align:center;padding:20px;">Нет багрепортов</p>';
+    const emptyMessages = {
+      new:         'Нет новых багрепортов',
+      in_progress: 'Нет багрепортов в работе',
+      resolved:    'Нет решённых багрепортов',
+      rejected:    'Нет отклонённых багрепортов',
+    };
+    const text = emptyMessages[status] || 'Нет багрепортов';
+    container.innerHTML = `<p style="color:#aaa;text-align:center;padding:20px;">${text}</p>`;
     return;
   }
 
