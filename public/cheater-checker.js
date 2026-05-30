@@ -101,6 +101,9 @@ function updateAuthState() {
   } else {
     inputSection.style.display = 'flex';
     authWarning.style.display = 'none';
+    // Показываем кнопку багрепорта
+    const bugBtn = document.getElementById('bugReportFloatingBtn');
+    if (bugBtn) bugBtn.style.display = 'block';
   }
 }
 
@@ -756,4 +759,53 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+
+// ===== БАГРЕПОРТ =====
+
+function openBugReportModal() {
+  document.getElementById('bugReportModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('bugReportText').value = '';
+}
+
+function closeBugReportModal() {
+  document.getElementById('bugReportModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function sendBugReport() {
+  if (!currentUserId) {
+    showNotification('Войдите в систему для отправки багрепорта', 'error');
+    return;
+  }
+
+  const text = document.getElementById('bugReportText').value.trim();
+  if (!text) {
+    showNotification('Опишите проблему', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/bug-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: currentUserId,
+        username: currentUsername || currentUserId,
+        bugText: text,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      closeBugReportModal();
+      showNotification('✅ Багрепорт отправлен, спасибо!', 'success');
+    } else {
+      showNotification(data.error || 'Ошибка при отправке', 'error');
+    }
+  } catch (err) {
+    showNotification('Ошибка соединения с сервером', 'error');
+  }
 }
