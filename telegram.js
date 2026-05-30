@@ -263,7 +263,10 @@ export async function sendNewCheaterNotification(addedByUsername, source, profil
   await sendTelegramReport(message);
 }
 
-
+/**
+ * Уведомление о добавлении пользователя в чёрный список
+ */
+export async function sendBlocklistAddNotification(addedByUsername, addedByUserId, blockedUsername, blockedUserId) {
   const message =
     `🚫 <b>Добавление в чёрный список</b>\n\n` +
     `👤 Кто добавил: ${addedByUsername} (<code>${addedByUserId}</code>)\n` +
