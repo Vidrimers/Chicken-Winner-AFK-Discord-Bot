@@ -114,10 +114,24 @@ function updateAuthState() {
  */
 async function loadProfiles() {
   try {
-    const response = await fetch('/api/cheater-checker/profiles?limit=50&filter=all');
-    const data = await response.json();
-    profiles = data.profiles || [];
-    renderProfiles(profiles);
+    // Загружаем забаненных и чистых отдельно чтобы не терять профили из-за лимита
+    const [bannedRes, cleanRes] = await Promise.all([
+      fetch('/api/cheater-checker/profiles?limit=1000&filter=banned'),
+      fetch('/api/cheater-checker/profiles?limit=1000&filter=clean'),
+    ]);
+    const bannedData = await bannedRes.json();
+    const cleanData = await cleanRes.json();
+
+    allBannedProfiles = bannedData.profiles || [];
+    allCleanProfiles = cleanData.profiles || [];
+    profiles = [...allBannedProfiles, ...allCleanProfiles];
+
+    bannedPage = 1;
+    cleanPage = 1;
+
+    renderBannedPage();
+    renderCleanPage();
+    updateCounters();
   } catch (err) {
     console.error('❌ Ошибка загрузки профилей:', err);
   }
