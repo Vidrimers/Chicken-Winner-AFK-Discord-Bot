@@ -122,40 +122,40 @@ export class MessageHandler {
    */
   async handleCommands(message, content, userId, username) {
     // Команда статистики
-    if (content === '.!. stats' || content === '.!. статистика') {
+    if (content === '.1. stats' || content === '.1. статистика') {
       await this.handleStatsCommand(message, userId);
       return;
     }
 
     // Команда достижений
-    if (content === '.!. achievements' || content === '.!. достижения') {
+    if (content === '.1. achievements' || content === '.1. достижения') {
       await this.handleAchievementsCommand(message, userId);
       return;
     }
 
     // Команды настроек
-    if (content === '.!. msg on' || content === '.!. лс вкл') {
+    if (content === '.1. msg on' || content === '.1. лс вкл') {
       await this.handleMsgOnCommand(message, userId, username);
       return;
     }
 
-    if (content === '.!. msg off' || content === '.!. лс выкл') {
+    if (content === '.1. msg off' || content === '.1. лс выкл') {
       await this.handleMsgOffCommand(message, userId, username);
       return;
     }
 
     // Команды таймера
-    if (content === '.!. time 15' || content === '.!. время 15') {
+    if (content === '.1. time 15' || content === '.1. время 15') {
       await this.handleTimeCommand(message, userId, username, 15);
       return;
     }
 
-    if (content === '.!. time 30' || content === '.!. время 30') {
+    if (content === '.1. time 30' || content === '.1. время 30') {
       await this.handleTimeCommand(message, userId, username, 30);
       return;
     }
 
-    if (content === '.!. time 45' || content === '.!. время 45') {
+    if (content === '.1. time 45' || content === '.1. время 45') {
       await this.handleTimeCommand(message, userId, username, 45);
       return;
     }
@@ -163,20 +163,20 @@ export class MessageHandler {
     // VAC-чекер команды (только в указанном канале)
     if (message.channel.id === STEAM_CONFIG.VAC_WATCH_CHANNEL_ID) {
       // Справка по VAC-чекеру
-      if (content === '.!. vac-help') {
+      if (content === '.1. vac-help') {
         await this.vacHandler.handleHelpCommand(message);
         return;
       }
 
       // Проверка Steam URL
-      if (content.startsWith('.!. https://steamcommunity.com/') || content.startsWith('.!. http://steamcommunity.com/')) {
+      if (content.startsWith('.1. https://steamcommunity.com/') || content.startsWith('.1. http://steamcommunity.com/')) {
         const url = message.content.trim().split(/\s+/).pop();
         await this.vacHandler.handleCheckCommand(message, url);
         return;
       }
 
-      // Список забаненных .!. vac N
-      if (content.startsWith('.!. vac ')) {
+      // Список забаненных .1. vac N
+      if (content.startsWith('.1. vac ')) {
         const parts = content.split(' ');
         const count = parseInt(parts[parts.length - 1], 10);
         await this.vacHandler.handleVacListCommand(message, count);
@@ -185,7 +185,7 @@ export class MessageHandler {
     }
 
     // Команда помощи
-    if (content === '.!.' || content === '.!. help' || content === '.!. помощь') {
+    if (content === '.1.' || content === '.1. help' || content === '.1. помощь') {
       await this.handleHelpCommand(message);
       return;
     }
@@ -324,18 +324,18 @@ export class MessageHandler {
 📖 **Доступные команды:**
 
 📊 **Статистика:**
-\`.!. stats\` - Показать вашу статистику
-\`.!. achievements\` - Показать ваши достижения
+\`.1. stats\` - Показать вашу статистику
+\`.1. achievements\` - Показать ваши достижения
 
 ⚙️ **Настройки:**
-\`.!. msg on\` - Включить ЛС уведомления
-\`.!. msg off\` - Отключить ЛС уведомления
-\`.!. time 15\` - Таймер AFK 15 минут
-\`.!. time 30\` - Таймер AFK 30 минут
-\`.!. time 45\` - Таймер AFK 45 минут
+\`.1. msg on\` - Включить ЛС уведомления
+\`.1. msg off\` - Отключить ЛС уведомления
+\`.1. time 15\` - Таймер AFK 15 минут
+\`.1. time 30\` - Таймер AFK 30 минут
+\`.1. time 45\` - Таймер AFK 45 минут
 
 🔍 **VAC Чекер:**
-\`.!. vac-help\` - Справка по чекеру читеров
+\`.1. vac-help\` - Справка по чекеру читеров
 
 🌐 **Веб-панель:** http://${SERVER_CONFIG.IP}:${SERVER_CONFIG.PORT}
     `);

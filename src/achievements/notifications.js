@@ -34,7 +34,7 @@ export class AchievementNotificationService {
         `${achievement.description}\n` +
         `+${achievement.points} очков рейтинга! 🌟\n\n` +
         `💡 Посмотреть все достижения:\n` +
-        `📱 В боте: \`.!. achievements\`\n` +
+        `📱 В боте: \`.1. achievements\`\n` +
         `🌐 Веб-панель: http://${SERVER_CONFIG.IP}:${SERVER_CONFIG.PORT}/?userId=${userId}&autoLogin=true`;
 
       await member.send(messageText);

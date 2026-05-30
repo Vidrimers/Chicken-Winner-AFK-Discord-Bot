@@ -174,7 +174,7 @@ export class VacHandler {
   async handleVacListCommand(message, count) {
     // Валидация count
     if (isNaN(count) || count < 1 || count > 100) {
-      await message.reply('❌ Укажите число от 1 до 100. Пример: `.!. vac 10`');
+      await message.reply('❌ Укажите число от 1 до 100. Пример: `.1. vac 10`');
       return;
     }
 
@@ -316,7 +316,7 @@ export class VacHandler {
         },
         {
           name: '📋 Команды',
-          value: '`.!. <steam_url>` — проверить профиль\n`.!. vac N` — сканировать последние N сообщений в чате и проверить найденные ссылки\n`.!. vac-help` — эта справка'
+          value: '`.1. <steam_url>` — проверить профиль\n`.1. vac N` — сканировать последние N сообщений в чате и проверить найденные ссылки\n`.1. vac-help` — эта справка'
         },
         {
           name: '🔗 Форматы ссылок',
