@@ -356,16 +356,18 @@ export class DatabaseManager {
   }
 
   getCheaterChecks({ limit = 50, offset = 0, filter = 'all' } = {}) {
-    let sql = 'SELECT * FROM cheater_checks';
+    let sql = `SELECT cc.*, COALESCE(us.username, cc.checked_by_username) as checked_by_username 
+               FROM cheater_checks cc 
+               LEFT JOIN user_stats us ON cc.checked_by_discord_id = us.user_id`;
     const params = [];
 
     if (filter === 'banned') {
-      sql += ' WHERE vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != \'none\'';
+      sql += ' WHERE cc.vac_banned = 1 OR cc.number_of_game_bans > 0 OR cc.community_banned = 1 OR cc.economy_ban != \'none\'';
     } else if (filter === 'clean') {
-      sql += ' WHERE vac_banned = 0 AND number_of_game_bans = 0 AND community_banned = 0 AND economy_ban = \'none\'';
+      sql += ' WHERE cc.vac_banned = 0 AND cc.number_of_game_bans = 0 AND cc.community_banned = 0 AND cc.economy_ban = \'none\'';
     }
 
-    sql += ' ORDER BY checked_at DESC LIMIT ? OFFSET ?';
+    sql += ' ORDER BY cc.checked_at DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
     return this.db.prepare(sql).all(...params);
@@ -397,7 +399,12 @@ export class DatabaseManager {
   }
 
   getCheaterCheckBySteamId(steamId) {
-    return this.prepare('SELECT * FROM cheater_checks WHERE steam_id = ?').get(steamId);
+    return this.prepare(
+      `SELECT cc.*, COALESCE(us.username, cc.checked_by_username) as checked_by_username 
+       FROM cheater_checks cc 
+       LEFT JOIN user_stats us ON cc.checked_by_discord_id = us.user_id 
+       WHERE cc.steam_id = ?`
+    ).get(steamId);
   }
 
   getUserCheaterStats(discordId) {
