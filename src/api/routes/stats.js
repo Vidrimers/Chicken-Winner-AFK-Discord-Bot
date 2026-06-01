@@ -77,10 +77,13 @@ export function createStatsRouter(db, discordClient, telegram) {
         channelNotifications: db.getUserChannelNotificationSetting(userId),
       };
 
+      const cheaterStats = db.getUserCheaterStats(userId);
+
       res.json({
         stats: stats || {},
         achievements,
         settings,
+        cheaterStats,
       });
     } catch (error) {
       logError(`Ошибка в API /api/stats: ${error.message}`);

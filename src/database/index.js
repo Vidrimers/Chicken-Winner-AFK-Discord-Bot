@@ -400,6 +400,21 @@ export class DatabaseManager {
     return this.prepare('SELECT * FROM cheater_checks WHERE steam_id = ?').get(steamId);
   }
 
+  getUserCheaterStats(discordId) {
+    const total = this.db.prepare(
+      'SELECT COUNT(*) as count FROM cheater_checks WHERE checked_by_discord_id = ?'
+    ).get(discordId);
+    const banned = this.db.prepare(
+      `SELECT COUNT(*) as count FROM cheater_checks 
+       WHERE checked_by_discord_id = ? 
+       AND (vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != 'none')`
+    ).get(discordId);
+    return {
+      totalChecked: total ? total.count : 0,
+      bannedFound: banned ? banned.count : 0
+    };
+  }
+
   // ===== BUG REPORTS =====
 
   createBugReport(userId, username, bugText) {

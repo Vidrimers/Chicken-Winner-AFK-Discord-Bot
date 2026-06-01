@@ -272,7 +272,7 @@ async function loadUserDataAuto(userId) {
       // Игнорируем ошибки отправки статистики посещений
     }
 
-    displayUserStats(data.stats);
+    displayUserStats(data.stats, data.cheaterStats);
     displayUserAchievements(data.achievements);
     displayUserSettings(data.settings);
     document.getElementById("loading").style.display = "none";
@@ -511,7 +511,7 @@ async function _doLogin(userId) {
       // Игнорируем ошибки отправки статистики посещений
     }
 
-    displayUserStats(data.stats);
+    displayUserStats(data.stats, data.cheaterStats);
     displayUserAchievements(data.achievements);
     displayUserSettings(data.settings);
 
@@ -583,7 +583,7 @@ async function _doLogin(userId) {
 
 // Продолжение в следующем файле из-за ограничения размера
 
-function displayUserStats(stats) {
+function displayUserStats(stats, cheaterStats) {
   const statsGrid = document.getElementById("statsGrid");
   const voiceHours = Math.floor((stats.total_voice_time || 0) / 3600);
   const voiceMinutes = Math.floor(((stats.total_voice_time || 0) % 3600) / 60);
@@ -593,6 +593,9 @@ function displayUserStats(stats) {
   const streamMinutes = Math.floor(
     ((stats.stream_channel_time || 0) % 3600) / 60,
   );
+
+  const cheaterProfilesChecked = cheaterStats ? cheaterStats.totalChecked || 0 : 0;
+  const cheaterBannedFound = cheaterStats ? cheaterStats.bannedFound || 0 : 0;
 
   let longestSessionDate = "";
   if (stats.longest_session_date) {
@@ -657,6 +660,14 @@ function displayUserStats(stats) {
         <div class="stat-card">
             <div class="stat-number">${stats.total_streams || 0}</div>
             <div class="stat-label">Включений трансляций</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${cheaterProfilesChecked}</div>
+            <div class="stat-label">Проверено профилей</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${cheaterBannedFound}</div>
+            <div class="stat-label">Выявлено читеров</div>
         </div>
     `;
 }
