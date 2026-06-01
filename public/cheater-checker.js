@@ -523,6 +523,13 @@ async function handleSingleCheck() {
     if (data.results && data.results.length > 0) {
       addResultCards(data.results);
       input.value = '';
+    }
+
+    // Показываем уведомление о дубликатах
+    if (data.duplicates && data.duplicates.length > 0) {
+      const dupNames = data.duplicates.map(d => `${d.personaName || d.steamId} (добавил: ${d.alreadyAddedBy})`).join(', ');
+      showNotification(`⚠️ Уже в базе: ${dupNames}`, 'warning');
+    } else if (data.results && data.results.length > 0) {
       showNotification('Проверка завершена', 'success');
     }
 
@@ -613,6 +620,14 @@ async function handleMassCheck() {
 
     if (data.results && data.results.length > 0) {
       addResultCards(data.results);
+    }
+
+    // Уведомления
+    const newCount = (data.results?.length || 0) - (data.duplicates?.length || 0);
+    if (data.duplicates && data.duplicates.length > 0) {
+      const dupNames = data.duplicates.map(d => `${d.personaName || d.steamId} (добавил: ${d.alreadyAddedBy})`).join(', ');
+      showNotification(`Проверено: ${data.results.length}. Уже в базе: ${dupNames}`, 'warning');
+    } else if (data.results && data.results.length > 0) {
       showNotification(`Проверено профилей: ${data.results.length}`, 'success');
     }
 

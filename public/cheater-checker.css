@@ -699,6 +699,11 @@
   color: white;
 }
 
+.notification.warning {
+  background: rgba(255, 170, 0, 0.9);
+  color: white;
+}
+
 /* Анимация удаления */
 @keyframes fadeOut {
   from {

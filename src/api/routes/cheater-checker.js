@@ -73,8 +73,25 @@ export function createCheaterCheckerRouter(db, discordClient, telegram) {
       // Проверка профилей через Steam API
       const { results, errors } = await checkProfiles(urls);
 
-      // Сохранение результатов в БД
+      // Проверяем какие профили уже есть в БД
+      const duplicates = [];
+      const newProfiles = [];
+
       for (const profile of results) {
+        const existing = db.getCheaterCheckBySteamId(profile.steamId);
+        if (existing) {
+          duplicates.push({
+            ...profile,
+            alreadyAddedBy: existing.checked_by_username || 'Unknown',
+            alreadyAddedAt: existing.checked_at,
+          });
+        } else {
+          newProfiles.push(profile);
+        }
+      }
+
+      // Сохранение только новых результатов в БД
+      for (const profile of newProfiles) {
         db.upsertCheaterCheck({
           ...profile,
           checkedByDiscordId,
@@ -82,10 +99,19 @@ export function createCheaterCheckerRouter(db, discordClient, telegram) {
         });
       }
 
-      // Уведомление админу о новых профилях
-      if (results.length > 0 && telegram && telegram.sendNewCheaterNotification) {
+      // Обновляем данные о банах для дубликатов (без перезаписи автора)
+      for (const profile of duplicates) {
+        db.upsertCheaterCheck({
+          ...profile,
+          checkedByDiscordId,
+          checkedByUsername: checkedByUsername || 'Unknown',
+        });
+      }
+
+      // Уведомление админу только о новых профилях
+      if (newProfiles.length > 0 && telegram && telegram.sendNewCheaterNotification) {
         try {
-          const profiles = results.map(p => ({
+          const profiles = newProfiles.map(p => ({
             personaName: p.personaName || p.steamId,
             profileUrl: p.profileUrl || `https://steamcommunity.com/profiles/${p.steamId}`,
             steamId: p.steamId,
@@ -96,7 +122,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram) {
         }
       }
 
-      res.json({ results, errors });
+      res.json({ results, errors, duplicates });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }

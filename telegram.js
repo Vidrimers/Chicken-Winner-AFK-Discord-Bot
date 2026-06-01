@@ -509,6 +509,42 @@ async function handleSteamUrlCheck(chatId, url) {
 
     const profile = results[0];
 
+    // Проверяем, есть ли уже в БД
+    const existingProfile = db.getCheaterCheckBySteamId(profile.steamId);
+    if (existingProfile) {
+      // Обновляем данные о банах (автор не перезапишется благодаря ON CONFLICT)
+      db.upsertCheaterCheck({
+        ...profile,
+        checkedByDiscordId: discordId,
+        checkedByUsername: discordUsername,
+      });
+
+      const isBanned = profile.vacBanned || profile.numberOfGameBans > 0 || profile.communityBanned || (profile.economyBan && profile.economyBan !== 'none');
+      const statusEmoji = isBanned ? '🔴' : '🟢';
+      const statusText = isBanned ? 'ЗАБАНЕН' : 'ЧИСТО';
+
+      let dupMessage = `⚠️ <b>Этот профиль уже добавлен!</b>\n\n`;
+      dupMessage += `👤 Добавил: <b>${existingProfile.checked_by_username || 'Unknown'}</b>\n`;
+      dupMessage += `📅 Дата: ${new Date(existingProfile.checked_at).toLocaleDateString('ru-RU')}\n\n`;
+      dupMessage += `${statusEmoji} <b>${profile.personaName}</b> — ${statusText}\n`;
+      dupMessage += `🔗 <a href="${profile.profileUrl}">Профиль Steam</a>\n`;
+      dupMessage += `\nДанные о банах обновлены.`;
+
+      const dupButtons = {
+        inline_keyboard: [
+          [{ text: '🔎 Проверить ещё', callback_data: 'checker_check' }],
+          [{ text: '◀️ Назад в меню', callback_data: 'back_to_menu' }]
+        ]
+      };
+
+      await telegramBot.sendMessage(chatId, dupMessage, {
+        parse_mode: 'HTML',
+        reply_markup: dupButtons,
+        disable_web_page_preview: true
+      });
+      return;
+    }
+
     // Сохраняем в БД
     db.upsertCheaterCheck({
       ...profile,

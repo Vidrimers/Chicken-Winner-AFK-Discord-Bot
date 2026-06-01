@@ -127,6 +127,27 @@ export class VacHandler {
         // Берём displayName с сервера из БД (то же имя что на сайте)
         const discordDisplayName = this.db.getUserStats(message.author.id)?.username || message.member?.displayName || message.author.username;
 
+        // Проверяем, есть ли уже в БД
+        const existing = this.db.getCheaterCheckBySteamId(profile.steamId);
+        if (existing) {
+          // Профиль уже добавлен — обновляем данные о банах, но сообщаем пользователю
+          this.db.upsertCheaterCheck({
+            ...profile,
+            checkedByDiscordId: message.author.id,
+            checkedByUsername: discordDisplayName
+          });
+
+          const embed = this.buildProfileEmbed(profile, existing.checked_by_username);
+          await message.reply({
+            content: `⚠️ Этот профиль уже добавлен пользователем **${existing.checked_by_username}** (${new Date(existing.checked_at).toLocaleDateString('ru-RU')}). Данные о банах обновлены.`,
+            embeds: [embed]
+          });
+
+          await message.reactions.cache.get('🔍')?.remove();
+          await message.react('⚠️');
+          return;
+        }
+
         // Сохраняем в БД
         this.db.upsertCheaterCheck({
           ...profile,
