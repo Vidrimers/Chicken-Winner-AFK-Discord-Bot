@@ -23,6 +23,13 @@
   </head>
   <body>
     <script>
+      // Мгновенное применение темы из localStorage до рендера (убирает мерцание)
+      (function() {
+        var t = localStorage.getItem('afkBotTheme');
+        if (t && t !== 'standard') document.body.setAttribute('data-theme', t);
+      })();
+    </script>
+    <script>
       (function() {
         fetch('/icons/icons-sprite.svg')
           .then(function(r) { return r.text(); })

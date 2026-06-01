@@ -1005,6 +1005,8 @@ async function showLinkCodeModal() {
 // Функция для применения темы
 function applyTheme(theme) {
   document.body.setAttribute("data-theme", theme);
+  // Сохраняем в localStorage для мгновенного применения при следующей загрузке
+  localStorage.setItem("afkBotTheme", theme);
 }
 
 // Функция для предпросмотра темы (без сохранения)
