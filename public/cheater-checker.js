@@ -530,8 +530,19 @@ async function handleSingleCheck() {
 
     // Показываем уведомление о дубликатах
     if (data.duplicates && data.duplicates.length > 0) {
-      const dupNames = data.duplicates.map(d => `${d.personaName || d.steamId} (добавил: ${d.alreadyAddedBy})`).join(', ');
-      showNotification(`⚠️ Уже в базе: ${dupNames}`, 'warning');
+      const myDups = data.duplicates.filter(d => d.alreadyAddedByDiscordId === currentUserId);
+      const otherDups = data.duplicates.filter(d => d.alreadyAddedByDiscordId !== currentUserId);
+      
+      let msg = '';
+      if (myDups.length > 0) {
+        const names = myDups.map(d => d.personaName || d.steamId).join(', ');
+        msg += `Ты уже добавлял: ${names}. `;
+      }
+      if (otherDups.length > 0) {
+        const names = otherDups.map(d => `${d.personaName || d.steamId} (добавил: ${d.alreadyAddedBy})`).join(', ');
+        msg += `Уже в базе: ${names}`;
+      }
+      showNotification(msg.trim(), 'warning');
       if (newResults.length === 0) input.value = '';
     } else if (newResults.length > 0) {
       showNotification('Проверка завершена', 'success');
@@ -632,8 +643,19 @@ async function handleMassCheck() {
 
     // Уведомления
     if (data.duplicates && data.duplicates.length > 0) {
-      const dupNames = data.duplicates.map(d => `${d.personaName || d.steamId} (добавил: ${d.alreadyAddedBy})`).join(', ');
-      showNotification(`Проверено: ${data.results.length}. Уже в базе: ${dupNames}`, 'warning');
+      const myDups = data.duplicates.filter(d => d.alreadyAddedByDiscordId === currentUserId);
+      const otherDups = data.duplicates.filter(d => d.alreadyAddedByDiscordId !== currentUserId);
+      
+      let msg = `Проверено: ${data.results.length}. `;
+      if (myDups.length > 0) {
+        const names = myDups.map(d => d.personaName || d.steamId).join(', ');
+        msg += `Ты уже добавлял: ${names}. `;
+      }
+      if (otherDups.length > 0) {
+        const names = otherDups.map(d => `${d.personaName || d.steamId} (добавил: ${d.alreadyAddedBy})`).join(', ');
+        msg += `Уже в базе: ${names}`;
+      }
+      showNotification(msg.trim(), 'warning');
     } else if (newResults.length > 0) {
       showNotification(`Проверено профилей: ${newResults.length}`, 'success');
     }

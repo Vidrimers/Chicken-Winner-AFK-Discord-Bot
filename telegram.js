@@ -523,9 +523,16 @@ async function handleSteamUrlCheck(chatId, url) {
       const statusEmoji = isBanned ? '🔴' : '🟢';
       const statusText = isBanned ? 'ЗАБАНЕН' : 'ЧИСТО';
 
-      let dupMessage = `⚠️ <b>Этот профиль уже добавлен!</b>\n\n`;
-      dupMessage += `👤 Добавил: <b>${existingProfile.checked_by_username || 'Unknown'}</b>\n`;
-      dupMessage += `📅 Дата: ${new Date(existingProfile.checked_at).toLocaleDateString('ru-RU')}\n\n`;
+      const isSameUser = existingProfile.checked_by_discord_id === discordId;
+      let dupMessage;
+      if (isSameUser) {
+        dupMessage = `⚠️ <b>Ты уже добавлял этого читера!</b>\n\n`;
+        dupMessage += `📅 Дата: ${new Date(existingProfile.checked_at).toLocaleDateString('ru-RU')}\n\n`;
+      } else {
+        dupMessage = `⚠️ <b>Этот профиль уже добавлен!</b>\n\n`;
+        dupMessage += `👤 Добавил: <b>${existingProfile.checked_by_username || 'Unknown'}</b>\n`;
+        dupMessage += `📅 Дата: ${new Date(existingProfile.checked_at).toLocaleDateString('ru-RU')}\n\n`;
+      }
       dupMessage += `${statusEmoji} <b>${profile.personaName}</b> — ${statusText}\n`;
       dupMessage += `🔗 <a href="${profile.profileUrl}">Профиль Steam</a>\n`;
       dupMessage += `\nДанные о банах обновлены.`;

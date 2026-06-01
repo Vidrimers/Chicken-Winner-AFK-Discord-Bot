@@ -83,6 +83,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram) {
           duplicates.push({
             ...profile,
             alreadyAddedBy: existing.checked_by_username || 'Unknown',
+            alreadyAddedByDiscordId: existing.checked_by_discord_id || null,
             alreadyAddedAt: existing.checked_at,
           });
         } else {

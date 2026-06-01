@@ -130,7 +130,7 @@ export class VacHandler {
         // Проверяем, есть ли уже в БД
         const existing = this.db.getCheaterCheckBySteamId(profile.steamId);
         if (existing) {
-          // Профиль уже добавлен — обновляем данные о банах, но сообщаем пользователю
+          // Обновляем данные о банах (автор не перезапишется благодаря ON CONFLICT)
           this.db.upsertCheaterCheck({
             ...profile,
             checkedByDiscordId: message.author.id,
@@ -138,8 +138,15 @@ export class VacHandler {
           });
 
           const embed = this.buildProfileEmbed(profile, existing.checked_by_username);
+          
+          // Разные сообщения: сам добавлял или кто-то другой
+          const isSameUser = existing.checked_by_discord_id === message.author.id;
+          const replyText = isSameUser
+            ? `⚠️ Ты уже добавлял этого читера (${new Date(existing.checked_at).toLocaleDateString('ru-RU')}). Данные о банах обновлены.`
+            : `⚠️ Этот профиль уже добавлен пользователем **${existing.checked_by_username}** (${new Date(existing.checked_at).toLocaleDateString('ru-RU')}). Данные о банах обновлены.`;
+
           await message.reply({
-            content: `⚠️ Этот профиль уже добавлен пользователем **${existing.checked_by_username}** (${new Date(existing.checked_at).toLocaleDateString('ru-RU')}). Данные о банах обновлены.`,
+            content: replyText,
             embeds: [embed]
           });
 
