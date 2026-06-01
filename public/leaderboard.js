@@ -383,6 +383,16 @@ function displayUserModal(
                                 <div class="stat-value">${stats.total_streams || 0}</div>
                                 <div class="stat-label">Включений трансляций</div>
                             </div>
+                            ${data.cheaterStats && data.cheaterStats.totalChecked > 0 ? `
+                            <div class="stat-item">
+                                <div class="stat-value">${data.cheaterStats.totalChecked}</div>
+                                <div class="stat-label">Проверено профилей</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${data.cheaterStats.bannedFound}</div>
+                                <div class="stat-label">Выявлено читеров</div>
+                            </div>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
