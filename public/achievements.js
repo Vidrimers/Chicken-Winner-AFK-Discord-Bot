@@ -33,7 +33,28 @@ const REGULAR_ACHIEVEMENTS = {
     stream_viewer_3: { name: '📺 Топовый зритель', description: 'Провел 100+ часов в канале Че смотрим?', points: 100 },
     stream_viewer_4: { name: '📺 Киберфанат', description: 'Провел 200+ часов в канале Че смотрим?', points: 200 },
     stream_viewer_5: { name: '📺 Бессмертный зритель', description: 'Провел 500+ часов в канале Че смотрим?', points: 500 },
-    stream_viewer_6: { name: '📺 Легенда трансляций', description: 'Провел 1000+ часов в канале Че смотрим?', points: 1000 }
+    stream_viewer_6: { name: '📺 Легенда трансляций', description: 'Провел 1000+ часов в канале Че смотрим?', points: 1000 },
+    // Cheater Checker — проверенные профили
+    checker_first: { name: '🔍 Досье открыто', description: 'Проверил первый Steam-профиль', points: 5 },
+    checker_beginner: { name: '🔍 Любопытный сосед', description: 'Проверил 10 Steam-профилей', points: 10 },
+    checker_active: { name: '🔍 Любитель покопаться', description: 'Проверил 25 Steam-профилей', points: 25 },
+    checker_veteran: { name: '🔍 Диванный детектив', description: 'Проверил 50 Steam-профилей', points: 50 },
+    checker_master: { name: '🔍 Маленький сыщик', description: 'Проверил 100 Steam-профилей', points: 100 },
+    checker_300: { name: '🔍 Патруль на минималках', description: 'Проверил 300 Steam-профилей', points: 200 },
+    checker_500: { name: '🔍 Машина подозрений', description: 'Проверил 500 Steam-профилей', points: 350 },
+    checker_700: { name: '🔍 У меня нет жизни, но есть статистика', description: 'Проверил 700 Steam-профилей', points: 500 },
+    checker_1000: { name: '🔍 Параноик года', description: 'Проверил 1000 Steam-профилей', points: 750 },
+    // Cheater Checker — выявленные читеры
+    cheater_found_first: { name: '🚨 Я так и знал', description: 'Выявил первого читера', points: 15 },
+    cheater_found_5: { name: '🚨 Крысолов', description: 'Выявил 5 читеров', points: 25 },
+    cheater_found_10: { name: '🚨 Слишком много совпадений', description: 'Выявил 10 читеров', points: 50 },
+    cheater_found_25: { name: '🚨 Минус аккаунт', description: 'Выявил 25 читеров', points: 150 },
+    cheater_found_50: { name: '🚨 Уже не удивляюсь', description: 'Выявил 50 читеров', points: 300 },
+    cheater_found_100: { name: '🚨 Санитар матчмейкинга', description: 'Выявил 100 читеров', points: 450 },
+    cheater_found_300: { name: '🚨 Истребитель шнырей', description: 'Выявил 300 читеров', points: 600 },
+    cheater_found_500: { name: '🚨 Valve мне должны', description: 'Выявил 500 читеров', points: 800 },
+    cheater_found_700: { name: '🚨 Главный по репортам', description: 'Выявил 700 читеров', points: 900 },
+    cheater_found_1000: { name: '🚨 VAC на ножках', description: 'Выявил 1000 читеров', points: 1000 }
 };
 
 const SPECIAL_ACHIEVEMENTS = {
