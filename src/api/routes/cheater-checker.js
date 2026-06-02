@@ -42,7 +42,7 @@ const EMBED_COLORS = {
 /**
  * Роуты для cheater checker API
  */
-export function createCheaterCheckerRouter(db, discordClient, telegram) {
+export function createCheaterCheckerRouter(db, discordClient, telegram, achievements) {
   const router = Router();
 
   // Rate limiters
@@ -120,6 +120,15 @@ export function createCheaterCheckerRouter(db, discordClient, telegram) {
           await telegram.sendNewCheaterNotification(checkedByUsername || 'Unknown', 'web', profiles);
         } catch (err) {
           console.error('[CheaterChecker] Ошибка отправки уведомления:', err.message);
+        }
+      }
+
+      // Проверяем достижения cheater-checker для пользователя
+      if (achievements && checkedByDiscordId) {
+        try {
+          await achievements.checkAll(checkedByDiscordId, checkedByUsername || 'Unknown');
+        } catch (err) {
+          console.error('[CheaterChecker] Ошибка проверки достижений:', err.message);
         }
       }
 

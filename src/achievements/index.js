@@ -57,6 +57,11 @@ export class AchievementSystem {
       return;
     }
 
+    // Подгружаем статистику cheater-checker и мержим в stats
+    const cheaterStats = this.db.getUserCheaterStats(userId);
+    stats.totalChecked = cheaterStats.totalChecked || 0;
+    stats.bannedFound = cheaterStats.bannedFound || 0;
+
     for (const [id, achievement] of Object.entries(this.definitions)) {
       // Пропускаем специальные достижения
       if (id === 'best_admin' || id === 'no_afk_week') {
