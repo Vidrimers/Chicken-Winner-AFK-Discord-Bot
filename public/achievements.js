@@ -42,7 +42,7 @@ const REGULAR_ACHIEVEMENTS = {
     checker_master: { name: '🔍 Маленький сыщик', description: 'Проверил 100 Steam-профилей', points: 100 },
     checker_300: { name: '🔍 Патруль на минималках', description: 'Проверил 300 Steam-профилей', points: 200 },
     checker_500: { name: '🔍 Машина подозрений', description: 'Проверил 500 Steam-профилей', points: 350 },
-    checker_700: { name: '🔍 У меня нет жизни, но есть статистика', description: 'Проверил 700 Steam-профилей', points: 500 },
+    checker_700: { name: '🔍 Главный по репортам', description: 'Проверил 700 Steam-профилей', points: 500 },
     checker_1000: { name: '🔍 Параноик года', description: 'Проверил 1000 Steam-профилей', points: 750 },
     // Cheater Checker — выявленные читеры
     cheater_found_first: { name: '🚨 Я так и знал', description: 'Выявил первого читера', points: 15 },
@@ -53,7 +53,7 @@ const REGULAR_ACHIEVEMENTS = {
     cheater_found_100: { name: '🚨 Санитар матчмейкинга', description: 'Выявил 100 читеров', points: 450 },
     cheater_found_300: { name: '🚨 Истребитель шнырей', description: 'Выявил 300 читеров', points: 600 },
     cheater_found_500: { name: '🚨 Valve мне должны', description: 'Выявил 500 читеров', points: 800 },
-    cheater_found_700: { name: '🚨 Главный по репортам', description: 'Выявил 700 читеров', points: 900 },
+    cheater_found_700: { name: '🚨 У меня нет жизни, но есть статистика', description: 'Выявил 700 читеров', points: 900 },
     cheater_found_1000: { name: '🚨 VAC на ножках', description: 'Выявил 1000 читеров', points: 1000 }
 };
 

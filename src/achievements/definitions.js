@@ -308,7 +308,7 @@ export const ACHIEVEMENTS = {
   },
   checker_700: {
     id: 'checker_700',
-    name: '🔍 У меня нет жизни, но есть статистика',
+    name: '🔍 Главный по репортам',
     description: 'Проверил 700 Steam-профилей',
     points: 500,
     condition: (stats) => stats.totalChecked >= 700,
@@ -380,7 +380,7 @@ export const ACHIEVEMENTS = {
   },
   cheater_found_700: {
     id: 'cheater_found_700',
-    name: '🚨 Главный по репортам',
+    name: '🚨 У меня нет жизни, но есть статистика',
     description: 'Выявил 700 читеров',
     points: 900,
     condition: (stats) => stats.bannedFound >= 700,
