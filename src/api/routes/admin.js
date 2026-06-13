@@ -381,7 +381,7 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
       const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
       const backupPath = path.join(backupDir, `afkbot-backup-${timestamp}.db`);
 
-      fs.copyFileSync('./afkbot.db', backupPath);
+      fs.copyFileSync(process.env.DB_FILE || 'afkbot.db', backupPath);
 
       log(`💾 Бэкап базы данных создан: ${backupPath}`);
 

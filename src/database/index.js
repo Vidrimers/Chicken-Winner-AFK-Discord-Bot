@@ -6,7 +6,7 @@ import { runMigrations } from './migrations.js';
  * Database класс для работы с SQLite
  */
 export class DatabaseManager {
-  constructor(dbPath = 'afkbot.db') {
+  constructor(dbPath = process.env.DB_FILE || 'afkbot.db') {
     this.db = new Database(dbPath);
     this.cache = new Map();
     this.statements = new Map();
