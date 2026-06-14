@@ -1392,3 +1392,198 @@ body.modal-open {
 .modal-box-body {
   padding: 24px;
 }
+
+/* ===== STEAM CS2 СТАТИСТИКА ===== */
+
+.steam-stats-card {
+  background: white;
+  border-radius: 15px;
+  padding: 25px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.steam-stats-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.steam-stats-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.steam-stats-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.steam-stats-title svg {
+  color: #1b2838;
+  flex-shrink: 0;
+}
+
+.steam-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+  margin-bottom: 0;
+}
+
+.steam-stat-item {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 14px 10px;
+  text-align: center;
+  border-left: 3px solid #667eea;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.steam-stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #333;
+  line-height: 1.1;
+}
+
+.steam-stat-label {
+  font-size: 0.78rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* ===== FACEIT БЛОК ===== */
+
+.faceit-block {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #eee;
+}
+
+.faceit-block-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.faceit-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.faceit-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 10px 16px;
+  min-width: 70px;
+  border-left: 3px solid #ff6600;
+}
+
+.faceit-stat-label {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.faceit-stat-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #333;
+  margin-top: 2px;
+}
+
+.faceit-ban-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 68, 68, 0.1);
+  color: #cc0000;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  align-self: center;
+}
+
+/* Цвета уровней FACEIT (1–10) */
+.faceit-level-1,
+.faceit-level-2 { color: #808080; }
+.faceit-level-3,
+.faceit-level-4 { color: #ffd700; }
+.faceit-level-5,
+.faceit-level-6 { color: #ff8c00; }
+.faceit-level-7,
+.faceit-level-8 { color: #ff4500; }
+.faceit-level-9,
+.faceit-level-10 { color: #cc0000; }
+
+/* Тёмные темы — адаптация */
+body[data-theme="metal"] .steam-stats-card,
+body[data-theme="discord"] .steam-stats-card,
+body[data-theme="steam"] .steam-stats-card,
+body[data-theme="die-my-darling"] .steam-stats-card {
+  background: var(--card-bg, rgba(255, 255, 255, 0.07));
+  border-color: var(--border-color, rgba(255, 255, 255, 0.1));
+}
+
+body[data-theme="metal"] .steam-stat-item,
+body[data-theme="discord"] .steam-stat-item,
+body[data-theme="steam"] .steam-stat-item,
+body[data-theme="die-my-darling"] .steam-stat-item,
+body[data-theme="metal"] .faceit-stat,
+body[data-theme="discord"] .faceit-stat,
+body[data-theme="steam"] .faceit-stat,
+body[data-theme="die-my-darling"] .faceit-stat {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+body[data-theme="metal"] .steam-stats-title,
+body[data-theme="discord"] .steam-stats-title,
+body[data-theme="steam"] .steam-stats-title,
+body[data-theme="die-my-darling"] .steam-stats-title,
+body[data-theme="metal"] .steam-stat-value,
+body[data-theme="discord"] .steam-stat-value,
+body[data-theme="steam"] .steam-stat-value,
+body[data-theme="die-my-darling"] .steam-stat-value,
+body[data-theme="metal"] .faceit-block-title,
+body[data-theme="discord"] .faceit-block-title,
+body[data-theme="steam"] .faceit-block-title,
+body[data-theme="die-my-darling"] .faceit-block-title,
+body[data-theme="metal"] .faceit-stat-value,
+body[data-theme="discord"] .faceit-stat-value,
+body[data-theme="steam"] .faceit-stat-value,
+body[data-theme="die-my-darling"] .faceit-stat-value {
+  color: #e0e0e0;
+}
+
+body[data-theme="metal"] .steam-stats-title svg,
+body[data-theme="discord"] .steam-stats-title svg,
+body[data-theme="steam"] .steam-stats-title svg,
+body[data-theme="die-my-darling"] .steam-stats-title svg {
+  color: #aaa;
+}
+
+body[data-theme="metal"] .faceit-block,
+body[data-theme="discord"] .faceit-block,
+body[data-theme="steam"] .faceit-block,
+body[data-theme="die-my-darling"] .faceit-block {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
