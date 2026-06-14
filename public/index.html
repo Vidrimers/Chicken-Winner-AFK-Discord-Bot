@@ -822,6 +822,7 @@
             <div class="stats-grid" id="statsGrid">
               <!-- Статистика будет загружена здесь -->
             </div>
+            <div id="steamStatsSection"></div>
           </div>
 
           <div id="achievements" class="tab-content">
@@ -1023,6 +1024,53 @@
                   >
                     <svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связать
                   </button>
+                </div>
+              </div>
+
+              <!-- Steam ID карточка -->
+              <div class="setting-card">
+                <div class="setting-card-icon">🎮</div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">Steam аккаунт</h3>
+                  <p class="setting-card-description">
+                    Привяжи свой Steam ID чтобы показывать CS2 статистику на профиле
+                  </p>
+                  <input
+                    type="text"
+                    id="steamIdSettingInput"
+                    placeholder="76561198..."
+                    class="setting-select"
+                    style="font-family: monospace; letter-spacing: 1px;"
+                    maxlength="17"
+                  />
+                  <button
+                    id="steamIdSaveBtn"
+                    onclick="saveSteamId()"
+                    class="setting-select"
+                    style="
+                      cursor: pointer;
+                      text-align: center;
+                      font-weight: 600;
+                      background: linear-gradient(135deg, #1b2838 0%, #2a475e 100%);
+                      color: white;
+                      border: none;
+                      padding: 12px;
+                      width: 100%;
+                      margin-top: 8px;
+                    "
+                  >
+                    💾 Сохранить Steam ID
+                  </button>
+                  <div id="steamIdError" style="display:none; color:#ff6b6b; font-size:12px; margin-top:6px;"></div>
+                  <p style="font-size: 12px; opacity: 0.7; margin: 8px 0 0 0;">
+                    💡 Не знаешь свой Steam ID?
+                    <a href="https://steamid.io" target="_blank" style="color:#667eea;">steamid.io</a> или
+                    <a href="https://www.steamidfinder.com" target="_blank" style="color:#667eea;">steamidfinder.com</a><br>
+                    Также: <code style="font-size:11px; opacity:0.8;">steamcommunity.com/profiles/[твой Steam ID]</code>
+                  </p>
+                  <p style="font-size: 12px; color: #ffaa00; margin: 6px 0 0 0;">
+                    ⚠️ Профиль Steam должен быть <b>публичным</b>, иначе статистика не отобразится
+                  </p>
                 </div>
               </div>
 

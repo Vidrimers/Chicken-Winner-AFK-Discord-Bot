@@ -275,6 +275,11 @@ async function loadUserDataAuto(userId) {
     displayUserStats(data.stats, data.cheaterStats);
     displayUserAchievements(data.achievements);
     displayUserSettings(data.settings);
+    // Предзаполняем поле Steam ID если уже привязан
+    const steamInput1 = document.getElementById('steamIdSettingInput');
+    if (steamInput1 && data.stats.steam_id) steamInput1.value = data.stats.steam_id;
+    // Загружаем CS2 статистику (собственный профиль при автологине)
+    loadSteamStats(userId, true);
     document.getElementById("loading").style.display = "none";
     document.getElementById("userContent").style.display = "block";
     document.getElementById("userIdDisplay").style.display = "block";
@@ -514,6 +519,11 @@ async function _doLogin(userId) {
     displayUserStats(data.stats, data.cheaterStats);
     displayUserAchievements(data.achievements);
     displayUserSettings(data.settings);
+    // Предзаполняем поле Steam ID если уже привязан
+    const steamInput2 = document.getElementById('steamIdSettingInput');
+    if (steamInput2 && data.stats.steam_id) steamInput2.value = data.stats.steam_id;
+    // Загружаем CS2 статистику (собственный профиль при ручном входе)
+    loadSteamStats(userId, true);
 
     const username = data.stats.username || "Пользователь";
     const avatarUrl = data.stats.avatar_url || null;
@@ -672,6 +682,27 @@ function displayUserStats(stats, cheaterStats) {
     `;
 }
 
+// Загружает CS2/FACEIT статистику и рендерит карточку в #steamStatsSection
+async function loadSteamStats(userId, isOwnProfile) {
+  const section = document.getElementById('steamStatsSection');
+  if (!section) return;
+
+  try {
+    const res = await fetch(`/api/users/${userId}/steam-stats`);
+    if (!res.ok) {
+      section.innerHTML = '';
+      return;
+    }
+    const data = await res.json();
+
+    const html = renderSteamStatsCard(data, isOwnProfile);
+    section.innerHTML = html;
+  } catch (err) {
+    // Тихо проглатываем ошибку — статистика необязательна
+    section.innerHTML = '';
+  }
+}
+
 function displayUserSettings(settings) {
   document.getElementById("dmNotifications").value =
     settings.dmNotifications.toString();
@@ -734,6 +765,46 @@ function displayUserSettings(settings) {
   // Показываем уведомление о секретной теме
   // Передаем информацию о том, активирована ли тема у пользователя
   showSecretThemeNotification(secretThemeActivated);
+}
+
+// Сохранить Steam ID пользователя
+async function saveSteamId() {
+  const input = document.getElementById('steamIdSettingInput');
+  const errorEl = document.getElementById('steamIdError');
+  const steamId = input.value.trim();
+
+  errorEl.style.display = 'none';
+
+  // Клиентская валидация
+  if (!steamId) {
+    errorEl.textContent = 'Введите Steam ID';
+    errorEl.style.display = 'block';
+    return;
+  }
+  if (!/^\d{17}$/.test(steamId) || !steamId.startsWith('765611')) {
+    errorEl.textContent = 'Невалидный Steam ID. Ожидается 17-значный числовой идентификатор, начинающийся с 765611';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/users/${window.currentUserId}/steam`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ steamId }),
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      showNotification('✅ Steam ID сохранён');
+    } else {
+      errorEl.textContent = data.error || 'Ошибка сохранения';
+      errorEl.style.display = 'block';
+    }
+  } catch (err) {
+    errorEl.textContent = 'Ошибка соединения с сервером';
+    errorEl.style.display = 'block';
+  }
 }
 
 // Показать уведомление о секретной теме

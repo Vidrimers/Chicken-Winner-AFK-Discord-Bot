@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { checkProfiles } from '../../steam/steamApi.js';
+import { getCachedStats } from '../../steam/statsCache.js';
 import { USER_IDS, STEAM_CONFIG } from '../../config.js';
 import { EmbedBuilder } from 'discord.js';
 
@@ -98,6 +99,10 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
           checkedByDiscordId,
           checkedByUsername: checkedByUsername || 'Unknown',
         });
+
+        // Асинхронно подтягиваем Steam/CS2 статистику в фоне (не блокируем ответ)
+        getCachedStats(profile.steamId, db, 'cheater_checks', profile.steamId)
+          .catch(err => console.error('[CheaterChecker] Ошибка кэширования Steam stats:', err.message));
       }
 
       // Обновляем данные о банах для дубликатов (без перезаписи автора)

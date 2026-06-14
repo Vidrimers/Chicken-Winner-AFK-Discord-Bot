@@ -41,6 +41,11 @@ export const STEAM_CONFIG = {
   VAC_THREAD_ID: process.env.VAC_THREAD_ID,
 };
 
+// ===== FACEIT CONFIGURATION =====
+export const FACEIT_CONFIG = {
+  FACEIT_API_KEY: process.env.FACEIT_API_KEY || null,
+};
+
 // ===== VALIDATION =====
 export function validateConfig() {
   const required = [

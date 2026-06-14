@@ -422,6 +422,35 @@ export class DatabaseManager {
     };
   }
 
+  // ===== STEAM DATA =====
+
+  setSteamId(userId, steamId) {
+    this.prepare('UPDATE user_stats SET steam_id = ? WHERE user_id = ?').run(steamId, userId);
+  }
+
+  getSteamId(userId) {
+    const result = this.prepare('SELECT steam_id FROM user_stats WHERE user_id = ?').get(userId);
+    return result?.steam_id ?? null;
+  }
+
+  updateUserSteamCache(userId, cacheJson, timestamp) {
+    this.prepare('UPDATE user_stats SET steam_cache = ?, steam_cache_updated = ? WHERE user_id = ?').run(cacheJson, timestamp, userId);
+  }
+
+  updateCheaterSteamCache(steamId, cacheJson, timestamp) {
+    this.prepare('UPDATE cheater_checks SET steam_cache = ?, steam_cache_updated = ? WHERE steam_id = ?').run(cacheJson, timestamp, steamId);
+  }
+
+  getUserSteamCache(userId) {
+    const result = this.prepare('SELECT steam_cache, steam_cache_updated FROM user_stats WHERE user_id = ?').get(userId);
+    return result ?? null;
+  }
+
+  getCheaterSteamCache(steamId) {
+    const result = this.prepare('SELECT steam_cache, steam_cache_updated FROM cheater_checks WHERE steam_id = ?').get(steamId);
+    return result ?? null;
+  }
+
   // ===== BUG REPORTS =====
 
   createBugReport(userId, username, bugText) {

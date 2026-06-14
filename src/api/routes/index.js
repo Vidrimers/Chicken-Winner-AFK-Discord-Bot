@@ -10,6 +10,7 @@ import { createAuthRouter } from "./auth.js";
 import { success } from "../../utils/logger.js";
 import { USER_IDS, DISCORD_CONFIG, SERVER_CONFIG } from "../../config.js";
 import { createSteamProxyRouter } from "./steam-proxy.js";
+import { createSteamRouter } from "./steam.js";
 
 /**
  * Зарегистрировать все API роуты
@@ -259,6 +260,10 @@ export function registerRoutes(
   });
   const steamProxyRouter = createSteamProxyRouter();
   app.use("/api/steam", steamProxyRouter);
+
+  // Steam статистика (привязка Steam ID и получение CS2/FACEIT статистики)
+  const steamRouter = createSteamRouter(db);
+  app.use('/api/users', steamRouter);
 
   success("API роуты зарегистрированы");
 }

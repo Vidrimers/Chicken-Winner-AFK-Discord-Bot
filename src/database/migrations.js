@@ -41,6 +41,83 @@ export function runMigrations(db) {
     }
   });
 
+  // Миграция cheater_checks: добавить колонки steam_cache и steam_cache_updated
+  {
+    const cheaterChecksCols = db.prepare('PRAGMA table_info(cheater_checks)').all();
+    const ccColNames = cheaterChecksCols.map(c => c.name);
+
+    if (!ccColNames.includes('steam_cache')) {
+      try {
+        db.exec('ALTER TABLE cheater_checks ADD COLUMN steam_cache TEXT');
+        console.log('✅ Добавлена колонка steam_cache в cheater_checks');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка steam_cache уже существует в cheater_checks');
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (!ccColNames.includes('steam_cache_updated')) {
+      try {
+        db.exec('ALTER TABLE cheater_checks ADD COLUMN steam_cache_updated INTEGER');
+        console.log('✅ Добавлена колонка steam_cache_updated в cheater_checks');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка steam_cache_updated уже существует в cheater_checks');
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
+  // Миграция user_stats: добавить колонки steam_id, steam_cache и steam_cache_updated
+  {
+    const userStatsCols = db.prepare('PRAGMA table_info(user_stats)').all();
+    const usColNames = userStatsCols.map(c => c.name);
+
+    if (!usColNames.includes('steam_id')) {
+      try {
+        db.exec('ALTER TABLE user_stats ADD COLUMN steam_id TEXT');
+        console.log('✅ Добавлена колонка steam_id в user_stats');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка steam_id уже существует в user_stats');
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (!usColNames.includes('steam_cache')) {
+      try {
+        db.exec('ALTER TABLE user_stats ADD COLUMN steam_cache TEXT');
+        console.log('✅ Добавлена колонка steam_cache в user_stats');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка steam_cache уже существует в user_stats');
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (!usColNames.includes('steam_cache_updated')) {
+      try {
+        db.exec('ALTER TABLE user_stats ADD COLUMN steam_cache_updated INTEGER');
+        console.log('✅ Добавлена колонка steam_cache_updated в user_stats');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка steam_cache_updated уже существует в user_stats');
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
   // Создание таблицы cheater_checks для хранения результатов проверок Steam-профилей
   try {
     db.exec(`
