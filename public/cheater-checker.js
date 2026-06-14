@@ -310,6 +310,61 @@ function isBannedProfile(profile) {
 }
 
 /**
+ * Вычисляет сигналы подозрительности по данным steam_cache.
+ * Возвращает массив объектов { icon, text }.
+ *
+ * @param {object|null} steamCache — объект { cs2, faceit } из profile.steam_cache (уже распарсенный)
+ * @returns {Array<{icon: string, text: string}>}
+ */
+function computeSuspiciousSignals(steamCache) {
+  const signals = [];
+
+  if (!steamCache || !steamCache.cs2) return signals;
+
+  const cs2 = steamCache.cs2;
+  const faceit = steamCache.faceit || null;
+
+  // 1. Приватный профиль — дальнейший анализ невозможен
+  if (cs2.private) {
+    signals.push({ icon: '⛔', text: 'Профиль приватный' });
+    return signals;
+  }
+
+  // 2. Молодой аккаунт (< 1 года)
+  if (cs2.accountCreatedYear !== null && cs2.accountCreatedYear !== undefined) {
+    const currentYear = new Date().getFullYear();
+    const accountAgeYears = currentYear - cs2.accountCreatedYear;
+    if (accountAgeYears < 1) {
+      signals.push({ icon: '⚠️', text: `Аккаунт создан в ${cs2.accountCreatedYear}` });
+    }
+  }
+
+  // 3. Мало часов при высоком K/D
+  if (cs2.hoursPlayed !== null && cs2.hoursPlayed !== undefined &&
+      cs2.kd !== null && cs2.kd !== undefined) {
+    if (cs2.hoursPlayed < 100 && cs2.kd > 2.0) {
+      signals.push({ icon: '⚠️', text: `Мало часов (${cs2.hoursPlayed}) при высоком K/D (${cs2.kd})` });
+    }
+  }
+
+  // 4. Бан на FACEIT
+  if (faceit !== null && faceit.isBanned) {
+    signals.push({ icon: '🔴', text: 'Бан на FACEIT' });
+  }
+
+  // 5. FACEIT уровень ≥ 8 при < 200 матчей в CS2
+  if (faceit !== null && !faceit.isBanned &&
+      faceit.level !== null && faceit.level !== undefined &&
+      cs2.totalMatchesPlayed !== null && cs2.totalMatchesPlayed !== undefined) {
+    if (faceit.level >= 8 && cs2.totalMatchesPlayed < 200) {
+      signals.push({ icon: '⚠️', text: `FACEIT уровень ${faceit.level} при малом опыте` });
+    }
+  }
+
+  return signals;
+}
+
+/**
  * Создание HTML карточки профиля
  */
 function createProfileCard(profile, isBanned) {
@@ -340,6 +395,35 @@ function createProfileCard(profile, isBanned) {
     ? `<button class="card-action-btn discord-publish-btn" data-steam-id="${steamId}"><svg class="icon" aria-hidden="true"><use href="#icon-discord"></use></svg> Дискорд</button>`
     : '';
 
+  // Парсим steam_cache
+  let steamCache = null;
+  if (profile.steam_cache) {
+    try {
+      steamCache = JSON.parse(profile.steam_cache);
+    } catch (e) {
+      // Повреждённый кэш — игнорируем
+    }
+  }
+
+  // Вычисляем сигналы подозрительности
+  const signals = computeSuspiciousSignals(steamCache);
+  const suspiciousBadge = signals.length > 0
+    ? `<span class="suspicious-badge">⚠️ Подозрительно</span>`
+    : '';
+
+  // Сигналы в виде списка (отображаются в деталях)
+  const signalsHtml = signals.length > 0
+    ? `<div class="signals-section">
+        ${signals.map(s => `<div class="signal-item">${s.icon} ${escapeHtml(s.text)}</div>`).join('')}
+      </div>`
+    : '';
+
+  // CS2-секция в деталях
+  const cs2Html = renderCs2Section(steamCache);
+
+  // FACEIT-секция в деталях (только если faceit !== null)
+  const faceitHtml = renderFaceitSection(steamCache);
+
   return `
     <div class="profile-card ${statusClass}" data-steam-id="${steamId}">
       <div class="card-header">
@@ -349,11 +433,13 @@ function createProfileCard(profile, isBanned) {
           <div class="card-name" data-steam-id="${steamId}">
             <span class="expand-icon">▶</span>
             ${personaName}
+            ${suspiciousBadge}
           </div>
         </div>
         ${deleteBtn}
       </div>
       <div class="card-details" id="details-${steamId}">
+        ${signalsHtml}
         <div class="detail-row">
           <span class="detail-label">VAC-бан</span>
           <span class="detail-value ${profile.vac_banned ? 'danger' : 'safe'}">${vacBanned}</span>
@@ -378,10 +464,98 @@ function createProfileCard(profile, isBanned) {
           <span class="detail-label">Торговый бан</span>
           <span class="detail-value ${economyBan !== 'Нет' ? 'danger' : 'safe'}">${economyBan}</span>
         </div>
+        ${cs2Html}
+        ${faceitHtml}
       </div>
       <div class="card-actions">
         <a href="${profileUrl}" target="_blank" rel="noopener" class="card-action-btn profile-link-btn"><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Профиль</a>
         ${publishBtn}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Рендерит CS2-секцию внутри card-details.
+ * Скрывает блок если нет кэша, профиль приватный или нет данных CS2.
+ * Сигнал ⛔ при приватном профиле всё равно попадает в signals (шапка карточки).
+ *
+ * @param {object|null} steamCache
+ * @returns {string}
+ */
+function renderCs2Section(steamCache) {
+  if (!steamCache || !steamCache.cs2) return '';
+
+  const cs2 = steamCache.cs2;
+
+  // Приватный или нет данных — скрываем CS2-блок (сигнал уже в шапке)
+  if (cs2.private || cs2.noData) return '';
+
+  const fmt = (val, suffix = '') => (val !== null && val !== undefined) ? `${val}${suffix}` : '—';
+
+  return `
+    <div class="cs2-section">
+      <div class="cs2-section-title">📊 CS2</div>
+      <div class="detail-row">
+        <span class="detail-label">Год аккаунта</span>
+        <span class="detail-value">${fmt(cs2.accountCreatedYear)}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Часов в CS2</span>
+        <span class="detail-value">${fmt(cs2.hoursPlayed, ' ч')}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Матчей</span>
+        <span class="detail-value">${fmt(cs2.totalMatchesPlayed)}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Побед</span>
+        <span class="detail-value">${fmt(cs2.winRate, '%')}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">K/D</span>
+        <span class="detail-value">${fmt(cs2.kd)}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">HS%</span>
+        <span class="detail-value">${fmt(cs2.hsPercent, '%')}</span>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Рендерит FACEIT-секцию внутри card-details.
+ * Если faceit === null — возвращает '' (без заглушки).
+ *
+ * @param {object|null} steamCache
+ * @returns {string}
+ */
+function renderFaceitSection(steamCache) {
+  if (!steamCache || !steamCache.faceit) return '';
+
+  const faceit = steamCache.faceit;
+  const fmt = (val, suffix = '') => (val !== null && val !== undefined) ? `${val}${suffix}` : '—';
+  const banBadge = faceit.isBanned ? ' <span class="faceit-ban-badge">🔴 Забанен</span>' : '';
+
+  return `
+    <div class="faceit-section">
+      <div class="faceit-section-title">🎮 FACEIT${banBadge}</div>
+      <div class="detail-row">
+        <span class="detail-label">Уровень</span>
+        <span class="detail-value faceit-level faceit-level-${faceit.level || 0}">${fmt(faceit.level)}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">ELO</span>
+        <span class="detail-value">${fmt(faceit.elo)}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Матчей</span>
+        <span class="detail-value">${fmt(faceit.matches)}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Побед</span>
+        <span class="detail-value">${faceit.winRate !== null && faceit.winRate !== undefined ? faceit.winRate + '%' : '—'}</span>
       </div>
     </div>
   `;
