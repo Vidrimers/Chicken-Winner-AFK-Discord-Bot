@@ -11,6 +11,7 @@ import { success } from "../../utils/logger.js";
 import { USER_IDS, DISCORD_CONFIG, SERVER_CONFIG } from "../../config.js";
 import { createSteamProxyRouter } from "./steam-proxy.js";
 import { createSteamRouter } from "./steam.js";
+import { sessionManager } from "../server.js";
 
 /**
  * Зарегистрировать все API роуты
@@ -245,16 +246,12 @@ export function registerRoutes(
 
   // Logout роут
   app.get("/logout", (req, res) => {
-    // Очищаем сессию если она есть
-    if (req.session) {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error("Ошибка при очистке сессии:", err);
-        }
-      });
+    // Удаляем сессию из Map
+    if (req.sessionId) {
+      sessionManager.sessions.delete(req.sessionId);
     }
     // Очищаем куки
-    res.clearCookie("connect.sid");
+    res.setHeader('Set-Cookie', 'sessionId=; Path=/; Max-Age=0');
     // Редирект на главную
     res.redirect("/");
   });

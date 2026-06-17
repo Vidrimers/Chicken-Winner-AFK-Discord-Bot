@@ -30,7 +30,9 @@ export function createAuthRouter(db, telegram) {
       ).get(userId);
 
       if (!telegramUser || !telegramUser.telegram_chat_id) {
-        // TG не привязан — вход без кода
+        // TG не привязан — вход без кода, сразу устанавливаем сессию
+        req.session.userId = userId;
+        req.session.save();
         return res.json({ requiresCode: false });
       }
 
@@ -94,6 +96,10 @@ export function createAuthRouter(db, telegram) {
 
       // Помечаем код как использованный
       db.prepare('UPDATE login_codes SET used = 1 WHERE code = ?').run(code);
+
+      // Устанавливаем сессию
+      req.session.userId = userId;
+      req.session.save();
 
       log(`✅ Успешный вход через TG-код для userId: ${userId}`);
 
