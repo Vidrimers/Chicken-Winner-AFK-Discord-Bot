@@ -22,6 +22,15 @@ body[data-theme="metal"] .achievement {
     backdrop-filter: blur(5px);
     border: 1px solid rgba(150, 150, 150, 0.3);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    color: #b0b0b0;
+}
+
+body[data-theme="metal"] .setting-card-title {
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] .setting-card-description {
+    color: #a0a0a0;
 }
 
 body[data-theme="metal"] .tab {
@@ -206,6 +215,14 @@ body[data-theme="discord"] .achievement {
     color: #dcddde;
 }
 
+body[data-theme="discord"] .setting-card-title {
+    color: #ffffff;
+}
+
+body[data-theme="discord"] .setting-card-description {
+    color: #b9bbbe;
+}
+
 body[data-theme="discord"] .tab {
     background: #2f3136;
     color: #b9bbbe;
@@ -377,6 +394,14 @@ body[data-theme="steam"] .achievement {
     background: #16202d;
     border: 1px solid #2a475e;
     color: #c7d5e0;
+}
+
+body[data-theme="steam"] .setting-card-title {
+    color: #ffffff;
+}
+
+body[data-theme="steam"] .setting-card-description {
+    color: #8f98a0;
 }
 
 body[data-theme="steam"] .tab {
@@ -554,6 +579,15 @@ body[data-theme="die-my-darling"] .achievement {
     backdrop-filter: blur(5px);
     border: 1px solid rgba(139, 0, 0, 0.3);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    color: #e0c0c0;
+}
+
+body[data-theme="die-my-darling"] .setting-card-title {
+    color: #ffd0d0;
+}
+
+body[data-theme="die-my-darling"] .setting-card-description {
+    color: #c9a0a0;
 }
 
 body[data-theme="die-my-darling"] .tab {

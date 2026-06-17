@@ -20,6 +20,8 @@ export function createSettingsRouter(db, discordClient, achievements, telegram, 
       achievementNotifications,
       theme,
       channelNotifications,
+      cheaterOwnNotifications,
+      cheaterOthersNotifications,
       settingName, // Имя изменённой настройки
     } = req.body;
 
@@ -162,6 +164,24 @@ export function createSettingsRouter(db, discordClient, achievements, telegram, 
         }
       }
 
+      if (cheaterOwnNotifications !== undefined) {
+        const currentCheaterOwn = db.getUserCheaterOwnNotificationSetting(userId);
+        if (cheaterOwnNotifications !== currentCheaterOwn) {
+          db.setUserCheaterOwnNotificationSetting(userId, cheaterOwnNotifications);
+          settingsChanged = true;
+          changedSettingText = `🚨 Уведомления "Мои читеры": ${cheaterOwnNotifications ? '✅ включены' : '❌ отключены'}`;
+        }
+      }
+
+      if (cheaterOthersNotifications !== undefined) {
+        const currentCheaterOthers = db.getUserCheaterOthersNotificationSetting(userId);
+        if (cheaterOthersNotifications !== currentCheaterOthers) {
+          db.setUserCheaterOthersNotificationSetting(userId, cheaterOthersNotifications);
+          settingsChanged = true;
+          changedSettingText = `🚨 Уведомления "Чужие читеры": ${cheaterOthersNotifications ? '✅ включены' : '❌ отключены'}`;
+        }
+      }
+
       if (settingsChanged) {
         db.incrementUserStat(userId, 'settings_changes');
 
@@ -209,15 +229,17 @@ export function createSettingsRouter(db, discordClient, achievements, telegram, 
       }
 
       db.prepare(
-        `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated, channel_notifications)
+        `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated, channel_notifications, cheater_own_notifications, cheater_others_notifications)
          VALUES (?, 
                  COALESCE((SELECT dm_notifications FROM user_settings WHERE user_id = ?), 1),
                  COALESCE((SELECT afk_timeout FROM user_settings WHERE user_id = ?), 15),
                  COALESCE((SELECT achievement_notifications FROM user_settings WHERE user_id = ?), 1),
                  COALESCE((SELECT theme FROM user_settings WHERE user_id = ?), 'standard'),
                  1,
-                 COALESCE((SELECT channel_notifications FROM user_settings WHERE user_id = ?), 0))`
-      ).run(userId, userId, userId, userId, userId, userId);
+                 COALESCE((SELECT channel_notifications FROM user_settings WHERE user_id = ?), 0),
+                 COALESCE((SELECT cheater_own_notifications FROM user_settings WHERE user_id = ?), 1),
+                 COALESCE((SELECT cheater_others_notifications FROM user_settings WHERE user_id = ?), 0))`
+      ).run(userId, userId, userId, userId, userId, userId, userId, userId);
 
       log(`🎉 Секретная тема активирована для userId: ${userId}`);
 

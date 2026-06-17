@@ -504,21 +504,41 @@ async function main() {
                   await sendTelegramReport(adminMessage);
                   log(`📨 Отправлено уведомление админу: ${profileName} получил ограничения`);
 
-                  // Уведомление тому, кто добавил профиль (если связан с Telegram)
+                  // Уведомление тому, кто добавил профиль (если включены уведомления "мои читеры" и связан с Telegram)
                   if (existing.checked_by_discord_id) {
-                    const telegramChatId = db.getTelegramChatId(existing.checked_by_discord_id);
-                    if (telegramChatId) {
-                      const userMessage =
-                        `⚠️ <b>Обновление по потенциальному читеру</b>\n\n` +
-                        `Профиль, который вы добавили, получил ограничения:\n\n` +
-                        `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
-                        `🆔 SteamID: ${profile.steamId}\n` +
-                        `🚫 Ограничения: ${restrictionDetails.join(', ')}\n` +
-                        `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
+                    const ownNotificationsEnabled = db.getUserCheaterOwnNotificationSetting(existing.checked_by_discord_id);
+                    if (ownNotificationsEnabled) {
+                      const telegramChatId = db.getTelegramChatId(existing.checked_by_discord_id);
+                      if (telegramChatId) {
+                        const userMessage =
+                          `⚠️ <b>Обновление по потенциальному читеру</b>\n\n` +
+                          `Профиль, который вы добавили, получил ограничения:\n\n` +
+                          `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
+                          `🆔 SteamID: ${profile.steamId}\n` +
+                          `🚫 Ограничения: ${restrictionDetails.join(', ')}\n` +
+                          `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
 
-                      await sendTelegramMessageToUser(telegramChatId, userMessage);
-                      log(`📨 Отправлено уведомление пользователю (${existing.checked_by_discord_id}): ${profileName} получил ограничения`);
+                        await sendTelegramMessageToUser(telegramChatId, userMessage);
+                        log(`📨 Отправлено уведомление пользователю (${existing.checked_by_discord_id}): ${profileName} получил ограничения`);
+                      }
                     }
+                  }
+
+                  // Уведомление подписчикам "чужие читеры"
+                  const otherSubscribers = db.getUsersSubscribedToOthersCheaterNotifications();
+                  for (const subscriber of otherSubscribers) {
+                    if (subscriber.user_id === existing.checked_by_discord_id) continue;
+                    const othersMessage =
+                      `🔔 <b>Изменение статуса читера</b>\n\n` +
+                      `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
+                      `🆔 SteamID: ${profile.steamId}\n` +
+                      `🚫 Ограничения: ${restrictionDetails.join(', ')}\n` +
+                      `👁 Добавил: ${existing.checked_by_username || 'Неизвестно'}\n` +
+                      `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
+                    await sendTelegramMessageToUser(subscriber.telegram_chat_id, othersMessage);
+                  }
+                  if (otherSubscribers.length > 0) {
+                    log(`📨 Отправлено уведомление ${otherSubscribers.length} подписчикам "чужие читеры": ${profileName}`);
                   }
                 }
               }

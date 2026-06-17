@@ -429,6 +429,16 @@ body.modal-open {
   flex: 1; /* Растягивается, отталкивая кнопки вниз */
 }
 
+.setting-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: inherit;
+}
+
 /* Контейнер для кнопок и селектов внизу карточки */
 .setting-card-actions {
   width: 100%;

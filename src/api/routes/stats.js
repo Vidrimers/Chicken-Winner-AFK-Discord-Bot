@@ -75,6 +75,8 @@ export function createStatsRouter(db, discordClient, telegram) {
         theme: db.getUserTheme(userId),
         secretThemeActivated: db.getSecretThemeActivated(userId),
         channelNotifications: db.getUserChannelNotificationSetting(userId),
+        cheaterOwnNotifications: db.getUserCheaterOwnNotificationSetting(userId),
+        cheaterOthersNotifications: db.getUserCheaterOthersNotificationSetting(userId),
       };
 
       const cheaterStats = db.getUserCheaterStats(userId);

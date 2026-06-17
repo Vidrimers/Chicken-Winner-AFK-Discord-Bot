@@ -102,9 +102,16 @@ export class DatabaseManager {
 
   setUserDMSetting(userId, enabled) {
     this.prepare(
-      `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout) 
-       VALUES (?, ?, COALESCE((SELECT afk_timeout FROM user_settings WHERE user_id = ?), 15))`
-    ).run(enabled ? 1 : 0, userId, userId);
+      `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated, channel_notifications, cheater_own_notifications, cheater_others_notifications)
+       VALUES (?, ?, 
+               COALESCE((SELECT afk_timeout FROM user_settings WHERE user_id = ?), 15),
+               COALESCE((SELECT achievement_notifications FROM user_settings WHERE user_id = ?), 1),
+               COALESCE((SELECT theme FROM user_settings WHERE user_id = ?), 'standard'),
+               COALESCE((SELECT secret_theme_activated FROM user_settings WHERE user_id = ?), 0),
+               COALESCE((SELECT channel_notifications FROM user_settings WHERE user_id = ?), 0),
+               COALESCE((SELECT cheater_own_notifications FROM user_settings WHERE user_id = ?), 1),
+               COALESCE((SELECT cheater_others_notifications FROM user_settings WHERE user_id = ?), 0))`
+    ).run(userId, enabled ? 1 : 0, userId, userId, userId, userId, userId, userId, userId);
   }
 
   getUserTimeout(userId) {
@@ -114,9 +121,17 @@ export class DatabaseManager {
 
   setUserTimeout(userId, timeout) {
     this.prepare(
-      `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout) 
-       VALUES (?, COALESCE((SELECT dm_notifications FROM user_settings WHERE user_id = ?), 1), ?)`
-    ).run(userId, userId, timeout);
+      `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated, channel_notifications, cheater_own_notifications, cheater_others_notifications)
+       VALUES (?, 
+               COALESCE((SELECT dm_notifications FROM user_settings WHERE user_id = ?), 1), 
+               ?,
+               COALESCE((SELECT achievement_notifications FROM user_settings WHERE user_id = ?), 1),
+               COALESCE((SELECT theme FROM user_settings WHERE user_id = ?), 'standard'),
+               COALESCE((SELECT secret_theme_activated FROM user_settings WHERE user_id = ?), 0),
+               COALESCE((SELECT channel_notifications FROM user_settings WHERE user_id = ?), 0),
+               COALESCE((SELECT cheater_own_notifications FROM user_settings WHERE user_id = ?), 1),
+               COALESCE((SELECT cheater_others_notifications FROM user_settings WHERE user_id = ?), 0))`
+    ).run(userId, userId, timeout, userId, userId, userId, userId, userId, userId);
   }
 
   getUserAchievementNotificationSetting(userId) {
@@ -126,12 +141,17 @@ export class DatabaseManager {
 
   setUserAchievementNotificationSetting(userId, enabled) {
     this.prepare(
-      `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications) 
+      `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated, channel_notifications, cheater_own_notifications, cheater_others_notifications)
        VALUES (?, 
                COALESCE((SELECT dm_notifications FROM user_settings WHERE user_id = ?), 1), 
                COALESCE((SELECT afk_timeout FROM user_settings WHERE user_id = ?), 15),
-               ?)`
-    ).run(userId, userId, userId, enabled ? 1 : 0);
+               ?,
+               COALESCE((SELECT theme FROM user_settings WHERE user_id = ?), 'standard'),
+               COALESCE((SELECT secret_theme_activated FROM user_settings WHERE user_id = ?), 0),
+               COALESCE((SELECT channel_notifications FROM user_settings WHERE user_id = ?), 0),
+               COALESCE((SELECT cheater_own_notifications FROM user_settings WHERE user_id = ?), 1),
+               COALESCE((SELECT cheater_others_notifications FROM user_settings WHERE user_id = ?), 0))`
+    ).run(userId, userId, userId, enabled ? 1 : 0, userId, userId, userId, userId, userId);
   }
 
   getUserTheme(userId) {
@@ -152,15 +172,66 @@ export class DatabaseManager {
   setUserChannelNotificationSetting(userId, value) {
     const numValue = value ? 1 : 0;
     this.prepare(
-      `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated, channel_notifications) 
+      `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated, channel_notifications, cheater_own_notifications, cheater_others_notifications) 
        VALUES (?, 
                COALESCE((SELECT dm_notifications FROM user_settings WHERE user_id = ?), 1), 
                COALESCE((SELECT afk_timeout FROM user_settings WHERE user_id = ?), 15),
                COALESCE((SELECT achievement_notifications FROM user_settings WHERE user_id = ?), 1),
                COALESCE((SELECT theme FROM user_settings WHERE user_id = ?), 'standard'),
                COALESCE((SELECT secret_theme_activated FROM user_settings WHERE user_id = ?), 0),
+               ?,
+               COALESCE((SELECT cheater_own_notifications FROM user_settings WHERE user_id = ?), 1),
+               COALESCE((SELECT cheater_others_notifications FROM user_settings WHERE user_id = ?), 0))`
+    ).run(userId, userId, userId, userId, userId, userId, numValue, userId, userId);
+  }
+
+  getUserCheaterOwnNotificationSetting(userId) {
+    const result = this.prepare('SELECT cheater_own_notifications FROM user_settings WHERE user_id = ?').get(userId);
+    return result ? Boolean(result.cheater_own_notifications) : true;
+  }
+
+  setUserCheaterOwnNotificationSetting(userId, enabled) {
+    this.prepare(
+      `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated, channel_notifications, cheater_own_notifications, cheater_others_notifications)
+       VALUES (?, 
+               COALESCE((SELECT dm_notifications FROM user_settings WHERE user_id = ?), 1), 
+               COALESCE((SELECT afk_timeout FROM user_settings WHERE user_id = ?), 15),
+               COALESCE((SELECT achievement_notifications FROM user_settings WHERE user_id = ?), 1),
+               COALESCE((SELECT theme FROM user_settings WHERE user_id = ?), 'standard'),
+               COALESCE((SELECT secret_theme_activated FROM user_settings WHERE user_id = ?), 0),
+               COALESCE((SELECT channel_notifications FROM user_settings WHERE user_id = ?), 0),
+               ?,
+               COALESCE((SELECT cheater_others_notifications FROM user_settings WHERE user_id = ?), 0))`
+    ).run(userId, userId, userId, userId, userId, userId, userId, enabled ? 1 : 0, userId);
+  }
+
+  getUserCheaterOthersNotificationSetting(userId) {
+    const result = this.prepare('SELECT cheater_others_notifications FROM user_settings WHERE user_id = ?').get(userId);
+    return result ? Boolean(result.cheater_others_notifications) : false;
+  }
+
+  getUsersSubscribedToOthersCheaterNotifications() {
+    return this.prepare(
+      `SELECT us.user_id, tu.telegram_chat_id 
+       FROM user_settings us
+       JOIN telegram_users tu ON us.user_id = tu.user_id
+       WHERE us.cheater_others_notifications = 1 AND tu.started_bot = 1`
+    ).all();
+  }
+
+  setUserCheaterOthersNotificationSetting(userId, enabled) {
+    this.prepare(
+      `INSERT OR REPLACE INTO user_settings (user_id, dm_notifications, afk_timeout, achievement_notifications, theme, secret_theme_activated, channel_notifications, cheater_own_notifications, cheater_others_notifications)
+       VALUES (?, 
+               COALESCE((SELECT dm_notifications FROM user_settings WHERE user_id = ?), 1), 
+               COALESCE((SELECT afk_timeout FROM user_settings WHERE user_id = ?), 15),
+               COALESCE((SELECT achievement_notifications FROM user_settings WHERE user_id = ?), 1),
+               COALESCE((SELECT theme FROM user_settings WHERE user_id = ?), 'standard'),
+               COALESCE((SELECT secret_theme_activated FROM user_settings WHERE user_id = ?), 0),
+               COALESCE((SELECT channel_notifications FROM user_settings WHERE user_id = ?), 0),
+               COALESCE((SELECT cheater_own_notifications FROM user_settings WHERE user_id = ?), 1),
                ?)`
-    ).run(userId, userId, userId, userId, userId, userId, numValue);
+    ).run(userId, userId, userId, userId, userId, userId, userId, userId, enabled ? 1 : 0);
   }
 
   // ===== USER ACHIEVEMENTS =====

@@ -277,7 +277,13 @@ async function loadUserDataAuto(userId) {
     displayUserSettings(data.settings);
     // Предзаполняем поле Steam ID если уже привязан
     const steamInput1 = document.getElementById('steamIdSettingInput');
-    if (steamInput1 && data.stats.steam_id) steamInput1.value = data.stats.steam_id;
+    const steamUnlinkBtn1 = document.getElementById('steamIdUnlinkBtn');
+    if (steamInput1 && data.stats.steam_id) {
+      steamInput1.value = data.stats.steam_id;
+      if (steamUnlinkBtn1) steamUnlinkBtn1.style.display = 'block';
+    } else {
+      if (steamUnlinkBtn1) steamUnlinkBtn1.style.display = 'none';
+    }
     // Загружаем CS2 статистику (собственный профиль при автологине)
     loadSteamStats(userId, true);
     document.getElementById("loading").style.display = "none";
@@ -521,7 +527,13 @@ async function _doLogin(userId) {
     displayUserSettings(data.settings);
     // Предзаполняем поле Steam ID если уже привязан
     const steamInput2 = document.getElementById('steamIdSettingInput');
-    if (steamInput2 && data.stats.steam_id) steamInput2.value = data.stats.steam_id;
+    const steamUnlinkBtn = document.getElementById('steamIdUnlinkBtn');
+    if (steamInput2 && data.stats.steam_id) {
+      steamInput2.value = data.stats.steam_id;
+      if (steamUnlinkBtn) steamUnlinkBtn.style.display = 'block';
+    } else {
+      if (steamUnlinkBtn) steamUnlinkBtn.style.display = 'none';
+    }
     // Загружаем CS2 статистику (собственный профиль при ручном входе)
     loadSteamStats(userId, true);
 
@@ -824,6 +836,11 @@ function displayUserSettings(settings) {
     settings.channelNotifications || false
   ).toString();
 
+  const cheaterOwnEl = document.getElementById("cheaterOwnNotifications");
+  const cheaterOthersEl = document.getElementById("cheaterOthersNotifications");
+  if (cheaterOwnEl) cheaterOwnEl.checked = settings.cheaterOwnNotifications !== false;
+  if (cheaterOthersEl) cheaterOthersEl.checked = settings.cheaterOthersNotifications === true;
+
   // Проверяем активирована ли секретная тема на сервере
   const secretThemeActivated = settings.secretThemeActivated || false;
   const themeSelect = document.getElementById("themeSelect");
@@ -895,12 +912,14 @@ async function saveSteamId() {
     const res = await fetch(`/api/users/${window.currentUserId}/steam`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ steamId }),
+      body: JSON.stringify({ steamId, userId: window.currentUserId }),
     });
     const data = await res.json();
 
     if (res.ok && data.success) {
       showNotification('✅ Steam ID сохранён');
+      const unlinkBtn = document.getElementById('steamIdUnlinkBtn');
+      if (unlinkBtn) unlinkBtn.style.display = 'block';
     } else {
       errorEl.textContent = data.error || 'Ошибка сохранения';
       errorEl.style.display = 'block';
@@ -1037,11 +1056,41 @@ async function checkTelegramLinkStatus() {
         channelNotificationsSelect.style.cursor = "pointer";
       }
 
-      // Меняем подсказку на успешную
+      // Меняем подсказку в зависимости от состояния настройки
       if (channelNotificationsHint) {
-        channelNotificationsHint.textContent =
-          "✅ Уведомления будут приходить в Telegram";
-        channelNotificationsHint.style.color = "#4CAF50";
+        const channelEnabled = channelNotificationsSelect && channelNotificationsSelect.value === "true";
+        if (channelEnabled) {
+          channelNotificationsHint.textContent = "✅ Уведомления будут приходить в Telegram";
+          channelNotificationsHint.style.color = "#4CAF50";
+        } else {
+          channelNotificationsHint.textContent = "Настройка отключена";
+          channelNotificationsHint.style.color = "#999";
+        }
+      }
+
+      // Разблокируем чекбоксы уведомлений о читерах
+      const cheaterOwnEl = document.getElementById("cheaterOwnNotifications");
+      const cheaterOthersEl = document.getElementById("cheaterOthersNotifications");
+      const cheaterHint = document.getElementById("cheaterNotificationsHint");
+      if (cheaterOwnEl) {
+        cheaterOwnEl.disabled = false;
+        cheaterOwnEl.style.opacity = "1";
+        cheaterOwnEl.style.cursor = "pointer";
+      }
+      if (cheaterOthersEl) {
+        cheaterOthersEl.disabled = false;
+        cheaterOthersEl.style.opacity = "1";
+        cheaterOthersEl.style.cursor = "pointer";
+      }
+      if (cheaterHint) {
+        const anyCheaterEnabled = (cheaterOwnEl && cheaterOwnEl.checked) || (cheaterOthersEl && cheaterOthersEl.checked);
+        if (anyCheaterEnabled) {
+          cheaterHint.textContent = "✅ Уведомления будут приходить в Telegram";
+          cheaterHint.style.color = "#4CAF50";
+        } else {
+          cheaterHint.textContent = "Настройки отключены";
+          cheaterHint.style.color = "#999";
+        }
       }
     } else {
       statusDiv.style.display = "none";
@@ -1067,6 +1116,27 @@ async function checkTelegramLinkStatus() {
         channelNotificationsHint.textContent =
           "⚠️ Сначала свяжите аккаунт с Telegram";
         channelNotificationsHint.style.color = "#ff9800";
+      }
+
+      // Блокируем чекбоксы уведомлений о читерах
+      const cheaterOwnEl = document.getElementById("cheaterOwnNotifications");
+      const cheaterOthersEl = document.getElementById("cheaterOthersNotifications");
+      const cheaterHint = document.getElementById("cheaterNotificationsHint");
+      if (cheaterOwnEl) {
+        cheaterOwnEl.disabled = true;
+        cheaterOwnEl.checked = false;
+        cheaterOwnEl.style.opacity = "0.5";
+        cheaterOwnEl.style.cursor = "not-allowed";
+      }
+      if (cheaterOthersEl) {
+        cheaterOthersEl.disabled = true;
+        cheaterOthersEl.checked = false;
+        cheaterOthersEl.style.opacity = "0.5";
+        cheaterOthersEl.style.cursor = "not-allowed";
+      }
+      if (cheaterHint) {
+        cheaterHint.textContent = "⚠️ Сначала свяжите аккаунт с Telegram";
+        cheaterHint.style.color = "#ff9800";
       }
     }
   } catch (error) {
@@ -1328,13 +1398,24 @@ async function autoSaveSetting(selectElement, settingName) {
       if (secretThemeActivated && themeSelect && !themeSelect.querySelector('option[value="die-my-darling"]')) {
         const option = document.createElement("option");
         option.value = "die-my-darling";
-        option.textContent = "🥀 Die my Darling";
+        option.textContent = "🥀 Die My Darling";
         themeSelect.appendChild(option);
       }
     }
 
-    // Уведомления канала включены — Telegram уже привязан (иначе кнопка заблокирована)
-    // Дополнительная подсказка не нужна
+    // Обновляем подсказку "Кто в канале" после изменения
+    if (settingName === 'channelNotifications') {
+      const hint = document.getElementById("channelNotificationsHint");
+      if (hint) {
+        if (settingValue) {
+          hint.textContent = "✅ Уведомления будут приходить в Telegram";
+          hint.style.color = "#4CAF50";
+        } else {
+          hint.textContent = "Настройка отключена";
+          hint.style.color = "#999";
+        }
+      }
+    }
 
   } catch (error) {
     console.error("❌ Ошибка автосохранения:", error);
@@ -1345,6 +1426,95 @@ async function autoSaveSetting(selectElement, settingName) {
       indicator.className = "setting-save-indicator";
       indicator.textContent = "";
     }, 3000);
+  }
+}
+
+// Автосохранение чекбокса при изменении
+async function autoSaveCheckbox(checkboxEl, settingName) {
+  if (!window.currentUserId) return;
+
+  const indicator = document.getElementById(`${settingName}-indicator`);
+  if (indicator) {
+    indicator.textContent = "💾 Сохранение...";
+    indicator.className = "setting-save-indicator saving";
+  }
+
+  try {
+    const requestBody = {};
+    requestBody[settingName] = checkboxEl.checked;
+    requestBody.settingName = settingName;
+
+    const response = await fetch(`/api/settings/${window.currentUserId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) throw new Error('Ошибка сохранения');
+
+    if (indicator) {
+      indicator.textContent = "✅ Сохранено";
+      indicator.className = "setting-save-indicator saved";
+      setTimeout(() => {
+        indicator.className = "setting-save-indicator";
+        indicator.textContent = "";
+      }, 2000);
+    }
+
+    // Обновляем подсказку "Уведомления о читерах" после изменения
+    const cheaterOwnEl = document.getElementById("cheaterOwnNotifications");
+    const cheaterOthersEl = document.getElementById("cheaterOthersNotifications");
+    const cheaterHint = document.getElementById("cheaterNotificationsHint");
+    if (cheaterHint) {
+      const anyEnabled = (cheaterOwnEl && cheaterOwnEl.checked) || (cheaterOthersEl && cheaterOthersEl.checked);
+      if (anyEnabled) {
+        cheaterHint.textContent = "✅ Уведомления будут приходить в Telegram";
+        cheaterHint.style.color = "#4CAF50";
+      } else {
+        cheaterHint.textContent = "Настройки отключены";
+        cheaterHint.style.color = "#999";
+      }
+    }
+  } catch (error) {
+    console.error("❌ Ошибка автосохранения чекбокса:", error);
+    if (indicator) {
+      indicator.textContent = "❌ Ошибка";
+      indicator.className = "setting-save-indicator error";
+      setTimeout(() => {
+        indicator.className = "setting-save-indicator";
+        indicator.textContent = "";
+      }, 3000);
+    }
+  }
+}
+
+// Отвязать Steam ID
+async function unlinkSteamId() {
+  if (!window.currentUserId) return;
+  if (!confirm('Отвязать Steam аккаунт?')) return;
+
+  const errorEl = document.getElementById('steamIdError');
+  errorEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`/api/users/${window.currentUserId}/steam`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: window.currentUserId }),
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      document.getElementById('steamIdSettingInput').value = '';
+      document.getElementById('steamIdUnlinkBtn').style.display = 'none';
+      showNotification('✅ Steam аккаунт отвязан');
+    } else {
+      errorEl.textContent = data.error || 'Ошибка отвязки';
+      errorEl.style.display = 'block';
+    }
+  } catch (err) {
+    errorEl.textContent = 'Ошибка соединения с сервером';
+    errorEl.style.display = 'block';
   }
 }
 

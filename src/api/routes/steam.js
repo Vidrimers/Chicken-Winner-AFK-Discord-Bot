@@ -30,15 +30,18 @@ export function createSteamRouter(db) {
    */
   router.post('/:discordId/steam', async (req, res) => {
     const { discordId } = req.params;
-    const { steamId } = req.body;
+    const { steamId, userId: bodyUserId } = req.body;
 
-    // 1. Аутентификация — есть ли сессия?
-    if (!req.session?.userId) {
+    // Получаем userId из сессии или из тела запроса (fallback для системы без OAuth)
+    const sessionUserId = req.session?.userId || bodyUserId || null;
+
+    // 1. Аутентификация — есть ли идентификатор пользователя?
+    if (!sessionUserId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     // 2. Авторизация — это твой профиль?
-    if (req.session.userId !== discordId) {
+    if (sessionUserId !== discordId) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
@@ -51,6 +54,26 @@ export function createSteamRouter(db) {
 
     // 4. Бизнес-логика
     db.setSteamId(discordId, steamId);
+    return res.json({ success: true });
+  });
+
+  /**
+   * DELETE /api/users/:discordId/steam
+   * Отвязать Steam ID от профиля пользователя
+   */
+  router.delete('/:discordId/steam', async (req, res) => {
+    const { discordId } = req.params;
+    const sessionUserId = req.session?.userId || req.body?.userId || null;
+
+    if (!sessionUserId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (sessionUserId !== discordId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    db.setSteamId(discordId, null);
     return res.json({ success: true });
   });
 

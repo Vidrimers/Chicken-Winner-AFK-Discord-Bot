@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { checkProfiles } from './src/steam/steamApi.js';
-import { STEAM_CONFIG } from './src/config.js';
+import { STEAM_CONFIG, SERVER_CONFIG } from './src/config.js';
 import { EmbedBuilder } from 'discord.js';
 
 // Telegram bot settings
@@ -331,7 +331,11 @@ async function sendMainMenu(chatId) {
         { text: '🔍 Чекер читеров', callback_data: 'menu_checker' }
       ],
       [
-        { text: '🐛 Багрепорт', callback_data: 'menu_bugreport' }
+        { text: '🐛 Багрепорт', callback_data: 'menu_bugreport' },
+        { text: '⚙️ Настройки', callback_data: 'menu_settings' }
+      ],
+      [
+        { text: '🌐 Открыть сайт', url: `http://${SERVER_CONFIG.IP}:${SERVER_CONFIG.PORT}` }
       ]
     ]
   };
@@ -363,6 +367,124 @@ async function sendCheckerMenu(chatId) {
   await telegramBot.sendMessage(chatId, '<b>🔍 Чекер читеров</b>\n\nВыберите действие:', {
     parse_mode: 'HTML',
     reply_markup: checkerButtons
+  });
+}
+
+/**
+ * Отправка подменю настроек
+ */
+async function sendSettingsMenu(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId) {
+    await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+    return;
+  }
+
+  const dm = db.getUserDMSetting(discordId);
+  const timeout = db.getUserTimeout(discordId);
+  const achievement = db.getUserAchievementNotificationSetting(discordId);
+  const channel = db.getUserChannelNotificationSetting(discordId);
+  const cheaterOwn = db.getUserCheaterOwnNotificationSetting(discordId);
+  const cheaterOthers = db.getUserCheaterOthersNotificationSetting(discordId);
+  const steamId = db.getSteamId(discordId);
+
+  const timeoutDisplay = timeout < 15 ? `${timeout} сек` : `${timeout} мин`;
+
+  const settingsButtons = {
+    inline_keyboard: [
+      [{ text: `📩 ЛС уведомления [${dm ? '✅' : '❌'}] · Для Discord`, callback_data: 'settings_toggle_dm' }],
+      [{ text: `⏱ Время до AFK [${timeoutDisplay}] · Для Discord`, callback_data: 'settings_change_timeout' }],
+      [{ text: `🏆 Уведомления о достижениях [${achievement ? '✅' : '❌'}] · Для Discord`, callback_data: 'settings_toggle_achievement' }],
+      [{ text: `🔔 Кто в канале [${channel ? '✅' : '❌'}] · Для Telegram`, callback_data: 'settings_toggle_channel' }],
+      [{ text: `🚨 Уведомления о читерах · Для Telegram`, callback_data: 'settings_cheater_menu' }],
+      [{ text: `🎮 Steam [${steamId ? '✅' : '❌'}]`, callback_data: 'settings_steam_menu' }],
+      [{ text: '◀️ Назад', callback_data: 'back_to_menu' }]
+    ]
+  };
+
+  await telegramBot.sendMessage(chatId, '<b>⚙️ Настройки</b>\n\nНажмите на настройку чтобы изменить:', {
+    parse_mode: 'HTML',
+    reply_markup: settingsButtons
+  });
+}
+
+/**
+ * Переключение настройки и обновление меню
+ */
+async function toggleSetting(chatId, getter, setter, label) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId) return;
+
+  const current = getter.call(db, discordId);
+  setter.call(db, discordId, !current);
+  await sendSettingsMenu(chatId);
+}
+
+/**
+ * Подменю времени до AFK
+ */
+async function sendTimeoutMenu(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId) return;
+
+  const current = db.getUserTimeout(discordId);
+
+  const buttons = [
+    [{ text: `${current === 15 ? '👉 ' : ''}15 минут`, callback_data: 'settings_set_timeout_15' }],
+    [{ text: `${current === 30 ? '👉 ' : ''}30 минут`, callback_data: 'settings_set_timeout_30' }],
+    [{ text: `${current === 45 ? '👉 ' : ''}45 минут`, callback_data: 'settings_set_timeout_45' }],
+    [{ text: '◀️ Назад', callback_data: 'menu_settings' }]
+  ];
+
+  await telegramBot.sendMessage(chatId, '<b>⏱ Время до AFK</b>\n\nВыберите время неактивности:', {
+    parse_mode: 'HTML',
+    reply_markup: { inline_keyboard: buttons }
+  });
+}
+
+/**
+ * Подменю уведомлений о читерах
+ */
+async function sendCheaterSettingsMenu(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId) return;
+
+  const own = db.getUserCheaterOwnNotificationSetting(discordId);
+  const others = db.getUserCheaterOthersNotificationSetting(discordId);
+
+  const buttons = [
+    [{ text: `👤 Мои читеры [${own ? '✅' : '❌'}]`, callback_data: 'settings_toggle_cheater_own' }],
+    [{ text: `👥 Чужие читеры [${others ? '✅' : '❌'}]`, callback_data: 'settings_toggle_cheater_others' }],
+    [{ text: '◀️ Назад', callback_data: 'menu_settings' }]
+  ];
+
+  await telegramBot.sendMessage(chatId, '<b>🚨 Уведомления о читерах</b>\n\nВыберите опцию:', {
+    parse_mode: 'HTML',
+    reply_markup: { inline_keyboard: buttons }
+  });
+}
+
+/**
+ * Подменю Steam аккаунта
+ */
+async function sendSteamMenu(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId) return;
+
+  const steamId = db.getSteamId(discordId);
+
+  const buttons = [];
+  if (steamId) {
+    buttons.push([{ text: `✅ Привязан: ${steamId}`, callback_data: 'noop' }]);
+    buttons.push([{ text: '🗑️ Отвязать Steam', callback_data: 'settings_unlink_steam' }]);
+  } else {
+    buttons.push([{ text: '❌ Не привязан', callback_data: 'noop' }]);
+  }
+  buttons.push([{ text: '◀️ Назад', callback_data: 'menu_settings' }]);
+
+  await telegramBot.sendMessage(chatId, '<b>🎮 Steam аккаунт</b>\n\nПривяжи Steam ID чтобы показывать CS2 статистику на профиле.', {
+    parse_mode: 'HTML',
+    reply_markup: { inline_keyboard: buttons }
   });
 }
 
@@ -1130,6 +1252,90 @@ export function initTelegramBot(
             await sendCheckerMenu(chatId);
             break;
           }
+
+          case 'menu_settings': {
+            const discordIdSettings = getLinkedDiscordId(chatId);
+            if (!discordIdSettings) {
+              await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+              return;
+            }
+            await sendSettingsMenu(chatId);
+            break;
+          }
+
+          case 'settings_toggle_dm':
+            await toggleSetting(chatId, db.getUserDMSetting, db.setUserDMSetting);
+            break;
+
+          case 'settings_toggle_achievement':
+            await toggleSetting(chatId, db.getUserAchievementNotificationSetting, db.setUserAchievementNotificationSetting);
+            break;
+
+          case 'settings_toggle_channel':
+            await toggleSetting(chatId, db.getUserChannelNotificationSetting, db.setUserChannelNotificationSetting);
+            break;
+
+          case 'settings_toggle_cheater_own': {
+            const dIdOwn = getLinkedDiscordId(chatId);
+            if (dIdOwn) {
+              const cur = db.getUserCheaterOwnNotificationSetting(dIdOwn);
+              db.setUserCheaterOwnNotificationSetting(dIdOwn, !cur);
+              await sendCheaterSettingsMenu(chatId);
+            }
+            break;
+          }
+
+          case 'settings_toggle_cheater_others': {
+            const dIdOthers = getLinkedDiscordId(chatId);
+            if (dIdOthers) {
+              const cur = db.getUserCheaterOthersNotificationSetting(dIdOthers);
+              db.setUserCheaterOthersNotificationSetting(dIdOthers, !cur);
+              await sendCheaterSettingsMenu(chatId);
+            }
+            break;
+          }
+
+          case 'settings_change_timeout':
+            await sendTimeoutMenu(chatId);
+            break;
+
+          case 'settings_set_timeout_15': {
+            const dId15 = getLinkedDiscordId(chatId);
+            if (dId15) { db.setUserTimeout(dId15, 15); await sendSettingsMenu(chatId); }
+            break;
+          }
+
+          case 'settings_set_timeout_30': {
+            const dId30 = getLinkedDiscordId(chatId);
+            if (dId30) { db.setUserTimeout(dId30, 30); await sendSettingsMenu(chatId); }
+            break;
+          }
+
+          case 'settings_set_timeout_45': {
+            const dId45 = getLinkedDiscordId(chatId);
+            if (dId45) { db.setUserTimeout(dId45, 45); await sendSettingsMenu(chatId); }
+            break;
+          }
+
+          case 'settings_cheater_menu':
+            await sendCheaterSettingsMenu(chatId);
+            break;
+
+          case 'settings_steam_menu':
+            await sendSteamMenu(chatId);
+            break;
+
+          case 'settings_unlink_steam': {
+            const dIdSteam = getLinkedDiscordId(chatId);
+            if (dIdSteam) {
+              db.setSteamId(dIdSteam, null);
+              await sendSteamMenu(chatId);
+            }
+            break;
+          }
+
+          case 'noop':
+            break;
 
           case 'checker_my_added':
             await handleMyAdded(chatId);

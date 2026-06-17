@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node src/index.js",
+    "dev": "nodemon src/index.js",
     "start:old": "node bot.js"
   },
   "dependencies": {
@@ -15,5 +15,8 @@
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "node-telegram-bot-api": "^0.67.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

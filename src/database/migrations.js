@@ -208,6 +208,38 @@ export function runMigrations(db) {
     console.error(`❌ Ошибка создания таблицы user_blocklist: ${error.message}`);
   }
 
+  // Миграция user_settings: добавить колонки cheater_own_notifications и cheater_others_notifications
+  {
+    const userSettingsCols = db.prepare('PRAGMA table_info(user_settings)').all();
+    const usColNames = userSettingsCols.map(c => c.name);
+
+    if (!usColNames.includes('cheater_own_notifications')) {
+      try {
+        db.exec('ALTER TABLE user_settings ADD COLUMN cheater_own_notifications INTEGER DEFAULT 1');
+        console.log('✅ Добавлена колонка cheater_own_notifications в user_settings');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка cheater_own_notifications уже существует в user_settings');
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (!usColNames.includes('cheater_others_notifications')) {
+      try {
+        db.exec('ALTER TABLE user_settings ADD COLUMN cheater_others_notifications INTEGER DEFAULT 0');
+        console.log('✅ Добавлена колонка cheater_others_notifications в user_settings');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка cheater_others_notifications уже существует в user_settings');
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
   // Создание таблицы login_codes для входа через Telegram-код
   try {
     db.exec(`
