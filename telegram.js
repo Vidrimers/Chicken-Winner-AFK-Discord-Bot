@@ -479,10 +479,11 @@ async function sendSteamMenu(chatId) {
     buttons.push([{ text: '🗑️ Отвязать Steam', callback_data: 'settings_unlink_steam' }]);
   } else {
     buttons.push([{ text: '❌ Не привязан', callback_data: 'noop' }]);
+    buttons.push([{ text: '🔗 Привязать Steam ID', callback_data: 'settings_link_steam' }]);
   }
   buttons.push([{ text: '◀️ Назад', callback_data: 'menu_settings' }]);
 
-  await telegramBot.sendMessage(chatId, '<b>🎮 Steam аккаунт</b>\n\nПривяжи Steam ID чтобы показывать CS2 статистику на профиле.', {
+  await telegramBot.sendMessage(chatId, '<b>🎮 Steam аккаунт</b>\n\nПривяжи Steam ID чтобы показывать CS2 статистику на профиле.\n\n💡 Не знаешь свой Steam ID? В клиенте Steam нажми на свой ник сверху → <b>Об аккаунте</b> — ID будет указан под именем. Или найди через <a href="https://steamid.io">steamid.io</a>', {
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: buttons }
   });
@@ -1334,6 +1335,18 @@ export function initTelegramBot(
             break;
           }
 
+          case 'settings_link_steam': {
+            userStates.set(chatId, 'awaiting_steam_id');
+            const cancelButton = {
+              inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'settings_steam_menu' }]]
+            };
+            await telegramBot.sendMessage(chatId, '🎮 Отправьте свой Steam ID (17-значный числовой идентификатор, начинающийся на 765611)\n\n💡 Не знаешь свой Steam ID? В клиенте Steam нажми на свой ник сверху → <b>Об аккаунте</b> — ID будет указан под именем.', {
+              parse_mode: 'HTML',
+              reply_markup: cancelButton
+            });
+            break;
+          }
+
           case 'noop':
             break;
 
@@ -1423,6 +1436,26 @@ export function initTelegramBot(
         userStates.delete(chatId);
         if (text) {
           await handleSteamUrlCheck(chatId, text.trim());
+        }
+        return;
+      }
+
+      // Проверяем состояние пользователя (ожидание Steam ID для привязки)
+      if (userStates.get(chatId) === 'awaiting_steam_id') {
+        userStates.delete(chatId);
+        if (text) {
+          const steamId = text.trim();
+          if (!/^\d{17}$/.test(steamId) || !steamId.startsWith('765611')) {
+            await telegramBot.sendMessage(chatId, '❌ Невалидный Steam ID. Ожидается 17-значный числовой идентификатор, начинающийся на 765611');
+            await sendSteamMenu(chatId);
+          } else {
+            const discordId = getLinkedDiscordId(chatId);
+            if (discordId) {
+              db.setSteamId(discordId, steamId);
+              await telegramBot.sendMessage(chatId, `✅ Steam ID ${steamId} успешно привязан!`);
+              await sendSteamMenu(chatId);
+            }
+          }
         }
         return;
       }
