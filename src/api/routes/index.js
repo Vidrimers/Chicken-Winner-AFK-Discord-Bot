@@ -29,8 +29,9 @@ export function registerRoutes(
     res.json({
       ADMIN_USER_ID: USER_IDS.ADMIN_USER_ID,
       ADMIN_LOGIN: process.env.ADMIN_LOGIN || "admin",
-      SERVER_IP: SERVER_CONFIG.SERVER_IP || "localhost",
+      SERVER_IP: SERVER_CONFIG.IP || "localhost",
       PORT: SERVER_CONFIG.PORT,
+      SITE_URL: SERVER_CONFIG.SITE_URL,
       TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME || "",
     });
   });

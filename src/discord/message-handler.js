@@ -226,7 +226,7 @@ export class MessageHandler {
 🏆 Достижений: **${achievements.filter(a => a.achievement_id !== 'best_admin').length}/${Object.keys(ACHIEVEMENTS).filter(id => id !== 'best_admin').length}**
 
 👤 **Твой ID:** \`${message.author.id}\`
-🌐 **Подробная статистика:** http://${SERVER_CONFIG.IP}:${SERVER_CONFIG.PORT}
+🌐 **Подробная статистика:** ${SERVER_CONFIG.SITE_URL}
     `);
   }
 
@@ -337,7 +337,7 @@ export class MessageHandler {
 🔍 **VAC Чекер:**
 \`.1. vac-help\` - Справка по чекеру читеров
 
-🌐 **Веб-панель:** http://${SERVER_CONFIG.IP}:${SERVER_CONFIG.PORT}
+🌐 **Веб-панель:** ${SERVER_CONFIG.SITE_URL}
     `);
   }
 

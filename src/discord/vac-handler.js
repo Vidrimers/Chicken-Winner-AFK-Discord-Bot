@@ -352,7 +352,7 @@ export class VacHandler {
         },
         {
           name: '🌐 Веб-версия',
-          value: `Проверить читера также можно на сайте:\nhttp://${SERVER_CONFIG.IP}:${SERVER_CONFIG.PORT}/cheater-checker.html`
+          value: `Проверить читера также можно на сайте:\n${SERVER_CONFIG.SITE_URL}/cheater-checker.html`
         },
         {
           name: '📢 Публикация в Discord',

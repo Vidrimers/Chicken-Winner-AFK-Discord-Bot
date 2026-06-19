@@ -25,6 +25,7 @@ export const TIMEOUTS = {
 export const SERVER_CONFIG = {
   IP: process.env.SERVER_IP || 'localhost',
   PORT: process.env.PORT || 3000,
+  SITE_URL: process.env.SITE_URL || `http://${process.env.SERVER_IP || 'localhost'}:${process.env.PORT || 3000}`,
 };
 
 // ===== TELEGRAM CONFIGURATION =====

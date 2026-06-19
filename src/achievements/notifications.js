@@ -35,7 +35,7 @@ export class AchievementNotificationService {
         `+${achievement.points} очков рейтинга! 🌟\n\n` +
         `💡 Посмотреть все достижения:\n` +
         `📱 В боте: \`.1. achievements\`\n` +
-        `🌐 Веб-панель: http://${SERVER_CONFIG.IP}:${SERVER_CONFIG.PORT}/?userId=${userId}&autoLogin=true`;
+        `🌐 Веб-панель: ${SERVER_CONFIG.SITE_URL}/?userId=${userId}&autoLogin=true`;
 
       await member.send(messageText);
       log(`✅ ЛС отправлено пользователю ${member.username}`);

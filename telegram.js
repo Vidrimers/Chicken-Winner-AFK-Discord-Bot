@@ -335,7 +335,7 @@ async function sendMainMenu(chatId) {
         { text: '⚙️ Настройки', callback_data: 'menu_settings' }
       ],
       [
-        { text: '🌐 Открыть сайт', url: `http://${SERVER_CONFIG.IP}:${SERVER_CONFIG.PORT}` }
+        { text: '🌐 Открыть сайт', url: SERVER_CONFIG.SITE_URL }
       ]
     ]
   };
