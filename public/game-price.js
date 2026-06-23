@@ -54,10 +54,11 @@
   function getUserId() {
     if (currentUserId) return currentUserId;
     try {
-      const auth = localStorage.getItem('auth_user');
-      if (auth) {
-        const user = JSON.parse(auth);
-        currentUserId = user.id || user.user_id;
+      // Основной сайт хранит ID в "afkBotUserId"
+      const afkBotId = localStorage.getItem('afkBotUserId');
+      if (afkBotId) {
+        currentUserId = afkBotId;
+        return currentUserId;
       }
     } catch {}
     if (!currentUserId) {
