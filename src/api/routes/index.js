@@ -25,6 +25,7 @@ export function registerRoutes(
   telegram,
   notificationService,
   gamesDb,
+  priceNotificationService,
 ) {
   // Config роут - для загрузки конфигурации на фронтенде
   app.get("/api/config", (req, res) => {
@@ -53,7 +54,7 @@ export function registerRoutes(
   app.use("/api/auth", authRouter);
 
   // Stats роуты
-  const statsRouter = createStatsRouter(db, discordClient, telegram);
+  const statsRouter = createStatsRouter(db, discordClient, telegram, gamesDb);
   app.use("/api/stats", statsRouter);
 
   // Дополнительные stats endpoints
@@ -182,6 +183,7 @@ export function registerRoutes(
   // Settings роуты
   const settingsRouter = createSettingsRouter(
     db,
+    gamesDb,
     discordClient,
     achievements,
     telegram,
@@ -267,7 +269,7 @@ export function registerRoutes(
 
   // Game Prices роуты
   if (gamesDb) {
-    const gamePricesRouter = createGamePricesRouter(db, gamesDb, discordClient, telegram);
+    const gamePricesRouter = createGamePricesRouter(db, gamesDb, discordClient, telegram, priceNotificationService);
     app.use("/api/game-prices", gamePricesRouter);
   }
 

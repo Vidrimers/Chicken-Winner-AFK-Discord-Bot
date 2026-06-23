@@ -3,6 +3,7 @@ import { validateConfig, SERVER_CONFIG } from './config.js';
 import { success, log, error as logError } from './utils/logger.js';
 import { DatabaseManager } from './database/index.js';
 import { GamesDatabase } from './database/games-db.js';
+import { PriceNotificationService } from './services/price-notification.js';
 import { AchievementSystem } from './achievements/index.js';
 import { AchievementNotificationService } from './achievements/notifications.js';
 import { AchievementChecker } from './achievements/checker.js';
@@ -96,8 +97,12 @@ async function main() {
     // Создание Express сервера
     const app = createExpressServer();
 
+    // Запуск сервиса уведомлений о ценах
+    const priceNotificationService = new PriceNotificationService(gamesDb, discordClient, telegramWrapper);
+    priceNotificationService.start();
+
     // Регистрация API роутов
-    registerRoutes(app, db, discordClient, achievements, telegramWrapper, notificationService, gamesDb);
+    registerRoutes(app, db, discordClient, achievements, telegramWrapper, notificationService, gamesDb, priceNotificationService);
 
     // Запуск сервера
     await startServer(app, SERVER_CONFIG.PORT);

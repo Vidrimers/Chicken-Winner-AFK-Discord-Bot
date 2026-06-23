@@ -1003,6 +1003,25 @@
               </div>
 
               <div class="setting-card">
+                <div class="setting-card-icon"><svg class="icon" aria-hidden="true"><use href="#icon-price"></use></svg></div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">Уведомления об изменении цен</h3>
+                  <p class="setting-card-description">
+                    Получать уведомления когда цена на игру из избранного изменится
+                  </p>
+                  <label class="setting-checkbox-label">
+                    <input type="checkbox" id="priceNotifyDiscord" onchange="autoSaveCheckbox(this, 'priceNotifyDiscord')">
+                    <span>Уведомления в Discord (ЛС)</span>
+                  </label>
+                  <label class="setting-checkbox-label" style="margin-top:8px;">
+                    <input type="checkbox" id="priceNotifyTelegram" onchange="autoSaveCheckbox(this, 'priceNotifyTelegram')">
+                    <span>Уведомления в Telegram</span>
+                  </label>
+                  <div class="setting-save-indicator" id="priceNotifyDiscord-indicator"></div>
+                </div>
+              </div>
+
+              <div class="setting-card">
                 <div class="setting-card-icon"><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg></div>
                 <div class="setting-card-content">
                   <h3 class="setting-card-title">Связь с Telegram</h3>
@@ -1159,11 +1178,19 @@
                 </button>
                 <button
                   id="backupDatabaseBtn"
-                  onclick="backupDatabase()"
+                  onclick="openBackupModal()"
                   class="admin-btn"
                 >
                   <span class="admin-btn-icon"><svg class="icon" aria-hidden="true"><use href="#icon-save"></use></svg></span>
                   <span class="admin-btn-text">Бэкап БД</span>
+                </button>
+                <button
+                  id="gamePriceSettingsBtn"
+                  onclick="openGamePriceSettingsModal()"
+                  class="admin-btn"
+                >
+                  <span class="admin-btn-icon">💰</span>
+                  <span class="admin-btn-text">Настройки Game Price</span>
                 </button>
                 <button
                   id="manageUsersBtn"
@@ -1216,6 +1243,57 @@
 
     <!-- Кнопка "Сообщить об ошибке" для всех залогиненных пользователей -->
     <button id="bugReportFloatingBtn" onclick="openBugReportModal()" style="display:none;position:fixed;bottom:20px;right:20px;padding:5px 6px;border:none;border-radius:50px;background:transparent;color:white;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 15px rgba(102,126,234,0.4);font-size:12px;"><svg class="icon" aria-hidden="true"><use href="#icon-bug"></use></svg> Баг</button>
+
+    <!-- Модалка настроек Game Price -->
+    <div class="modal-overlay" id="gamePriceSettingsModal" style="display:none" onclick="if(event.target===this)closeGamePriceSettingsModal()">
+      <div class="modal-box">
+        <div class="modal-box-header">
+          <h2>💰 Настройки Game Price</h2>
+          <button class="modal-close-btn" onclick="closeGamePriceSettingsModal()">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <div class="setting-card" style="margin-bottom:16px;">
+            <div class="setting-card-content">
+              <h3 class="setting-card-title">Интервал проверки цен</h3>
+              <p class="setting-card-description">Как часто сервис будет проверять цены на игры в избранном у пользователей</p>
+              <select id="gpPriceCheckInterval" class="setting-select" style="width:100%;margin-top:10px;" onchange="saveGamePriceSettings()">
+                <option value="1">Каждый час</option>
+                <option value="2">Каждые 2 часа</option>
+                <option value="3">Каждые 3 часа</option>
+                <option value="4">Каждые 4 часа</option>
+                <option value="6" selected>Каждые 6 часов</option>
+                <option value="8">Каждые 8 часов</option>
+                <option value="12">Каждые 12 часов</option>
+                <option value="24">Раз в сутки</option>
+                <option value="48">Раз в 2 суток</option>
+              </select>
+              <div class="setting-save-indicator" id="gpPriceCheckInterval-indicator"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модалка управления бэкапами -->
+    <div class="modal-overlay" id="backupModal" style="display:none" onclick="if(event.target===this)closeBackupModal()">
+      <div class="modal-box" style="max-width:600px;">
+        <div class="modal-box-header">
+          <h2><svg class="icon" aria-hidden="true"><use href="#icon-save"></use></svg> Управление бэкапами</h2>
+          <button class="modal-close-btn" onclick="closeBackupModal()">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+            <button onclick="createBackup()" class="admin-btn" style="flex:1;min-width:150px;">
+              <span class="admin-btn-icon"><svg class="icon" aria-hidden="true"><use href="#icon-save"></use></svg></span>
+              <span class="admin-btn-text">Создать бэкап</span>
+            </button>
+          </div>
+          <div id="backupInfo" style="margin-bottom:12px;font-size:0.85em;opacity:0.7;"></div>
+          <div id="backupList" style="max-height:400px;overflow-y:auto;"></div>
+          <div id="backupEmpty" style="text-align:center;padding:20px;opacity:0.5;display:none;">Нет бэкапов</div>
+        </div>
+      </div>
+    </div>
 
     <!-- Модальное окно отправки багрепорта -->
     <div class="modal-overlay" id="bugReportModal" style="display:none" onclick="if(event.target===this)closeBugReportModal()">

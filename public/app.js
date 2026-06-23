@@ -841,6 +841,12 @@ function displayUserSettings(settings) {
   if (cheaterOwnEl) cheaterOwnEl.checked = settings.cheaterOwnNotifications !== false;
   if (cheaterOthersEl) cheaterOthersEl.checked = settings.cheaterOthersNotifications === true;
 
+  // Price notification settings
+  const priceDiscordEl = document.getElementById("priceNotifyDiscord");
+  const priceTelegramEl = document.getElementById("priceNotifyTelegram");
+  if (priceDiscordEl) priceDiscordEl.checked = settings.priceNotifyDiscord === true;
+  if (priceTelegramEl) priceTelegramEl.checked = settings.priceNotifyTelegram === true;
+
   // Проверяем активирована ли секретная тема на сервере
   const secretThemeActivated = settings.secretThemeActivated || false;
   const themeSelect = document.getElementById("themeSelect");
@@ -3179,4 +3185,150 @@ function initBlocklistClearableInput() {
     filterBlocklistUsers('');
     input.focus();
   });
+}
+
+// ===== Game Price Settings Modal =====
+async function openGamePriceSettingsModal() {
+  const modal = document.getElementById('gamePriceSettingsModal');
+  modal.style.display = 'block';
+
+  try {
+    const res = await fetch('/api/game-prices/admin/settings');
+    const data = await res.json();
+    const select = document.getElementById('gpPriceCheckInterval');
+    select.value = String(data.priceCheckIntervalHours || 6);
+  } catch (err) {
+    console.error('Ошибка загрузки настроек Game Price:', err);
+  }
+}
+
+function closeGamePriceSettingsModal() {
+  document.getElementById('gamePriceSettingsModal').style.display = 'none';
+}
+
+async function saveGamePriceSettings() {
+  const select = document.getElementById('gpPriceCheckInterval');
+  const indicator = document.getElementById('gpPriceCheckInterval-indicator');
+  const hours = parseInt(select.value, 10);
+
+  indicator.textContent = '💾 Сохранение...';
+  indicator.className = 'setting-save-indicator saving';
+
+  try {
+    const res = await fetch('/api/game-prices/admin/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priceCheckIntervalHours: hours }),
+    });
+
+    if (!res.ok) throw new Error('Ошибка');
+
+    indicator.textContent = '✅ Сохранено';
+    indicator.className = 'setting-save-indicator saved';
+    setTimeout(() => {
+      indicator.className = 'setting-save-indicator';
+      indicator.textContent = '';
+    }, 2000);
+  } catch (err) {
+    indicator.textContent = '❌ Ошибка';
+    indicator.className = 'setting-save-indicator error';
+  }
+}
+
+// ===== Backup Modal =====
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleString('ru-RU');
+}
+
+async function openBackupModal() {
+  document.getElementById('backupModal').style.display = 'block';
+  await loadBackupList();
+}
+
+function closeBackupModal() {
+  document.getElementById('backupModal').style.display = 'none';
+}
+
+async function loadBackupList() {
+  const listEl = document.getElementById('backupList');
+  const emptyEl = document.getElementById('backupEmpty');
+  const infoEl = document.getElementById('backupInfo');
+
+  listEl.innerHTML = '<div style="text-align:center;padding:20px;opacity:0.5;">Загрузка...</div>';
+  emptyEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/admin/backups');
+    const data = await res.json();
+
+    infoEl.textContent = `Всего бэкапов: ${data.backups.length} | Размер: ${formatSize(data.totalSize)}`;
+
+    if (data.backups.length === 0) {
+      listEl.innerHTML = '';
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    listEl.innerHTML = data.backups.map(b => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.05);margin-bottom:6px;border:1px solid rgba(255,255,255,0.08);">
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:0.9em;">${formatDate(b.date)}</div>
+          <div style="font-size:0.8em;opacity:0.6;margin-top:2px;">
+            ${b.files.map(f => `${f.type === 'afkbot' ? '🟢' : '🎮'} ${f.name} (${formatSize(f.size)})`).join(' | ')}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="restoreBackup('${b.timestamp}')" style="padding:6px 12px;border-radius:6px;border:1px solid rgba(76,175,80,0.4);background:rgba(76,175,80,0.15);color:#4caf50;cursor:pointer;font-size:0.8em;font-weight:600;">Восстановить</button>
+          <button onclick="deleteBackupFiles(${JSON.stringify(b.files.map(f=>f.name)).replace(/"/g, '&quot;')})" style="padding:6px 12px;border-radius:6px;border:1px solid rgba(244,67,54,0.4);background:rgba(244,67,54,0.15);color:#f44336;cursor:pointer;font-size:0.8em;font-weight:600;">Удалить</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#f44336;">Ошибка загрузки</div>';
+  }
+}
+
+async function createBackup() {
+  try {
+    const res = await fetch('/api/admin/backup-database', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      await loadBackupList();
+    }
+  } catch (err) {
+    console.error('Ошибка создания бэкапа:', err);
+  }
+}
+
+async function restoreBackup(timestamp) {
+  if (!confirm('Восстановить БД из этого бэкапа? Сервер потребует перезапуска.')) return;
+
+  try {
+    const res = await fetch('/api/admin/restore-database', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timestamp }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('БД восстановлена! Перезапустите сервер.');
+    }
+  } catch (err) {
+    alert('Ошибка восстановления');
+  }
+}
+
+async function deleteBackupFiles(filenames) {
+  if (!confirm('Удалить эти файлы бэкапа?')) return;
+
+  for (const filename of filenames) {
+    await fetch(`/api/admin/backups/${filename}`, { method: 'DELETE' });
+  }
+  await loadBackupList();
 }

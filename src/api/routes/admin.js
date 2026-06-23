@@ -366,7 +366,7 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
 
   /**
    * POST /api/admin/backup-database
-   * Создать бэкап базы данных
+   * Создать бэкап обеих баз данных
    */
   router.post('/backup-database', async (req, res) => {
     try {
@@ -379,20 +379,158 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
       }
 
       const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
-      const backupPath = path.join(backupDir, `afkbot-backup-${timestamp}.db`);
 
-      fs.copyFileSync(process.env.DB_FILE || 'afkbot.db', backupPath);
+      // Бэкап afkbot.db
+      const afkbotPath = path.join(backupDir, `afkbot-backup-${timestamp}.db`);
+      fs.copyFileSync(process.env.DB_FILE || 'afkbot.db', afkbotPath);
 
-      log(`💾 Бэкап базы данных создан: ${backupPath}`);
+      // Бэкап games.db
+      const gamesPath = path.join(backupDir, `games-backup-${timestamp}.db`);
+      const gamesDbFile = process.env.GAMES_DB_FILE || 'games.db';
+      if (fs.existsSync(gamesDbFile)) {
+        fs.copyFileSync(gamesDbFile, gamesPath);
+      }
+
+      log(`💾 Бэкап создан: afkbot-backup-${timestamp}.db, games-backup-${timestamp}.db`);
 
       res.json({
         success: true,
         message: 'Бэкап успешно создан',
-        filename: `afkbot-backup-${timestamp}.db`,
+        files: [
+          `afkbot-backup-${timestamp}.db`,
+          fs.existsSync(gamesPath) ? `games-backup-${timestamp}.db` : null,
+        ].filter(Boolean),
       });
     } catch (error) {
       logError(`Ошибка при создании бэкапа: ${error.message}`);
       res.status(500).json({ error: 'Failed to create backup' });
+    }
+  });
+
+  /**
+   * GET /api/admin/backups
+   * Список бэкапов с метаданными
+   */
+  router.get('/backups', async (req, res) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+
+      const backupDir = './backup';
+      if (!fs.existsSync(backupDir)) {
+        return res.json({ backups: [], totalSize: 0 });
+      }
+
+      const files = fs.readdirSync(backupDir).filter(f => f.endsWith('.db'));
+      const backups = [];
+
+      // Группируем по timestamp
+      const grouped = {};
+      for (const file of files) {
+        const match = file.match(/^(afkbot|games)-backup-(.+)\.db$/);
+        if (match) {
+          const type = match[1];
+          const timestamp = match[2];
+          if (!grouped[timestamp]) grouped[timestamp] = { timestamp, files: [] };
+          const filePath = path.join(backupDir, file);
+          const stats = fs.statSync(filePath);
+          grouped[timestamp].files.push({
+            name: file,
+            type,
+            size: stats.size,
+            createdAt: stats.birthtime,
+          });
+        }
+      }
+
+      let totalSize = 0;
+      for (const group of Object.values(grouped)) {
+        const groupSize = group.files.reduce((sum, f) => sum + f.size, 0);
+        totalSize += groupSize;
+        backups.push({
+          timestamp: group.timestamp,
+          files: group.files,
+          totalSize: groupSize,
+          date: group.files[0]?.createdAt,
+        });
+      }
+
+      backups.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      res.json({ backups, totalSize });
+    } catch (error) {
+      logError(`Ошибка получения списка бэкапов: ${error.message}`);
+      res.status(500).json({ error: 'Failed to list backups' });
+    }
+  });
+
+  /**
+   * POST /api/admin/restore-database
+   * Восстановить из бэкапа
+   */
+  router.post('/restore-database', async (req, res) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+
+      const { timestamp } = req.body;
+      if (!timestamp) {
+        return res.status(400).json({ error: 'timestamp required' });
+      }
+
+      const backupDir = './backup';
+      const afkbotBackup = path.join(backupDir, `afkbot-backup-${timestamp}.db`);
+      const gamesBackup = path.join(backupDir, `games-backup-${timestamp}.db`);
+
+      if (!fs.existsSync(afkbotBackup)) {
+        return res.status(404).json({ error: 'Бэкап не найден' });
+      }
+
+      // Восстанавливаем afkbot.db
+      fs.copyFileSync(afkbotBackup, process.env.DB_FILE || 'afkbot.db');
+
+      // Восстанавливаем games.db если есть
+      const gamesDbFile = process.env.GAMES_DB_FILE || 'games.db';
+      if (fs.existsSync(gamesBackup)) {
+        fs.copyFileSync(gamesBackup, gamesDbFile);
+      }
+
+      log(`💾 БД восстановлена из бэкапа: ${timestamp}`);
+
+      res.json({ success: true, message: 'БД восстановлена. Перезапустите сервер.' });
+    } catch (error) {
+      logError(`Ошибка восстановления: ${error.message}`);
+      res.status(500).json({ error: 'Failed to restore' });
+    }
+  });
+
+  /**
+   * DELETE /api/admin/backups/:filename
+   * Удалить файл бэкапа
+   */
+  router.delete('/backups/:filename', async (req, res) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+
+      const { filename } = req.params;
+      // Безопасность: только .db файлы из папки backup
+      if (!filename.endsWith('.db') || filename.includes('..')) {
+        return res.status(400).json({ error: 'Invalid filename' });
+      }
+
+      const filePath = path.join('./backup', filename);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Файл не найден' });
+      }
+
+      fs.unlinkSync(filePath);
+      log(`💾 Бэкап удалён: ${filename}`);
+
+      res.json({ success: true });
+    } catch (error) {
+      logError(`Ошибка удаления бэкапа: ${error.message}`);
+      res.status(500).json({ error: 'Failed to delete' });
     }
   });
 

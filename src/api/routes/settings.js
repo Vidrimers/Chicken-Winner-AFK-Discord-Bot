@@ -5,7 +5,7 @@ import { formatTime } from '../../utils/time.js';
 /**
  * Роуты для настроек пользователей
  */
-export function createSettingsRouter(db, discordClient, achievements, telegram, notificationService) {
+export function createSettingsRouter(db, gamesDb, discordClient, achievements, telegram, notificationService) {
   const router = Router();
 
   /**
@@ -22,6 +22,8 @@ export function createSettingsRouter(db, discordClient, achievements, telegram, 
       channelNotifications,
       cheaterOwnNotifications,
       cheaterOthersNotifications,
+      priceNotifyDiscord,
+      priceNotifyTelegram,
       settingName, // Имя изменённой настройки
     } = req.body;
 
@@ -179,6 +181,24 @@ export function createSettingsRouter(db, discordClient, achievements, telegram, 
           db.setUserCheaterOthersNotificationSetting(userId, cheaterOthersNotifications);
           settingsChanged = true;
           changedSettingText = `🚨 Уведомления "Чужие читеры": ${cheaterOthersNotifications ? '✅ включены' : '❌ отключены'}`;
+        }
+      }
+
+      // Price change notifications (games.db)
+      if ((priceNotifyDiscord !== undefined || priceNotifyTelegram !== undefined) && gamesDb) {
+        const current = gamesDb.getNotificationSettings(userId);
+        const newSettings = {
+          price_changes_enabled: true,
+          notify_discord: priceNotifyDiscord !== undefined ? priceNotifyDiscord : current.notify_discord,
+          notify_telegram: priceNotifyTelegram !== undefined ? priceNotifyTelegram : current.notify_telegram,
+        };
+        newSettings.price_changes_enabled = newSettings.notify_discord || newSettings.notify_telegram;
+        gamesDb.setNotificationSettings(userId, newSettings);
+        settingsChanged = true;
+        if (priceNotifyDiscord !== undefined) {
+          changedSettingText = `💰 Уведомления о ценах в Discord: ${priceNotifyDiscord ? '✅ включены' : '❌ отключены'}`;
+        } else if (priceNotifyTelegram !== undefined) {
+          changedSettingText = `💰 Уведомления о ценах в Telegram: ${priceNotifyTelegram ? '✅ включены' : '❌ отключены'}`;
         }
       }
 

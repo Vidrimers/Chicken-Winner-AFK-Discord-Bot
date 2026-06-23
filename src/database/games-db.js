@@ -59,6 +59,11 @@ export class GamesDatabase {
         notify_telegram INTEGER DEFAULT 0
       );
 
+      CREATE TABLE IF NOT EXISTS game_price_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+
       CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
       CREATE INDEX IF NOT EXISTS idx_favorites_game ON favorites(game_slug);
       CREATE INDEX IF NOT EXISTS idx_game_prices_slug ON game_prices(game_slug);
@@ -275,6 +280,28 @@ export class GamesDatabase {
        LEFT JOIN telegram_users tu ON un.user_id = tu.user_id
        WHERE un.price_changes_enabled = 1`
     ).all();
+  }
+
+  // ===== GAME PRICE SETTINGS =====
+
+  getSetting(key, defaultValue = null) {
+    const row = this.prepare('SELECT value FROM game_price_settings WHERE key = ?').get(key);
+    return row ? row.value : defaultValue;
+  }
+
+  setSetting(key, value) {
+    this.prepare(
+      'INSERT INTO game_price_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+    ).run(key, String(value));
+  }
+
+  getPriceCheckInterval() {
+    const val = this.getSetting('price_check_interval_hours', '6');
+    return parseInt(val, 10) || 6;
+  }
+
+  setPriceCheckInterval(hours) {
+    this.setSetting('price_check_interval_hours', String(hours));
   }
 
   close() {

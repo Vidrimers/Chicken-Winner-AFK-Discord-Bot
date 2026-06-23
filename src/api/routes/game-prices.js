@@ -1,6 +1,24 @@
 import { Router } from "express";
 
-export function createGamePricesRouter(db, gamesDb, discordClient, telegram) {
+// Rate limiting для Hot.Game API
+const apiCallTimestamps = [];
+const API_RATE_LIMIT = 30; // максимум запросов в минуту
+const API_RATE_WINDOW = 60 * 1000; // окно 1 минута
+
+function canCallApi() {
+  const now = Date.now();
+  // Удаляем старые записи
+  while (apiCallTimestamps.length > 0 && apiCallTimestamps[0] < now - API_RATE_WINDOW) {
+    apiCallTimestamps.shift();
+  }
+  return apiCallTimestamps.length < API_RATE_LIMIT;
+}
+
+function recordApiCall() {
+  apiCallTimestamps.push(Date.now());
+}
+
+export function createGamePricesRouter(db, gamesDb, discordClient, telegram, priceNotificationService) {
   const router = Router();
 
   // ===== SEARCH =====
@@ -16,9 +34,14 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram) {
 
       // Если в БД мало результатов — пробуем поиск через API
       if (results.length === 0) {
+        if (!canCallApi()) {
+          console.warn("Hot.Game API rate limit exceeded, skipping search");
+          return res.json(results);
+        }
         try {
           const apiRes = await fetch("https://api.hot.game/method/all-games");
           if (apiRes.ok) {
+            recordApiCall();
             const allGames = await apiRes.json();
             const query = q.trim().toLowerCase();
             const matched = allGames.filter(
@@ -127,31 +150,38 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram) {
 
       if (!game || isStale) {
         // Запрашиваем из API
-        try {
-          const apiRes = await fetch(
-            `https://api.hot.game/game/${slug}/main-info?currency=${currency}`
-          );
-          if (apiRes.ok) {
-            const apiData = await apiRes.json();
+        if (!canCallApi()) {
+          console.warn("Hot.Game API rate limit exceeded, using cached data");
+          if (!game) {
+            return res.status(404).json({ error: "Игра не найдена (кэш пуст)" });
+          }
+        } else {
+          try {
+            const apiRes = await fetch(
+              `https://api.hot.game/game/${slug}/main-info?currency=${currency}`
+            );
+            if (apiRes.ok) {
+              recordApiCall();
+              const apiData = await apiRes.json();
 
-            // Сохраняем/обновляем基本信息
-            gamesDb.upsertGame(apiData);
+              // Сохраняем/обновляем基本信息
+              gamesDb.upsertGame(apiData);
 
-            // Сохраняем цены
-            if (apiData.min_prices_by_region) {
-              const allPrices = [];
-              for (const [region, regionPrices] of Object.entries(apiData.min_prices_by_region)) {
-                for (const price of regionPrices) {
-                  allPrices.push({
-                    region: region,
-                    currency: price.currency,
-                    price: price.price,
-                    old_price: null,
-                    discount: price.percent_discount || 0,
-                    platform: price.platform,
-                    store_name: price.platform,
-                    store_url: null,
-                  });
+              // Сохраняем цены
+              if (apiData.min_prices_by_region) {
+                const allPrices = [];
+                for (const [region, regionPrices] of Object.entries(apiData.min_prices_by_region)) {
+                  for (const price of regionPrices) {
+                    allPrices.push({
+                      region: region,
+                      currency: price.currency,
+                      price: price.price,
+                      old_price: null,
+                      discount: price.percent_discount || 0,
+                      platform: price.platform,
+                      store_name: price.platform,
+                      store_url: null,
+                    });
                 }
               }
               gamesDb.upsertGamePrices(slug, allPrices);
@@ -161,6 +191,7 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram) {
           }
         } catch (apiErr) {
           console.error(`Ошибка API для ${slug}:`, apiErr.message);
+        }
         }
       }
 
@@ -211,7 +242,7 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram) {
     }
   });
 
-  router.post("/favorites", (req, res) => {
+  router.post("/favorites", async (req, res) => {
     try {
       const { user_id, game_slug } = req.body;
       if (!user_id || !game_slug) {
@@ -219,6 +250,29 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram) {
       }
 
       gamesDb.addFavorite(user_id, game_slug);
+
+      // Записываем начальную цену для графика
+      try {
+        const currency = req.body.currency || 'RUB';
+        const apiRes = await fetch(`https://api.hot.game/game/${game_slug}/main-info?currency=${currency}`);
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          if (apiData.min_prices_by_region) {
+            let minPrice = Infinity;
+            for (const regionPrices of Object.values(apiData.min_prices_by_region)) {
+              for (const p of regionPrices) {
+                if (p.price < minPrice) minPrice = p.price;
+              }
+            }
+            if (minPrice < Infinity) {
+              gamesDb.addPriceHistory(game_slug, minPrice, currency);
+            }
+          }
+        }
+      } catch (e) {
+        // Не критично
+      }
+
       res.json({ success: true });
     } catch (error) {
       console.error("Ошибка добавления в избранное:", error.message);
@@ -286,6 +340,35 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram) {
       res.json({ success: true });
     } catch (error) {
       console.error("Ошибка сохранения настроек уведомлений:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
+  // ===== ADMIN SETTINGS =====
+  router.get("/admin/settings", (req, res) => {
+    try {
+      const interval = gamesDb.getPriceCheckInterval();
+      res.json({ priceCheckIntervalHours: interval });
+    } catch (error) {
+      console.error("Ошибка получения настроек:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
+  router.post("/admin/settings", (req, res) => {
+    try {
+      const { priceCheckIntervalHours } = req.body;
+      if (priceCheckIntervalHours !== undefined) {
+        const hours = Math.max(1, Math.min(48, parseInt(priceCheckIntervalHours, 10) || 6));
+        gamesDb.setPriceCheckInterval(hours);
+        // Перезапускаем сервис с новым интервалом
+        if (priceNotificationService) {
+          priceNotificationService.restart();
+        }
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Ошибка сохранения настроек:", error.message);
       res.status(500).json({ error: "Ошибка сервера" });
     }
   });

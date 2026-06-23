@@ -4,7 +4,7 @@ import { log, error as logError } from '../../utils/logger.js';
 /**
  * Роуты для статистики пользователей
  */
-export function createStatsRouter(db, discordClient, telegram) {
+export function createStatsRouter(db, discordClient, telegram, gamesDb) {
   const router = Router();
 
   /**
@@ -78,6 +78,13 @@ export function createStatsRouter(db, discordClient, telegram) {
         cheaterOwnNotifications: db.getUserCheaterOwnNotificationSetting(userId),
         cheaterOthersNotifications: db.getUserCheaterOthersNotificationSetting(userId),
       };
+
+      // Price notification settings from games.db
+      if (gamesDb) {
+        const priceSettings = gamesDb.getNotificationSettings(userId);
+        settings.priceNotifyDiscord = priceSettings.notify_discord === 1;
+        settings.priceNotifyTelegram = priceSettings.notify_telegram === 1;
+      }
 
       const cheaterStats = db.getUserCheaterStats(userId);
 
