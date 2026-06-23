@@ -874,3 +874,229 @@ body[data-theme="die-my-darling"] .discord-publish-btn {
     color: #ffa0a0;
     border-color: rgba(139, 0, 0, 0.5);
 }
+
+/* ===== GAME PRICE — ТЕМА: МЕТАЛЛ ===== */
+body[data-theme="metal"] .gp-header {
+    background: rgba(50, 50, 50, 0.8);
+    border: 1px solid rgba(150, 150, 150, 0.3);
+}
+
+body[data-theme="metal"] .gp-game-card {
+    background: rgba(60, 60, 60, 0.4);
+    border-color: rgba(150, 150, 150, 0.2);
+}
+
+body[data-theme="metal"] .gp-game-card:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+body[data-theme="metal"] .gp-tab {
+    color: #b0b0b0;
+}
+
+body[data-theme="metal"] .gp-tab.active {
+    color: #e0e0e0;
+}
+
+body[data-theme="metal"] .gp-game-modal {
+    background: #2a2a2a;
+    border-color: rgba(150, 150, 150, 0.3);
+}
+
+body[data-theme="metal"] .gp-game-modal-header {
+    background: #2a2a2a;
+    border-color: rgba(150, 150, 150, 0.2);
+}
+
+body[data-theme="metal"] .gp-price-row {
+    background: rgba(60, 60, 60, 0.4);
+    border-color: rgba(150, 150, 150, 0.15);
+}
+
+body[data-theme="metal"] .gp-skeleton-card {
+    background: rgba(60, 60, 60, 0.4);
+    border-color: rgba(150, 150, 150, 0.1);
+}
+
+body[data-theme="metal"] .gp-setting select,
+body[data-theme="metal"] .gp-filter-group select {
+    background: rgba(40, 40, 40, 0.6);
+    border-color: rgba(150, 150, 150, 0.3);
+}
+
+/* ===== GAME PRICE — ТЕМА: NEON ===== */
+body[data-theme="neon"] .gp-header {
+    background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(255, 0, 255, 0.15));
+    border: 1px solid rgba(0, 255, 255, 0.3);
+}
+
+body[data-theme="neon"] .gp-game-card {
+    background: rgba(0, 255, 255, 0.05);
+    border-color: rgba(0, 255, 255, 0.2);
+}
+
+body[data-theme="neon"] .gp-game-card:hover {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+}
+
+body[data-theme="neon"] .gp-tab.active {
+    color: #00ffff;
+    border-bottom-color: #00ffff;
+}
+
+body[data-theme="neon"] .gp-fav-btn.active {
+    color: #ff00ff;
+    text-shadow: 0 0 12px rgba(255, 0, 255, 0.7);
+}
+
+body[data-theme="neon"] .gp-game-modal {
+    background: #0a0a1a;
+    border-color: rgba(0, 255, 255, 0.3);
+}
+
+body[data-theme="neon"] .gp-game-modal-header {
+    background: #0a0a1a;
+    border-color: rgba(0, 255, 255, 0.2);
+}
+
+body[data-theme="neon"] .gp-price-row {
+    background: rgba(0, 255, 255, 0.05);
+    border-color: rgba(0, 255, 255, 0.15);
+}
+
+body[data-theme="neon"] .gp-price-value {
+    color: #00ff88;
+}
+
+body[data-theme="neon"] .gp-setting select,
+body[data-theme="neon"] .gp-filter-group select {
+    background: rgba(0, 255, 255, 0.08);
+    border-color: rgba(0, 255, 255, 0.3);
+    color: #e0e0e0;
+}
+
+body[data-theme="neon"] .steam-input {
+    border-color: rgba(0, 255, 255, 0.3);
+}
+
+body[data-theme="neon"] .steam-input:focus {
+    border-color: #00ffff;
+    box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.2);
+}
+
+/* ===== GAME PRICE — ТЕМА: STEAM ===== */
+body[data-theme="steam"] .gp-header {
+    background: linear-gradient(135deg, rgba(30, 60, 114, 0.8), rgba(42, 82, 152, 0.8));
+    border: 1px solid rgba(102, 192, 244, 0.3);
+}
+
+body[data-theme="steam"] .gp-game-card {
+    background: rgba(30, 60, 114, 0.3);
+    border-color: rgba(102, 192, 244, 0.2);
+}
+
+body[data-theme="steam"] .gp-game-card:hover {
+    box-shadow: 0 0 20px rgba(102, 192, 244, 0.2);
+}
+
+body[data-theme="steam"] .gp-tab.active {
+    color: #66c0f4;
+    border-bottom-color: #66c0f4;
+}
+
+body[data-theme="steam"] .gp-fav-btn.active {
+    color: #ffd700;
+}
+
+body[data-theme="steam"] .gp-game-modal {
+    background: #1b2838;
+    border-color: rgba(102, 192, 244, 0.3);
+}
+
+body[data-theme="steam"] .gp-game-modal-header {
+    background: #1b2838;
+    border-color: rgba(102, 192, 244, 0.2);
+}
+
+body[data-theme="steam"] .gp-price-row {
+    background: rgba(102, 192, 244, 0.08);
+    border-color: rgba(102, 192, 244, 0.15);
+}
+
+body[data-theme="steam"] .gp-price-value {
+    color: #a0d8f8;
+}
+
+body[data-theme="steam"] .gp-setting select,
+body[data-theme="steam"] .gp-filter-group select {
+    background: rgba(30, 60, 114, 0.5);
+    border-color: rgba(102, 192, 244, 0.3);
+}
+
+body[data-theme="steam"] .steam-input {
+    border-color: rgba(102, 192, 244, 0.3);
+}
+
+body[data-theme="steam"] .steam-input:focus {
+    border-color: #66c0f4;
+    box-shadow: 0 0 0 3px rgba(102, 192, 244, 0.2);
+}
+
+/* ===== GAME PRICE — ТЕМА: DIE MY DARLING ===== */
+body[data-theme="die-my-darling"] .gp-header {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.6), rgba(80, 0, 0, 0.8));
+    border: 1px solid rgba(255, 50, 50, 0.3);
+}
+
+body[data-theme="die-my-darling"] .gp-game-card {
+    background: rgba(139, 0, 0, 0.15);
+    border-color: rgba(255, 50, 50, 0.2);
+}
+
+body[data-theme="die-my-darling"] .gp-game-card:hover {
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.2);
+}
+
+body[data-theme="die-my-darling"] .gp-tab.active {
+    color: #ff4444;
+    border-bottom-color: #ff4444;
+}
+
+body[data-theme="die-my-darling"] .gp-fav-btn.active {
+    color: #ff0000;
+    text-shadow: 0 0 12px rgba(255, 0, 0, 0.7);
+}
+
+body[data-theme="die-my-darling"] .gp-game-modal {
+    background: #1a0000;
+    border-color: rgba(255, 50, 50, 0.3);
+}
+
+body[data-theme="die-my-darling"] .gp-game-modal-header {
+    background: #1a0000;
+    border-color: rgba(255, 50, 50, 0.2);
+}
+
+body[data-theme="die-my-darling"] .gp-price-row {
+    background: rgba(255, 50, 50, 0.08);
+    border-color: rgba(255, 50, 50, 0.15);
+}
+
+body[data-theme="die-my-darling"] .gp-price-value {
+    color: #ffa0a0;
+}
+
+body[data-theme="die-my-darling"] .gp-setting select,
+body[data-theme="die-my-darling"] .gp-filter-group select {
+    background: rgba(139, 0, 0, 0.3);
+    border-color: rgba(255, 50, 50, 0.3);
+}
+
+body[data-theme="die-my-darling"] .steam-input {
+    border-color: rgba(255, 50, 50, 0.3);
+}
+
+body[data-theme="die-my-darling"] .steam-input:focus {
+    border-color: #ff4444;
+    box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.2);
+}
