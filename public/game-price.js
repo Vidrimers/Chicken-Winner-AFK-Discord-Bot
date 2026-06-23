@@ -332,16 +332,21 @@
       if (game.description) meta.push(game.description);
       document.getElementById('gpModalMeta').innerHTML = meta.join('<br>');
 
-      // Screenshots
-      if (game.screenshots && game.screenshots.length > 0) {
-        const slider = document.getElementById('gpModalScreenshots');
-        game.screenshots.forEach((src) => {
-          const img = document.createElement('img');
-          img.className = 'gp-screenshot';
-          img.src = src;
-          img.loading = 'lazy';
-          slider.appendChild(img);
-        });
+      // Screenshots (store links now stored here)
+      if (game.screenshots) {
+        let storeLinks = [];
+        try {
+          storeLinks = typeof game.screenshots === 'string' ? JSON.parse(game.screenshots) : game.screenshots;
+        } catch {}
+        if (Array.isArray(storeLinks) && storeLinks.length > 0 && storeLinks[0].url) {
+          const slider = document.getElementById('gpModalScreenshots');
+          slider.innerHTML = storeLinks.map(s => `
+            <a href="${s.url}" target="_blank" rel="noopener" class="gp-store-link">
+              <span class="gp-store-name">${s.source || s.activation || 'Магазин'}</span>
+              <span class="gp-store-buy">Купить →</span>
+            </a>
+          `).join('');
+        }
       }
 
       // Prices

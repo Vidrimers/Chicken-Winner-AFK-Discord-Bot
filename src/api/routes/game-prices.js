@@ -167,22 +167,44 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
               // Сохраняем/обновляем基本信息
               gamesDb.upsertGame(apiData);
 
-              // Парсим poster (og:image) со страницы игры
-              if (!game || !game.poster) {
-                try {
-                  const pageRes = await fetch(`https://hot.game/ru-kz/game/${slug}`, {
-                    headers: { 'User-Agent': 'Mozilla/5.0' }
-                  });
-                  if (pageRes.ok) {
-                    const html = await pageRes.text();
-                    const ogMatch = html.match(/og:image["\s]+content="([^"]+)"/i)
-                      || html.match(/content="([^"]+)"\s+.*?og:image/i);
-                    if (ogMatch) {
-                      gamesDb.setPoster(slug, ogMatch[1]);
+              // Парсим данные со страницы игры (poster, description, store links)
+              try {
+                const pageRes = await fetch(`https://hot.game/ru-kz/game/${slug}`, {
+                  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                });
+                if (pageRes.ok) {
+                  const html = await pageRes.text();
+                  const updates = {};
+
+                  // Poster
+                  const ogImg = html.match(/property="og:image"\s+content="([^"]+)"/);
+                  if (ogImg) updates.poster = ogImg[1];
+
+                  // Description
+                  const ogDesc = html.match(/name="description"\s+content="([^"]+)"/);
+                  if (ogDesc) updates.description = ogDesc[1];
+
+                  // Store links: data-href + data-price-source
+                  const storeLinks = [];
+                  const storeRegex = /data-href="([^"]+)"[^>]*class="hidden-link2 hidden-link-game-price"[^>]*>[\s\S]*?data-price-source="([^"]*)"[^>]*data-activation="([^"]*)"/g;
+                  let m;
+                  while ((m = storeRegex.exec(html)) !== null) {
+                    const url = m[1].replace(/&amp;/g, '&');
+                    const source = m[2];
+                    const activation = m[3];
+                    if (!storeLinks.find(s => s.url === url)) {
+                      storeLinks.push({ url, source, activation });
                     }
                   }
-                } catch (e) { /* не критично */ }
-              }
+                  if (storeLinks.length > 0) {
+                    updates.screenshots = JSON.stringify(storeLinks);
+                  }
+
+                  if (Object.keys(updates).length > 0) {
+                    gamesDb.updateGameInfo(slug, updates);
+                  }
+                }
+              } catch (e) { /* не критично */ }
 
               // Сохраняем цены
               if (apiData.min_prices_by_region) {
@@ -376,23 +398,22 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
           result[slug] = game.poster;
           continue;
         }
-        // Парсим poster со страницы
+        // Парсим данные со страницы
         try {
           if (!canCallApi()) continue;
-          console.log(`[posters] Парсим og:image для ${slug}...`);
+          console.log(`[posters] Парсим ${slug}...`);
           const pageRes = await fetch(`https://hot.game/ru-kz/game/${slug}`, {
-            headers: { 'User-Agent': 'Mozilla/5.0' }
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
           });
           console.log(`[posters] Ответ для ${slug}: ${pageRes.status}`);
           if (pageRes.ok) {
             recordApiCall();
             const html = await pageRes.text();
-            const ogMatch = html.match(/og:image["\s]+content="([^"]+)"/i)
-                      || html.match(/content="([^"]+)"\s+.*?og:image/i);
-            console.log(`[posters] og:image для ${slug}: ${ogMatch ? ogMatch[1] : 'не найден'}`);
-            if (ogMatch) {
-              result[slug] = ogMatch[1];
-              gamesDb.setPoster(slug, ogMatch[1]);
+            const ogImg = html.match(/property="og:image"\s+content="([^"]+)"/);
+            console.log(`[posters] og:image для ${slug}: ${ogImg ? ogImg[1] : 'не найден'}`);
+            if (ogImg) {
+              result[slug] = ogImg[1];
+              gamesDb.setPoster(slug, ogImg[1]);
             }
           }
           await new Promise(r => setTimeout(r, 300));
