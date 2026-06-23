@@ -389,6 +389,10 @@
       document.getElementById('gpModalTitle').textContent = game.title || slug;
       if (game.poster) {
         document.getElementById('gpModalPoster').src = game.poster;
+        // Ставим размытый постер как фон модалки
+        document.getElementById('gpModalBody').style.setProperty('--poster-bg', `url(${game.poster})`);
+      } else {
+        document.getElementById('gpModalBody').style.setProperty('--poster-bg', 'none');
       }
 
       // Meta

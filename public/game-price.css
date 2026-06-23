@@ -462,13 +462,14 @@
 .gp-game-modal {
   background: #1a1a2e;
   border-radius: 16px;
-  max-width: 700px;
+  max-width: 1000px;
   width: 95%;
   max-height: 90vh;
   overflow-y: auto;
   margin: 5vh auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   border: 1px solid rgba(255,255,255,0.1);
+  position: relative;
 }
 
 .gp-game-modal-header {
@@ -492,20 +493,39 @@
 .gp-game-modal-body {
   padding: 20px;
   color: #e0e0e0;
+  position: relative;
+}
+
+.gp-game-modal-body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--poster-bg, none);
+  background-size: cover;
+  background-position: center;
+  filter: blur(30px) brightness(0.4);
+  z-index: 0;
+  border-radius: 0 0 16px 16px;
+}
+
+.gp-game-modal-body > * {
+  position: relative;
+  z-index: 1;
 }
 
 .gp-game-poster-wrap {
-  position: relative;
-  display: inline-block;
+  display: flex;
+  justify-content: center;
   margin-bottom: 16px;
 }
 
 .gp-game-poster {
-  width: 100%;
-  max-height: 300px;
-  object-fit: cover;
+  max-width: 350px;
+  max-height: 350px;
+  object-fit: contain;
   border-radius: 12px;
   display: block;
+  margin: 0 auto;
 }
 
 .gp-game-meta {
@@ -759,9 +779,15 @@
 
   .gp-game-modal {
     width: 100%;
+    max-width: 100%;
     max-height: 100vh;
     border-radius: 0;
     margin: 0;
+  }
+
+  .gp-game-poster {
+    max-width: 250px;
+    max-height: 250px;
   }
 
   .gp-screenshot {
