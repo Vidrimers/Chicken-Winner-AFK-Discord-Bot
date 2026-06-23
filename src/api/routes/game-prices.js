@@ -243,7 +243,11 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
         try {
           console.log(`[game] Парсим страницу для ${slug} (poster=${!!game.poster}, desc=${!!game.description})`);
           const pageRes = await fetch(`https://hot.game/ru-kz/game/${slug}`, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+              'Accept': 'text/html',
+              'Accept-Language': 'ru',
+            }
           });
           if (pageRes.ok) {
             const html = await pageRes.text();
@@ -451,7 +455,11 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
           if (!canCallApi()) continue;
           console.log(`[posters] Парсим ${slug}...`);
           const pageRes = await fetch(`https://hot.game/ru-kz/game/${slug}`, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+              'Accept': 'text/html',
+              'Accept-Language': 'ru',
+            }
           });
           console.log(`[posters] Ответ для ${slug}: ${pageRes.status}`);
           if (pageRes.ok) {
