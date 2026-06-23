@@ -111,7 +111,7 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
           if (apiRes.ok) {
             const allGames = await apiRes.json();
             popular = allGames.slice(0, 20).map((g) => ({
-              game_slug: g.slug,
+              slug: g.slug,
               title: g.title,
               hg_link: g.hg_link,
               cnt: 0,
