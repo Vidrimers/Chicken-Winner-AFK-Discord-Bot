@@ -167,6 +167,22 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
               // Сохраняем/обновляем基本信息
               gamesDb.upsertGame(apiData);
 
+              // Парсим poster (og:image) со страницы игры
+              if (!game || !game.poster) {
+                try {
+                  const pageRes = await fetch(`https://hot.game/ru-kz/game/${slug}`, {
+                    headers: { 'User-Agent': 'Mozilla/5.0' }
+                  });
+                  if (pageRes.ok) {
+                    const html = await pageRes.text();
+                    const ogMatch = html.match(/property="og:image"\s+content="([^"]+)"/);
+                    if (ogMatch) {
+                      gamesDb.updateGameInfo(slug, { poster: ogMatch[1] });
+                    }
+                  }
+                } catch (e) { /* не критично */ }
+              }
+
               // Сохраняем цены
               if (apiData.min_prices_by_region) {
                 const allPrices = [];
@@ -340,6 +356,47 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
       res.json({ success: true });
     } catch (error) {
       console.error("Ошибка сохранения настроек уведомлений:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
+  // ===== POSTERS =====
+  router.get("/posters", async (req, res) => {
+    try {
+      const { slugs } = req.query;
+      if (!slugs) return res.json({});
+
+      const slugList = slugs.split(',').slice(0, 10);
+      const result = {};
+
+      for (const slug of slugList) {
+        const game = gamesDb.getGameBySlug(slug);
+        if (game && game.poster) {
+          result[slug] = game.poster;
+          continue;
+        }
+        // Парсим poster со страницы
+        try {
+          if (!canCallApi()) continue;
+          const pageRes = await fetch(`https://hot.game/ru-kz/game/${slug}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+          });
+          if (pageRes.ok) {
+            recordApiCall();
+            const html = await pageRes.text();
+            const ogMatch = html.match(/property="og:image"\s+content="([^"]+)"/);
+            if (ogMatch) {
+              result[slug] = ogMatch[1];
+              gamesDb.updateGameInfo(slug, { poster: ogMatch[1] });
+            }
+          }
+          await new Promise(r => setTimeout(r, 300));
+        } catch (e) { /* skip */ }
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Ошибка получения постеров:", error.message);
       res.status(500).json({ error: "Ошибка сервера" });
     }
   });

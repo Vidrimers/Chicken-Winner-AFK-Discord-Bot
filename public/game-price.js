@@ -131,6 +131,7 @@
 
     const card = document.createElement('div');
     card.className = 'gp-game-card';
+    card.dataset.slug = game.slug;
     card.innerHTML = `
       <button class="gp-fav-btn ${isFav ? 'active' : ''}" data-slug="${game.slug}" title="В избранное">★</button>
       <img class="gp-game-card-poster" src="${game.poster || '/avatars/nopic.png'}" alt="${game.title}" loading="lazy" />
@@ -155,6 +156,17 @@
     const fragment = document.createDocumentFragment();
     games.forEach((g) => fragment.appendChild(renderGameCard(g)));
     container.appendChild(fragment);
+  }
+
+  async function loadPosters(slugs) {
+    if (!slugs || slugs.length === 0) return;
+    try {
+      const data = await apiGet(`/posters?slugs=${slugs.join(',')}`);
+      for (const [slug, poster] of Object.entries(data)) {
+        const imgs = document.querySelectorAll(`.gp-game-card[data-slug="${slug}"] .gp-game-card-poster`);
+        imgs.forEach(img => { img.src = poster; });
+      }
+    } catch {}
   }
 
   function showSkeleton(show) {
@@ -212,6 +224,7 @@
       document.getElementById('gpResultsTitle').textContent = `Результаты (${results.length})`;
       renderGrid(document.getElementById('gpResultsGrid'), results);
       resultsSection.style.display = 'block';
+      loadPosters(results.map(g => g.slug).filter(Boolean));
     } catch (err) {
       showSkeleton(false);
       showEmpty('Ошибка поиска');
@@ -224,6 +237,7 @@
       const games = await apiGet('/popular');
       if (games.length > 0) {
         renderGrid(document.getElementById('gpPopularGrid'), games);
+        loadPosters(games.map(g => g.slug).filter(Boolean));
       }
     } catch {}
   }
@@ -263,6 +277,7 @@
       }
       empty.style.display = 'none';
       renderGrid(grid, favs);
+      loadPosters(favs.map(f => f.slug).filter(Boolean));
     } catch {
       grid.innerHTML = '';
       empty.style.display = 'block';
