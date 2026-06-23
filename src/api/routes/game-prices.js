@@ -124,7 +124,7 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
         // Обогащаем данными из БД
         popular = popular.map((p) => {
           const game = gamesDb.getGameBySlug(p.game_slug);
-          return { ...p, title: game?.title, hg_link: game?.hg_link };
+          return { slug: p.game_slug, title: game?.title || p.game_slug, hg_link: game?.hg_link };
         });
       }
 

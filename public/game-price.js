@@ -193,10 +193,6 @@
     document.getElementById('subtab-recent').classList.remove('active');
     resultsSection.style.display = 'none';
     hideEmpty();
-    popularSection.style.display = 'none';
-    recentSection.style.display = 'none';
-    resultsSection.style.display = 'none';
-    hideEmpty();
 
     try {
       const sort = document.getElementById('gpSort').value;

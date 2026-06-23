@@ -167,7 +167,7 @@ export class GamesDatabase {
 
   getUserFavorites(userId) {
     return this.prepare(
-      `SELECT f.game_slug, f.added_at, g.title, g.hg_link, g.poster
+      `SELECT f.game_slug as slug, f.added_at, g.title, g.hg_link, g.poster
        FROM favorites f
        LEFT JOIN games g ON f.game_slug = g.slug
        WHERE f.user_id = ?
