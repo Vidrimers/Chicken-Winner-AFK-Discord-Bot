@@ -261,15 +261,18 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
                 }
               } catch (e) { /* не критично */ }
 
-              // Сохраняем цены
+              // Сохраняем цены (с конвертацией в выбранную валюту)
               if (apiData.min_prices_by_region) {
                 const allPrices = [];
                 for (const [region, regionPrices] of Object.entries(apiData.min_prices_by_region)) {
                   for (const price of regionPrices) {
+                    // Используем converted_price если есть, иначе оригинальную
+                    const finalPrice = price.converted_price?.price || price.price;
+                    const finalCurrency = price.converted_price?.currency || price.currency;
                     allPrices.push({
                       region: region,
-                      currency: price.currency,
-                      price: price.price,
+                      currency: finalCurrency,
+                      price: finalPrice,
                       old_price: null,
                       discount: price.percent_discount || 0,
                       platform: price.platform,
