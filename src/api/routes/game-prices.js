@@ -157,7 +157,15 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
 
       // Сохраняем в БД для poster endpoint
       if (popular.length > 0) {
-        gamesDb.upsertManyGames(popular.map(p => ({ HGID: 0, slug: p.slug, title: p.title, hg_link: p.hg_link })));
+        const insert = gamesDb.db.prepare(`
+          INSERT INTO games (title, slug, hg_link, last_updated)
+          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+          ON CONFLICT(slug) DO UPDATE SET
+            title = excluded.title,
+            hg_link = excluded.hg_link,
+            last_updated = CURRENT_TIMESTAMP
+        `);
+        popular.forEach(p => insert.run(p.title, p.slug, p.hg_link));
       }
 
       res.json(popular);
