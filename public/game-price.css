@@ -562,6 +562,12 @@
   margin-bottom: 4px;
 }
 
+.gp-store-price {
+  font-size: 1.1em;
+  font-weight: 700;
+  color: #4caf50;
+}
+
 .gp-store-buy {
   font-size: 0.8em;
   color: #667eea;

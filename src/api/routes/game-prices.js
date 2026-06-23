@@ -264,14 +264,16 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
             }
 
             if (!game.screenshots) {
+              // Парсим магазины с ценами
               const storeLinks = [];
-              const storeRegex = /data-href="([^"]+)"[^>]*class="hidden-link2 hidden-link-game-price"[\s\S]*?data-price-source="([^"]*)"/g;
+              const itemRegex = /price-list-item[\s\S]*?data-href="([^"]+)"[\s\S]*?data-price-source="([^"]*)"[\s\S]*?data-final_price="(\d+)"/g;
               let m;
-              while ((m = storeRegex.exec(html)) !== null) {
+              while ((m = itemRegex.exec(html)) !== null) {
                 const url = m[1].replace(/&amp;/g, '&');
-                const source = m[2];
+                const source = m[2].trim();
+                const price = parseInt(m[3], 10);
                 if (!storeLinks.find(s => s.url === url)) {
-                  storeLinks.push({ url, source });
+                  storeLinks.push({ url, source, price });
                 }
               }
               if (storeLinks.length > 0) {
@@ -450,7 +452,7 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
           result[slug] = game.poster;
           continue;
         }
-        // Парсим данные со страницы
+      // Парсим данные со страницы
         try {
           if (!canCallApi()) continue;
           console.log(`[posters] Парсим ${slug}...`);

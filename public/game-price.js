@@ -332,7 +332,7 @@
       if (game.description) meta.push(game.description);
       document.getElementById('gpModalMeta').innerHTML = meta.join('<br>');
 
-      // Screenshots (store links now stored here)
+      // Screenshots (store links with prices)
       if (game.screenshots) {
         let storeLinks = [];
         try {
@@ -340,9 +340,12 @@
         } catch {}
         if (Array.isArray(storeLinks) && storeLinks.length > 0 && storeLinks[0].url) {
           const slider = document.getElementById('gpModalScreenshots');
+          // Сортируем по цене
+          storeLinks.sort((a, b) => (a.price || Infinity) - (b.price || Infinity));
           slider.innerHTML = storeLinks.map(s => `
             <a href="${s.url}" target="_blank" rel="noopener" class="gp-store-link">
-              <span class="gp-store-name">${s.source || s.activation || 'Магазин'}</span>
+              <span class="gp-store-name">${s.source || 'Магазин'}</span>
+              ${s.price ? `<span class="gp-store-price">${s.price} ₸</span>` : ''}
               <span class="gp-store-buy">Купить →</span>
             </a>
           `).join('');
