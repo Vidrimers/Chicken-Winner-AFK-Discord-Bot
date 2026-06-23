@@ -101,32 +101,63 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
   // ===== POPULAR GAMES =====
   router.get("/popular", async (req, res) => {
     try {
-      // Берём горячие игры из API
       let popular = [];
+
+      // Парсим горячие игры с главной hot.game
       try {
-        const apiRes = await fetch("https://api.hot.game/method/all-games");
-        if (apiRes.ok) {
-          const allGames = await apiRes.json();
-          popular = allGames.slice(0, 20).map((g) => ({
-            slug: g.slug,
-            title: g.title,
-            hg_link: g.hg_link,
-            cnt: 0,
-          }));
-          // Сохраняем в БД чтобы poster endpoint мог работать
-          gamesDb.upsertManyGames(allGames.slice(0, 20));
+        const pageRes = await fetch("https://hot.game/ru-kz/", {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            'Accept': 'text/html',
+            'Accept-Language': 'ru',
+          }
+        });
+        if (pageRes.ok) {
+          const html = await pageRes.text();
+          // Извлекаем слаги из ссылок на игры: /ru-kz/game/SLUG
+          const gameRegex = /\/ru-kz\/game\/([A-Za-z0-9_-]+)/g;
+          const seenSlugs = new Set();
+          let match;
+          while ((match = gameRegex.exec(html)) !== null) {
+            const slug = match[1];
+            if (!seenSlugs.has(slug) && slug !== 'undefined') {
+              seenSlugs.add(slug);
+              // Получаем заголовок из title атрибута или alt
+              const titleRegex = new RegExp(`title="([^"]+)"[^>]*>[^<]*<[^>]*>\\s*<[^>]*src="[^"]*${slug}`);
+              const titleMatch = html.match(titleRegex);
+              popular.push({
+                slug,
+                title: titleMatch ? titleMatch[1] : slug.replace(/-/g, ' '),
+                hg_link: `https://hot.game/ru-kz/game/${slug}`,
+              });
+            }
+          }
         }
       } catch (apiErr) {
-        console.error("Ошибка API:", apiErr.message);
+        console.error("Ошибка парсинга главной:", apiErr.message);
       }
 
-      // Если из API не получилось — берём из БД
+      // Если не удалось — берём из all-games (последние 20)
       if (popular.length === 0) {
-        const favorites = gamesDb.getFavoritesCountBySlug();
-        popular = favorites.map((p) => {
-          const game = gamesDb.getGameBySlug(p.game_slug);
-          return { slug: p.game_slug, title: game?.title || p.game_slug, hg_link: game?.hg_link };
-        });
+        try {
+          const apiRes = await fetch("https://api.hot.game/method/all-games");
+          if (apiRes.ok) {
+            const allGames = await apiRes.json();
+            popular = allGames.slice(-20).reverse().map((g) => ({
+              slug: g.slug,
+              title: g.title,
+              hg_link: g.hg_link,
+            }));
+            gamesDb.upsertManyGames(allGames.slice(-20));
+          }
+        } catch (apiErr) {
+          console.error("Ошибка API:", apiErr.message);
+        }
+      }
+
+      // Сохраняем в БД для poster endpoint
+      if (popular.length > 0) {
+        gamesDb.upsertManyGames(popular.map(p => ({ HGID: 0, slug: p.slug, title: p.title, hg_link: p.hg_link })));
       }
 
       res.json(popular);
@@ -171,7 +202,11 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
               // Парсим данные со страницы игры (poster, description, store links)
               try {
                 const pageRes = await fetch(`https://hot.game/ru-kz/game/${slug}`, {
-                  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                  headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                    'Accept': 'text/html',
+                    'Accept-Language': 'ru',
+                  }
                 });
                 if (pageRes.ok) {
                   const html = await pageRes.text();
