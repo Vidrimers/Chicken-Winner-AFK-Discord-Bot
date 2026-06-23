@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { validateConfig, SERVER_CONFIG } from './config.js';
 import { success, log, error as logError } from './utils/logger.js';
 import { DatabaseManager } from './database/index.js';
+import { GamesDatabase } from './database/games-db.js';
 import { AchievementSystem } from './achievements/index.js';
 import { AchievementNotificationService } from './achievements/notifications.js';
 import { AchievementChecker } from './achievements/checker.js';
@@ -39,6 +40,7 @@ async function main() {
 
     // Инициализация базы данных
     const db = new DatabaseManager();
+    const gamesDb = new GamesDatabase();
     success('База данных инициализирована');
 
     // Создание Discord клиента
@@ -95,7 +97,7 @@ async function main() {
     const app = createExpressServer();
 
     // Регистрация API роутов
-    registerRoutes(app, db, discordClient, achievements, telegramWrapper, notificationService);
+    registerRoutes(app, db, discordClient, achievements, telegramWrapper, notificationService, gamesDb);
 
     // Запуск сервера
     await startServer(app, SERVER_CONFIG.PORT);
@@ -568,6 +570,7 @@ async function main() {
       }
       
       db.close();
+      gamesDb.close();
       process.exit(0);
     });
 

@@ -12,6 +12,7 @@ import { USER_IDS, DISCORD_CONFIG, SERVER_CONFIG } from "../../config.js";
 import { createSteamProxyRouter } from "./steam-proxy.js";
 import { createSteamRouter } from "./steam.js";
 import { sessionManager } from "../server.js";
+import { createGamePricesRouter } from "./game-prices.js";
 
 /**
  * Зарегистрировать все API роуты
@@ -23,6 +24,7 @@ export function registerRoutes(
   achievements,
   telegram,
   notificationService,
+  gamesDb,
 ) {
   // Config роут - для загрузки конфигурации на фронтенде
   app.get("/api/config", (req, res) => {
@@ -262,6 +264,12 @@ export function registerRoutes(
   // Steam статистика (привязка Steam ID и получение CS2/FACEIT статистики)
   const steamRouter = createSteamRouter(db);
   app.use('/api/users', steamRouter);
+
+  // Game Prices роуты
+  if (gamesDb) {
+    const gamePricesRouter = createGamePricesRouter(db, gamesDb, discordClient, telegram);
+    app.use("/api/game-prices", gamePricesRouter);
+  }
 
   success("API роуты зарегистрированы");
 }

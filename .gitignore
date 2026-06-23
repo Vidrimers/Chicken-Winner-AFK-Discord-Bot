@@ -1,5 +1,6 @@
 node_modules/
 temp/
+tasks/
 .vscode/
 .DS_Store
 npm/

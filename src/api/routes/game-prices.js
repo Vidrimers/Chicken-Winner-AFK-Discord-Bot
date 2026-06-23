@@ -1,0 +1,294 @@
+import { Router } from "express";
+
+export function createGamePricesRouter(db, gamesDb, discordClient, telegram) {
+  const router = Router();
+
+  // ===== SEARCH =====
+  router.get("/search", async (req, res) => {
+    try {
+      const { q, platform, sort, currency, limit = 50 } = req.query;
+
+      if (!q || q.trim().length < 2) {
+        return res.json([]);
+      }
+
+      let results = gamesDb.searchGames(q.trim(), parseInt(limit));
+
+      // Если в БД мало результатов — пробуем поиск через API
+      if (results.length === 0) {
+        try {
+          const apiRes = await fetch("https://api.hot.game/method/all-games");
+          if (apiRes.ok) {
+            const allGames = await apiRes.json();
+            const query = q.trim().toLowerCase();
+            const matched = allGames.filter(
+              (g) =>
+                g.title?.toLowerCase().includes(query) ||
+                g.slug?.toLowerCase().includes(query)
+            ).slice(0, parseInt(limit));
+
+            // Сохраняем найденные игры в БД
+            if (matched.length > 0) {
+              gamesDb.upsertManyGames(matched);
+              results = gamesDb.searchGames(q.trim(), parseInt(limit));
+            }
+          }
+        } catch (apiErr) {
+          console.error("Ошибка API при поиске:", apiErr.message);
+        }
+      }
+
+      // Сортировка
+      if (sort === "price_asc" || sort === "price_desc") {
+        results = results.map((game) => {
+          const prices = gamesDb.getCachedPrices(game.slug);
+          const minPrice = prices.length > 0
+            ? Math.min(...prices.map((p) => p.price || Infinity))
+            : Infinity;
+          return { ...game, _minPrice: minPrice };
+        });
+        results.sort((a, b) =>
+          sort === "price_asc"
+            ? a._minPrice - b._minPrice
+            : b._minPrice - a._minPrice
+        );
+        results = results.map(({ _minPrice, ...rest }) => rest);
+      } else if (sort === "name_asc") {
+        results.sort((a, b) => a.title.localeCompare(b.title));
+      } else if (sort === "name_desc") {
+        results.sort((a, b) => b.title.localeCompare(a.title));
+      }
+
+      // Фильтр по платформе (если есть закэшированные цены)
+      if (platform) {
+        results = results.filter((game) => {
+          const prices = gamesDb.getCachedPrices(game.slug);
+          if (prices.length === 0) return true;
+          return prices.some((p) => p.platform === platform);
+        });
+      }
+
+      res.json(results);
+    } catch (error) {
+      console.error("Ошибка поиска игр:", error.message);
+      res.status(500).json({ error: "Ошибка поиска" });
+    }
+  });
+
+  // ===== POPULAR GAMES =====
+  router.get("/popular", async (req, res) => {
+    try {
+      // Сначала из избранного пользователей
+      let popular = gamesDb.getFavoritesCountBySlug();
+
+      if (popular.length === 0) {
+        // Если избранного нет — берём из API (горячие игры)
+        try {
+          const apiRes = await fetch("https://api.hot.game/method/all-games");
+          if (apiRes.ok) {
+            const allGames = await apiRes.json();
+            popular = allGames.slice(0, 20).map((g) => ({
+              game_slug: g.slug,
+              title: g.title,
+              hg_link: g.hg_link,
+              cnt: 0,
+            }));
+          }
+        } catch (apiErr) {
+          console.error("Ошибка API:", apiErr.message);
+        }
+      } else {
+        // Обогащаем данными из БД
+        popular = popular.map((p) => {
+          const game = gamesDb.getGameBySlug(p.game_slug);
+          return { ...p, title: game?.title, hg_link: game?.hg_link };
+        });
+      }
+
+      res.json(popular);
+    } catch (error) {
+      console.error("Ошибка получения популярных игр:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
+  // ===== GAME INFO =====
+  router.get("/game/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { currency = "RUB" } = req.query;
+
+      // Проверяем кэш в БД (обновляем если старше 24ч)
+      let game = gamesDb.getGameBySlug(slug);
+      const isStale =
+        game && game.last_updated
+          ? Date.now() - new Date(game.last_updated).getTime() > 24 * 60 * 60 * 1000
+          : true;
+
+      if (!game || isStale) {
+        // Запрашиваем из API
+        try {
+          const apiRes = await fetch(
+            `https://api.hot.game/game/${slug}/main-info?currency=${currency}`
+          );
+          if (apiRes.ok) {
+            const apiData = await apiRes.json();
+
+            // Сохраняем/обновляем基本信息
+            gamesDb.upsertGame(apiData);
+
+            // Сохраняем цены
+            if (apiData.min_prices_by_region) {
+              const allPrices = [];
+              for (const [region, regionPrices] of Object.entries(apiData.min_prices_by_region)) {
+                for (const price of regionPrices) {
+                  allPrices.push({
+                    region: region,
+                    currency: price.currency,
+                    price: price.price,
+                    old_price: null,
+                    discount: price.percent_discount || 0,
+                    platform: price.platform,
+                    store_name: price.platform,
+                    store_url: null,
+                  });
+                }
+              }
+              gamesDb.upsertGamePrices(slug, allPrices);
+            }
+
+            game = gamesDb.getGameBySlug(slug);
+          }
+        } catch (apiErr) {
+          console.error(`Ошибка API для ${slug}:`, apiErr.message);
+        }
+      }
+
+      if (!game) {
+        return res.status(404).json({ error: "Игра не найдена" });
+      }
+
+      const prices = gamesDb.getCachedPrices(slug);
+      const priceHistory = gamesDb.getOldPrices(slug);
+
+      res.json({
+        ...game,
+        prices,
+        priceHistory,
+        screenshots: game.screenshots ? JSON.parse(game.screenshots) : [],
+      });
+    } catch (error) {
+      console.error("Ошибка получения информации об игре:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
+  // ===== PRICE HISTORY =====
+  router.get("/game/:slug/price-history", (req, res) => {
+    try {
+      const { slug } = req.params;
+      const history = gamesDb.getOldPrices(slug);
+      res.json(history);
+    } catch (error) {
+      console.error("Ошибка получения истории цен:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
+  // ===== FAVORITES =====
+  router.get("/favorites", (req, res) => {
+    try {
+      const userId = req.query.user_id || req.headers["x-user-id"];
+      if (!userId) {
+        return res.status(401).json({ error: "Требуется user_id" });
+      }
+
+      const favorites = gamesDb.getUserFavorites(userId);
+      res.json(favorites);
+    } catch (error) {
+      console.error("Ошибка получения избранного:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
+  router.post("/favorites", (req, res) => {
+    try {
+      const { user_id, game_slug } = req.body;
+      if (!user_id || !game_slug) {
+        return res.status(400).json({ error: "user_id и game_slug обязательны" });
+      }
+
+      gamesDb.addFavorite(user_id, game_slug);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Ошибка добавления в избранное:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
+  router.delete("/favorites/:slug", (req, res) => {
+    try {
+      const userId = req.query.user_id || req.headers["x-user-id"];
+      const { slug } = req.params;
+
+      if (!userId) {
+        return res.status(401).json({ error: "Требуется user_id" });
+      }
+
+      gamesDb.removeFavorite(userId, slug);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Ошибка удаления из избранного:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
+  router.get("/favorites/check/:slug", (req, res) => {
+    try {
+      const userId = req.query.user_id || req.headers["x-user-id"];
+      const { slug } = req.params;
+
+      if (!userId) {
+        return res.json({ isFavorite: false });
+      }
+
+      const isFav = gamesDb.isFavorite(userId, slug);
+      res.json({ isFavorite: isFav });
+    } catch (error) {
+      res.json({ isFavorite: false });
+    }
+  });
+
+  // ===== NOTIFICATIONS =====
+  router.get("/notifications", (req, res) => {
+    try {
+      const userId = req.query.user_id || req.headers["x-user-id"];
+      if (!userId) {
+        return res.status(401).json({ error: "Требуется user_id" });
+      }
+
+      const settings = gamesDb.getNotificationSettings(userId);
+      res.json(settings);
+    } catch (error) {
+      console.error("Ошибка получения настроек уведомлений:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
+  router.post("/notifications", (req, res) => {
+    try {
+      const userId = req.body.user_id || req.headers["x-user-id"];
+      if (!userId) {
+        return res.status(401).json({ error: "Требуется user_id" });
+      }
+
+      gamesDb.setNotificationSettings(userId, req.body);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Ошибка сохранения настроек уведомлений:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
+  return router;
+}

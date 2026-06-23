@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Цены на игрульки — Chicken Winner</title>
+    <link rel="icon" type="image/png" href="/avatars/logo.png" />
+    <link rel="shortcut icon" type="image/png" href="/avatars/logo.png" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="/game-price.css" />
+    <link rel="stylesheet" href="/icons/icons.css" />
+    <script src="/game-price.js" defer></script>
+  </head>
+  <body>
+    <script>
+      (function() {
+        var t = localStorage.getItem('afkBotTheme');
+        if (t && t !== 'standard') document.body.setAttribute('data-theme', t);
+      })();
+    </script>
+    <script>
+      (function() {
+        fetch('/icons/icons-sprite.svg')
+          .then(function(r) { return r.text(); })
+          .then(function(svg) {
+            var div = document.createElement('div');
+            div.style.display = 'none';
+            div.setAttribute('aria-hidden', 'true');
+            div.innerHTML = svg;
+            document.body.insertBefore(div, document.body.firstChild);
+          })
+          .catch(function(err) { console.warn('SVG sprite load failed:', err); });
+      })();
+    </script>
+
+    <div class="gp-container">
+      <header class="gp-header">
+        <a href="/" class="back-btn">← Назад</a>
+        <div class="header-title">
+          <h1>Цены на игрульки</h1>
+        </div>
+      </header>
+
+      <!-- Регион и валюта -->
+      <div class="gp-settings-bar">
+        <div class="gp-setting">
+          <label for="gpRegion">Регион:</label>
+          <select id="gpRegion">
+            <option value="all">Все регионы</option>
+            <option value="ru">Россия</option>
+            <option value="kz">Казахстан</option>
+            <option value="cis">СНГ</option>
+            <option value="eu">Европа</option>
+            <option value="ua">Украина</option>
+            <option value="by">Беларусь</option>
+            <option value="ww">Region Free</option>
+          </select>
+        </div>
+        <div class="gp-setting">
+          <label for="gpCurrency">Валюта:</label>
+          <select id="gpCurrency">
+            <option value="RUB">₽ Рубли</option>
+            <option value="KZT">₸ Тенге</option>
+            <option value="USD">$ Доллары</option>
+            <option value="EUR">€ Евро</option>
+            <option value="UAH">₴ Гривны</option>
+            <option value="BYN">р. Белорусские рубли</option>
+            <option value="GBP">£ Фунты</option>
+            <option value="GEL">₾ Лари</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Вкладки -->
+      <div class="gp-tabs">
+        <button class="gp-tab active" data-tab="search">Поиск</button>
+        <button class="gp-tab" data-tab="favorites">Избранное</button>
+      </div>
+
+      <!-- Поиск -->
+      <div class="gp-tab-content active" id="tab-search">
+        <div class="gp-search-section">
+          <div class="input-clear-wrapper">
+            <input type="text" class="steam-input" id="gpSearchInput" placeholder="Найти игру..." />
+            <button class="input-clear-btn" id="gpSearchClearBtn" title="Очистить" aria-label="Очистить">×</button>
+          </div>
+        </div>
+
+        <!-- Фильтры и сортировка -->
+        <div class="gp-filters">
+          <div class="gp-filter-group">
+            <label>Сортировка:</label>
+            <select id="gpSort">
+              <option value="">По умолчанию</option>
+              <option value="price_asc">Цена ↑</option>
+              <option value="price_desc">Цена ↓</option>
+              <option value="name_asc">Название А-Я</option>
+              <option value="name_desc">Название Я-А</option>
+            </select>
+          </div>
+          <div class="gp-filter-group">
+            <label>Платформа:</label>
+            <select id="gpPlatform">
+              <option value="">Все</option>
+              <option value="windows">PC</option>
+              <option value="ps_5">PS5</option>
+              <option value="ps_4">PS4</option>
+              <option value="xbox_sx">Xbox Series X|S</option>
+              <option value="xbox_one">Xbox One</option>
+              <option value="nintendo_switch">Nintendo Switch</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Skeleton загрузка -->
+        <div class="gp-skeleton-grid" id="gpSkeleton" style="display:none">
+          <div class="gp-skeleton-card"></div>
+          <div class="gp-skeleton-card"></div>
+          <div class="gp-skeleton-card"></div>
+          <div class="gp-skeleton-card"></div>
+          <div class="gp-skeleton-card"></div>
+          <div class="gp-skeleton-card"></div>
+        </div>
+
+        <!-- Популярные игры -->
+        <div id="gpPopularSection">
+          <h3 class="gp-section-title">Популярные игры</h3>
+          <div class="gp-games-grid" id="gpPopularGrid"></div>
+        </div>
+
+        <!-- Недавно просмотренные -->
+        <div id="gpRecentSection" style="display:none">
+          <h3 class="gp-section-title">Недавно просмотренные</h3>
+          <div class="gp-games-grid" id="gpRecentGrid"></div>
+        </div>
+
+        <!-- Результаты поиска -->
+        <div id="gpResultsSection" style="display:none">
+          <h3 class="gp-section-title" id="gpResultsTitle">Результаты</h3>
+          <div class="gp-games-grid" id="gpResultsGrid"></div>
+        </div>
+
+        <!-- Пустое состояние -->
+        <div class="gp-empty-state" id="gpEmptyState" style="display:none">
+          <p id="gpEmptyText">Нет результатов</p>
+        </div>
+      </div>
+
+      <!-- Избранное -->
+      <div class="gp-tab-content" id="tab-favorites">
+        <div class="gp-empty-state" id="gpFavEmptyState" style="display:none">
+          <p>Избранное пусто. Добавляйте игры, нажимая ★</p>
+        </div>
+        <div class="gp-games-grid" id="gpFavoritesGrid"></div>
+      </div>
+    </div>
+
+    <!-- Модалка деталей игры -->
+    <div class="modal-overlay" id="gpGameModal" style="display:none" onclick="if(event.target===this)closeGameModal()">
+      <div class="gp-game-modal">
+        <div class="gp-game-modal-header">
+          <h2 id="gpModalTitle">Игра</h2>
+          <button class="modal-close-btn" onclick="closeGameModal()">&times;</button>
+        </div>
+        <div class="gp-game-modal-body" id="gpModalBody">
+          <div class="gp-game-poster-wrap">
+            <img id="gpModalPoster" class="gp-game-poster" src="" alt="" />
+            <button class="gp-fav-btn gp-fav-btn-lg" id="gpModalFavBtn" title="В избранное">★</button>
+          </div>
+          <div class="gp-game-meta" id="gpModalMeta"></div>
+          <div class="gp-game-screenshots" id="gpModalScreenshots"></div>
+          <div class="gp-game-prices" id="gpModalPrices"></div>
+          <div class="gp-game-chart" id="gpModalChart"></div>
+          <div class="gp-game-actions">
+            <button class="gp-share-btn" id="gpModalShareBtn">Поделиться</button>
+            <a class="gp-hg-link" id="gpModalHgLink" href="#" target="_blank" rel="noopener">Страница на Hot.Game</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Уведомление -->
+    <div class="gp-toast" id="gpToast" style="display:none">
+      <span id="gpToastText"></span>
+    </div>
+
+    <!-- Баг-репорт -->
+    <button id="bugReportFloatingBtn" onclick="openBugReportModal()" style="display:none;position:fixed;bottom:20px;right:20px;padding:5px 6px;border:none;border-radius:50px;background:transparent;color:white;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 15px rgba(102,126,234,0.4);font-size:12px;"><svg class="icon" aria-hidden="true"><use href="#icon-bug"></use></svg> Баг</button>
+
+    <div class="modal-overlay" id="bugReportModal" style="display:none" onclick="if(event.target===this)closeBugReportModal()">
+      <div class="modal-box">
+        <div class="modal-box-header">
+          <h2><svg class="icon" aria-hidden="true"><use href="#icon-bug"></use></svg> Сообщить об ошибке</h2>
+          <button class="modal-close-btn" onclick="closeBugReportModal()">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <textarea id="bugReportText" rows="6" placeholder="Опишите проблему..." style="width:100%;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:#e0e0e0;font-size:14px;resize:vertical;box-sizing:border-box;"></textarea>
+          <button onclick="sendBugReport()" style="width:100%;margin-top:12px;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;cursor:pointer;font-size:14px;">Отправить</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
