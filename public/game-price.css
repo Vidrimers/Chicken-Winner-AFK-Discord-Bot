@@ -416,7 +416,7 @@ body.modal-open {
 }
 
 .gp-card-price-empty {
-  color: rgba(255,255,255,0.4);
+  color: #4caf50;
   font-size: 0.8em;
 }
 
