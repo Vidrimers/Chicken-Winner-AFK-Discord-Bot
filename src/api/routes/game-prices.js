@@ -116,6 +116,8 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
               hg_link: g.hg_link,
               cnt: 0,
             }));
+            // Сохраняем в БД чтобы poster endpoint мог работать
+            gamesDb.upsertManyGames(allGames.slice(0, 20));
           }
         } catch (apiErr) {
           console.error("Ошибка API:", apiErr.message);
@@ -259,7 +261,8 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
             }
 
             if (!game.description) {
-              const ogDesc = html.match(/name="description"\s+content="([^"]+)"/);
+              const ogDesc = html.match(/name="description"\s+content="([^"]+)"/)
+                || html.match(/content="([^"]+)"\s+name="description"/);
               if (ogDesc) updates.description = ogDesc[1];
             }
 
@@ -452,7 +455,11 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
           result[slug] = game.poster;
           continue;
         }
-      // Парсим данные со страницы
+        // Сохраняем игру в БД если её нет
+        if (!game) {
+          gamesDb.upsertGame({ HGID: 0, title: slug, slug: slug });
+        }
+        // Парсим данные со страницы
         try {
           if (!canCallApi()) continue;
           console.log(`[posters] Парсим ${slug}...`);
