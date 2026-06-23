@@ -179,6 +179,16 @@ body.modal-open {
   border-bottom-color: #667eea;
 }
 
+.game-price-tab {
+  text-decoration: none;
+  color: inherit;
+}
+
+.game-price-tab:hover {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
 .tab-content {
   display: none;
 }
