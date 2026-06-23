@@ -214,6 +214,44 @@
   border-bottom-color: #667eea;
 }
 
+/* Sub-tabs (Популярные / Недавно просмотренные) */
+.gp-subtabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.gp-subtab {
+  padding: 7px 16px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.gp-subtab:hover {
+  color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.05);
+}
+
+.gp-subtab.active {
+  color: #e0e0e0;
+  background: rgba(102,126,234,0.2);
+  border-color: rgba(102,126,234,0.4);
+}
+
+.gp-subtab-content {
+  display: none;
+}
+
+.gp-subtab-content.active {
+  display: block;
+}
+
 .gp-tab-content {
   display: none;
 }

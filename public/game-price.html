@@ -123,16 +123,23 @@
           <div class="gp-skeleton-card"></div>
         </div>
 
+        <!-- Вкладки: Популярные / Недавно просмотренные -->
+        <div class="gp-subtabs" id="gpSubtabs">
+          <button class="gp-subtab active" data-subtab="popular">Популярные</button>
+          <button class="gp-subtab" data-subtab="recent">Недавно просмотренные</button>
+        </div>
+
         <!-- Популярные игры -->
-        <div id="gpPopularSection">
-          <h3 class="gp-section-title">Популярные игры</h3>
+        <div class="gp-subtab-content active" id="subtab-popular">
           <div class="gp-games-grid" id="gpPopularGrid"></div>
         </div>
 
         <!-- Недавно просмотренные -->
-        <div id="gpRecentSection" style="display:none">
-          <h3 class="gp-section-title">Недавно просмотренные</h3>
+        <div class="gp-subtab-content" id="subtab-recent">
           <div class="gp-games-grid" id="gpRecentGrid"></div>
+          <div class="gp-empty-state" id="gpRecentEmpty" style="display:none">
+            <p>Вы ещё не просматривали игры</p>
+          </div>
         </div>
 
         <!-- Результаты поиска -->

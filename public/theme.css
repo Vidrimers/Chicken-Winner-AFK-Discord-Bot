@@ -898,6 +898,17 @@ body[data-theme="metal"] .gp-tab.active {
     color: #e0e0e0;
 }
 
+body[data-theme="metal"] .gp-subtab {
+    border-color: rgba(150, 150, 150, 0.3);
+    color: #b0b0b0;
+}
+
+body[data-theme="metal"] .gp-subtab.active {
+    background: rgba(100, 100, 100, 0.3);
+    border-color: rgba(150, 150, 150, 0.5);
+    color: #e0e0e0;
+}
+
 body[data-theme="metal"] .gp-game-modal {
     background: #2a2a2a;
     border-color: rgba(150, 150, 150, 0.3);
@@ -942,6 +953,17 @@ body[data-theme="neon"] .gp-game-card:hover {
 body[data-theme="neon"] .gp-tab.active {
     color: #00ffff;
     border-bottom-color: #00ffff;
+}
+
+body[data-theme="neon"] .gp-subtab {
+    border-color: rgba(0, 255, 255, 0.3);
+    color: rgba(0, 255, 255, 0.5);
+}
+
+body[data-theme="neon"] .gp-subtab.active {
+    background: rgba(0, 255, 255, 0.15);
+    border-color: rgba(0, 255, 255, 0.5);
+    color: #00ffff;
 }
 
 body[data-theme="neon"] .gp-fav-btn.active {
@@ -1004,6 +1026,17 @@ body[data-theme="steam"] .gp-tab.active {
     border-bottom-color: #66c0f4;
 }
 
+body[data-theme="steam"] .gp-subtab {
+    border-color: rgba(102, 192, 244, 0.3);
+    color: rgba(102, 192, 244, 0.5);
+}
+
+body[data-theme="steam"] .gp-subtab.active {
+    background: rgba(102, 192, 244, 0.15);
+    border-color: rgba(102, 192, 244, 0.5);
+    color: #66c0f4;
+}
+
 body[data-theme="steam"] .gp-fav-btn.active {
     color: #ffd700;
 }
@@ -1060,6 +1093,17 @@ body[data-theme="die-my-darling"] .gp-game-card:hover {
 body[data-theme="die-my-darling"] .gp-tab.active {
     color: #ff4444;
     border-bottom-color: #ff4444;
+}
+
+body[data-theme="die-my-darling"] .gp-subtab {
+    border-color: rgba(255, 50, 50, 0.3);
+    color: rgba(255, 50, 50, 0.5);
+}
+
+body[data-theme="die-my-darling"] .gp-subtab.active {
+    background: rgba(255, 50, 50, 0.15);
+    border-color: rgba(255, 50, 50, 0.5);
+    color: #ff4444;
 }
 
 body[data-theme="die-my-darling"] .gp-fav-btn.active {

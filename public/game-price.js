@@ -12,6 +12,7 @@
   let searchTimer = null;
   let favoriteSlugs = new Set();
   let currentGameSlug = null;
+  let currentSubTab = 'popular';
 
   // ===== HELPERS =====
   function getSettings() {
@@ -173,20 +174,25 @@
   // ===== SEARCH =====
   async function doSearch(query) {
     const skeleton = document.getElementById('gpSkeleton');
-    const popularSection = document.getElementById('gpPopularSection');
-    const recentSection = document.getElementById('gpRecentSection');
+    const subtabs = document.getElementById('gpSubtabs');
     const resultsSection = document.getElementById('gpResultsSection');
 
     if (!query || query.trim().length < 2) {
       skeleton.style.display = 'none';
-      popularSection.style.display = 'block';
-      recentSection.style.display = getRecent().length > 0 ? 'block' : 'none';
+      subtabs.style.display = 'flex';
+      document.getElementById('subtab-popular').classList.toggle('active', currentSubTab === 'popular');
+      document.getElementById('subtab-recent').classList.toggle('active', currentSubTab === 'recent');
       resultsSection.style.display = 'none';
       hideEmpty();
       return;
     }
 
     showSkeleton(true);
+    subtabs.style.display = 'none';
+    document.getElementById('subtab-popular').classList.remove('active');
+    document.getElementById('subtab-recent').classList.remove('active');
+    resultsSection.style.display = 'none';
+    hideEmpty();
     popularSection.style.display = 'none';
     recentSection.style.display = 'none';
     resultsSection.style.display = 'none';
@@ -222,7 +228,6 @@
       const games = await apiGet('/popular');
       if (games.length > 0) {
         renderGrid(document.getElementById('gpPopularGrid'), games);
-        document.getElementById('gpPopularSection').style.display = 'block';
       }
     } catch {}
   }
@@ -230,21 +235,21 @@
   // ===== RECENT =====
   function loadRecent() {
     const recent = getRecent();
-    const section = document.getElementById('gpRecentSection');
     const grid = document.getElementById('gpRecentGrid');
+    const empty = document.getElementById('gpRecentEmpty');
 
+    grid.innerHTML = '';
     if (recent.length === 0) {
-      section.style.display = 'none';
+      empty.style.display = 'block';
       return;
     }
 
-    grid.innerHTML = '';
+    empty.style.display = 'none';
     const fragment = document.createDocumentFragment();
     recent.forEach((r) => {
       fragment.appendChild(renderGameCard({ slug: r.slug, title: r.title, hg_link: r.hg_link }));
     });
     grid.appendChild(fragment);
-    section.style.display = 'block';
   }
 
   // ===== FAVORITES TAB =====
@@ -418,6 +423,24 @@
     });
   }
 
+  // ===== SUB-TABS (Популярные / Недавно просмотренные) =====
+  function initSubtabs() {
+    document.querySelectorAll('.gp-subtab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.subtab;
+        if (tab === currentSubTab) return;
+        currentSubTab = tab;
+
+        document.querySelectorAll('.gp-subtab').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.gp-subtab-content').forEach((c) => c.classList.remove('active'));
+
+        btn.classList.add('active');
+        const target = document.getElementById('subtab-' + tab);
+        if (target) target.classList.add('active');
+      });
+    });
+  }
+
   // ===== SETTINGS =====
   function initSettings() {
     const settings = getSettings();
@@ -438,6 +461,7 @@
   // ===== EVENT LISTENERS =====
   function init() {
     initTabs();
+    initSubtabs();
     initSettings();
     loadFavorites();
     loadPopular();
