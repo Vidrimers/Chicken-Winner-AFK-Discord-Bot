@@ -155,7 +155,7 @@ body.modal-open {
 }
 
 .tab {
-  padding: 15px 25px;
+  padding: 10px 15px;
   cursor: pointer;
   border-bottom: 3px solid transparent;
   transition: all 0.3s;
