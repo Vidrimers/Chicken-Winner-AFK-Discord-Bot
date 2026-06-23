@@ -699,6 +699,47 @@
   backdrop-filter: blur(8px);
 }
 
+/* Pagination */
+.gp-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  margin: 16px 0;
+}
+
+.gp-page-btn {
+  padding: 6px 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.gp-page-btn:hover:not(:disabled) {
+  color: #e0e0e0;
+  background: rgba(255,255,255,0.08);
+}
+
+.gp-page-btn.active {
+  color: #667eea;
+  border-color: rgba(102,126,234,0.5);
+  background: rgba(102,126,234,0.15);
+}
+
+.gp-page-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.gp-page-ellipsis {
+  color: rgba(255,255,255,0.4);
+  padding: 0 4px;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .gp-games-grid {

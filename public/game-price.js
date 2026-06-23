@@ -7,12 +7,19 @@
   const RECENT_KEY = 'gp_recent_games';
   const SETTINGS_KEY = 'gp_settings';
   const MAX_RECENT = 20;
+  const PAGE_SIZE = 20;
 
   let currentUserId = null;
   let searchTimer = null;
   let favoriteSlugs = new Set();
   let currentGameSlug = null;
   let currentSubTab = 'popular';
+
+  // Pagination state
+  let allPopularGames = [];
+  let popularPage = 1;
+  let allSearchResults = [];
+  let searchPage = 1;
 
   // ===== HELPERS =====
   function getSettings() {
@@ -159,6 +166,64 @@
     container.appendChild(fragment);
   }
 
+  function renderPagination(containerId, total, currentPage, type) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+    const delta = 2;
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+        pages.push(i);
+      }
+    }
+    const pagesWithEllipsis = [];
+    for (let i = 0; i < pages.length; i++) {
+      if (i > 0 && pages[i] - pages[i - 1] > 1) pagesWithEllipsis.push('...');
+      pagesWithEllipsis.push(pages[i]);
+    }
+
+    let html = `<button class="gp-page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="gpGoPage('${type}', ${currentPage - 1})">←</button>`;
+    for (const page of pagesWithEllipsis) {
+      if (page === '...') {
+        html += `<span class="gp-page-ellipsis">…</span>`;
+      } else {
+        html += `<button class="gp-page-btn ${page === currentPage ? 'active' : ''}" onclick="gpGoPage('${type}', ${page})">${page}</button>`;
+      }
+    }
+    html += `<button class="gp-page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="gpGoPage('${type}', ${currentPage + 1})">→</button>`;
+    container.innerHTML = html;
+  }
+
+  window.gpGoPage = function(type, page) {
+    if (type === 'popular') {
+      popularPage = page;
+      renderPopularPage();
+    } else if (type === 'search') {
+      searchPage = page;
+      renderSearchPage();
+    }
+  };
+
+  function renderPopularPage() {
+    const start = (popularPage - 1) * PAGE_SIZE;
+    const pageGames = allPopularGames.slice(start, start + PAGE_SIZE);
+    renderGrid(document.getElementById('gpPopularGrid'), pageGames);
+    renderPagination('gpPopularPagination', allPopularGames.length, popularPage, 'popular');
+    loadPosters(pageGames.map(g => g.slug).filter(Boolean));
+  }
+
+  function renderSearchPage() {
+    const start = (searchPage - 1) * PAGE_SIZE;
+    const pageGames = allSearchResults.slice(start, start + PAGE_SIZE);
+    document.getElementById('gpResultsTitle').textContent = `Результаты (${allSearchResults.length})`;
+    renderGrid(document.getElementById('gpResultsGrid'), pageGames);
+    renderPagination('gpSearchPagination', allSearchResults.length, searchPage, 'search');
+    loadPosters(pageGames.map(g => g.slug).filter(Boolean));
+  }
+
   async function loadPosters(slugs) {
     if (!slugs || slugs.length === 0) return;
     try {
@@ -223,9 +288,10 @@
       }
 
       document.getElementById('gpResultsTitle').textContent = `Результаты (${results.length})`;
-      renderGrid(document.getElementById('gpResultsGrid'), results);
+      allSearchResults = results;
+      searchPage = 1;
+      renderSearchPage();
       resultsSection.style.display = 'block';
-      loadPosters(results.map(g => g.slug).filter(Boolean));
     } catch (err) {
       showSkeleton(false);
       showEmpty('Ошибка поиска');
@@ -236,10 +302,9 @@
   async function loadPopular() {
     try {
       const games = await apiGet('/popular');
-      if (games.length > 0) {
-        renderGrid(document.getElementById('gpPopularGrid'), games);
-        loadPosters(games.map(g => g.slug).filter(Boolean));
-      }
+      allPopularGames = games;
+      popularPage = 1;
+      renderPopularPage();
     } catch {}
   }
 
