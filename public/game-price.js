@@ -301,7 +301,8 @@
   // ===== POPULAR =====
   async function loadPopular() {
     try {
-      const games = await apiGet('/popular');
+      const currency = document.getElementById('gpCurrency').value;
+      const games = await apiGet(`/popular?currency=${currency}`);
       allPopularGames = games;
       popularPage = 1;
       renderPopularPage();
@@ -335,7 +336,8 @@
 
     try {
       const userId = getUserId();
-      const favs = await apiGet(`/favorites?user_id=${userId}`);
+      const currency = document.getElementById('gpCurrency').value;
+      const favs = await apiGet(`/favorites?user_id=${userId}&currency=${currency}`);
       if (favs.length === 0) {
         grid.innerHTML = '';
         empty.style.display = 'block';

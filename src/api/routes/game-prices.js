@@ -101,6 +101,7 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
   // ===== POPULAR GAMES =====
   router.get("/popular", async (req, res) => {
     try {
+      const currency = req.query.currency || 'KZT';
       let popular = [];
 
       // Парсим горячие игры с главной hot.game
@@ -174,7 +175,7 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
         popular.forEach(p => {
           insert.run(p.title, p.slug, p.hg_link);
           // Добавляем минимальную цену из БД
-          p.minPrice = gamesDb.getMinPrice(p.slug);
+          p.minPrice = gamesDb.getMinPrice(p.slug, currency);
         });
       }
 
@@ -388,9 +389,10 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
       }
 
       const favorites = gamesDb.getUserFavorites(userId);
+      const currency = req.query.currency || 'KZT';
       // Добавляем минимальную цену
       favorites.forEach(f => {
-        f.minPrice = gamesDb.getMinPrice(f.slug);
+        f.minPrice = gamesDb.getMinPrice(f.slug, currency);
       });
       res.json(favorites);
     } catch (error) {

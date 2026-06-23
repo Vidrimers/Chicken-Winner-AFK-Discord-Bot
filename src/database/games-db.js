@@ -225,10 +225,10 @@ export class GamesDatabase {
     ).all(gameSlug);
   }
 
-  getMinPrice(gameSlug) {
+  getMinPrice(gameSlug, currency = 'RUB') {
     const row = this.prepare(
-      "SELECT MIN(price) as min_price FROM game_prices WHERE game_slug = ? AND price > 0"
-    ).get(gameSlug);
+      "SELECT MIN(price) as min_price FROM game_prices WHERE game_slug = ? AND currency = ? AND price > 0"
+    ).get(gameSlug, currency);
     return row?.min_price || null;
   }
 
