@@ -181,9 +181,9 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
                   const ogImg = html.match(/property="og:image"\s+content="([^"]+)"/);
                   if (ogImg) updates.poster = ogImg[1];
 
-                  // Description
-                  const ogDesc = html.match(/name="description"\s+content="([^"]+)"/);
-                  if (ogDesc) updates.description = ogDesc[1];
+              // Description
+              const ogDesc = html.match(/name="description"[\s\S]*?content="([^"]+)"/);
+              if (ogDesc) updates.description = ogDesc[1].trim();
 
                   // Store links: data-href + data-price-source
                   const storeLinks = [];
@@ -260,9 +260,14 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
             }
 
             if (!game.description) {
-              const ogDesc = html.match(/name="description"\s+content="([^"]+)"/)
-                || html.match(/content="([^"]+)"\s+name="description"/);
-              if (ogDesc) updates.description = ogDesc[1];
+              const ogDesc = html.match(/name="description"[\s\S]*?content="([^"]+)"/)
+                || html.match(/content="([^"]+)"[\s\S]*?name="description"/);
+              if (ogDesc) {
+                updates.description = ogDesc[1].trim();
+                console.log(`[game] description для ${slug}: ${ogDesc[1].substring(0, 60)}...`);
+              } else {
+                console.log(`[game] description не найден для ${slug}`);
+              }
             }
 
             if (!game.screenshots) {
@@ -445,7 +450,7 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
       const { slugs } = req.query;
       if (!slugs) return res.json({});
 
-      const slugList = slugs.split(',').slice(0, 10);
+      const slugList = slugs.split(',').slice(0, 20);
       const result = {};
 
       for (const slug of slugList) {
