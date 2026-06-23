@@ -137,18 +137,24 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
         console.error("Ошибка парсинга главной:", apiErr.message);
       }
 
-      // Если не удалось — берём из all-games (последние 20)
-      if (popular.length === 0) {
+      // Если не удалось — берём из all-games (новейшие первые)
+      if (popular.length < 20) {
         try {
           const apiRes = await fetch("https://api.hot.game/method/all-games");
           if (apiRes.ok) {
             const allGames = await apiRes.json();
-            popular = allGames.slice(-20).reverse().map((g) => ({
-              slug: g.slug,
-              title: g.title,
-              hg_link: g.hg_link,
-            }));
-            gamesDb.upsertManyGames(allGames.slice(-20));
+            const existingSlugs = new Set(popular.map(p => p.slug));
+            const newGames = allGames
+              .filter(g => !existingSlugs.has(g.slug))
+              .slice(-40)
+              .reverse()
+              .map((g) => ({
+                slug: g.slug,
+                title: g.title,
+                hg_link: g.hg_link,
+              }));
+            popular = [...popular, ...newGames];
+            gamesDb.upsertManyGames(allGames.slice(-40));
           }
         } catch (apiErr) {
           console.error("Ошибка API:", apiErr.message);
