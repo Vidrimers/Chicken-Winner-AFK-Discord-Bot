@@ -143,7 +143,7 @@
     card.innerHTML = `
       <button class="gp-fav-btn ${isFav ? 'active' : ''}" data-slug="${game.slug}" title="В избранное">★</button>
       <img class="gp-game-card-poster" src="${game.poster || '/avatars/nopic.png'}" alt="${game.title}" loading="lazy" />
-      ${minPrice ? `<span class="gp-card-price">${minPrice} ₽</span>` : ''}
+      ${minPrice ? `<span class="gp-card-price">${minPrice} ${getCurrencySymbol(document.getElementById('gpCurrency').value)}</span>` : `<span class="gp-card-price gp-card-price-empty">¯\\_(ツ)_/¯</span>`}
       <div class="gp-game-card-info">
         <p class="gp-game-card-title">${game.title}</p>
       </div>
