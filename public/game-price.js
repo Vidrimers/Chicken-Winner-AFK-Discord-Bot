@@ -296,7 +296,9 @@
     document.getElementById('gpModalScreenshots').innerHTML = '';
     document.getElementById('gpModalPrices').innerHTML = '<p style="opacity:0.5">Загрузка цен...</p>';
     document.getElementById('gpModalChart').innerHTML = '';
-    const hgLinkRu = hgLink ? hgLink.replace('https://hot.game/', 'https://hot.game/ru-kz/') : `https://hot.game/ru-kz/game/${slug}`;
+    const hgLinkRu = hgLink
+      ? hgLink.replace('hot.game/en/', 'hot.game/ru-kz/').replace('hot.game/uk-ua/', 'hot.game/ru-kz/')
+      : `https://hot.game/ru-kz/game/${slug}`;
     document.getElementById('gpModalHgLink').href = hgLinkRu;
 
     const favBtn = document.getElementById('gpModalFavBtn');

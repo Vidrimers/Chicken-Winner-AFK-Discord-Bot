@@ -129,15 +129,20 @@ export class GamesDatabase {
     transaction(games);
   }
 
+  setPoster(slug, posterUrl) {
+    this.prepare("UPDATE games SET poster = ? WHERE slug = ?").run(posterUrl, slug);
+  }
+
   updateGameInfo(slug, data) {
-    this.prepare(`
-      UPDATE games SET
-        description = ?,
-        poster = ?,
-        screenshots = ?,
-        last_updated = CURRENT_TIMESTAMP
-      WHERE slug = ?
-    `).run(data.description || null, data.poster || null, data.screenshots || null, slug);
+    const sets = [];
+    const vals = [];
+    if (data.description !== undefined) { sets.push('description = ?'); vals.push(data.description || null); }
+    if (data.poster !== undefined) { sets.push('poster = ?'); vals.push(data.poster || null); }
+    if (data.screenshots !== undefined) { sets.push('screenshots = ?'); vals.push(data.screenshots || null); }
+    if (sets.length === 0) return;
+    sets.push("last_updated = CURRENT_TIMESTAMP");
+    vals.push(slug);
+    this.prepare(`UPDATE games SET ${sets.join(', ')} WHERE slug = ?`).run(...vals);
   }
 
   getGamesWithoutDetails(limit = 100) {

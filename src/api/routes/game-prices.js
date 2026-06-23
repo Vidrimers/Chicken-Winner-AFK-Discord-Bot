@@ -175,9 +175,10 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
                   });
                   if (pageRes.ok) {
                     const html = await pageRes.text();
-                    const ogMatch = html.match(/property="og:image"\s+content="([^"]+)"/);
+                    const ogMatch = html.match(/og:image["\s]+content="([^"]+)"/i)
+                      || html.match(/content="([^"]+)"\s+.*?og:image/i);
                     if (ogMatch) {
-                      gamesDb.updateGameInfo(slug, { poster: ogMatch[1] });
+                      gamesDb.setPoster(slug, ogMatch[1]);
                     }
                   }
                 } catch (e) { /* не критично */ }
@@ -378,20 +379,26 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
         // Парсим poster со страницы
         try {
           if (!canCallApi()) continue;
+          console.log(`[posters] Парсим og:image для ${slug}...`);
           const pageRes = await fetch(`https://hot.game/ru-kz/game/${slug}`, {
             headers: { 'User-Agent': 'Mozilla/5.0' }
           });
+          console.log(`[posters] Ответ для ${slug}: ${pageRes.status}`);
           if (pageRes.ok) {
             recordApiCall();
             const html = await pageRes.text();
-            const ogMatch = html.match(/property="og:image"\s+content="([^"]+)"/);
+            const ogMatch = html.match(/og:image["\s]+content="([^"]+)"/i)
+                      || html.match(/content="([^"]+)"\s+.*?og:image/i);
+            console.log(`[posters] og:image для ${slug}: ${ogMatch ? ogMatch[1] : 'не найден'}`);
             if (ogMatch) {
               result[slug] = ogMatch[1];
-              gamesDb.updateGameInfo(slug, { poster: ogMatch[1] });
+              gamesDb.setPoster(slug, ogMatch[1]);
             }
           }
           await new Promise(r => setTimeout(r, 300));
-        } catch (e) { /* skip */ }
+        } catch (e) {
+          console.error(`[posters] Ошибка для ${slug}:`, e.message);
+        }
       }
 
       res.json(result);
