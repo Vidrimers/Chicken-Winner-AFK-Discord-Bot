@@ -474,11 +474,13 @@
 
     searchInput.addEventListener('input', () => {
       clearTimeout(searchTimer);
+      searchClear.classList.toggle('visible', searchInput.value.length > 0);
       searchTimer = setTimeout(() => doSearch(searchInput.value), DEBOUNCE_MS);
     });
 
     searchClear.addEventListener('click', () => {
       searchInput.value = '';
+      searchClear.classList.remove('visible');
       doSearch('');
       searchInput.focus();
     });
