@@ -399,12 +399,14 @@
       document.getElementById('gpModalMeta').innerHTML = meta.join('<br>');
 
       // Screenshots (store links with prices)
+      let hasStoreLinks = false;
       if (game.screenshots) {
         let storeLinks = [];
         try {
           storeLinks = typeof game.screenshots === 'string' ? JSON.parse(game.screenshots) : game.screenshots;
         } catch {}
         if (Array.isArray(storeLinks) && storeLinks.length > 0 && storeLinks[0].url) {
+          hasStoreLinks = true;
           const slider = document.getElementById('gpModalScreenshots');
           // Сортируем по цене
           storeLinks.sort((a, b) => (a.price || Infinity) - (b.price || Infinity));
@@ -418,7 +420,8 @@
         }
       }
 
-      // Prices
+      // Prices (from API cache)
+      const pricesEl = document.getElementById('gpModalPrices');
       if (game.prices && game.prices.length > 0) {
         const selectedRegion = document.getElementById('gpRegion').value;
         let prices = game.prices;
@@ -445,8 +448,10 @@
 
         document.getElementById('gpModalPrices').innerHTML =
           `<p class="gp-prices-title">Цены</p>${pricesHtml}`;
-      } else {
+      } else if (!hasStoreLinks) {
         document.getElementById('gpModalPrices').innerHTML = '<p style="opacity:0.5">Цены не найдены</p>';
+      } else {
+        document.getElementById('gpModalPrices').innerHTML = '';
       }
 
       // Price history chart
