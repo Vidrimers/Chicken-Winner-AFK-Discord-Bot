@@ -171,7 +171,11 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
             hg_link = excluded.hg_link,
             last_updated = CURRENT_TIMESTAMP
         `);
-        popular.forEach(p => insert.run(p.title, p.slug, p.hg_link));
+        popular.forEach(p => {
+          insert.run(p.title, p.slug, p.hg_link);
+          // Добавляем минимальную цену из БД
+          p.minPrice = gamesDb.getMinPrice(p.slug);
+        });
       }
 
       res.json(popular);
@@ -384,6 +388,10 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
       }
 
       const favorites = gamesDb.getUserFavorites(userId);
+      // Добавляем минимальную цену
+      favorites.forEach(f => {
+        f.minPrice = gamesDb.getMinPrice(f.slug);
+      });
       res.json(favorites);
     } catch (error) {
       console.error("Ошибка получения избранного:", error.message);

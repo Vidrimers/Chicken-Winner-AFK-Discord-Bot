@@ -357,12 +357,6 @@ body.modal-open {
   color: #e0e0e0;
 }
 
-.gp-game-card-price {
-  font-size: 0.85em;
-  color: #4caf50;
-  font-weight: 600;
-}
-
 .gp-game-card-discount {
   position: absolute;
   top: 8px;
@@ -404,6 +398,21 @@ body.modal-open {
 .gp-fav-btn.active {
   color: #ffd700;
   text-shadow: 0 0 8px rgba(255,215,0,0.5);
+}
+
+/* Price badge on card */
+.gp-card-price {
+  position: absolute;
+  bottom: 50px;
+  right: 10px;
+  background: rgba(0,0,0,0.7);
+  color: #4caf50;
+  font-weight: 700;
+  font-size: 0.85em;
+  padding: 4px 10px;
+  border-radius: 8px;
+  z-index: 2;
+  backdrop-filter: blur(4px);
 }
 
 .gp-fav-btn-lg {

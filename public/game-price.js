@@ -135,7 +135,7 @@
   // ===== RENDER =====
   function renderGameCard(game) {
     const isFav = favoriteSlugs.has(game.slug);
-    const minPrice = game._minPrice != null ? game._minPrice : null;
+    const minPrice = game.minPrice || game._minPrice || null;
 
     const card = document.createElement('div');
     card.className = 'gp-game-card';
@@ -143,9 +143,9 @@
     card.innerHTML = `
       <button class="gp-fav-btn ${isFav ? 'active' : ''}" data-slug="${game.slug}" title="В избранное">★</button>
       <img class="gp-game-card-poster" src="${game.poster || '/avatars/nopic.png'}" alt="${game.title}" loading="lazy" />
+      ${minPrice ? `<span class="gp-card-price">${minPrice} ₽</span>` : ''}
       <div class="gp-game-card-info">
         <p class="gp-game-card-title">${game.title}</p>
-        ${minPrice != null && minPrice < Infinity ? `<p class="gp-game-card-price">от ${minPrice} ₽</p>` : ''}
       </div>
     `;
 

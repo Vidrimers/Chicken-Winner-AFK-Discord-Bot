@@ -225,6 +225,13 @@ export class GamesDatabase {
     ).all(gameSlug);
   }
 
+  getMinPrice(gameSlug) {
+    const row = this.prepare(
+      "SELECT MIN(price) as min_price FROM game_prices WHERE game_slug = ? AND price > 0"
+    ).get(gameSlug);
+    return row?.min_price || null;
+  }
+
   getOldPrices(gameSlug) {
     return this.prepare(
       'SELECT price, currency, recorded_at FROM price_history WHERE game_slug = ? ORDER BY recorded_at ASC'
