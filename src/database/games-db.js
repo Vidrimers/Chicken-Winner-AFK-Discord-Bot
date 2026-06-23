@@ -142,7 +142,7 @@ export class GamesDatabase {
 
   getGamesWithoutDetails(limit = 100) {
     return this.prepare(
-      'SELECT slug FROM games WHERE description IS NULL AND last_updated < datetime("now", "-7 days") LIMIT ?'
+      "SELECT slug FROM games WHERE description IS NULL AND last_updated < datetime('now', '-7 days') LIMIT ?"
     ).all(limit);
   }
 
@@ -216,7 +216,7 @@ export class GamesDatabase {
 
   getCachedPrices(gameSlug) {
     return this.prepare(
-      'SELECT * FROM game_prices WHERE game_slug = ? AND last_checked > datetime("now", "-1 hour")'
+      "SELECT * FROM game_prices WHERE game_slug = ? AND last_checked > datetime('now', '-1 hour')"
     ).all(gameSlug);
   }
 
@@ -250,7 +250,7 @@ export class GamesDatabase {
 
   cleanOldPriceHistory(days = 90) {
     this.prepare(
-      `DELETE FROM price_history WHERE recorded_at < datetime("now", "-${days} days")`
+      `DELETE FROM price_history WHERE recorded_at < datetime('now', '-${days} days')`
     ).run();
   }
 
@@ -273,13 +273,23 @@ export class GamesDatabase {
     `).run(userId, settings.price_changes_enabled ? 1 : 0, settings.notify_discord ? 1 : 0, settings.notify_telegram ? 1 : 0);
   }
 
-  getUsersWithNotifications() {
-    return this.prepare(
-      `SELECT un.user_id, un.notify_discord, un.notify_telegram, tu.telegram_chat_id
-       FROM user_notifications un
-       LEFT JOIN telegram_users tu ON un.user_id = tu.user_id
-       WHERE un.price_changes_enabled = 1`
+  getUsersWithNotifications(mainDb) {
+    // Сначала получаем пользователей с уведомлениями
+    const users = this.prepare(
+      `SELECT user_id, notify_discord, notify_telegram
+       FROM user_notifications
+       WHERE price_changes_enabled = 1`
     ).all();
+
+    // Обогащаем telegram_chat_id из основной БД
+    if (mainDb) {
+      return users.map(u => {
+        const tgChatId = mainDb.getTelegramChatId(u.user_id);
+        return { ...u, telegram_chat_id: tgChatId };
+      });
+    }
+
+    return users;
   }
 
   // ===== GAME PRICE SETTINGS =====

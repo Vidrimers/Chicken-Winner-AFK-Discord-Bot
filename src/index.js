@@ -98,7 +98,7 @@ async function main() {
     const app = createExpressServer();
 
     // Запуск сервиса уведомлений о ценах
-    const priceNotificationService = new PriceNotificationService(gamesDb, discordClient, telegramWrapper);
+    const priceNotificationService = new PriceNotificationService(gamesDb, discordClient, telegramWrapper, db);
     priceNotificationService.start();
 
     // Регистрация API роутов

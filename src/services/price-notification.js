@@ -4,10 +4,11 @@ import { log, error as logError } from '../utils/logger.js';
  * Сервис проверки изменения цен и отправки уведомлений
  */
 export class PriceNotificationService {
-  constructor(gamesDb, discordClient, telegram) {
+  constructor(gamesDb, discordClient, telegram, mainDb) {
     this.gamesDb = gamesDb;
     this.discordClient = discordClient;
     this.telegram = telegram;
+    this.mainDb = mainDb;
     this.checkInterval = null;
   }
 
@@ -49,7 +50,7 @@ export class PriceNotificationService {
     try {
       log('💰 Проверка изменения цен...');
 
-      const usersWithNotifications = this.gamesDb.getUsersWithNotifications();
+      const usersWithNotifications = this.gamesDb.getUsersWithNotifications(this.mainDb);
       if (usersWithNotifications.length === 0) {
         log('💰 Нет пользователей с уведомлениями о ценах');
         return;
