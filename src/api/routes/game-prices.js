@@ -560,6 +560,69 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
     }
   });
 
+  // ===== PRICES BATCH =====
+  router.get("/prices-batch", async (req, res) => {
+    try {
+      const { slugs, currency = 'KZT' } = req.query;
+      if (!slugs) return res.json({});
+
+      const slugList = slugs.split(',').slice(0, 20);
+      const result = {};
+
+      for (const slug of slugList) {
+        // Проверяем кэш
+        const minPrice = gamesDb.getMinPrice(slug, currency);
+        if (minPrice != null) {
+          result[slug] = minPrice;
+          continue;
+        }
+
+        // Запрашиваем из API
+        try {
+          if (!canCallApi()) continue;
+          const apiRes = await fetch(
+            `https://api.hot.game/game/${slug}/main-info?currency=${currency}`
+          );
+          if (apiRes.ok) {
+            recordApiCall();
+            const apiData = await apiRes.json();
+            if (apiData.min_prices_by_region) {
+              const allPrices = [];
+              let lowest = Infinity;
+              for (const regionPrices of Object.values(apiData.min_prices_by_region)) {
+                for (const price of regionPrices) {
+                  const finalPrice = price.converted_price?.price || price.price;
+                  const finalCurrency = price.converted_price?.currency || price.currency;
+                  allPrices.push({
+                    region: price.region_code_name || 'unknown',
+                    currency: finalCurrency,
+                    price: finalPrice,
+                    old_price: null,
+                    discount: price.percent_discount || 0,
+                    platform: price.platform,
+                    store_name: price.platform,
+                    store_url: null,
+                  });
+                  if (finalPrice > 0 && finalPrice < lowest) lowest = finalPrice;
+                }
+              }
+              gamesDb.upsertGamePrices(slug, allPrices);
+              if (lowest < Infinity) result[slug] = lowest;
+            }
+          }
+          await new Promise(r => setTimeout(r, 200));
+        } catch (e) {
+          console.error(`[prices-batch] Ошибка для ${slug}:`, e.message);
+        }
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error("Ошибка batch цен:", error.message);
+      res.status(500).json({ error: "Ошибка сервера" });
+    }
+  });
+
   // ===== ADMIN SETTINGS =====
   router.get("/admin/settings", (req, res) => {
     try {

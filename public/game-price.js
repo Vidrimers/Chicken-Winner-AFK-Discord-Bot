@@ -212,7 +212,9 @@
     const pageGames = allPopularGames.slice(start, start + PAGE_SIZE);
     renderGrid(document.getElementById('gpPopularGrid'), pageGames);
     renderPagination('gpPopularPagination', allPopularGames.length, popularPage, 'popular');
-    loadPosters(pageGames.map(g => g.slug).filter(Boolean));
+    const slugs = pageGames.map(g => g.slug).filter(Boolean);
+    loadPosters(slugs);
+    loadPrices(slugs);
   }
 
   function renderSearchPage() {
@@ -221,7 +223,9 @@
     document.getElementById('gpResultsTitle').textContent = `Результаты (${allSearchResults.length})`;
     renderGrid(document.getElementById('gpResultsGrid'), pageGames);
     renderPagination('gpSearchPagination', allSearchResults.length, searchPage, 'search');
-    loadPosters(pageGames.map(g => g.slug).filter(Boolean));
+    const slugs = pageGames.map(g => g.slug).filter(Boolean);
+    loadPosters(slugs);
+    loadPrices(slugs);
   }
 
   async function loadPosters(slugs) {
@@ -233,6 +237,33 @@
         imgs.forEach(img => { img.src = poster; });
       }
     } catch {}
+  }
+
+  async function loadPrices(slugs) {
+    if (!slugs || slugs.length === 0) return;
+    try {
+      const currency = document.getElementById('gpCurrency').value;
+      const data = await apiGet(`/prices-batch?slugs=${slugs.join(',')}&currency=${currency}`);
+      for (const [slug, price] of Object.entries(data)) {
+        const cards = document.querySelectorAll(`.gp-game-card[data-slug="${slug}"] .gp-card-price`);
+        cards.forEach(el => { el.textContent = `${price} ${getCurrencySymbol(currency)}`; el.style.display = 'block'; });
+        // Если бейджа нет — создаём
+        if (cards.length === 0) {
+          const card = document.querySelector(`.gp-game-card[data-slug="${slug}"]`);
+          if (card) {
+            const badge = document.createElement('span');
+            badge.className = 'gp-card-price';
+            badge.textContent = `${price} ${getCurrencySymbol(currency)}`;
+            card.appendChild(badge);
+          }
+        }
+      }
+    } catch {}
+  }
+
+  function getCurrencySymbol(code) {
+    const symbols = { KZT: '₸', RUB: '₽', USD: '$', EUR: '€', UAH: '₴', BYN: 'р.', GBP: '£', GEL: '₾' };
+    return symbols[code] || code;
   }
 
   function showSkeleton(show) {
@@ -345,7 +376,9 @@
       }
       empty.style.display = 'none';
       renderGrid(grid, favs);
-      loadPosters(favs.map(f => f.slug).filter(Boolean));
+      const slugs = favs.map(f => f.slug).filter(Boolean);
+      loadPosters(slugs);
+      loadPrices(slugs);
     } catch {
       grid.innerHTML = '';
       empty.style.display = 'block';
