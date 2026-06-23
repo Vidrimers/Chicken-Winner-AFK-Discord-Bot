@@ -101,30 +101,29 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
   // ===== POPULAR GAMES =====
   router.get("/popular", async (req, res) => {
     try {
-      // Сначала из избранного пользователей
-      let popular = gamesDb.getFavoritesCountBySlug();
-
-      if (popular.length === 0) {
-        // Если избранного нет — берём из API (горячие игры)
-        try {
-          const apiRes = await fetch("https://api.hot.game/method/all-games");
-          if (apiRes.ok) {
-            const allGames = await apiRes.json();
-            popular = allGames.slice(0, 20).map((g) => ({
-              slug: g.slug,
-              title: g.title,
-              hg_link: g.hg_link,
-              cnt: 0,
-            }));
-            // Сохраняем в БД чтобы poster endpoint мог работать
-            gamesDb.upsertManyGames(allGames.slice(0, 20));
-          }
-        } catch (apiErr) {
-          console.error("Ошибка API:", apiErr.message);
+      // Берём горячие игры из API
+      let popular = [];
+      try {
+        const apiRes = await fetch("https://api.hot.game/method/all-games");
+        if (apiRes.ok) {
+          const allGames = await apiRes.json();
+          popular = allGames.slice(0, 20).map((g) => ({
+            slug: g.slug,
+            title: g.title,
+            hg_link: g.hg_link,
+            cnt: 0,
+          }));
+          // Сохраняем в БД чтобы poster endpoint мог работать
+          gamesDb.upsertManyGames(allGames.slice(0, 20));
         }
-      } else {
-        // Обогащаем данными из БД
-        popular = popular.map((p) => {
+      } catch (apiErr) {
+        console.error("Ошибка API:", apiErr.message);
+      }
+
+      // Если из API не получилось — берём из БД
+      if (popular.length === 0) {
+        const favorites = gamesDb.getFavoritesCountBySlug();
+        popular = favorites.map((p) => {
           const game = gamesDb.getGameBySlug(p.game_slug);
           return { slug: p.game_slug, title: game?.title || p.game_slug, hg_link: game?.hg_link };
         });
