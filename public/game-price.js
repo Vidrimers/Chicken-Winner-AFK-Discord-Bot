@@ -377,6 +377,7 @@
     };
 
     modal.style.display = 'block';
+    document.body.classList.add('modal-open');
 
     // Save to recent
     addRecent(slug, title, hgLink);
@@ -469,6 +470,7 @@
 
   function closeGameModal() {
     document.getElementById('gpGameModal').style.display = 'none';
+    document.body.classList.remove('modal-open');
     currentGameSlug = null;
     loadRecent();
   }

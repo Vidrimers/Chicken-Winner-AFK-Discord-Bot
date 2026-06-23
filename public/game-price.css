@@ -1,3 +1,7 @@
+body.modal-open {
+  overflow: hidden;
+}
+
 .gp-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -520,8 +524,8 @@
 }
 
 .gp-game-poster {
-  max-width: 350px;
-  max-height: 350px;
+  max-width: 400px;
+  max-height: 400px;
   object-fit: contain;
   border-radius: 12px;
   display: block;
