@@ -238,6 +238,54 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
         return res.status(404).json({ error: "Игра не найдена" });
       }
 
+      // Если poster/description не заполнены — парсим страницу
+      if (!game.poster || !game.description) {
+        try {
+          console.log(`[game] Парсим страницу для ${slug} (poster=${!!game.poster}, desc=${!!game.description})`);
+          const pageRes = await fetch(`https://hot.game/ru-kz/game/${slug}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+          });
+          if (pageRes.ok) {
+            const html = await pageRes.text();
+            const updates = {};
+
+            if (!game.poster) {
+              const ogImg = html.match(/property="og:image"\s+content="([^"]+)"/);
+              if (ogImg) updates.poster = ogImg[1];
+            }
+
+            if (!game.description) {
+              const ogDesc = html.match(/name="description"\s+content="([^"]+)"/);
+              if (ogDesc) updates.description = ogDesc[1];
+            }
+
+            if (!game.screenshots) {
+              const storeLinks = [];
+              const storeRegex = /data-href="([^"]+)"[^>]*class="hidden-link2 hidden-link-game-price"[\s\S]*?data-price-source="([^"]*)"/g;
+              let m;
+              while ((m = storeRegex.exec(html)) !== null) {
+                const url = m[1].replace(/&amp;/g, '&');
+                const source = m[2];
+                if (!storeLinks.find(s => s.url === url)) {
+                  storeLinks.push({ url, source });
+                }
+              }
+              if (storeLinks.length > 0) {
+                updates.screenshots = JSON.stringify(storeLinks);
+              }
+            }
+
+            if (Object.keys(updates).length > 0) {
+              console.log(`[game] Обновляем ${slug}:`, Object.keys(updates));
+              gamesDb.updateGameInfo(slug, updates);
+              game = gamesDb.getGameBySlug(slug);
+            }
+          }
+        } catch (e) {
+          console.error(`[game] Ошибка парсинга ${slug}:`, e.message);
+        }
+      }
+
       const prices = gamesDb.getCachedPrices(slug);
       const priceHistory = gamesDb.getOldPrices(slug);
 
