@@ -1370,7 +1370,7 @@ export function initTelegramBot(
             const cancelButton = {
               inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'menu_checker' }]]
             };
-            await telegramBot.sendMessage(chatId, '🔗 Отправьте ссылку на Steam-профиль для проверки\n\nМожно отправить до 5 ссылок (через Enter)\n\nПримеры:\n• https://steamcommunity.com/id/username\n• https://steamcommunity.com/profiles/76561198xxxxxxxxx', {
+            await telegramBot.sendMessage(chatId, '🔗 Отправьте ссылку на Steam-профиль для проверки\n\nМожно отправить до 5 ссылок (каждая ссылка с новой строки)\n\nПримеры:\n• https://steamcommunity.com/id/username\n• https://steamcommunity.com/profiles/76561198xxxxxxxxx', {
               reply_markup: cancelButton
             });
             break;
