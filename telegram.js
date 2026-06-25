@@ -622,7 +622,12 @@ async function handleSteamUrlCheck(chatId, text) {
   });
 
   // Если нет валидных URL — пробуем как один URL
-  const urlsToCheck = urls.length > 0 ? urls : [text.trim()];
+  let urlsToCheck = urls.length > 0 ? urls : [text.trim()];
+
+  if (urlsToCheck.length > 5) {
+    await telegramBot.sendMessage(chatId, '⚠️ Максимум 5 профилей за раз. Отправьте первые 5.');
+    urlsToCheck = urlsToCheck.slice(0, 5);
+  }
 
   const countText = urlsToCheck.length > 1 ? `${urlsToCheck.length} профилей` : 'профиль';
   await telegramBot.sendMessage(chatId, `⏳ Проверяю ${countText}... Это может занять несколько секунд.`);
