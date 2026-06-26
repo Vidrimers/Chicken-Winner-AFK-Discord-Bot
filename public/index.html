@@ -23,6 +23,9 @@
     <link rel="prefetch" href="/game-price.html" />
     <link rel="prefetch" href="/game-price.css" />
     <link rel="prefetch" href="/game-price.js" />
+    <link rel="prefetch" href="/hlae-tutorial.html" />
+    <link rel="prefetch" href="/hlae-tutorial.css" />
+    <link rel="prefetch" href="/hlae-tutorial.js" />
   </head>
   <body>
     <script>
@@ -817,8 +820,7 @@
               <svg class="icon" aria-hidden="true"><use href="#icon-trophy"></use></svg> Достижения
             </div>
             <div class="tab" onclick="switchTab('leaderboard')"><svg class="icon" aria-hidden="true"><use href="#icon-medal"></use></svg> Рейтинг</div>
-            <a href="/cheater-checker.html" class="tab cheater-checker-tab"><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg> Чекер читеров</a>
-            <a href="/game-price.html" class="tab game-price-tab"><svg class="icon" aria-hidden="true"><use href="#icon-stats"></use></svg> Цены на игрульки</a>
+            <div class="tab" onclick="switchTab('projects')"><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg> Проекты</div>
             <div class="tab" onclick="switchTab('settings')"><svg class="icon" id="settingsTabIcon" aria-hidden="true"><use href="#icon-settings"></use></svg> Настройки</div>
           </div>
 
@@ -1232,6 +1234,27 @@
             <div class="leaderboard" id="leaderboardList">
               <!-- Рейтинг будет загружен здесь -->
             </div>
+          </div>
+
+          <div id="projects" class="tab-content">
+            <div class="projects-grid">
+              <a href="/cheater-checker.html" class="project-card">
+                <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+                <div class="project-card-title">Чекер читеров</div>
+                <div class="project-card-description">Добавь потенциального читераста и следи, когда его забанит Габен... Или не забанит</div>
+              </a>
+              <a href="/game-price.html" class="project-card">
+                <svg class="icon" aria-hidden="true"><use href="#icon-price"></use></svg>
+                <div class="project-card-title">Цены на игрульки</div>
+                <div class="project-card-description">Сравнивай цены на игры в разных магазинах</div>
+              </a>
+              <a href="/hlae-tutorial.html" class="project-card">
+                <svg class="icon" aria-hidden="true"><use href="#icon-star"></use></svg>
+                <div class="project-card-title">HLAE (Half-Life Advanced Effects)</div>
+                <div class="project-card-description">Полный туториал по созданию мувиков в CS2</div>
+              </a>
+            </div>
+          </div>
           </div>
         </div>
 

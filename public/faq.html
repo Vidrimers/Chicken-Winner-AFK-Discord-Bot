@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ — HLAE CS2</title>
+<link rel="icon" type="image/png" href="/avatars/logo.png" />
+<link rel="shortcut icon" type="image/png" href="/avatars/logo.png" />
+<link rel="stylesheet" href="/style.css" />
+<link rel="stylesheet" href="/theme.css" />
+<link rel="stylesheet" href="/hlae-tutorial.css" />
+</head>
+<body>
+<script>
+  (function() {
+    var t = localStorage.getItem('afkBotTheme');
+    if (t && t !== 'standard') document.body.setAttribute('data-theme', t);
+  })();
+</script>
+
+<div class="tutorial-content" id="content" style="margin:0 auto;max-width:800px">
+
+<a href="/" class="hlae-back">← Назад в chicken-winner</a>
+
+<div class="hlae-nav">
+  <a href="/hlae-tutorial.html" class="hlae-nav-btn">Туториал</a>
+  <a href="/faq.html" class="hlae-nav-btn active">FAQ</a>
+</div>
+
+<h1>FAQ — Часто задаваемые вопросы</h1>
+
+<div class="search-wrap">
+  <input type="text" id="searchInput" placeholder="Поиск по FAQ...">
+  <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
+</div>
+
+<div class="faq-item" id="q1">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">1.</span>
+    Банит ли HLAE?
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <img src="/img-hlae/q1-ban.webp">
+    <p>Если неправильно использовать HLAE — да, можно.</p>
+    <p>При обычном запуске КС2 с рекомендованными параметрами вас не забанит, но если в параметрах запуска не будет <span class="cmd" onclick="copyCmd(this)">-insecure</span> то появляется шанс бана.</p>
+    <p>Лучшим решением будет использовать HLAE на аккаунте-пустышке или на забаненном аккаунте.</p>
+  </div>
+</div>
+
+<div class="faq-item" id="q2">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">2.</span>
+    После обновления КС всё сломалось — что делать?!
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <img src="/img-hlae/q2-update.webp">
+    <p><strong>Решение:</strong></p>
+    <ol>
+      <li>Перед запуском HLAE выбрать в свойствах игры в Стиме предыдущий билд ДО нового апдейта</li>
+      <li>Либо просто дождаться обновления HLAE, обычно выкатывают оперативно</li>
+    </ol>
+  </div>
+</div>
+
+<div class="faq-item" id="q3">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">3.</span>
+    Записывается только звук без видео
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <p><strong>После записи не появляется видео-файлов</strong></p>
+    <p><strong>Решение:</strong></p>
+    <ol>
+      <li>Переустановка FFmpeg с другого источника</li>
+      <li>Запуск HLAE от имени администратора</li>
+      <li>Перед записью снимать демку с паузы на F9 и ставить на Б русскую</li>
+      <li>Запускать игру в разрешении которое делится на 2, например <span class="cmd" onclick="copyCmd(this)">1920x1080</span> или <span class="cmd" onclick="copyCmd(this)">2560x1440</span></li>
+      <li>Если не помогло — вернуться к пункту #1</li>
+    </ol>
+  </div>
+</div>
+
+<div class="faq-item" id="q4">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">4.</span>
+    Посреди раунда плашка о пленте бомбы
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <p>При проигрывании демо появляется надпись о том, что нужно заложить бомбу.</p>
+    <img src="/img-hlae/q4-bomb.webp">
+    <p><strong>Решение:</strong> Прописать команду:</p>
+    <p><span class="cmd" onclick="copyCmd(this)">mirv_panorama panelstyle panelClassName=CSGOHudHintText opacity=0</span></p>
+  </div>
+</div>
+
+<div class="faq-item" id="q5">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">5.</span>
+    Не работает свободная камера при создании сайнов
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <p><strong>При паузе на русскую Б не летает камера</strong></p>
+    <p><strong>Решение:</strong> Нажимать кнопку <strong>Z</strong> на клавиатуре до тех пор пока камера не начнет вращаться по одной из осей</p>
+  </div>
+</div>
+
+<div class="faq-item" id="q6">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">6.</span>
+    Поставил поинты, а камера не летит по ним
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <p><strong>Стоит больше четырех поинтов камеры но она не летит</strong></p>
+    <p><strong>Решение:</strong></p>
+    <ol>
+      <li>Нажать английскую <strong>O</strong> на клавиатуре</li>
+      <li>Убедиться что вы не в режиме свободной камеры (нажать ESC несколько раз)</li>
+      <li>Прописать команду <span class="cmd" onclick="copyCmd(this)">mirv_campath enable 1</span></li>
+    </ol>
+  </div>
+</div>
+
+<div class="faq-item" id="q7">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">7.</span>
+    Пропала консоль в демке и не отображается
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <p><strong>Консоль не отображается в демке</strong></p>
+    <p><strong>Решение:</strong> В конфиге есть бинд на английскую <strong>J</strong> переключающий видимость всего интерфейса</p>
+  </div>
+</div>
+
+<div class="faq-item" id="q8">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">8.</span>
+    Черно-белый цветокор в начале раунда
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <p><strong>В начале раунда всё черно-белое</strong></p>
+    <p><strong>Решение:</strong> Прописать команду <span class="cmd" onclick="copyCmd(this)">r_csgo_postprocess_enable 0</span> и дождаться конца раунда на некоторых картах</p>
+  </div>
+</div>
+
+<div class="faq-item" id="q9">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">9.</span>
+    Демка не открывается — unable to extract addons
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <p>Не удается открыть демо со следующим сообщением: <code>unable to extract addons from file</code></p>
+    <img src="/img-hlae/q9-demo.webp">
+    <p><strong>Решение:</strong> Переместить демку в корень игры и запустить через <span class="cmd" onclick="copyCmd(this)">playdemo название_демки</span></p>
+  </div>
+</div>
+
+<div class="faq-item" id="q10">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">10.</span>
+    Как убрать надпись TrueView
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <p>При проигрывании демо появляется надпись TrueView.</p>
+    <img src="/img-hlae/q10-trueview.webp">
+    <p><strong>Решение:</strong> Прописать команду <span class="cmd" onclick="copyCmd(this)">mirv_panorama panelstyle panelId=trueview_row opacity=0</span></p>
+  </div>
+</div>
+
+<div class="faq-item" id="q11">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">11.</span>
+    Старая демка не работает
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <p><strong>Решение:</strong> Скачать старый билд игры/HLAE, где всё работало.</p>
+    <p><strong>Версии HLAE для конкретных обновлений CS2:</strong></p>
+    <ul>
+      <li>До обновления от 16.09.2025 — <a href="https://github.com/advancedfx/advancedfx/releases/tag/v2.186.15" target="_blank">v2.186.15</a></li>
+      <li>До обновления от 27.08.2025 — <a href="https://github.com/advancedfx/advancedfx/releases/tag/v2.186.13" target="_blank">v2.186.13</a></li>
+      <li>До обновления от 16.08.2025 — <a href="https://github.com/advancedfx/advancedfx/releases/tag/v2.186.10" target="_blank">v2.186.10</a></li>
+      <li>До обновления от 14.08.2025 — <a href="https://github.com/advancedfx/advancedfx/releases/tag/v2.186.5" target="_blank">v2.186.5</a></li>
+      <li>До обновления от 28.07.2025 (AnimGraph2) — <a href="https://github.com/advancedfx/advancedfx/releases/tag/v2.185.3" target="_blank">v2.185.3</a></li>
+    </ul>
+    <p><em>автор списка Chet Jong, перевел TuJluGPaM</em></p>
+  </div>
+</div>
+
+<div class="faq-item" id="q12">
+  <div class="faq-q" onclick="toggleFaq(this)">
+    <span class="num">12.</span>
+    Не работает запись по бинду
+    <span class="arrow">▼</span>
+  </div>
+  <div class="faq-a">
+    <p><strong>Основная причина:</strong> HLAE не хватает прав на создание папки по указанному пути.</p>
+    <img src="/img-hlae/q12-record.webp">
+    <p>Если не помогает запуск HLAE от имени админа — в качестве решения можно прописать вместо пути к папке записи просто название папки и записывать рядом с .exe файлом игры.</p>
+  </div>
+</div>
+
+</div>
+
+<script>
+function copyCmd(el) {
+  navigator.clipboard.writeText(el.textContent).then(function() {
+    var toast = document.getElementById('copyToast');
+    toast.classList.add('show');
+    setTimeout(function() { toast.classList.remove('show'); }, 1200);
+  });
+}
+
+function toggleFaq(el) {
+  el.classList.toggle('open');
+  var answer = el.nextElementSibling;
+  if (answer) answer.classList.toggle('open');
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClear').style.display = 'none';
+  document.getElementById('searchInput').dispatchEvent(new Event('input'));
+}
+
+document.getElementById('searchInput').addEventListener('input', function() {
+  document.getElementById('searchClear').style.display = this.value ? 'block' : 'none';
+  var query = this.value.trim().toLowerCase();
+  var items = document.querySelectorAll('.faq-item');
+
+  if (query.length < 2) {
+    items.forEach(function(item) { item.style.display = ''; });
+    document.querySelector('h1').style.display = '';
+    document.querySelector('.search-wrap').style.display = '';
+    return;
+  }
+
+  items.forEach(function(item) {
+    var text = item.textContent.toLowerCase();
+    if (text.includes(query)) {
+      item.style.display = '';
+      var q = item.querySelector('.faq-q');
+      var a = item.querySelector('.faq-a');
+      if (q && !q.classList.contains('open')) {
+        q.classList.add('open');
+        if (a) a.classList.add('open');
+      }
+    } else {
+      item.style.display = 'none';
+    }
+  });
+
+  document.querySelector('h1').style.display = '';
+  document.querySelector('.search-wrap').style.display = '';
+});
+</script>
+
+<div class="copy-toast" id="copyToast">Скопировано!</div>
+</body>
+</html>

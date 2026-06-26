@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HLAE CS2 Tutorial</title>
+<link rel="icon" type="image/png" href="/avatars/logo.png" />
+<link rel="shortcut icon" type="image/png" href="/avatars/logo.png" />
+<link rel="stylesheet" href="/style.css" />
+<link rel="stylesheet" href="/theme.css" />
+<link rel="stylesheet" href="/hlae-tutorial.css" />
+</head>
+<body>
+<script>
+  (function() {
+    var t = localStorage.getItem('afkBotTheme');
+    if (t && t !== 'standard') document.body.setAttribute('data-theme', t);
+  })();
+</script>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <a href="/" class="hlae-back">← Назад в chicken-winner</a>
+  <h3>Содержание</h3>
+  <a href="#s1">1. Что такое HLAE</a>
+  <a href="#s2">2. Установка и запуск</a>
+  <a href="#s3">3. Управление демкой</a>
+  <a href="#s4">4. Свободная камера</a>
+  <a href="#s5">5. Campaths</a>
+  <a href="#s6">6. Запись видео</a>
+  <a href="#s7">7. Чистая картинка</a>
+  <a href="#s8">8. Смерти и убийства</a>
+  <a href="#s9">9. FOV и вьюмодель</a>
+  <a href="#s10">10. Системные команды</a>
+  <a href="#s11">11. Готовый cfg</a>
+  <a href="#s12">12. Воркфлоу</a>
+  <a href="#s13">13. Ошибки и решения</a>
+
+  <h3>Категории команд</h3>
+  <a href="#cat-camera">Камера и вид</a>
+  <a href="#cat-logic">Игровая логика</a>
+  <a href="#cat-system">Система и отладка</a>
+  <a href="#cat-visual">Визуальные эффекты</a>
+  <a href="#cat-scripts">Скрипты и команды</a>
+  <a href="#cat-record">Запись футажей</a>
+
+  <h3>Полезные ресурсы</h3>
+
+  <div class="acc-header" onclick="toggleAcc(this)">
+    <span class="arrow">▶</span> Туториалы
+  </div>
+  <div class="acc-body">
+    <a href="https://youtu.be/Lz_o-crz03c" target="_blank">Монтаж КС2</a>
+    <a href="https://youtu.be/72enNR9rosc" target="_blank">Смена неба</a>
+    <a href="https://youtu.be/5fN26wvGCtA" target="_blank">Импорт в UE5</a>
+  </div>
+
+  <div class="acc-header" onclick="toggleAcc(this)">
+    <span class="arrow">▶</span> Файлы
+  </div>
+  <div class="acc-body">
+    <a href="https://drive.google.com/drive/folders/1pul1pvniZ1czUgyMzfnVkZt0AmoXWdBf?usp=sharing" target="_blank">Папка для монтажа</a>
+    <a href="https://www.ffmpeg.org/download.html" target="_blank">FFmpeg</a>
+    <a href="https://github.com/advancedfx/ReShade_advancedfx" target="_blank">ReShade_advancedfx</a>
+  </div>
+
+  <div class="acc-header" onclick="toggleAcc(this)">
+    <span class="arrow">▶</span> Скрипты
+  </div>
+  <div class="acc-body">
+    <a href="https://github.com/xNWP/HLAE-CamIO-To-AE/releases" target="_blank">CamIO → After Effects</a>
+    <a href="https://github.com/Devostated/HLAE-CamIO-To-Nuke/releases" target="_blank">CamIO → Nuke</a>
+    <a href="https://github.com/Devostated/HLAE-CamIO-To-Nuke" target="_blank">CamIO → DaVinci</a>
+    <a href="https://github.com/advancedfx/afx-blender-scripts" target="_blank">CamIO → Blender</a>
+    <a href="https://github.com/xNWP/HLAE-CamIO-To-C4D/releases" target="_blank">CamIO → Cinema4D</a>
+  </div>
+
+  <div class="acc-header" onclick="toggleAcc(this)">
+    <span class="arrow">▶</span> Документация
+  </div>
+  <div class="acc-body">
+    <a href="https://github.com/advancedfx/advancedfx/wiki" target="_blank">Wiki HLAE</a>
+    <a href="https://github.com/advancedfx/advancedfx/wiki/Source2:Commands" target="_blank">Команды CS2</a>
+    <a href="https://github.com/advancedfx/advancedfx/releases" target="_blank">Релизы HLAE</a>
+    <a href="https://www.youtube.com/@ibuymoviecom" target="_blank">YouTube IBUYMOVIE</a>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+<div class="tutorial-content" id="content">
+
+<div class="hlae-nav">
+  <a href="/hlae-tutorial.html" class="hlae-nav-btn active">Туториал</a>
+  <a href="/faq.html" class="hlae-nav-btn">FAQ</a>
+</div>
+
+<!-- ===================== SECTION 1 ===================== -->
+<h1 id="s1">HLAE для CS2 — Полный туториал</h1>
+<p class="subtitle">Версия актуальна для HLAE 2.189+ / AfxHookSource2 / CS2<br>
+Официальная документация: <a href="https://github.com/advancedfx/advancedfx/wiki/AfxHookSource2" target="_blank">github.com/advancedfx</a><br>
+Туториал сделан на основе <a href="https://ibuymovie.com/hlae" target="_blank">ibuymovie.com/hlae</a><br>
+Скачать туториал в формате markdown .md: <a href="/hlae_cs2_tutorial.md" download>hlae_cs2_tutorial.md</a>
+</p>
+
+<div class="search-wrap">
+  <input type="text" id="searchInput" placeholder="Поиск по тексту...">
+  <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
+</div>
+
+<h2 id="cat-camera">Камера и вид</h2>
+
+<h3 id="s2">1. Что такое HLAE и зачем он нужен</h3>
+<p><strong>HLAE (Half-Life Advanced Effects)</strong> — инструмент для создания контента в CS2:</p>
+<ul>
+  <li>Запись видео <strong>без потери кадров</strong> (frame-perfect)</li>
+  <li><strong>Плавные кинематографические пути камеры</strong> по демке</li>
+  <li>Свободная камера на паузе</li>
+  <li>Убирание HUD, фильтрация уведомлений об убийствах</li>
+  <li>Изменение FOV, скайбокса, эффектов</li>
+  <li>Запись отдельных слоёв (фон, игроки, оружие)</li>
+</ul>
+
+<div class="warn">⚠️ <strong>Важно:</strong> HLAE запускает CS2 в режиме <span class="cmd" onclick="copyCmd(this)">-insecure</span>. Никогда не заходи на VAC-серверы через HLAE — бан. Только демки и LAN.</div>
+
+<!-- ===================== SECTION 2 ===================== -->
+<h3 id="s2b">2. Установка и запуск CS2 через HLAE</h3>
+<h4>Установка</h4>
+<ol>
+  <li>Скачать <code>HLAE_Setup.exe</code> с <a href="https://github.com/advancedfx/advancedfx/releases" target="_blank">GitHub Releases</a></li>
+  <li>Установить — <strong>путь не должен содержать кириллицу</strong> (например: <code>C:\HLAE</code>)</li>
+  <li>Опционально — установить FFmpeg через тот же установщик</li>
+</ol>
+
+<h4>Запуск CS2</h4>
+<p>Открыть <code>HLAE.exe</code> → <strong>Menu → File → Launch CS2</strong></p>
+<table>
+  <tr><th>Поле</th><th>Что указать</th></tr>
+  <tr><td>Game</td><td><code>...\cs2.exe</code></td></tr>
+  <tr><td>Moviemaking config parent folder</td><td>Папка без кириллицы, например <code>C:\HLAE\cfg</code></td></tr>
+  <tr><td>Graphic Resolution</td><td>Нужное разрешение (1920x1080)</td></tr>
+  <tr><td>Custom command line options</td><td><span class="cmd" onclick="copyCmd(this)">-console</span> (опционально)</td></tr>
+</table>
+<p>Нажать <strong>Launch</strong>. В консоли CS2 должно появиться сообщение от <code>advancedfx.org</code>.</p>
+
+<!-- ===================== SECTION 3 ===================== -->
+<h2 id="cat-logic">Игровая логика и поведение</h2>
+
+<h3 id="s3">3. Загрузка и управление демкой</h3>
+<h4>Загрузить демку</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">demoui</span>          <span class="comment">// открыть интерфейс демок (или Shift+F2)</span>
+<span class="cmd" onclick="copyCmd(this)">demo_gototick 0</span> <span class="comment">// перейти в начало демки</span></div>
+
+<h4>Управление скоростью</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">host_timescale 1</span>      <span class="comment">// нормальная скорость</span>
+<span class="cmd" onclick="copyCmd(this)">host_timescale 0.25</span>   <span class="comment">// четверть скорости (для campaths)</span>
+<span class="cmd" onclick="copyCmd(this)">host_timescale 0.1</span>    <span class="comment">// очень медленно</span>
+<span class="cmd" onclick="copyCmd(this)">host_timescale 0</span>      <span class="comment">// пауза</span></div>
+
+<h4>Прыжки по тикам</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">demo_gototick 12345</span>      <span class="comment">// перейти на конкретный тик</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_skip time -5</span>        <span class="comment">// откатиться на 5 секунд назад</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_skip time 10</span>        <span class="comment">// прыгнуть вперёд на 10 секунд</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_skip tick to 10000</span>  <span class="comment">// перейти к тику 10000</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_skip time to 173.5</span>  <span class="comment">// перейти ко времени 173.5 сек</span></div>
+
+<h4>Рекомендуемые бинды</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">bind "F1" "demo_togglepause"</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F2" "host_timescale 0.25"</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F3" "host_timescale 1"</span>
+<span class="cmd" onclick="copyCmd(this)">bind "PGUP" "mirv_skip time 5"</span>
+<span class="cmd" onclick="copyCmd(this)">bind "PGDN" "mirv_skip time -5"</span></div>
+
+<!-- ===================== SECTION 4 ===================== -->
+<h3 id="s4">4. Свободная камера — mirv_input</h3>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_input camera</span>          <span class="comment">// включить свободную камеру</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_input off</span>             <span class="comment">// выключить, вернуть обычный режим</span></div>
+
+<div class="info">💡 Для POV-демок (от первого лица) сначала переключись в thirdperson:<br>
+<span class="cmd" onclick="copyCmd(this)">sv_cheats 1</span> → <span class="cmd" onclick="copyCmd(this)">thirdperson</span> → <span class="cmd" onclick="copyCmd(this)">mirv_input camera</span></div>
+
+<h4>Чувствительность</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_input cfg msens 1.0</span>   <span class="comment">// чувствительность мыши</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_input cfg ksens 200</span>   <span class="comment">// скорость клавиатуры (WASD)</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_input cfg mouseMoveSupport 1</span>  <span class="comment">// управление кнопками мыши</span></div>
+
+<h4>Управление камерой</h4>
+<table>
+  <tr><th>Клавиша</th><th>Действие</th></tr>
+  <tr><td>WASD / NUMPAD</td><td>Движение</td></tr>
+  <tr><td>R / NUMPAD 9</td><td>Вверх</td></tr>
+  <tr><td>F / NUMPAD 3</td><td>Вниз</td></tr>
+  <tr><td>Мышь</td><td>Обзор</td></tr>
+  <tr><td>PAGE UP / колёсико</td><td>Приблизить</td></tr>
+  <tr><td>PAGE DOWN / колёсико</td><td>Отдалить</td></tr>
+  <tr><td>Z / X</td><td>Roll (поворот)</td></tr>
+  <tr><td>+ / -</td><td>Скорость ×2 / ×0.5</td></tr>
+  <tr><td>ESC</td><td>Выйти из режима камеры</td></tr>
+  <tr><td>HOME</td><td>Сброс обзора</td></tr>
+</table>
+
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">bind "KP_END" "mirv_input camera"</span>   <span class="comment">// Numpad 1 — включить камеру</span>
+<span class="cmd" onclick="copyCmd(this)">bind "KP_INS" "mirv_input off"</span>      <span class="comment">// Numpad 0 — выключить</span></div>
+
+<!-- ===================== SECTION 5 ===================== -->
+<h3 id="s5">5. Плавные камера-пути (Campaths)</h3>
+<p>Campath — анимированный путь камеры. HLAE плавно интерполирует между расставленными точками.</p>
+
+<h4>Принцип работы</h4>
+<ol>
+  <li>Расставляешь <strong>кейфреймы</strong> (минимум 4) в нужных местах/моментах</li>
+  <li>HLAE строит плавный путь между ними</li>
+  <li>При воспроизведении камера сама летит по пути</li>
+</ol>
+
+<h4>Подготовка</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">host_timescale 0.25</span>         <span class="comment">// замедли демку</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_input camera</span>           <span class="comment">// включи свободную камеру</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_campath draw enabled 1</span> <span class="comment">// включи визуализацию пути</span></div>
+
+<h4>Расстановка кейфреймов</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">bind "E" "mirv_campath add"</span>   <span class="comment">// добавить кейфрейм</span></div>
+
+<div class="warn">⚠️ Нужно минимум <strong>4 кейфрейма</strong>. Меньше — campath не включится!</div>
+
+<h4>Включение campath</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_campath enable 1</span>    <span class="comment">// включить путь камеры</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_campath enable 0</span>    <span class="comment">// выключить</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_campath print</span>       <span class="comment">// список всех кейфреймов</span></div>
+
+<h4>Все команды campath</h4>
+<table>
+  <tr><th>Команда</th><th>Описание</th></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath add</span></td><td>Добавить кейфрейм</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath enable 1|0</span></td><td>Включить/выключить campath</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath print</span></td><td>Показать все кейфреймы</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath remove [id]</span></td><td>Удалить кейфрейм по ID</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath select &lt;id&gt;</span></td><td>Выбрать кейфреймы (clear/edit работают только с ними)</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath clear</span></td><td>Удалить все кейфреймы</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath draw enabled 1|0</span></td><td>Визуализация пути</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath draw keyIndex 5</span></td><td>Размер номеров ключей</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath draw keyAxis 1</span></td><td>Показать оси ключевых кадров</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath draw keyCam 1</span></td><td>Показать положение камеры</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath save mypath</span></td><td>Сохранить путь в файл</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath load mypath</span></td><td>Загрузить путь из файла</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath edit start</span></td><td>Сдвинуть путь к текущему времени</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath edit duration 10</span></td><td>Задать длительность (сек)</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath setduration 10</span></td><td>Растянуть путь до 10 сек</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">mirv_campath offset</span></td><td>Синхронизировать с текущим временем</td></tr>
+</table>
+
+<h4>Интерполяция</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_campath edit interp position linear</span>     <span class="comment">// линейное движение</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_campath edit interp position cubic</span>      <span class="comment">// кубическое (по умолчанию)</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_campath edit interp rotation sLinear</span>    <span class="comment">// линейный поворот</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_campath edit interp fov linear</span>          <span class="comment">// линейное изменение FOV</span></div>
+
+<h4>Бинды для campath</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">bind "E"   "mirv_campath add"</span>
+<span class="cmd" onclick="copyCmd(this)">bind "R"   "mirv_campath enable 1"</span>
+<span class="cmd" onclick="copyCmd(this)">bind "T"   "mirv_campath enable 0"</span>
+<span class="cmd" onclick="copyCmd(this)">bind "G"   "mirv_campath clear"</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F4"  "mirv_campath draw enabled 1"</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F5"  "mirv_campath draw enabled 0"</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F6"  "mirv_campath print"</span></div>
+
+<h4>Советы</h4>
+<ul>
+  <li>Расставляй точки <strong>в слоу-мо</strong> (host_timescale 0.1–0.25), не на паузе</li>
+  <li>Между кейфреймами <strong>минимум 1–2 секунды</strong> реального времени</li>
+  <li>Используй <span class="cmd" onclick="copyCmd(this)">mirv_campath draw enabled 1</span> чтобы видеть путь</li>
+  <li>Сохраняй пути через <span class="cmd" onclick="copyCmd(this)">mirv_campath save</span> — можно редактировать XML</li>
+</ul>
+
+<h4>Экспорт камеры в файл</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_camio export start mycamera.xml</span>   <span class="comment">// начать экспорт</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_camio export end</span>                  <span class="comment">// остановить</span></div>
+<p>Альтернатива: <span class="cmd" onclick="copyCmd(this)">mirv_streams record cam enabled 1</span> — экспорт автоматически при записи.</p>
+
+<!-- ===================== SECTION 6 ===================== -->
+<h2 id="cat-record">Запись игровых футажей</h2>
+
+<h3 id="s6">6. Запись видео — mirv_streams</h3>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_streams record start</span>      <span class="comment">// начать запись</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams record end</span>        <span class="comment">// остановить</span></div>
+
+<h4>FFmpeg настройка</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_streams add normal mystream</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams edit mystream settings sampler fps 60</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams edit mystream settings ffmpegOptions "-c:v libx264 -crf 15 -preset slow -pix_fmt yuv420p"</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams edit mystream settings ffmpegOutputPath "C:/recordings/output.mp4"</span></div>
+
+<h4>Встроенные пресеты</h4>
+<table>
+  <tr><th>Пресет</th><th>Формат</th><th>Описание</th></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">afxClassic</span></td><td>.tga</td><td>Сырые кадры</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">afxFfmpeg</span></td><td>.mp4</td><td>Низкий размер, среднее качество</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">afxFfmpegHuffyuv</span></td><td>.avi</td><td>Lossless</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">afxFfmpegLosslessBest</span></td><td>.mp4</td><td>Lossless лучший</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">afxFfmpegLosslessFast</span></td><td>.mp4</td><td>Lossless быстрый</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">afxFfmpegRaw</span></td><td>.avi</td><td>Сырые данные</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">afxFfmpegYuv420p</span></td><td>.mp4</td><td>Низкое качество</td></tr>
+  <tr><td><span class="cmd" onclick="copyCmd(this)">afxSampler30</span></td><td>—</td><td>30 FPS</td></tr>
+</table>
+
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_streams record screen settings afxFfmpeg</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams record startMovieWav 1</span>    <span class="comment">// запись звука</span></div>
+
+<h4>Depth Map и нормали</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_streams add depth d</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams add normal n</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams edit n capture beforeUi</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams settings edit afxDefault settings afxFfmpegYuv420p</span>
+<span class="cmd" onclick="copyCmd(this)">host_framerate 300; demo_resume; mirv_streams record start</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams record end; demo_pause; host_framerate 0</span></div>
+
+<h4>OpenEXR depth</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_streams add depth exr</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams edit exr depthMode linear</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams edit exr depthVal 0</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams edit exr depthValMax 0</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams edit exr depthChannels gray</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams edit exr captureType depthF</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_streams edit exr settings afxClassic</span></div>
+
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">bind "F10" "mirv_streams record start"</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F11" "mirv_streams record end"</span></div>
+
+<div class="info">💡 Перед записью выключи <span class="cmd" onclick="copyCmd(this)">mirv_campath draw enabled 0</span> — иначе путь попадёт в видео!</div>
+
+<!-- ===================== SECTION 7 ===================== -->
+<h2 id="cat-visual">Визуальные эффекты и графика</h2>
+
+<h3 id="s7">7. Полезные команды для чистой картинки</h3>
+
+<h4>Убрать HUD</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">cl_drawhud 0</span>                        <span class="comment">// скрыть HUD</span>
+<span class="cmd" onclick="copyCmd(this)">cl_drawhud 1</span>                        <span class="comment">// вернуть</span>
+<span class="cmd" onclick="copyCmd(this)">cl_drawonlydeathnotices 1</span>           <span class="comment">// только прицел + killfeed</span></div>
+
+<h4>Флэшбэнг</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_noflash 1</span>    <span class="comment">// отключить ослепление</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_noflash 0</span>    <span class="comment">// вернуть</span></div>
+
+<h4>Заставка матча</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_endofmatch 1</span>   <span class="comment">// убрать экран окончания</span></div>
+
+<h4>Скрытые конвары</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_cvar_unhide_all</span>          <span class="comment">// все скрытые команды</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_cvar_unlock_sv_cheats</span>    <span class="comment">// обойти sv_cheats</span></div>
+
+<h4>Дым</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">sc_setclassflags SmokeVolumeObject 8</span>   <span class="comment">// убрать дым</span>
+<span class="cmd" onclick="copyCmd(this)">sc_setclassflags SmokeVolumeObject 0</span>   <span class="comment">// вернуть дым</span></div>
+
+<h4>Скайбокс</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_sky enabled 1</span>                        <span class="comment">// включить управление</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_sky color r 0.1 g 0.2 b 0.5</span>         <span class="comment">// цвет неба (RGB 0.0–1.0)</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_sky clouds draw 0</span>                    <span class="comment">// скрыть облака</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_sky clouds color r 255 g 200 b 150</span>   <span class="comment">// цвет облаков</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_sky material "materials/skybox/cs_italy_s2_skybox_2.vmat_c"</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_sky material default</span>                 <span class="comment">// вернуть стандартный</span></div>
+
+<h4>Цвета свечения (mirv_colors)</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_colors glow ct white</span>                 <span class="comment">// свечение CT — белое</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_colors glow t red</span>                    <span class="comment">// свечение T — красное</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_colors trails ct 255 0 0 255</span>         <span class="comment">// следы CT — красные</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_colors smoke 100 100 100</span>             <span class="comment">// цвет дыма</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_colors teamid_overhead ct cyan</span>       <span class="comment">// индикаторы над головой</span></div>
+
+<h4>Свечение игроков (mirv_glow)</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_glow projectiles smokes T 0</span>          <span class="comment">// убрать свечение дымовых гранат</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_glow players set x76561198106931330 0</span>  <span class="comment">// убрать свечение игрока</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_glow entities set 3471718 1</span>          <span class="comment">// свечение объекта</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_glow players help</span>                    <span class="comment">// список ID игроков</span></div>
+
+<h4>Панели HUD (mirv_panorama)</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_panorama panelStyle panelId=trueview_row opacity=0</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_panorama panelStyle panelClassName=CSGOHudHintText opacity=0</span></div>
+
+<h4>ReShade</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_reshade enabled 1</span>    <span class="comment">// включить ReShade</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_reshade enabled 0</span>    <span class="comment">// выключить</span></div>
+<p>Аддон: <a href="https://github.com/advancedfx/ReShade_advancedfx" target="_blank">github.com/advancedfx/ReShade_advancedfx</a></p>
+
+<!-- ===================== SECTION 8 ===================== -->
+<h3 id="s8">8. Смерти и убийства — mirv_deathmsg</h3>
+
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_deathmsg debug 1</span>    <span class="comment">// показывать UID в консоли</span>
+
+<span class="comment">// Блокировать всё кроме нужного игрока:</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_deathmsg filter add attackerMatch=!12345 block=1 lastRule=1</span>
+
+<span class="cmd" onclick="copyCmd(this)">mirv_deathmsg highLightId 12345</span>    <span class="comment">// подсветить убийства</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_deathmsg cfg noticeLifeTime 6</span>  <span class="comment">// показывать 6 секунд</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_deathmsg help players</span>          <span class="comment">// список игроков</span></div>
+
+<h4>Цвета уведомлений</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_deathmsg colors ct white</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_deathmsg colors t red</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_deathmsg colors border 255 255 0 255</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_deathmsg colors background 0 0 0 192</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_deathmsg colors backgroundLocal 0 0 0 192</span></div>
+
+<h4>Замена имён</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_replace_name help players</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_replace_name byUserId add 12345 "NewName"</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_replace_name byXuid add x76561198106931330 "Name with Spaces"</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_replace_name byUserId print</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_replace_name byUserId remove 12345</span></div>
+
+<!-- ===================== SECTION 9 ===================== -->
+<h3 id="s9">9. FOV и вьюмодель</h3>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_fov 90</span>                        <span class="comment">// стандартный FOV</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_fov 110</span>                       <span class="comment">// широкий угол</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_fov default</span>                   <span class="comment">// вернуть стандарт</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_fov handleZoom enabled 1</span>      <span class="comment">// фиксить скоп</span></div>
+
+<h4>Вьюмодель</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_viewmodel enabled 1</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_viewmodel offset x 2</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_viewmodel offset y 0</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_viewmodel offset z -1</span>
+
+<span class="comment">// Полный синтаксис:</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_viewmodel set [X] [Y] [Z] [FOV] [0|1]</span>
+<span class="comment">// 0 = правая рука, 1 = левая. * = по умолчанию</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_viewmodel set * * * 90 *</span>    <span class="comment">// только FOV</span></div>
+
+<!-- ===================== SECTION 10 ===================== -->
+<h2 id="cat-system">Система и отладка</h2>
+
+<h3 id="s10">10. Системные команды</h3>
+
+<h4>Список сущностей</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_listentities</span>                          <span class="comment">// все сущности</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_listentities isPlayer=1</span>              <span class="comment">// только игроки</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_listentities sort=distance limit=10</span>  <span class="comment">// 10 ближайших</span></div>
+
+<h4>Исправления</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_fix time 1</span>        <span class="comment">// исправить время Panorama</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_fix animations 1</span>  <span class="comment">// исправить плавность анимаций</span></div>
+
+<h4>Загрузка DLL</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_loadlibrary "C:/path/to/library.dll"</span></div>
+
+<h4>Приоритет камеры</h4>
+<ol>
+  <li><code>mirv_campath</code> (высший)</li>
+  <li><code>mirv_camimport</code></li>
+  <li><code>mirv_fov</code></li>
+  <li><code>mirv_input camera</code> (низший)</li>
+</ol>
+
+<!-- ===================== SECTION 11 ===================== -->
+<h2 id="cat-scripts">Скрипты и команды</h2>
+
+<h4>Авто-выполнение команд</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_cmd add time 45.5 "cl_drawhud 0"</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_cmd add tick 12000 "mirv_campath enable 1"</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_cmd clear</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_cmd save "script.xml"</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_cmd load "script.xml"</span></div>
+
+<h4>Анимация по кривым</h4>
+<div class="cmd-block"><span class="cmd" onclick="copyCmd(this)">mirv_cmd clear</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_cmd addCurves tick 1000 4000 - interp=cubic space=abs 1000 1 1300 2 1600 0.5 1900 2 2100 0.5 2500 2 2800 1 3100 2 3400 0.5 3700 2 4000 1 - interp=linear 0 0 1 100 -- "mirv_time drive {0}; echo {1}% finished: driving: {0}"</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_cmd addAtTick 4000 "mirv_time drive default"</span></div>
+<p><code>{0}</code> — кубическая интерполяция (мин. 4 точки). <code>{1}</code> — линейная (мин. 2 точки).</p>
+
+<h3 id="s11">11. Готовый cfg</h3>
+<p>Создай файл <code>hlae_movie.cfg</code> и запускай: <span class="cmd" onclick="copyCmd(this)">exec hlae_movie</span></p>
+<div class="cmd-block"><span class="comment">// ===== HLAE CS2 Moviemaking Config =====</span>
+
+<span class="comment">// --- Управление демкой ---</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F1"   "demo_togglepause"</span>  <span class="comment">// Пауза</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F2"   "host_timescale 0.25"</span>  <span class="comment">// Замедление</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F3"   "host_timescale 1"</span>  <span class="comment">// Нормальная скорость</span>
+<span class="cmd" onclick="copyCmd(this)">bind "PGUP" "mirv_skip time 5"</span>  <span class="comment">// Вперёд на 5 сек</span>
+<span class="cmd" onclick="copyCmd(this)">bind "PGDN" "mirv_skip time -5"</span>  <span class="comment">// Назад на 5 сек</span>
+
+<span class="comment">// --- Свободная камера ---</span>
+<span class="cmd" onclick="copyCmd(this)">bind "KP_END" "mirv_input camera"</span>  <span class="comment">// Включить камеру</span>
+<span class="cmd" onclick="copyCmd(this)">bind "KP_INS" "mirv_input off"</span>  <span class="comment">// Выключить камеру</span>
+
+<span class="comment">// --- Campath ---</span>
+<span class="cmd" onclick="copyCmd(this)">bind "E"   "mirv_campath add"</span>  <span class="comment">// Добавить кейфрейм</span>
+<span class="cmd" onclick="copyCmd(this)">bind "R"   "mirv_campath enable 1"</span>  <span class="comment">// Включить campath</span>
+<span class="cmd" onclick="copyCmd(this)">bind "T"   "mirv_campath enable 0"</span>  <span class="comment">// Выключить campath</span>
+<span class="cmd" onclick="copyCmd(this)">bind "G"   "mirv_campath clear"</span>  <span class="comment">// Очистить campath</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F4"  "mirv_campath draw enabled 1"</span>  <span class="comment">// Показать путь</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F5"  "mirv_campath draw enabled 0"</span>  <span class="comment">// Скрыть путь</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F6"  "mirv_campath print"</span>  <span class="comment">// Список кейфреймов</span>
+
+<span class="comment">// --- Запись ---</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F10" "mirv_streams record start"</span>  <span class="comment">// Начать запись</span>
+<span class="cmd" onclick="copyCmd(this)">bind "F11" "mirv_streams record end"</span>  <span class="comment">// Остановить запись</span>
+
+<span class="comment">// --- HUD и эффекты ---</span>
+<span class="cmd" onclick="copyCmd(this)">bind "H"   "toggle cl_drawhud 0 1"</span>  <span class="comment">// Переключить HUD</span>
+<span class="cmd" onclick="copyCmd(this)">bind "J"   "toggle mirv_noflash 0 1"</span>  <span class="comment">// Переключить флэш</span>
+
+<span class="comment">// --- Базовые настройки ---</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_cvar_unhide_all</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_cvar_unlock_sv_cheats</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_input cfg msens 1.0</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_input cfg ksens 200</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_fov handleZoom enabled 1</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_endofmatch 1</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_fix time 1</span>
+<span class="cmd" onclick="copyCmd(this)">mirv_fix animations 1</span></div>
+
+<!-- ===================== SECTION 12 ===================== -->
+<h3 id="s12">12. Полный воркфлоу</h3>
+<h4>Этап 1 — Подготовка</h4>
+<ol>
+  <li>Запустить CS2 через <code>HLAE → File → Launch CS2</code></li>
+  <li>Дождаться сообщения от advancedfx.org</li>
+  <li>Выполнить <span class="cmd" onclick="copyCmd(this)">exec hlae_movie</span></li>
+  <li>Загрузить демку: <span class="cmd" onclick="copyCmd(this)">demoui</span> → Load</li>
+</ol>
+
+<h4>Этап 2 — Поиск моментов</h4>
+<ol>
+  <li>Смотришь демку на нормальной скорости (<span class="cmd" onclick="copyCmd(this)">host_timescale 1</span>)</li>
+  <li>Нашёл момент — запоминаешь тик</li>
+  <li>Откатываешься: <span class="cmd" onclick="copyCmd(this)">mirv_skip time -10</span></li>
+</ol>
+
+<h4>Этап 3 — Создание campath</h4>
+<ol>
+  <li>Замедли: <span class="cmd" onclick="copyCmd(this)">host_timescale 0.25</span></li>
+  <li>Камера: <span class="cmd" onclick="copyCmd(this)">mirv_input camera</span></li>
+  <li>Визуализация: <span class="cmd" onclick="copyCmd(this)">mirv_campath draw enabled 1</span></li>
+  <li>Ставь точки: <span class="cmd" onclick="copyCmd(this)">mirv_campath add</span> (мин. 4)</li>
+  <li>Проверь: <span class="cmd" onclick="copyCmd(this)">mirv_campath print</span></li>
+  <li>Включи: <span class="cmd" onclick="copyCmd(this)">mirv_campath enable 1</span></li>
+  <li>Откатись до начала</li>
+</ol>
+
+<h4>Этап 4 — Запись</h4>
+<ol>
+  <li>Визуализация: <span class="cmd" onclick="copyCmd(this)">mirv_campath draw enabled 0</span></li>
+  <li>HUD: <span class="cmd" onclick="copyCmd(this)">cl_drawhud 0</span></li>
+  <li>Запись: <span class="cmd" onclick="copyCmd(this)">mirv_streams record start</span></li>
+  <li>Запусти демку</li>
+  <li>Стоп: <span class="cmd" onclick="copyCmd(this)">mirv_streams record end</span></li>
+  <li>Сброс: <span class="cmd" onclick="copyCmd(this)">mirv_campath clear</span></li>
+</ol>
+
+<h4>Этап 5 — Монтаж</h4>
+<p>Gather files in Premiere / DaVinci Resolve / Vegas.</p>
+
+<!-- ===================== SECTION 13 ===================== -->
+<h3 id="s13">13. Частые ошибки</h3>
+
+<h4>❌ Campath enabled but can not be evaluated</h4>
+<p><strong>Причина:</strong> точек меньше 4.</p>
+<p><strong>Решение:</strong></p>
+<ul>
+  <li>Используй <span class="cmd" onclick="copyCmd(this)">mirv_campath add</span></li>
+  <li>Проверь: <span class="cmd" onclick="copyCmd(this)">mirv_campath print</span></li>
+  <li>Точки в <strong>разное время</strong> демки</li>
+  <li>Между точками 1–2 секунды</li>
+</ul>
+
+<h4>❌ Видео не записывается</h4>
+<ul>
+  <li>FFmpeg установлен</li>
+  <li>Путь без кириллицы</li>
+  <li>Права на запись</li>
+</ul>
+
+<h4>❌ HLAE не подцепился</h4>
+<ul>
+  <li>Запускай через <code>HLAE → File → Launch CS2</code></li>
+  <li>Путь к cs2.exe правильный</li>
+  <li>Путь к HLAE без кириллицы</li>
+</ul>
+
+<!-- ===================== LINKS ===================== -->
+<h2>Полезные ссылки</h2>
+<h4>Документация</h4>
+<ul>
+  <li><a href="https://github.com/advancedfx/advancedfx/wiki" target="_blank">Wiki HLAE</a></li>
+  <li><a href="https://github.com/advancedfx/advancedfx/wiki/Source2:Commands" target="_blank">Команды CS2</a></li>
+  <li><a href="https://github.com/advancedfx/advancedfx/releases" target="_blank">Релизы HLAE</a></li>
+</ul>
+<h4>Видео</h4>
+<ul>
+  <li><a href="https://youtu.be/Lz_o-crz03c" target="_blank">Монтаж КС2</a></li>
+  <li><a href="https://youtu.be/72enNR9rosc" target="_blank">Смена неба</a></li>
+  <li><a href="https://youtu.be/5fN26wvGCtA" target="_blank">Импорт в UE5</a></li>
+  <li><a href="https://www.youtube.com/@ibuymoviecom" target="_blank">YouTube IBUYMOVIE</a></li>
+</ul>
+<h4>Инструменты</h4>
+<ul>
+  <li><a href="https://github.com/advancedfx/ReShade_advancedfx" target="_blank">ReShade for HLAE</a></li>
+  <li><a href="https://www.ffmpeg.org/download.html" target="_blank">FFmpeg</a></li>
+  <li><a href="https://github.com/xNWP/HLAE-CamIO-To-AE/releases" target="_blank">CamIO → After Effects</a></li>
+  <li><a href="https://github.com/Devostated/HLAE-CamIO-To-Nuke/releases" target="_blank">CamIO → Nuke</a></li>
+  <li><a href="https://github.com/advancedfx/afx-blender-scripts" target="_blank">CamIO → Blender</a></li>
+  <li><a href="https://github.com/xNWP/HLAE-CamIO-To-C4D/releases" target="_blank">CamIO → Cinema4D</a></li>
+</ul>
+
+</div><!-- /content -->
+</main>
+</div><!-- /layout -->
+
+<div class="copy-toast" id="copyToast">Скопировано!</div>
+
+<script src="/hlae-tutorial.js"></script>
+</body>
+</html>
