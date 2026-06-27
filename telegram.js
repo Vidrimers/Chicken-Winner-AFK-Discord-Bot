@@ -341,9 +341,9 @@ async function sendMainMenu(chatId) {
   };
 
   const discordId = getLinkedDiscordId(chatId);
-  const idLine = discordId ? `🆔 <code>${discordId}</code>\n` : '';
+  const idLine = discordId ? `\n\n🆔 <code>${discordId}</code>` : '';
 
-  await telegramBot.sendMessage(chatId, `<b>📱 Главное меню</b>\n${idLine}\nВыберите действие:`, {
+  await telegramBot.sendMessage(chatId, `<b>📱 Главное меню</b>${idLine}\n\nВыберите действие:`, {
     parse_mode: 'HTML',
     reply_markup: menuButtons
   });
