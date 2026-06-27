@@ -392,6 +392,7 @@ async function sendSettingsMenu(chatId) {
 
   const settingsButtons = {
     inline_keyboard: [
+      [{ text: `🆔 Мой ID`, callback_data: 'show_my_id' }],
       [{ text: `📩 ЛС уведомления [${dm ? '✅' : '❌'}] · Для Discord`, callback_data: 'settings_toggle_dm' }],
       [{ text: `⏱ Время до AFK [${timeoutDisplay}] · Для Discord`, callback_data: 'settings_change_timeout' }],
       [{ text: `🏆 Уведомления о достижениях [${achievement ? '✅' : '❌'}] · Для Discord`, callback_data: 'settings_toggle_achievement' }],
@@ -1256,6 +1257,18 @@ export function initTelegramBot(
               return;
             }
             await sendCheckerMenu(chatId);
+            break;
+          }
+
+          case 'show_my_id': {
+            const discordIdMyId = getLinkedDiscordId(chatId);
+            if (discordIdMyId) {
+              await telegramBot.sendMessage(chatId, `🆔 Ваш Discord ID:\n<code>${discordIdMyId}</code>\n\nНажмите на ID чтобы скопировать`, {
+                parse_mode: 'HTML'
+              });
+            } else {
+              await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+            }
             break;
           }
 
