@@ -331,6 +331,13 @@
     <circle cx="9" cy="15" r="2"/>
   </symbol>
 
+  <!-- Half-Life (лямбда λ) — на основе оригинального логотипа Wikipedia -->
+  <symbol id="icon-hlae" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <title>Half-Life</title>
+    <path d="M13.0 10.0 C13.3 8.8 14.7 6.8 16.7 12.0 C18.7 17.2 18.4 22.4 20.7 20.2"/>
+    <path d="M17.1 14.4 L13.2 20.4"/>
+  </symbol>
+
   <!-- ==================== РАЗНОЕ ==================== -->
 
   <!-- Палитра (темы) -->
