@@ -215,6 +215,7 @@ body.modal-open {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   text-decoration: none;
   transition: transform 0.2s, box-shadow 0.2s;
 }
