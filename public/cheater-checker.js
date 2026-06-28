@@ -140,7 +140,7 @@ async function loadProfiles() {
 /**
  * Отрисовка профилей в двух колонках с пагинацией
  */
-const PAGE_SIZE = 5;
+let PAGE_SIZE = parseInt(localStorage.getItem('cheaterCheckerPageSize') || '5', 10);
 let bannedPage = 1;
 let cleanPage = 1;
 let allBannedProfiles = [];
@@ -602,6 +602,20 @@ function bindEvents() {
   // Инпуты с крестиком и авто-очисткой
   initClearableInput('steamUrlInput', 'steamUrlClearBtn');
   initClearableInput('profileSearchInput', 'profileSearchClearBtn', (val) => filterProfileCards(val));
+
+  // Селектор количества на страницу
+  const pageSizeSelect = document.getElementById('pageSizeSelect');
+  if (pageSizeSelect) {
+    pageSizeSelect.value = PAGE_SIZE;
+    pageSizeSelect.addEventListener('change', (e) => {
+      PAGE_SIZE = parseInt(e.target.value, 10);
+      localStorage.setItem('cheaterCheckerPageSize', PAGE_SIZE);
+      bannedPage = 1;
+      cleanPage = 1;
+      renderBannedPage();
+      renderCleanPage();
+    });
+  }
 }
 
 /**

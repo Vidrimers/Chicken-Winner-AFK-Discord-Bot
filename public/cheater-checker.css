@@ -716,6 +716,46 @@
   }
 }
 
+/* Селектор количества на страницу */
+.page-size-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.page-size-section label {
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+.page-size-select {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.page-size-select:hover {
+  border-color: #667eea;
+}
+
+.page-size-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.page-size-select option {
+  background: #1a1a2e;
+  color: #e0e0e0;
+}
+
 /* Пагинация */
 .pagination {
   display: flex;
