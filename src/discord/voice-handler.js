@@ -394,6 +394,11 @@ export class VoiceStateHandler {
   async handleStreamStart(userId, username, newState) {
     log(`📡 ${username} включил трансляцию`);
 
+    if (newState.channel?.id === DISCORD_CONFIG.STREAM_CHANNEL_ID) {
+      this.clearInactivityTimer(userId);
+      log(`📡 ${username} начал стрим в стрим-канале, таймер неактивности отменен`);
+    }
+
     this.db.incrementUserStat(userId, 'total_streams');
 
     const streamStats = this.db.getUserStats(userId);
@@ -476,6 +481,11 @@ export class VoiceStateHandler {
         if (currentMember && currentMember.voice.channel) {
           if (!currentMember.voice.selfMute) {
             log(`🎙️ ${username} включил микрофон, отменяем перемещение в AFK`);
+            return;
+          }
+
+          if (currentMember.voice.streaming && currentMember.voice.channel?.id === DISCORD_CONFIG.STREAM_CHANNEL_ID) {
+            log(`📡 ${username} стримит в стрим-канале, отменяем перемещение в AFK`);
             return;
           }
 
