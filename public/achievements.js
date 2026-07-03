@@ -288,20 +288,24 @@ function displayUserAchievements(achievements) {
                     }
                 });
                 
-                // Вручную добавляем best_admin для Kakashech если его нет в списке
-                if (!allWithAdmin.some(x => x.achievement_id === 'best_admin' && x.user_id === '232581042177966080')) {
-                    allWithAdmin.push({
-                        achievement_id: 'best_admin',
-                        user_id: '232581042177966080',
-                        emoji: '👑',
-                        name: 'Kakashech - Лучший админ',
-                        description: 'Лучший admin_ebaniy канала',
-                        color: '#FFD700',
-                        type: 'special',
-                        unlocked_at: null
-                    });
-                    specialAchievementsUserNames['232581042177966080'] = 'Kakashech';
+                // Вручную добавляем best_admin для Kakashech если его нет или есть с пустыми данными
+                const bestAdminIdx = allWithAdmin.findIndex(x => x.achievement_id === 'best_admin' && x.user_id === '232581042177966080');
+                const bestAdminEntry = {
+                    achievement_id: 'best_admin',
+                    user_id: '232581042177966080',
+                    emoji: '👑',
+                    name: 'Kakashech - Лучший админ',
+                    description: 'Лучший admin_ebaniy канала',
+                    color: '#FFD700',
+                    type: 'special',
+                    unlocked_at: '2025-12-06T21:05:42.000Z'
+                };
+                if (bestAdminIdx >= 0) {
+                    allWithAdmin[bestAdminIdx] = bestAdminEntry;
+                } else {
+                    allWithAdmin.push(bestAdminEntry);
                 }
+                specialAchievementsUserNames['232581042177966080'] = 'Kakashech';
                 
                 specialAchievementsAdminData = allWithAdmin;
                 
