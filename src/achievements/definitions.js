@@ -193,9 +193,9 @@ export const ACHIEVEMENTS = {
   long_session: {
     id: 'long_session',
     name: '⏰ Марафонец',
-    description: 'Провел 12+ часов в одной сессии',
-    points: 75,
-    condition: (stats) => stats.longest_session >= 12 * 3600,
+    description: 'Провел 24+ часов в одной сессии',
+    points: 150,
+    condition: (stats) => stats.longest_session >= 24 * 3600,
   },
   settings_explorer: {
     id: 'settings_explorer',
