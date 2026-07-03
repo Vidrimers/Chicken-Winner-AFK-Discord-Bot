@@ -232,6 +232,7 @@ export function registerRoutes(
     discordClient,
     telegram,
     notificationService,
+    achievements,
   );
   app.use("/api/admin", adminRouter);
 

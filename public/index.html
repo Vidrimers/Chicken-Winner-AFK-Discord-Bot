@@ -744,6 +744,150 @@
           </div>
         </div>
 
+        <!-- МОДАЛЬНОЕ ОКНО ВЫДАЧИ ОБЫЧНОГО ДОСТИЖЕНИЯ -->
+        <div
+          id="grantRegularAchievementModal"
+          style="
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+          "
+        >
+          <div
+            style="
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              background: #1a1a1a;
+              border: 2px solid #a45eea;
+              border-radius: 10px;
+              padding: 20px;
+              width: 90%;
+              max-width: 500px;
+              max-height: 80vh;
+              overflow: auto;
+              scrollbar-width: none;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+              "
+            >
+              <h2 style="color: white; margin: 0 auto">
+                🏆 Выдать обычное достижение
+              </h2>
+              <button
+                onclick="closeGrantRegularAchievementModal()"
+                style="
+                  background: none;
+                  border: none;
+                  color: white;
+                  font-size: 24px;
+                  cursor: pointer;
+                "
+              >
+                &times;
+              </button>
+            </div>
+
+            <form id="grantRegularAchievementForm">
+              <div style="margin-bottom: 15px">
+                <label style="color: white; display: block; margin-bottom: 5px"
+                  >Discord ID пользователя:</label
+                >
+                <input
+                  type="text"
+                  id="grantAchievementUserId"
+                  placeholder="123456789"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    background: #0a0a0a;
+                    border: 1px solid #a45eea;
+                    color: white;
+                    border-radius: 5px;
+                  "
+                />
+              </div>
+
+              <div style="margin-bottom: 15px">
+                <label style="color: white; display: block; margin-bottom: 5px"
+                  >Достижение:</label
+                >
+                <select
+                  id="grantAchievementSelect"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    background: #0a0a0a;
+                    border: 1px solid #a45eea;
+                    color: white;
+                    border-radius: 5px;
+                  "
+                >
+                  <option value="">Выберите достижение</option>
+                </select>
+              </div>
+
+              <div
+                id="grantAchievementPreview"
+                style="
+                  margin-bottom: 15px;
+                  padding: 10px;
+                  background: #0a0a0a;
+                  border: 1px solid #a45eea;
+                  border-radius: 5px;
+                  display: none;
+                "
+              ></div>
+
+              <div
+                style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+              >
+                <button
+                  type="button"
+                  onclick="grantRegularAchievement()"
+                  style="
+                    padding: 10px;
+                    background-color: #28a745;
+                    color: #fff;
+                    border: none;
+                    border-radius: 5px;
+                    font-weight: bold;
+                    cursor: pointer;
+                  "
+                >
+                  Выдать
+                </button>
+                <button
+                  type="button"
+                  onclick="closeGrantRegularAchievementModal()"
+                  style="
+                    padding: 10px;
+                    background-color: #555;
+                    color: #fff;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                  "
+                >
+                  Отмена
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
         <!-- МОДАЛЬНОЕ ОКНО УПРАВЛЕНИЯ ПОЛЬЗОВАТЕЛЯМИ -->
         <div
           id="usersModal"
@@ -1176,6 +1320,16 @@
                   <span class="admin-btn-icon"><svg class="icon" aria-hidden="true"><use href="#icon-star"></use></svg></span>
                   <span class="admin-btn-text"
                     >Создать специальное достижение</span
+                  >
+                </button>
+                <button
+                  id="grantRegularAchievementBtn"
+                  onclick="openGrantRegularAchievementModal()"
+                  class="admin-btn"
+                >
+                  <span class="admin-btn-icon"><svg class="icon" aria-hidden="true"><use href="#icon-star"></use></svg></span>
+                  <span class="admin-btn-text"
+                    >Выдать обычное достижение</span
                   >
                 </button>
                 <button

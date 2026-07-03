@@ -5,7 +5,7 @@ import { formatTime } from '../../utils/time.js';
 /**
  * Роуты для админ-панели
  */
-export function createAdminRouter(db, discordClient, telegram, notificationService) {
+export function createAdminRouter(db, discordClient, telegram, notificationService, achievements) {
   const router = Router();
 
   /**
@@ -774,6 +774,86 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
     } catch (error) {
       logError(`Ошибка при удалении сообщений: ${error.message}`);
       res.status(500).json({ error: 'Ошибка при удалении сообщений' });
+    }
+  });
+
+  /**
+   * POST /api/admin/grant-achievement
+   * Выдать обычное достижение пользователю
+   */
+  router.post('/grant-achievement', async (req, res) => {
+    const { userId, achievementId } = req.body;
+
+    if (!userId || !achievementId) {
+      return res.status(400).json({ error: 'Отсутствуют обязательные поля' });
+    }
+
+    if (!achievements) {
+      return res.status(500).json({ error: 'Система достижений недоступна' });
+    }
+
+    try {
+      const username = db.getUserStats(userId)?.username || 'Unknown';
+
+      const granted = await achievements.checkAndUnlock(userId, username, achievementId);
+
+      if (granted) {
+        const regularAchievements = {
+          first_join: { name: '🎤 Малыш заговорил', points: 10 },
+          first_afk: { name: '😴 Первый сон', points: 5 },
+          first_message: { name: '💬 Первые буквы', points: 10 },
+          first_settings: { name: '⚙️ Первые настройки', points: 10 },
+          first_web_visit: { name: '🌐 Первый серфер', points: 15 },
+          first_stream: { name: '📡 Первый стример', points: 20 },
+          voice_starter: { name: '🎧 Алло, это я', points: 50 },
+          voice_addict: { name: '🎧 Заболтал до сотки', points: 100 },
+          voice_god: { name: '🎧 Звезда эфира', points: 1000 },
+          chatty_beginner: { name: '💬 Разговорчивый новичок', points: 25 },
+          chatty_user: { name: '💬 Болтун', points: 75 },
+          flooter: { name: '💬 Флудер', points: 100 },
+          linguist: { name: '💬 Лингвист', points: 150 },
+          session_beginner: { name: '🎯 Начинающий участник', points: 15 },
+          session_veteran: { name: '🎯 Опытный участник', points: 40 },
+          session_master: { name: '🎯 Мастер сессий', points: 75 },
+          frequent_guest: { name: '🎯 Частый гость', points: 150 },
+          permanent_resident: { name: '🎯 Постоянный житель', points: 350 },
+          session_lord: { name: '🎯 Властелин сессий', points: 1000 },
+          afk_beginner: { name: '😴 AFK новичок', points: 10 },
+          afk_veteran: { name: '😴 AFK ветеран', points: 50 },
+          afk_master: { name: '😴 AFK Специалист', points: 100 },
+          afk_time_lord: { name: '😴 AFK Повелитель времени', points: 1000 },
+          no_afk_week: { name: '💪 Железная воля', points: 50 },
+          mute_master: { name: '🎙️ Мастер тишины', points: 25 },
+          long_session: { name: '⏰ Марафонец', points: 75 },
+          voice_vegetable: { name: '🥦 Биомебель войса', points: 150 },
+          settings_explorer: { name: '⚙️ Исследователь настроек', points: 30 },
+          mention_responder: { name: '📢 Отзывчивый', points: 100 },
+          stream_viewer_1: { name: '📺 Одним глазком', points: 10 },
+          stream_viewer_2: { name: '📺 Зритель со стажем', points: 50 },
+          stream_viewer_3: { name: '📺 Топовый зритель', points: 100 },
+          stream_viewer_4: { name: '📺 Киберфанат', points: 200 },
+          stream_viewer_5: { name: '📺 Бессмертный зритель', points: 500 },
+          stream_viewer_6: { name: '📺 Легенда трансляций', points: 1000 }
+        };
+
+        const achievementName = regularAchievements[achievementId]?.name || achievementId;
+        const achievementPoints = regularAchievements[achievementId]?.points || 0;
+
+        log(`🏆 Выдано достижение "${achievementName}" пользователю ${username} (${userId})`);
+
+        res.json({
+          success: true,
+          message: `Достижение "${achievementName}" выдано пользователю ${username} (+${achievementPoints} очков)`,
+        });
+      } else {
+        res.json({
+          success: false,
+          error: 'Достижение уже получено или не удалось выдать',
+        });
+      }
+    } catch (error) {
+      logError(`Ошибка при выдаче достижения: ${error.message}`);
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
 

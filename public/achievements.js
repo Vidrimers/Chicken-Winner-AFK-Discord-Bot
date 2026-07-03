@@ -470,3 +470,70 @@ function deleteUserAchievement(userId, achievementId) {
         alert('Ошибка при удалении достижения');
     });
 }
+
+// === Выдача обычного достижения через админку ===
+
+function openGrantRegularAchievementModal() {
+    const select = document.getElementById('grantAchievementSelect');
+    select.innerHTML = '<option value="">Выберите достижение</option>';
+    
+    for (const [id, achievement] of Object.entries(REGULAR_ACHIEVEMENTS)) {
+        const option = document.createElement('option');
+        option.value = id;
+        option.textContent = `${achievement.name} (+${achievement.points} очков)`;
+        select.appendChild(option);
+    }
+    
+    document.getElementById('grantAchievementUserId').value = '';
+    document.getElementById('grantAchievementPreview').style.display = 'none';
+    
+    select.onchange = function() {
+        const preview = document.getElementById('grantAchievementPreview');
+        const selected = REGULAR_ACHIEVEMENTS[this.value];
+        if (selected) {
+            preview.style.display = 'block';
+            preview.innerHTML = `<strong style="color: #a45eea;">${selected.name}</strong><br><span style="color: #ccc;">${selected.description}</span><br><small style="color: #888;">+${selected.points} очков</small>`;
+        } else {
+            preview.style.display = 'none';
+        }
+    };
+    
+    document.getElementById('grantRegularAchievementModal').style.display = 'block';
+    document.body.classList.add('modal-open');
+}
+
+function closeGrantRegularAchievementModal() {
+    document.getElementById('grantRegularAchievementModal').style.display = 'none';
+    document.body.classList.remove('modal-open');
+}
+
+async function grantRegularAchievement() {
+    const userId = document.getElementById('grantAchievementUserId').value.trim();
+    const achievementId = document.getElementById('grantAchievementSelect').value;
+    
+    if (!userId || !achievementId) {
+        alert('Заполни все поля!');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/admin/grant-achievement', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, achievementId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            closeGrantRegularAchievementModal();
+            alert(data.message || 'Достижение выдано!');
+            loadUserDataAuto(window.currentUserId);
+        } else {
+            alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+        }
+    } catch (error) {
+        console.error('Ошибка при выдаче достижения:', error);
+        alert('Ошибка при выдаче достижения');
+    }
+}
