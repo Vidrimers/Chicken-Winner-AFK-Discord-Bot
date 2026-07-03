@@ -143,8 +143,8 @@ function displayUserAchievements(achievements) {
         return achievementDate <= now;
     });
     
-    // Для не-админа: добавляем best_admin если его нет
-    if (!isAdmin && !userSpecialAchievements.some(a => a.achievement_id === 'best_admin')) {
+    // Добавляем best_admin если его нет в достижениях
+    if (!userSpecialAchievements.some(a => a.achievement_id === 'best_admin')) {
         userSpecialAchievements.push({
             achievement_id: 'best_admin',
             unlocked_at: null,
@@ -331,6 +331,7 @@ function renderSpecialAchievementsUsersList() {
             <h2 style="text-align: center; color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
                 ⭐ Специальные достижения ⭐
             </h2>
+            <div style="max-width: 500px; margin: 0 auto;">
     `;
     
     users.forEach(user => {
@@ -349,7 +350,7 @@ function renderSpecialAchievementsUsersList() {
         `;
     });
     
-    html += '</div>';
+    html += '</div></div>';
     container.innerHTML += html;
 }
 
@@ -368,6 +369,7 @@ function showSpecialAchievementsForUser(userId) {
         <div onclick="renderSpecialAchievementsUsersList()" style="text-align:center; margin-bottom:20px;">
             <span style="color:#a45eea; cursor:pointer; font-weight:500; text-decoration:underline;">← Назад к списку</span>
         </div>
+        <div style="max-width: 500px; margin: 0 auto;">
     `;
     
     userAchievements.forEach(achievement => {
@@ -385,6 +387,7 @@ function showSpecialAchievementsForUser(userId) {
                 box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                 opacity: ${isUnlocked ? '1' : '0.7'};
                 position: relative;
+                margin-bottom: 10px;
             ">
                 ${editBtn}
                 <h3 style="color: ${achievementColor}; font-weight: bold;">${achievement.emoji} ${achievement.name} ${isUnlocked ? '✨' : '🔒'}</h3>
@@ -395,6 +398,7 @@ function showSpecialAchievementsForUser(userId) {
         `;
     });
     
+    html += '</div>';
     section.innerHTML = html;
 }
 
