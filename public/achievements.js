@@ -143,8 +143,8 @@ function displayUserAchievements(achievements) {
         return achievementDate <= now;
     });
     
-    // Добавляем best_admin если его нет в достижениях
-    if (!userSpecialAchievements.some(a => a.achievement_id === 'best_admin')) {
+    // Добавляем best_admin только для админа если его нет в достижениях
+    if (isAdmin && !userSpecialAchievements.some(a => a.achievement_id === 'best_admin')) {
         userSpecialAchievements.push({
             achievement_id: 'best_admin',
             unlocked_at: null,
