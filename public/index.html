@@ -801,14 +801,17 @@
             </div>
 
             <form id="grantRegularAchievementForm">
-              <div style="margin-bottom: 15px">
+              <div style="margin-bottom: 15px; position: relative;">
                 <label style="color: white; display: block; margin-bottom: 5px"
-                  >Discord ID пользователя:</label
+                  >Пользователь:</label
                 >
                 <input
                   type="text"
-                  id="grantAchievementUserId"
-                  placeholder="123456789"
+                  id="grantAchievementSearch"
+                  placeholder="Поиск по имени или ID..."
+                  autocomplete="off"
+                  oninput="filterGrantAchievementUsers(this.value)"
+                  onfocus="filterGrantAchievementUsers(this.value)"
                   style="
                     width: 100%;
                     padding: 8px;
@@ -816,8 +819,39 @@
                     border: 1px solid #a45eea;
                     color: white;
                     border-radius: 5px;
+                    box-sizing: border-box;
                   "
                 />
+                <div
+                  id="grantAchievementDropdown"
+                  style="
+                    display: none;
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    right: 0;
+                    background: #1a1a1a;
+                    border: 1px solid #a45eea;
+                    border-radius: 0 0 5px 5px;
+                    max-height: 200px;
+                    overflow-y: auto;
+                    z-index: 10;
+                  "
+                ></div>
+                <input type="hidden" id="grantAchievementUserId" />
+                <div
+                  id="grantAchievementSelected"
+                  style="
+                    display: none;
+                    margin-top: 8px;
+                    padding: 6px 10px;
+                    background: rgba(164, 94, 234, 0.15);
+                    border: 1px solid rgba(164, 94, 234, 0.3);
+                    border-radius: 5px;
+                    color: #a45eea;
+                    font-size: 13px;
+                  "
+                ></div>
               </div>
 
               <div style="margin-bottom: 15px">

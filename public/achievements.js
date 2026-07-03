@@ -473,6 +473,8 @@ function deleteUserAchievement(userId, achievementId) {
 
 // === Выдача обычного достижения через админку ===
 
+let grantAchievementAllUsers = [];
+
 function openGrantRegularAchievementModal() {
     const select = document.getElementById('grantAchievementSelect');
     select.innerHTML = '<option value="">Выберите достижение</option>';
@@ -485,6 +487,9 @@ function openGrantRegularAchievementModal() {
     }
     
     document.getElementById('grantAchievementUserId').value = '';
+    document.getElementById('grantAchievementSearch').value = '';
+    document.getElementById('grantAchievementSelected').style.display = 'none';
+    document.getElementById('grantAchievementDropdown').style.display = 'none';
     document.getElementById('grantAchievementPreview').style.display = 'none';
     
     select.onchange = function() {
@@ -500,10 +505,74 @@ function openGrantRegularAchievementModal() {
     
     document.getElementById('grantRegularAchievementModal').style.display = 'block';
     document.body.classList.add('modal-open');
+    
+    loadGrantAchievementUsers();
 }
+
+async function loadGrantAchievementUsers() {
+    try {
+        const res = await fetch('/api/guild-members');
+        const users = await res.json();
+        grantAchievementAllUsers = users || [];
+    } catch (err) {
+        console.error('Ошибка загрузки участников:', err);
+        grantAchievementAllUsers = [];
+    }
+}
+
+function filterGrantAchievementUsers(query) {
+    const dropdown = document.getElementById('grantAchievementDropdown');
+    const q = query.toLowerCase().trim();
+    
+    if (!q) {
+        dropdown.style.display = 'none';
+        return;
+    }
+    
+    const filtered = grantAchievementAllUsers.filter(u =>
+        u.username.toLowerCase().includes(q) ||
+        u.user_id.includes(q)
+    ).slice(0, 15);
+    
+    if (filtered.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+    }
+    
+    dropdown.innerHTML = filtered.map(user => `
+        <div onclick="selectGrantAchievementUser('${user.user_id}', '${escapeHtmlBug(user.username)}')"
+             style="padding:8px 12px;cursor:pointer;color:#e0e0e0;border-bottom:1px solid rgba(255,255,255,0.05);"
+             onmouseover="this.style.background='rgba(164,94,234,0.2)'"
+             onmouseout="this.style.background='transparent'">
+            <div style="font-weight:500;">${escapeHtmlBug(user.username)}</div>
+            <div style="font-size:11px;color:#888;">${user.user_id}</div>
+        </div>
+    `).join('');
+    
+    dropdown.style.display = 'block';
+}
+
+function selectGrantAchievementUser(userId, username) {
+    document.getElementById('grantAchievementUserId').value = userId;
+    document.getElementById('grantAchievementSearch').value = username;
+    document.getElementById('grantAchievementDropdown').style.display = 'none';
+    
+    const selected = document.getElementById('grantAchievementSelected');
+    selected.style.display = 'block';
+    selected.innerHTML = `Выбран: <strong>${username}</strong> (${userId})`;
+}
+
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('grantAchievementDropdown');
+    const search = document.getElementById('grantAchievementSearch');
+    if (dropdown && search && !dropdown.contains(e.target) && e.target !== search) {
+        dropdown.style.display = 'none';
+    }
+});
 
 function closeGrantRegularAchievementModal() {
     document.getElementById('grantRegularAchievementModal').style.display = 'none';
+    document.getElementById('grantAchievementDropdown').style.display = 'none';
     document.body.classList.remove('modal-open');
 }
 
@@ -512,7 +581,7 @@ async function grantRegularAchievement() {
     const achievementId = document.getElementById('grantAchievementSelect').value;
     
     if (!userId || !achievementId) {
-        alert('Заполни все поля!');
+        alert('Выберите пользователя и достижение!');
         return;
     }
     
