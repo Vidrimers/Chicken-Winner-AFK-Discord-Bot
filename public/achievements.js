@@ -282,10 +282,26 @@ function displayUserAchievements(achievements) {
                 // Объединяем: достижения админа + достижения других из БД
                 const allWithAdmin = [...adminAchievements];
                 allSpecial.forEach(a => {
-                    if (!allWithAdmin.some(x => x.achievement_id === a.achievement_id)) {
+                    const exists = allWithAdmin.some(x => x.achievement_id === a.achievement_id && x.user_id === a.user_id);
+                    if (!exists) {
                         allWithAdmin.push(a);
                     }
                 });
+                
+                // Вручную добавляем best_admin для Kakashech если его нет в списке
+                if (!allWithAdmin.some(x => x.achievement_id === 'best_admin' && x.user_id === '232581042177966080')) {
+                    allWithAdmin.push({
+                        achievement_id: 'best_admin',
+                        user_id: '232581042177966080',
+                        emoji: '👑',
+                        name: 'Kakashech - Лучший админ',
+                        description: 'Лучший admin_ebaniy канала',
+                        color: '#FFD700',
+                        type: 'special',
+                        unlocked_at: null
+                    });
+                    specialAchievementsUserNames['232581042177966080'] = 'Kakashech';
+                }
                 
                 specialAchievementsAdminData = allWithAdmin;
                 
@@ -331,7 +347,7 @@ function renderSpecialAchievementsUsersList() {
             <h2 style="text-align: center; color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
                 ⭐ Специальные достижения ⭐
             </h2>
-            <div style="max-width: 500px; margin: 0 auto;">
+            <div style="max-width: 500px;">
     `;
     
     users.forEach(user => {
@@ -369,7 +385,7 @@ function showSpecialAchievementsForUser(userId) {
         <div onclick="renderSpecialAchievementsUsersList()" style="text-align:center; margin-bottom:20px;">
             <span style="color:#a45eea; cursor:pointer; font-weight:500; text-decoration:underline;">← Назад к списку</span>
         </div>
-        <div style="max-width: 500px; margin: 0 auto;">
+        <div style="max-width: 500px;">
     `;
     
     userAchievements.forEach(achievement => {
