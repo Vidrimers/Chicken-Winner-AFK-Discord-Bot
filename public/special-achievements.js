@@ -91,16 +91,23 @@ document.addEventListener('click', function(e) {
 function updateSpecialAchievementPreview() {
     const emoji = document.getElementById('specialAchievementEmoji').value || '🏆';
     const name = document.getElementById('specialAchievementName').value || 'Название';
+    const description = document.getElementById('specialAchievementDescription').value || '';
     const color = document.getElementById('specialAchievementColor').value || '#FFD700';
     
     const preview = document.getElementById('specialAchievementPreview');
     const bgGradient = 'linear-gradient(135deg, ' + color + '22, ' + color + '11)';
     const borderColor = color;
     
-    preview.innerHTML = '<div class="achievement-preview" style="background: ' + bgGradient + '; border-left: 4px solid ' + borderColor + ';">' +
-        '<div style="font-size: 32px;">' + emoji + '</div>' +
-        '<div style="color: ' + color + '; font-weight: bold;">' + name + '</div>' +
-        '</div>';
+    let html = '<div class="achievement-preview" style="background: ' + bgGradient + '; border-left: 4px solid ' + borderColor + '; padding: 12px; border-radius: 6px;">' +
+        '<div style="font-size: 32px; margin-bottom: 6px;">' + emoji + '</div>' +
+        '<div style="color: ' + color + '; font-weight: bold; font-size: 15px; margin-bottom: 4px;">' + name + '</div>';
+    
+    if (description) {
+        html += '<div style="color: #ccc; font-size: 13px; margin-top: 4px;">' + description + '</div>';
+    }
+    
+    html += '</div>';
+    preview.innerHTML = html;
 }
 
 async function createSpecialAchievement() {
