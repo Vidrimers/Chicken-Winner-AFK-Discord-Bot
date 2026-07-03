@@ -276,62 +276,118 @@ function displayUserAchievements(achievements) {
         fetch('/api/special-achievements')
             .then(r => r.json())
             .then(async allSpecial => {
+                specialAchievementsAllSpecial = allSpecial;
+                
                 const unlockedIds = userSpecialAchievements.map(a => a.achievement_id);
+                specialAchievementsAdminData = allSpecial.filter(a => !unlockedIds.includes(a.achievement_id));
                 
-                const unlockedOtherSpecial = allSpecial.filter(a => !unlockedIds.includes(a.achievement_id));
-                
-                if (unlockedOtherSpecial.length > 0) {
-                    // Загружаем имена пользователей
-                    const userNames = {};
-                    for (const achievement of unlockedOtherSpecial) {
-                        if (!userNames[achievement.user_id]) {
-                            try {
-                                const response = await fetch(`/api/stats/${achievement.user_id}`);
-                                const data = await response.json();
-                                userNames[achievement.user_id] = data.stats?.username || 'Неизвестный';
-                            } catch (err) {
-                                userNames[achievement.user_id] = 'Неизвестный';
-                            }
+                // Загружаем имена пользователей
+                for (const achievement of specialAchievementsAdminData) {
+                    if (!specialAchievementsUserNames[achievement.user_id]) {
+                        try {
+                            const response = await fetch(`/api/stats/${achievement.user_id}`);
+                            const data = await response.json();
+                            specialAchievementsUserNames[achievement.user_id] = data.stats?.username || 'Неизвестный';
+                        } catch (err) {
+                            specialAchievementsUserNames[achievement.user_id] = 'Неизвестный';
                         }
                     }
-                    
-                    let addHtml = '';
-                    unlockedOtherSpecial.forEach(achievement => {
-                        const editBtn = `<button onclick="editSpecialAchievementOther('${achievement.achievement_id}', '${achievement.user_id}', event)" style="position: absolute; top: 5px; right: 5px; padding: 6px 10px; background: transparent; border: none; border-radius: 4px; cursor: pointer; font-size: 18px; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">✏️</button>`;
-                        const deleteBtn = `<button onclick="deleteUserAchievement('${achievement.user_id}', '${achievement.achievement_id}')" style="margin-top: 8px; padding: 4px 8px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Удалить</button>`;
-                        const achievementColor = achievement.color || '#999';
-                        const userName = userNames[achievement.user_id] || 'Неизвестный';
-                        const flipId = `flip-${achievement.achievement_id}`;
-                        const unlockedDate = achievement.unlocked_at ? new Date(achievement.unlocked_at).toLocaleDateString('ru-RU') : 'Неизвестно';
-                        
-                        addHtml += `
-                            <div class="achievement special-achievement" data-achievement-id="${achievement.achievement_id}" style="
-                                background: linear-gradient(135deg, ${achievementColor}22 0%, ${achievementColor}11 100%); 
-                                color: #333; 
-                                border-left: 5px solid ${achievementColor};
-                                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-                                opacity: 0.7;
-                                position: relative;
-                            ">
-                                ${editBtn}
-                                <h3 style="color: ${achievementColor}; font-weight: bold;">${achievement.emoji} ${achievement.name} 🔒</h3>
-                                <p style="color: #777; margin: 10px 0;">${achievement.description}</p>
-                                <small style="color: #888; font-weight: bold; display: block; margin-top: 5px;">
-                                    <span onclick="toggleUserFlip('${flipId}')" style="cursor: pointer;">👤 Для:</span>
-                                    <span class="user-flip-container" id="${flipId}" data-showing-id="false" style="display: inline-block; position: relative; perspective: 1000px;">
-                                        <span class="user-flip-text" onclick="copyUserInfo(event, '${userName}', '${achievement.user_id}')" data-username="${userName}" data-userid="${achievement.user_id}" style="cursor: pointer; display: inline-block; transition: transform 0.3s; transform-style: preserve-3d;">${userName}</span>
-                                    </span>
-                                </small>
-                                <small style="color: #666; font-weight: bold; display: block; margin-top: 3px;">🎉 Получено: ${unlockedDate}</small>
-                                ${deleteBtn}
-                            </div>
-                        `;
-                    });
-                    document.getElementById('achievementsList').innerHTML += addHtml;
                 }
+                
+                renderSpecialAchievementsUsersList();
             })
             .catch(err => console.error('Ошибка загрузки специальных достижений:', err));
     }
+}
+
+function renderSpecialAchievementsUsersList() {
+    const container = document.getElementById('achievementsList');
+    const existingSpecialSection = container.querySelector('.special-achievements-admin-section');
+    if (existingSpecialSection) existingSpecialSection.remove();
+    
+    if (specialAchievementsAdminData.length === 0) return;
+    
+    // Группируем по пользователям
+    const usersMap = {};
+    specialAchievementsAdminData.forEach(a => {
+        if (!usersMap[a.user_id]) {
+            usersMap[a.user_id] = { userId: a.user_id, count: 0 };
+        }
+        usersMap[a.user_id].count++;
+    });
+    
+    const users = Object.values(usersMap).sort((a, b) => b.count - a.count);
+    
+    let html = `
+        <div class="special-achievements-admin-section" style="grid-column: 1 / -1; margin-top: 40px; border-top: 3px solid #ffd700; padding-top: 30px;">
+            <h2 style="text-align: center; color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+                ⭐ Специальные достижения ⭐
+            </h2>
+    `;
+    
+    users.forEach(user => {
+        const userName = specialAchievementsUserNames[user.userId] || 'Неизвестный';
+        html += `
+            <div onclick="showSpecialAchievementsForUser('${user.userId}')"
+                 style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; margin-bottom:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,215,0,0.3); border-radius:8px; cursor:pointer; transition: background 0.2s;"
+                 onmouseover="this.style.background='rgba(255,215,0,0.1)'"
+                 onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                <div>
+                    <span style="color:#e0e0e0; font-weight:500;">👤 ${userName}</span>
+                    <span style="color:#888; font-size:12px; margin-left:8px;">ID: ${user.userId}</span>
+                </div>
+                <span style="color:#ffd700; font-weight:bold;">${user.count} ${user.count === 1 ? 'достижение' : (user.count < 5 ? 'достижения' : 'достижений')}</span>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML += html;
+}
+
+function showSpecialAchievementsForUser(userId) {
+    const container = document.getElementById('achievementsList');
+    const section = container.querySelector('.special-achievements-admin-section');
+    if (!section) return;
+    
+    const userName = specialAchievementsUserNames[userId] || 'Неизвестный';
+    const userAchievements = specialAchievementsAdminData.filter(a => a.user_id === userId);
+    
+    let html = `
+        <h2 style="text-align: center; color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+            ⭐ Достижения: ${userName} ⭐
+        </h2>
+        <div onclick="renderSpecialAchievementsUsersList()" style="text-align:center; margin-bottom:20px;">
+            <span style="color:#a45eea; cursor:pointer; font-weight:500; text-decoration:underline;">← Назад к списку</span>
+        </div>
+    `;
+    
+    userAchievements.forEach(achievement => {
+        const editBtn = `<button onclick="editSpecialAchievementOther('${achievement.achievement_id}', '${achievement.user_id}', event)" style="position:absolute; top:5px; right:5px; padding:6px 10px; background:transparent; border:none; border-radius:4px; cursor:pointer; font-size:18px; z-index:100;">✏️</button>`;
+        const deleteBtn = `<button onclick="deleteUserAchievement('${achievement.user_id}', '${achievement.achievement_id}')" style="margin-top:8px; padding:4px 8px; background:#ff4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px;">🗑️ Удалить</button>`;
+        const achievementColor = achievement.color || '#999';
+        const unlockedDate = achievement.unlocked_at ? new Date(achievement.unlocked_at).toLocaleDateString('ru-RU') : 'Неизвестно';
+        const isUnlocked = !!achievement.unlocked_at;
+        
+        html += `
+            <div class="achievement special-achievement" data-achievement-id="${achievement.achievement_id}" style="
+                background: linear-gradient(135deg, ${achievementColor}22 0%, ${achievementColor}11 100%); 
+                color: #333; 
+                border-left: 5px solid ${achievementColor};
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                opacity: ${isUnlocked ? '1' : '0.7'};
+                position: relative;
+            ">
+                ${editBtn}
+                <h3 style="color: ${achievementColor}; font-weight: bold;">${achievement.emoji} ${achievement.name} ${isUnlocked ? '✨' : '🔒'}</h3>
+                <p style="color: #555; margin: 10px 0;">${achievement.description}</p>
+                <small style="color: #666; font-weight: bold; display: block; margin-top: 3px;">🎉 Получено: ${unlockedDate}</small>
+                ${deleteBtn}
+            </div>
+        `;
+    });
+    
+    section.innerHTML = html;
 }
 
 // Функция для переключения между именем и ID
@@ -474,6 +530,11 @@ function deleteUserAchievement(userId, achievementId) {
 // === Выдача обычного достижения через админку ===
 
 let grantAchievementAllUsers = [];
+
+// === Навигация по спец. достижениям для админа ===
+let specialAchievementsAdminData = [];
+let specialAchievementsAllSpecial = [];
+let specialAchievementsUserNames = {};
 
 function openGrantRegularAchievementModal() {
     const select = document.getElementById('grantAchievementSelect');
