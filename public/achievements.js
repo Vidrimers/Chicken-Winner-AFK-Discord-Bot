@@ -26,6 +26,7 @@ const REGULAR_ACHIEVEMENTS = {
     no_afk_week: { name: '💪 Железная воля', description: 'Неделя без перемещений в AFK', points: 50 },
     mute_master: { name: '🎙️ Мастер тишины', description: 'Переключил микрофон 100 раз', points: 25 },
     long_session: { name: '⏰ Марафонец', description: 'Провел 12+ часов в одной сессии', points: 75 },
+    voice_vegetable: { name: '🥦 Биомебель войса', description: 'Провел 24+ часов в одной сессии', points: 150 },
     settings_explorer: { name: '⚙️ Исследователь настроек', description: 'Изменил настройки бота 20 раз', points: 30 },
     mention_responder: { name: '📢 Отзывчивый', description: 'Ответил на 1000+ упоминаний', points: 100 },
     stream_viewer_1: { name: '📺 Одним глазком', description: 'Провел 5+ часов в канале Че смотрим?', points: 10 },

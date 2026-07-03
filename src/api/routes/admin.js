@@ -164,6 +164,7 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
         no_afk_week: { name: '💪 Железная воля', points: 50 },
         mute_master: { name: '🎙️ Мастер тишины', points: 25 },
         long_session: { name: '⏰ Марафонец', points: 75 },
+        voice_vegetable: { name: '🥦 Биомебель войса', points: 150 },
         settings_explorer: { name: '⚙️ Исследователь настроек', points: 30 },
         mention_responder: { name: '📢 Отзывчивый', points: 100 },
         stream_viewer_1: { name: '📺 Одним глазком', points: 10 },
