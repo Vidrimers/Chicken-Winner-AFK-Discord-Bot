@@ -56,17 +56,24 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(achievementId, userId, emoji, name, description, type, color, specialDate || null);
 
-      const unlockedTime = specialDate || new Date().toISOString();
-      db.prepare(
-        `INSERT OR IGNORE INTO user_achievements (user_id, achievement_id, unlocked_at)
-         VALUES (?, ?, ?)`
-      ).run(userId, achievementId, unlockedTime);
+      // Проверяем, нужно ли выдать достижение сейчас или запланировать
+      const shouldUnlockNow = !specialDate || new Date(specialDate) <= new Date();
+      
+      if (shouldUnlockNow) {
+        // Достижение выдаётся сейчас
+        const unlockedTime = new Date().toISOString();
+        db.prepare(
+          `INSERT OR IGNORE INTO user_achievements (user_id, achievement_id, unlocked_at)
+           VALUES (?, ?, ?)`
+        ).run(userId, achievementId, unlockedTime);
+      } else {
+        // Достижение запланировано — НЕ ставим unlocked_at, пользователь пока не видит
+        log(`⏰ Достижение запланировано на ${new Date(specialDate).toLocaleString('ru-RU')}, пользователь увидит его в указанное время`);
+      }
 
       log(`✅ Специальное достижение создано: ${name} для ${userId}`);
 
-      // Проверяем, нужно ли отправлять уведомления сейчас
-      const shouldNotifyNow = !specialDate || new Date(specialDate) <= new Date();
-
+      // Отправляем уведомления только если достижение выдано сейчас
       if (shouldNotifyNow) {
         const guild = discordClient.guilds.cache.first();
         let username = 'Неизвестный пользователь';

@@ -67,15 +67,21 @@ export class AchievementChecker {
       if (achievement.special_date) {
         const specialDate = new Date(achievement.special_date);
         
-        // Проверяем совпадает ли день и месяц
-        if (
-          now.getDate() === specialDate.getDate() &&
-          now.getMonth() === specialDate.getMonth()
-        ) {
+        // Проверяем, наступила ли запланированная дата (год, месяц, день)
+        const dateMatch = 
+          now.getFullYear() === specialDate.getFullYear() &&
+          now.getMonth() === specialDate.getMonth() &&
+          now.getDate() === specialDate.getDate();
+        
+        if (dateMatch) {
           // Проверяем есть ли уже это достижение
           if (!this.db.hasAchievement(userId, achievement.achievement_id)) {
             // Разблокируем
-            this.db.unlockAchievement(userId, achievement.achievement_id);
+            const unlockedTime = now.toISOString();
+            this.db.prepare(
+              `INSERT OR IGNORE INTO user_achievements (user_id, achievement_id, unlocked_at)
+               VALUES (?, ?, ?)`
+            ).run(userId, achievement.achievement_id, unlockedTime);
             
             // Отправляем уведомления
             await this.achievements.sendNotifications(userId, username, {
