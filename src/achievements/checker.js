@@ -67,13 +67,8 @@ export class AchievementChecker {
       if (achievement.special_date) {
         const specialDate = new Date(achievement.special_date);
         
-        // Проверяем, наступила ли запланированная дата (год, месяц, день)
-        const dateMatch = 
-          now.getFullYear() === specialDate.getFullYear() &&
-          now.getMonth() === specialDate.getMonth() &&
-          now.getDate() === specialDate.getDate();
-        
-        if (dateMatch) {
+        // Проверяем, наступила ли запланированная дата и время
+        if (now >= specialDate) {
           // Проверяем есть ли уже это достижение
           if (!this.db.hasAchievement(userId, achievement.achievement_id)) {
             // Разблокируем
