@@ -6,16 +6,87 @@ function openCreateSpecialAchievementModal() {
     
     document.getElementById('specialAchievementDate').value = dateStr;
     document.getElementById('specialAchievementTime').value = timeStr;
+    document.getElementById('specialAchievementUserId').value = '';
+    document.getElementById('specialAchievementSearch').value = '';
+    document.getElementById('specialAchievementSelectedUser').style.display = 'none';
+    document.getElementById('specialAchievementDropdown').style.display = 'none';
     
     document.getElementById('createSpecialAchievementModal').style.display = 'block';
     document.body.classList.add('modal-open');
     updateSpecialAchievementPreview();
+    
+    loadSpecialAchievementUsers();
 }
 
 function closeCreateSpecialAchievementModal() {
     document.getElementById('createSpecialAchievementModal').style.display = 'none';
+    document.getElementById('specialAchievementDropdown').style.display = 'none';
     document.body.classList.remove('modal-open');
 }
+
+// Поиск пользователей для спец. достижения
+let specialAchievementAllUsers = [];
+
+async function loadSpecialAchievementUsers() {
+    try {
+        const res = await fetch('/api/guild-members');
+        const users = await res.json();
+        specialAchievementAllUsers = users || [];
+    } catch (err) {
+        console.error('Ошибка загрузки участников:', err);
+        specialAchievementAllUsers = [];
+    }
+}
+
+function filterSpecialAchievementUsers(query) {
+    const dropdown = document.getElementById('specialAchievementDropdown');
+    const q = query.toLowerCase().trim();
+    
+    if (!q) {
+        dropdown.style.display = 'none';
+        return;
+    }
+    
+    const filtered = specialAchievementAllUsers.filter(u =>
+        u.username.toLowerCase().includes(q) ||
+        u.user_id.includes(q)
+    ).slice(0, 15);
+    
+    if (filtered.length === 0) {
+        dropdown.style.display = 'none';
+        return;
+    }
+    
+    dropdown.innerHTML = filtered.map(user => `
+        <div onclick="selectSpecialAchievementUser('${user.user_id}', '${escapeHtmlBug(user.username)}')"
+             style="padding:8px 12px;cursor:pointer;color:#e0e0e0;border-bottom:1px solid rgba(255,255,255,0.05);"
+             onmouseover="this.style.background='rgba(164,94,234,0.2)'"
+             onmouseout="this.style.background='transparent'">
+            <div style="font-weight:500;">${escapeHtmlBug(user.username)}</div>
+            <div style="font-size:11px;color:#888;">${user.user_id}</div>
+        </div>
+    `).join('');
+    
+    dropdown.style.display = 'block';
+}
+
+function selectSpecialAchievementUser(userId, username) {
+    document.getElementById('specialAchievementUserId').value = userId;
+    document.getElementById('specialAchievementSearch').value = username;
+    document.getElementById('specialAchievementDropdown').style.display = 'none';
+    
+    const selected = document.getElementById('specialAchievementSelectedUser');
+    selected.style.display = 'block';
+    selected.innerHTML = `Выбран: <strong>${username}</strong> (${userId})`;
+}
+
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('specialAchievementDropdown');
+    const search = document.getElementById('specialAchievementSearch');
+    if (dropdown && search && !dropdown.contains(e.target) && e.target !== search) {
+        dropdown.style.display = 'none';
+    }
+});
 
 function updateSpecialAchievementPreview() {
     const emoji = document.getElementById('specialAchievementEmoji').value || '🏆';

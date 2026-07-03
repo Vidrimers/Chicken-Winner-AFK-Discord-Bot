@@ -287,8 +287,8 @@
               border-radius: 10px;
               padding: 20px;
               width: 90%;
-              max-width: 600px;
-              height: 80vh;
+              max-width: 500px;
+              max-height: 80vh;
               overflow: auto;
               scrollbar-width: none;
             "
@@ -322,73 +322,18 @@
             </div>
 
             <form id="createSpecialAchievementForm">
-              <div
-                class="SpecialAchievementForm-group"
-                style="
-                  display: flex;
-                  justify-content: space-evenly;
-                  margin-bottom: 15px;
-                "
-              >
-                <div style="display: flex; flex-direction: column">
-                  <label
-                    style="
-                      color: white;
-                      display: block;
-                      margin-bottom: 5px;
-                      text-align: center;
-                    "
-                    >Эмодзи достижения:</label
-                  >
-                  <input
-                    type="text"
-                    id="specialAchievementEmoji"
-                    maxlength="2"
-                    placeholder="🏆"
-                    style="
-                      width: 30%;
-                      padding: 8px;
-                      background: #0a0a0a;
-                      border: 1px solid #a45eea;
-                      color: white;
-                      border-radius: 5px;
-                      text-align: center;
-                      margin: 0 auto;
-                    "
-                    oninput="updateSpecialAchievementPreview()"
-                  />
-                </div>
-
-                <div style="margin-bottom: 15px">
-                  <label
-                    style="color: white; display: block; margin-bottom: 5px"
-                    >Discord ID пользователя:</label
-                  >
-                  <input
-                    type="text"
-                    id="specialAchievementUserId"
-                    placeholder="123456789"
-                    style="
-                      width: 100%;
-                      padding: 8px;
-                      background: #0a0a0a;
-                      border: 1px solid #a45eea;
-                      color: white;
-                      border-radius: 5px;
-                      text-align: center;
-                    "
-                  />
-                </div>
-              </div>
-
-              <div style="margin-bottom: 15px">
+              <!-- Пользователь -->
+              <div style="margin-bottom: 15px; position: relative;">
                 <label style="color: white; display: block; margin-bottom: 5px"
-                  >Название достижения:</label
+                  >Пользователь:</label
                 >
                 <input
                   type="text"
-                  id="specialAchievementName"
-                  placeholder="Название"
+                  id="specialAchievementSearch"
+                  placeholder="Поиск по имени или ID..."
+                  autocomplete="off"
+                  oninput="filterSpecialAchievementUsers(this.value)"
+                  onfocus="filterSpecialAchievementUsers(this.value)"
                   style="
                     width: 100%;
                     padding: 8px;
@@ -396,11 +341,88 @@
                     border: 1px solid #a45eea;
                     color: white;
                     border-radius: 5px;
+                    box-sizing: border-box;
                   "
-                  oninput="updateSpecialAchievementPreview()"
                 />
+                <div
+                  id="specialAchievementDropdown"
+                  style="
+                    display: none;
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    right: 0;
+                    background: #1a1a1a;
+                    border: 1px solid #a45eea;
+                    border-radius: 0 0 5px 5px;
+                    max-height: 200px;
+                    overflow-y: auto;
+                    z-index: 10;
+                  "
+                ></div>
+                <input type="hidden" id="specialAchievementUserId" />
+                <div
+                  id="specialAchievementSelectedUser"
+                  style="
+                    display: none;
+                    margin-top: 8px;
+                    padding: 6px 10px;
+                    background: rgba(164, 94, 234, 0.15);
+                    border: 1px solid rgba(164, 94, 234, 0.3);
+                    border-radius: 5px;
+                    color: #a45eea;
+                    font-size: 13px;
+                  "
+                ></div>
               </div>
 
+              <!-- Эмодзи + Название -->
+              <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-bottom: 15px; align-items: end;">
+                <div>
+                  <label style="color: white; display: block; margin-bottom: 5px; text-align: center;"
+                    >Эмодзи:</label
+                  >
+                  <input
+                    type="text"
+                    id="specialAchievementEmoji"
+                    maxlength="2"
+                    placeholder="🏆"
+                    oninput="updateSpecialAchievementPreview()"
+                    style="
+                      width: 60px;
+                      padding: 8px;
+                      background: #0a0a0a;
+                      border: 1px solid #a45eea;
+                      color: white;
+                      border-radius: 5px;
+                      text-align: center;
+                      font-size: 18px;
+                    "
+                  />
+                </div>
+                <div>
+                  <label style="color: white; display: block; margin-bottom: 5px;"
+                    >Название:</label
+                  >
+                  <input
+                    type="text"
+                    id="specialAchievementName"
+                    placeholder="Название"
+                    oninput="updateSpecialAchievementPreview()"
+                    style="
+                      width: 100%;
+                      padding: 8px;
+                      background: #0a0a0a;
+                      border: 1px solid #a45eea;
+                      color: white;
+                      border-radius: 5px;
+                      box-sizing: border-box;
+                    "
+                  />
+                </div>
+              </div>
+
+              <!-- Описание -->
               <div style="margin-bottom: 15px">
                 <label style="color: white; display: block; margin-bottom: 5px"
                   >Описание:</label
@@ -417,10 +439,12 @@
                     border-radius: 5px;
                     resize: vertical;
                     min-height: 60px;
+                    box-sizing: border-box;
                   "
                 ></textarea>
               </div>
 
+              <!-- Дата + Время -->
               <div
                 style="
                   display: grid;
@@ -430,8 +454,7 @@
                 "
               >
                 <div>
-                  <label
-                    style="color: white; display: block; margin-bottom: 5px"
+                  <label style="color: white; display: block; margin-bottom: 5px"
                     >Дата:</label
                   >
                   <input
@@ -444,12 +467,12 @@
                       border: 1px solid #a45eea;
                       color: white;
                       border-radius: 5px;
+                      box-sizing: border-box;
                     "
                   />
                 </div>
                 <div>
-                  <label
-                    style="color: white; display: block; margin-bottom: 5px"
+                  <label style="color: white; display: block; margin-bottom: 5px"
                     >Время:</label
                   >
                   <input
@@ -462,11 +485,13 @@
                       border: 1px solid #a45eea;
                       color: white;
                       border-radius: 5px;
+                      box-sizing: border-box;
                     "
                   />
                 </div>
               </div>
 
+              <!-- Цвет -->
               <div style="margin-bottom: 15px">
                 <label style="color: white; display: block; margin-bottom: 5px"
                   >Цвет:</label
@@ -475,6 +500,7 @@
                   type="color"
                   id="specialAchievementColor"
                   value="#a45eea"
+                  oninput="updateSpecialAchievementPreview()"
                   style="
                     width: 100%;
                     padding: 8px;
@@ -482,11 +508,12 @@
                     border: 1px solid #a45eea;
                     border-radius: 5px;
                     cursor: pointer;
+                    box-sizing: border-box;
                   "
-                  oninput="updateSpecialAchievementPreview()"
                 />
               </div>
 
+              <!-- Превью -->
               <div style="margin-bottom: 15px">
                 <label style="color: white; display: block; margin-bottom: 5px"
                   >Превью:</label
@@ -502,6 +529,7 @@
                 ></div>
               </div>
 
+              <!-- Кнопки -->
               <div
                 style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
               >
