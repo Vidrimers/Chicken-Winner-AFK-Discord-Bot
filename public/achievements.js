@@ -123,7 +123,10 @@ function displayUserAchievements(achievements) {
     const now = new Date();
     
     let userSpecialAchievements = achievements.filter(a => {
-        const isSpecial = (a.emoji && a.name && a.type === 'special') || a.achievement_id === 'best_admin';
+        // Пропускаем записи с пустыми данными (мусор из БД)
+        if (!a.emoji || !a.name) return false;
+        
+        const isSpecial = a.type === 'special' || a.achievement_id === 'best_admin';
         if (!isSpecial) return false;
         
         if (isAdmin) return true;
@@ -148,11 +151,11 @@ function displayUserAchievements(achievements) {
         userSpecialAchievements.push({
             achievement_id: 'best_admin',
             unlocked_at: null,
-            emoji: null,
-            name: null,
-            description: null,
-            color: null,
-            type: null
+            emoji: '👑',
+            name: 'Kakashech - Лучший админ',
+            description: 'Лучший admin_ebaniy канала',
+            color: '#FFD700',
+            type: 'special'
         });
     }
     
@@ -380,7 +383,7 @@ function showSpecialAchievementsForUser(userId) {
     if (!section) return;
     
     const userName = specialAchievementsUserNames[userId] || 'Неизвестный';
-    const userAchievements = specialAchievementsAdminData.filter(a => a.user_id === userId);
+    const userAchievements = specialAchievementsAdminData.filter(a => a.user_id === userId && a.emoji && a.name);
     
     let html = `
         <h2 style="text-align: center; color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
