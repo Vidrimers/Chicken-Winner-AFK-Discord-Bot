@@ -146,19 +146,6 @@ function displayUserAchievements(achievements) {
         return achievementDate <= now;
     });
     
-    // Добавляем best_admin только для админа если его нет в достижениях
-    if (isAdmin && !userSpecialAchievements.some(a => a.achievement_id === 'best_admin')) {
-        userSpecialAchievements.push({
-            achievement_id: 'best_admin',
-            unlocked_at: null,
-            emoji: '👑',
-            name: 'Kakashech - Лучший админ',
-            description: 'Лучший admin_ebaniy канала',
-            color: '#FFD700',
-            type: 'special'
-        });
-    }
-    
     // Для не-админа: показываем специальные достижения обычным способом
     if (!isAdmin && (userSpecialAchievements.length > 0)) {
         html += `
