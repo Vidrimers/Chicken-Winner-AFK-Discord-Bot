@@ -123,10 +123,10 @@ function displayUserAchievements(achievements) {
     const now = new Date();
     
     let userSpecialAchievements = achievements.filter(a => {
-        // Пропускаем записи с пустыми данными (мусор из БД)
+        // Пропускаем записи с пустыми данными
         if (!a.emoji || !a.name) return false;
         
-        const isSpecial = a.type === 'special' || a.achievement_id === 'best_admin';
+        const isSpecial = a.type === 'special';
         if (!isSpecial) return false;
         
         if (isAdmin) return true;
