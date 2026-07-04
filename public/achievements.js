@@ -341,21 +341,21 @@ function renderSpecialAchievementsUsersList() {
             <h2 style="text-align: center; color: #ffd700; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
                 ⭐ Специальные достижения ⭐
             </h2>
-            <div style="max-width: 500px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 900px; margin: 0 auto;">
     `;
     
     users.forEach(user => {
         const userName = specialAchievementsUserNames[user.userId] || 'Неизвестный';
         html += `
             <div onclick="showSpecialAchievementsForUser('${user.userId}')"
-                 style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; margin-bottom:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,215,0,0.3); border-radius:8px; cursor:pointer; transition: background 0.2s;"
+                 style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,215,0,0.3); border-radius:8px; cursor:pointer; transition: background 0.2s;"
                  onmouseover="this.style.background='rgba(255,215,0,0.1)'"
                  onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                <div>
+                <div style="min-width:0;">
                     <span style="color:#e0e0e0; font-weight:500;">👤 ${userName}</span>
-                    <span style="color:#888; font-size:12px; margin-left:8px;">ID: ${user.userId}</span>
+                    <div style="color:#888; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">ID: ${user.userId}</div>
                 </div>
-                <span style="color:#ffd700; font-weight:bold;">${user.count} ${user.count === 1 ? 'достижение' : (user.count < 5 ? 'достижения' : 'достижений')}</span>
+                <span style="color:#ffd700; font-weight:bold; white-space:nowrap; margin-left:10px;">${user.count} ${user.count === 1 ? 'достижение' : (user.count < 5 ? 'достижения' : 'достижений')}</span>
             </div>
         `;
     });
@@ -379,7 +379,7 @@ function showSpecialAchievementsForUser(userId) {
         <div onclick="renderSpecialAchievementsUsersList()" style="text-align:center; margin-bottom:20px;">
             <span style="color:#a45eea; cursor:pointer; font-weight:500; text-decoration:underline;">← Назад к списку</span>
         </div>
-        <div style="max-width: 500px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 900px; margin: 0 auto;">
     `;
     
     userAchievements.forEach(achievement => {
