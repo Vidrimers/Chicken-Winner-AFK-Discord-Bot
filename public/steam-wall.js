@@ -11,12 +11,8 @@ let editingTargetId = null;
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Проверяем сессию через API
-  currentUserId = await checkSession();
-  if (!currentUserId) {
-    // Пробуем из localStorage
-    currentUserId = localStorage.getItem('afkBotUserId');
-  }
+  // Получаем данные пользователя из localStorage (как в cheater-checker)
+  currentUserId = localStorage.getItem('afkBotUserId') || null;
 
   if (!currentUserId) {
     showAuthWarning();
@@ -32,16 +28,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadLogs();
   bindEvents();
 });
-
-async function checkSession() {
-  try {
-    const response = await fetch('/api/session');
-    const data = await response.json();
-    return data.userId || null;
-  } catch {
-    return null;
-  }
-}
 
 // ===== UI HELPERS =====
 
