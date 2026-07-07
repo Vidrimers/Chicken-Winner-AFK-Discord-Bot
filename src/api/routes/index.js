@@ -13,6 +13,7 @@ import { createSteamProxyRouter } from "./steam-proxy.js";
 import { createSteamRouter } from "./steam.js";
 import { sessionManager } from "../server.js";
 import { createGamePricesRouter } from "./game-prices.js";
+import { createSteamWallRouter } from "./steam-wall.js";
 
 /**
  * Зарегистрировать все API роуты
@@ -26,6 +27,8 @@ export function registerRoutes(
   notificationService,
   gamesDb,
   priceNotificationService,
+  steamWallDb = null,
+  steamWallManager = null,
 ) {
   // Config роут - для загрузки конфигурации на фронтенде
   app.get("/api/config", (req, res) => {
@@ -272,6 +275,12 @@ export function registerRoutes(
   if (gamesDb) {
     const gamePricesRouter = createGamePricesRouter(db, gamesDb, discordClient, telegram, priceNotificationService);
     app.use("/api/game-prices", gamePricesRouter);
+  }
+
+  // Steam Wall Auto-Answer роуты
+  if (steamWallDb && steamWallManager) {
+    const steamWallRouter = createSteamWallRouter(steamWallDb, steamWallManager);
+    app.use("/api/steam-wall", steamWallRouter);
   }
 
   success("API роуты зарегистрированы");

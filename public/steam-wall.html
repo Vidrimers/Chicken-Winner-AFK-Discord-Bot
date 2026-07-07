@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Автоответчик Steam — Steam Wall Bot</title>
+    <link rel="icon" type="image/png" href="/avatars/logo.png" />
+    <link rel="shortcut icon" type="image/png" href="/avatars/logo.png" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="/steam-wall.css" />
+    <script src="/steam-wall.js" defer></script>
+  </head>
+  <body>
+    <script>
+      (function() {
+        var t = localStorage.getItem('afkBotTheme');
+        if (t && t !== 'standard') document.body.setAttribute('data-theme', t);
+      })();
+    </script>
+
+    <div class="wall-container">
+      <!-- Шапка -->
+      <header class="wall-header">
+        <a href="/" class="back-btn">← Назад</a>
+        <div class="header-title">
+          <h1>Автоответчик Steam</h1>
+        </div>
+      </header>
+
+      <!-- Сообщение для неавторизованных -->
+      <div class="auth-warning" id="authWarning" style="display: none">
+        <p>🔒 Войдите для управления автоответчиком</p>
+      </div>
+
+      <!-- Управление ботом -->
+      <section class="bot-control-section" id="botControlSection" style="display: none">
+        <div class="bot-status">
+          <div class="bot-status-dot" id="botStatusDot"></div>
+          <span id="botStatusText">Загрузка...</span>
+        </div>
+        <button class="btn btn-start" id="startBotBtn">▶ Запустить</button>
+        <button class="btn btn-stop" id="stopBotBtn" style="display: none">⏹ Остановить</button>
+      </section>
+
+      <!-- Токен -->
+      <section class="token-section" id="tokenSection" style="display: none">
+        <h2>🔑 Refresh Token</h2>
+        <div class="token-warning">
+          ⚠️ Данные хранятся на сервере в зашифрованном виде (AES-256). Refresh token даёт полный доступ к вашему Steam аккаунту.
+        </div>
+        <div class="token-input-wrapper">
+          <input type="password" id="tokenInput" placeholder="Вставьте refresh token из login.js" />
+          <button class="btn btn-primary" id="saveTokenBtn">Сохранить</button>
+        </div>
+      </section>
+
+      <!-- Настройки -->
+      <section class="settings-section" id="settingsSection" style="display: none">
+        <h2>⚙️ Настройки</h2>
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label>Не отвечать друзьям</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="skipFriendsToggle" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <label>Кулдаун (мин)</label>
+            <input type="number" id="cooldownInput" value="30" min="5" max="1440" />
+          </div>
+          <div class="setting-item">
+            <label>Интервал опроса (сек)</label>
+            <input type="number" id="pollIntervalInput" value="60" min="30" max="300" />
+          </div>
+        </div>
+        <button class="btn btn-primary" id="saveSettingsBtn" style="margin-top: 15px">Сохранить настройки</button>
+      </section>
+
+      <!-- Общие фразы -->
+      <section class="phrases-section" id="phrasesSection" style="display: none">
+        <h2>💬 Общие фразы</h2>
+        <div class="phrases-add">
+          <input type="text" id="newPhraseInput" placeholder="Добавить новую фразу..." />
+          <button class="btn btn-primary" id="addPhraseBtn">Добавить</button>
+        </div>
+        <div class="phrases-list" id="phrasesList"></div>
+      </section>
+
+      <!-- Поиск -->
+      <div class="search-section" id="searchSection" style="display: none">
+        <div class="input-clear-wrapper">
+          <input type="text" id="searchInput" placeholder="Поиск по нику или SteamID..." />
+          <button class="clear-btn" id="searchClearBtn">×</button>
+        </div>
+      </div>
+
+      <!-- Пользователи -->
+      <section class="targets-section" id="targetsSection" style="display: none">
+        <h2>👥 Пользователи</h2>
+        <div class="targets-add">
+          <input type="text" id="targetSteamInput" placeholder="SteamID64 или ссылка (steamcommunity.com/id/...)" />
+          <input type="text" id="targetNameInput" placeholder="Ник (опционально)" />
+          <button class="btn btn-primary" id="addTargetBtn">Добавить</button>
+        </div>
+        <div class="targets-grid" id="targetsGrid"></div>
+      </section>
+
+      <!-- Логи -->
+      <section class="logs-section" id="logsSection" style="display: none">
+        <h2>📋 Последние ответы</h2>
+        <div class="logs-list" id="logsList"></div>
+      </section>
+    </div>
+
+    <!-- Модальное окно редактирования фразы -->
+    <div class="modal-overlay" id="editPhraseModal">
+      <div class="modal">
+        <h3>Редактировать фразу</h3>
+        <div class="modal-field">
+          <label>Текст фразы</label>
+          <input type="text" id="editPhraseText" />
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="editPhraseCancel">Отмена</button>
+          <button class="btn btn-primary" id="editPhraseSave">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно редактирования пользователя -->
+    <div class="modal-overlay" id="editTargetModal">
+      <div class="modal">
+        <h3>Редактировать пользователя</h3>
+        <div class="modal-field">
+          <label>SteamID64</label>
+          <input type="text" id="editTargetSteamId" readonly />
+        </div>
+        <div class="modal-field">
+          <label>Ник</label>
+          <input type="text" id="editTargetName" />
+        </div>
+        <div class="modal-field">
+          <label>Ссылка на профиль</label>
+          <input type="text" id="editTargetUrl" />
+        </div>
+        <div class="modal-field">
+          <label>Фразы (каждая с новой строки)</label>
+          <textarea id="editTargetPhrases"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="editTargetCancel">Отмена</button>
+          <button class="btn btn-primary" id="editTargetSave">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

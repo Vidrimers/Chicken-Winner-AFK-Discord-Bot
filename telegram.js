@@ -284,12 +284,19 @@ let db = null;
 let discordClient = null;
 let getVoiceActivityHandler = null;
 let getOnlineUsersHandler = null;
+let steamWallDb = null;
+let steamWallManager = null;
 
 // Состояния пользователей для пошаговых диалогов
 const userStates = new Map(); // chatId → state string
 
 
 // ===== HELPER FUNCTIONS =====
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 /**
  * Получить связанный Discord ID по Telegram chat ID
@@ -328,7 +335,8 @@ async function sendMainMenu(chatId) {
         { text: '👥 Кто онлайн', callback_data: 'menu_online' }
       ],
       [
-        { text: '🔍 Чекер читеров', callback_data: 'menu_checker' }
+        { text: '🔍 Чекер читеров', callback_data: 'menu_checker' },
+        { text: '🤖 Автоответчик', callback_data: 'menu_steam_wall' }
       ],
       [
         { text: '🐛 Багрепорт', callback_data: 'menu_bugreport' },
@@ -370,6 +378,144 @@ async function sendCheckerMenu(chatId) {
   await telegramBot.sendMessage(chatId, '<b>🔍 Чекер читеров</b>\n\nВыберите действие:', {
     parse_mode: 'HTML',
     reply_markup: checkerButtons
+  });
+}
+
+/**
+ * Отправка подменю автоответчика Steam
+ */
+async function sendSteamWallMenu(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId) {
+    await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+    return;
+  }
+
+  let statusText = '❌ Неизвестно';
+  let activeText = '❌ Выключен';
+
+  if (steamWallDb) {
+    const settings = steamWallDb.getSettings(discordId);
+    if (settings) {
+      activeText = settings.isActive ? '✅ Включён' : '❌ Выключен';
+      statusText = settings.hasToken ? '✅ Токен есть' : '❌ Нет токена';
+    }
+  }
+
+  const buttons = {
+    inline_keyboard: [
+      [{ text: `🤖 Бот: ${activeText}`, callback_data: 'sw_toggle' }],
+      [{ text: `🔑 Токен: ${statusText}`, callback_data: 'sw_token_info' }],
+      [
+        { text: '💬 Фразы', callback_data: 'sw_phrases' },
+        { text: '👥 Пользователи', callback_data: 'sw_targets' }
+      ],
+      [{ text: '📋 Последние ответы', callback_data: 'sw_logs' }],
+      [{ text: '🌐 Настроить на сайте', url: `${SERVER_CONFIG.SITE_URL}/steam-wall.html` }],
+      [{ text: '◀️ Назад', callback_data: 'back_to_menu' }]
+    ]
+  };
+
+  await telegramBot.sendMessage(chatId, '<b>🤖 Автоответчик Steam</b>\n\nУправление ботом, который отвечает на комментарии в стене вашего профиля.', {
+    parse_mode: 'HTML',
+    reply_markup: buttons
+  });
+}
+
+/**
+ * Отправка подменю фраз
+ */
+async function sendSteamWallPhrasesMenu(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId || !steamWallDb) return;
+
+  const phrases = steamWallDb.getPhrases(discordId);
+  let message = '<b>💬 Ваши фразы:</b>\n\n';
+
+  if (phrases.length === 0) {
+    message += '<i>Пока нет фраз. Добавьте через сайт или отправьте фразу сейчас.</i>';
+  } else {
+    phrases.forEach((p, i) => {
+      message += `${i + 1}. ${escapeHtml(p.text)}\n`;
+    });
+  }
+
+  message += '\n💡 Отправьте текст чтобы добавить новую фразу.';
+
+  const buttons = {
+    inline_keyboard: [
+      [{ text: '◀️ Назад', callback_data: 'menu_steam_wall' }]
+    ]
+  };
+
+  userStates.set(chatId, 'awaiting_sw_phrase');
+  await telegramBot.sendMessage(chatId, message, {
+    parse_mode: 'HTML',
+    reply_markup: buttons
+  });
+}
+
+/**
+ * Отправка подменю пользователей
+ */
+async function sendSteamWallTargetsMenu(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId || !steamWallDb) return;
+
+  const targets = steamWallDb.getTargetUsers(discordId);
+  let message = '<b>👥 Ваши пользователи:</b>\n\n';
+
+  if (targets.length === 0) {
+    message += '<i>Пока нет пользователей. Добавьте через сайт.</i>';
+  } else {
+    targets.forEach((t, i) => {
+      const name = t.name || 'Без ника';
+      message += `${i + 1}. <b>${escapeHtml(name)}</b> (${t.steam_id64})\n`;
+    });
+  }
+
+  const buttons = {
+    inline_keyboard: [
+      [{ text: '🌐 Управление на сайте', url: `${SERVER_CONFIG.SITE_URL}/steam-wall.html` }],
+      [{ text: '◀️ Назад', callback_data: 'menu_steam_wall' }]
+    ]
+  };
+
+  await telegramBot.sendMessage(chatId, message, {
+    parse_mode: 'HTML',
+    reply_markup: buttons
+  });
+}
+
+/**
+ * Отправка последних ответов
+ */
+async function sendSteamWallLogsMenu(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId || !steamWallDb) return;
+
+  const logs = steamWallDb.getLogs(discordId, 10);
+  let message = '<b>📋 Последние ответы:</b>\n\n';
+
+  if (logs.length === 0) {
+    message += '<i>Пока нет ответов.</i>';
+  } else {
+    logs.forEach(l => {
+      const time = new Date(l.created_at).toLocaleString('ru-RU');
+      message += `• ${escapeHtml(l.target_name || '?')}: ${escapeHtml(l.reply_text)}\n`;
+      message += `  <i>${time}</i>\n`;
+    });
+  }
+
+  const buttons = {
+    inline_keyboard: [
+      [{ text: '◀️ Назад', callback_data: 'menu_steam_wall' }]
+    ]
+  };
+
+  await telegramBot.sendMessage(chatId, message, {
+    parse_mode: 'HTML',
+    reply_markup: buttons
   });
 }
 
@@ -898,6 +1044,8 @@ export function initTelegramBot(
   linkCodeHandler,
   voiceActivityHandler,
   onlineUsersHandler,
+  swDb = null,
+  swManager = null,
 ) {
   if (!TELEGRAM_TOKEN) {
     console.log(
@@ -910,6 +1058,8 @@ export function initTelegramBot(
   discordClient = client;
   getVoiceActivityHandler = voiceActivityHandler;
   getOnlineUsersHandler = onlineUsersHandler;
+  steamWallDb = swDb;
+  steamWallManager = swManager;
 
   try {
     telegramBot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
@@ -1262,6 +1412,54 @@ export function initTelegramBot(
             break;
           }
 
+          case 'menu_steam_wall': {
+            const discordIdSW = getLinkedDiscordId(chatId);
+            if (!discordIdSW) {
+              await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+              return;
+            }
+            await sendSteamWallMenu(chatId);
+            break;
+          }
+
+          case 'sw_toggle': {
+            const discordIdToggle = getLinkedDiscordId(chatId);
+            if (!discordIdToggle || !steamWallDb || !steamWallManager) break;
+
+            const isActive = steamWallDb.isUserActive(discordIdToggle);
+            if (isActive) {
+              steamWallManager.stopWorker(discordIdToggle);
+            } else {
+              if (!steamWallDb.hasRefreshToken(discordIdToggle)) {
+                await telegramBot.sendMessage(chatId, '❌ Сначала введите refresh token на сайте.');
+                break;
+              }
+              steamWallManager.startWorker(discordIdToggle);
+            }
+            await sendSteamWallMenu(chatId);
+            break;
+          }
+
+          case 'sw_token_info': {
+            await telegramBot.sendMessage(chatId, '🔑 Refresh token можно ввести на сайте:\n\n' + `${SERVER_CONFIG.SITE_URL}/steam-wall.html\n\n` + '⚠️ Токен хранится в зашифрованном виде (AES-256).');
+            break;
+          }
+
+          case 'sw_phrases': {
+            await sendSteamWallPhrasesMenu(chatId);
+            break;
+          }
+
+          case 'sw_targets': {
+            await sendSteamWallTargetsMenu(chatId);
+            break;
+          }
+
+          case 'sw_logs': {
+            await sendSteamWallLogsMenu(chatId);
+            break;
+          }
+
           case 'menu_settings': {
             const discordIdSettings = getLinkedDiscordId(chatId);
             if (!discordIdSettings) {
@@ -1508,6 +1706,23 @@ export function initTelegramBot(
             console.error('❌ Ошибка создания багрепорта через Telegram:', error);
             await telegramBot.sendMessage(chatId, '❌ Произошла ошибка при отправке. Попробуйте позже.');
           }
+        }
+        return;
+      }
+
+      // Проверяем состояние пользователя (ожидание фразы для автоответчика)
+      if (userStates.get(chatId) === 'awaiting_sw_phrase') {
+        userStates.delete(chatId);
+        if (text && steamWallDb) {
+          const discordId = getLinkedDiscordId(chatId);
+          if (!discordId) {
+            await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом.');
+            return;
+          }
+
+          steamWallDb.addPhrase(discordId, text.trim());
+          await telegramBot.sendMessage(chatId, `✅ Фраза добавлена: "${text.trim()}"`);
+          await sendSteamWallPhrasesMenu(chatId);
         }
         return;
       }

@@ -44,6 +44,12 @@ async function main() {
     const gamesDb = new GamesDatabase();
     success('База данных инициализирована');
 
+    // Инициализация Steam Wall Auto-Answer
+    const { SteamWallDatabase, SteamWallManager } = await import('./steam-wall/index.js');
+    const steamWallDb = new SteamWallDatabase();
+    const steamWallManager = new SteamWallManager(steamWallDb);
+    success('Steam Wall Auto-Answer инициализирован');
+
     // Создание Discord клиента
     const discordClient = createDiscordClient();
 
@@ -102,7 +108,7 @@ async function main() {
     priceNotificationService.start();
 
     // Регистрация API роутов
-    registerRoutes(app, db, discordClient, achievements, telegramWrapper, notificationService, gamesDb, priceNotificationService);
+    registerRoutes(app, db, discordClient, achievements, telegramWrapper, notificationService, gamesDb, priceNotificationService, steamWallDb, steamWallManager);
 
     // Запуск сервера
     await startServer(app, SERVER_CONFIG.PORT);
@@ -326,10 +332,19 @@ async function main() {
           discordClient,
           useLinkCode,
           getVoiceChannelActivity,
-          getOnlineUsers
+          getOnlineUsers,
+          steamWallDb,
+          steamWallManager
         );
 
         success('Telegram бот инициализирован');
+        
+        // Запуск всех активных Steam Wall ботов
+        try {
+          steamWallManager.startAll();
+        } catch (err) {
+          logError(`Ошибка запуска Steam Wall ботов: ${err.message}`);
+        }
         
         // Отправляем уведомление о запуске бота
         sendBotStatusNotification('started', `Версия: 2.0.0 (Refactored)`).catch((err) => {
@@ -569,6 +584,12 @@ async function main() {
       log('🛑 Закрытие бота...');
       
       try {
+        steamWallManager.stopAll();
+      } catch (error) {
+        logError(`Ошибка остановки Steam Wall ботов: ${error.message}`);
+      }
+
+      try {
         await sendBotStatusNotification('stopped');
       } catch (error) {
         logError(`Ошибка отправки уведомления об остановке: ${error.message}`);
@@ -576,6 +597,7 @@ async function main() {
       
       db.close();
       gamesDb.close();
+      steamWallDb.close();
       process.exit(0);
     });
 
