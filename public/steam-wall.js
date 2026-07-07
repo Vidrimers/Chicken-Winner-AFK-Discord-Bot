@@ -77,8 +77,15 @@ function updateBotStatus(running) {
 
 // ===== API CALLS =====
 
+function addUserIdToUrl(url) {
+  if (!currentUserId) return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}userId=${currentUserId}`;
+}
+
 async function apiCall(url, options = {}) {
   try {
+    url = addUserIdToUrl(url);
     const response = await fetch(url, {
       headers: { 'Content-Type': 'application/json' },
       ...options,

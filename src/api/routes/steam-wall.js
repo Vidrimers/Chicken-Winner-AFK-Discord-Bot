@@ -3,7 +3,8 @@ import { LoginSession, EAuthTokenPlatformType } from 'steam-session';
 import { log, error as logError } from '../../utils/logger.js';
 
 function getDiscordId(req) {
-  return req.session?.userId || null;
+  // Из сессии, из query params, или из body
+  return req.session?.userId || req.query?.userId || req.body?.userId || null;
 }
 
 function requireAuth(req, res) {
