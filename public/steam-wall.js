@@ -11,7 +11,13 @@ let editingTargetId = null;
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 
 document.addEventListener('DOMContentLoaded', async () => {
-  currentUserId = localStorage.getItem('afkBotUserId');
+  // Проверяем сессию через API
+  currentUserId = await checkSession();
+  if (!currentUserId) {
+    // Пробуем из localStorage
+    currentUserId = localStorage.getItem('afkBotUserId');
+  }
+
   if (!currentUserId) {
     showAuthWarning();
     return;
@@ -26,6 +32,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadLogs();
   bindEvents();
 });
+
+async function checkSession() {
+  try {
+    const response = await fetch('/api/session');
+    const data = await response.json();
+    return data.userId || null;
+  } catch {
+    return null;
+  }
+}
 
 // ===== UI HELPERS =====
 
@@ -126,7 +142,7 @@ async function loadLogs() {
 function renderPhrases() {
   const container = document.getElementById('phrasesList');
   if (phrases.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💬</div><div class="empty-state-text">Нет фраз. Добавьте первую!</div></div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg class="icon" style="width:3em;height:3em;opacity:0.5"><use href="#icon-chat"></use></svg></div><div class="empty-state-text">Нет фраз. Добавьте первую!</div></div>';
     return;
   }
 
@@ -134,8 +150,8 @@ function renderPhrases() {
     <div class="phrase-item" data-id="${p.id}">
       <span class="phrase-text">${escapeHtml(p.text)}</span>
       <div class="phrase-actions">
-        <button class="btn-icon btn-edit" onclick="editPhrase(${p.id})" title="Редактировать">✏️</button>
-        <button class="btn-icon btn-delete" onclick="deletePhrase(${p.id})" title="Удалить">🗑️</button>
+        <button class="btn-icon btn-edit" onclick="editPhrase(${p.id})" title="Редактировать"><svg class="icon icon-btn"><use href="#icon-edit"></use></svg></button>
+        <button class="btn-icon btn-delete" onclick="deletePhrase(${p.id})" title="Удалить"><svg class="icon icon-btn"><use href="#icon-delete"></use></svg></button>
       </div>
     </div>
   `).join('');
@@ -144,7 +160,7 @@ function renderPhrases() {
 function renderTargets() {
   const container = document.getElementById('targetsGrid');
   if (targets.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><div class="empty-state-text">Нет пользователей. Добавьте первого!</div></div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg class="icon" style="width:3em;height:3em;opacity:0.5"><use href="#icon-users"></use></svg></div><div class="empty-state-text">Нет пользователей. Добавьте первого!</div></div>';
     return;
   }
 
@@ -170,8 +186,8 @@ function renderTargets() {
           </div>
         ` : ''}
         <div class="target-card-actions">
-          <button class="btn btn-secondary" onclick="editTarget(${t.id})">✏️ Редактировать</button>
-          <button class="btn btn-danger" onclick="deleteTarget(${t.id})">🗑️ Удалить</button>
+          <button class="btn btn-secondary" onclick="editTarget(${t.id})"><svg class="icon icon-inline"><use href="#icon-edit"></use></svg> Редактировать</button>
+          <button class="btn btn-danger" onclick="deleteTarget(${t.id})"><svg class="icon icon-inline"><use href="#icon-delete"></use></svg> Удалить</button>
         </div>
       </div>
     `;
@@ -181,7 +197,7 @@ function renderTargets() {
 function renderLogs(logs) {
   const container = document.getElementById('logsList');
   if (!logs || logs.length === 0) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">Пока нет ответов</div></div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg class="icon" style="width:3em;height:3em;opacity:0.5"><use href="#icon-clock"></use></svg></div><div class="empty-state-text">Пока нет ответов</div></div>';
     return;
   }
 

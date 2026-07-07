@@ -1,5 +1,39 @@
 /* ===== Steam Wall Auto-Answer — Стили ===== */
 
+/* Иконки */
+.icon {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  fill: none;
+  stroke: currentColor;
+}
+
+.icon-sm {
+  width: 0.875em;
+  height: 0.875em;
+}
+
+.icon-inline {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.15em;
+  margin-right: 0.25em;
+}
+
+.icon-header {
+  width: 1.5em;
+  height: 1.5em;
+  vertical-align: -0.3em;
+  margin-right: 0.3em;
+}
+
+.icon-btn {
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+}
+
 /* Основной контейнер */
 .wall-container {
   max-width: 1200px;

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/theme.css" />
     <link rel="stylesheet" href="/steam-wall.css" />
+    <link rel="stylesheet" href="/icons/icons.css" />
     <script src="/steam-wall.js" defer></script>
   </head>
   <body>
@@ -18,19 +19,36 @@
         if (t && t !== 'standard') document.body.setAttribute('data-theme', t);
       })();
     </script>
+    <script>
+      (function() {
+        fetch('/icons/icons-sprite.svg')
+          .then(function(r) { return r.text(); })
+          .then(function(svg) {
+            var div = document.createElement('div');
+            div.style.display = 'none';
+            div.setAttribute('aria-hidden', 'true');
+            div.innerHTML = svg;
+            document.body.insertBefore(div, document.body.firstChild);
+          })
+          .catch(function(err) { console.warn('SVG sprite load failed:', err); });
+      })();
+    </script>
 
     <div class="wall-container">
       <!-- Шапка -->
       <header class="wall-header">
-        <a href="/" class="back-btn">← Назад</a>
+        <a href="/" class="back-btn">
+          <svg class="icon icon-sm"><use href="#icon-back"></use></svg> Назад
+        </a>
         <div class="header-title">
+          <svg class="icon icon-header"><use href="#icon-steam"></use></svg>
           <h1>Автоответчик Steam</h1>
         </div>
       </header>
 
       <!-- Сообщение для неавторизованных -->
       <div class="auth-warning" id="authWarning" style="display: none">
-        <p>🔒 Войдите для управления автоответчиком</p>
+        <p><svg class="icon icon-inline"><use href="#icon-block"></use></svg> Войдите для управления автоответчиком</p>
       </div>
 
       <!-- Управление ботом -->
@@ -39,15 +57,19 @@
           <div class="bot-status-dot" id="botStatusDot"></div>
           <span id="botStatusText">Загрузка...</span>
         </div>
-        <button class="btn btn-start" id="startBotBtn">▶ Запустить</button>
-        <button class="btn btn-stop" id="stopBotBtn" style="display: none">⏹ Остановить</button>
+        <button class="btn btn-start" id="startBotBtn">
+          <svg class="icon icon-inline"><use href="#icon-check"></use></svg> Запустить
+        </button>
+        <button class="btn btn-stop" id="stopBotBtn" style="display: none">
+          <svg class="icon icon-inline"><use href="#icon-cross"></use></svg> Остановить
+        </button>
       </section>
 
       <!-- Токен / QR-код -->
       <section class="token-section" id="tokenSection" style="display: none">
-        <h2>🔑 Привязка Steam аккаунта</h2>
+        <h2><svg class="icon icon-inline"><use href="#icon-link"></use></svg> Привязка Steam аккаунта</h2>
         <div class="token-warning">
-          ⚠️ Данные хранятся на сервере в зашифрованном виде (AES-256).
+          <svg class="icon icon-inline"><use href="#icon-warning"></use></svg> Данные хранятся на сервере в зашифрованном виде (AES-256).
         </div>
 
         <!-- QR-код -->
@@ -56,8 +78,12 @@
           <div id="qrCodeContainer" style="text-align: center; margin-bottom: 15px;"></div>
           <div id="qrStatus" style="text-align: center; color: #999; margin-bottom: 15px;"></div>
           <div style="text-align: center;">
-            <button class="btn btn-primary" id="startQrBtn">📱 Показать QR-код</button>
-            <button class="btn btn-secondary" id="cancelQrBtn" style="display: none;">❌ Отмена</button>
+            <button class="btn btn-primary" id="startQrBtn">
+              <svg class="icon icon-inline"><use href="#icon-steam"></use></svg> Показать QR-код
+            </button>
+            <button class="btn btn-secondary" id="cancelQrBtn" style="display: none;">
+              <svg class="icon icon-inline"><use href="#icon-cross"></use></svg> Отмена
+            </button>
           </div>
         </div>
 
@@ -66,14 +92,16 @@
           <summary style="color: #999; cursor: pointer; font-size: 0.85rem;">Или вставьте токен вручную</summary>
           <div class="token-input-wrapper" style="margin-top: 10px;">
             <input type="password" id="tokenInput" placeholder="Refresh token из login.js" />
-            <button class="btn btn-primary" id="saveTokenBtn">Сохранить</button>
+            <button class="btn btn-primary" id="saveTokenBtn">
+              <svg class="icon icon-inline"><use href="#icon-save"></use></svg> Сохранить
+            </button>
           </div>
         </details>
       </section>
 
       <!-- Настройки -->
       <section class="settings-section" id="settingsSection" style="display: none">
-        <h2>⚙️ Настройки</h2>
+        <h2><svg class="icon icon-inline"><use href="#icon-settings"></use></svg> Настройки</h2>
         <div class="settings-grid">
           <div class="setting-item">
             <label>Не отвечать друзьям</label>
@@ -83,15 +111,19 @@
             </label>
           </div>
         </div>
-        <button class="btn btn-primary" id="saveSettingsBtn" style="margin-top: 15px">Сохранить настройки</button>
+        <button class="btn btn-primary" id="saveSettingsBtn" style="margin-top: 15px">
+          <svg class="icon icon-inline"><use href="#icon-save"></use></svg> Сохранить настройки
+        </button>
       </section>
 
       <!-- Общие фразы -->
       <section class="phrases-section" id="phrasesSection" style="display: none">
-        <h2>💬 Общие фразы</h2>
+        <h2><svg class="icon icon-inline"><use href="#icon-chat"></use></svg> Общие фразы</h2>
         <div class="phrases-add">
           <input type="text" id="newPhraseInput" placeholder="Добавить новую фразу..." />
-          <button class="btn btn-primary" id="addPhraseBtn">Добавить</button>
+          <button class="btn btn-primary" id="addPhraseBtn">
+            <svg class="icon icon-inline"><use href="#icon-check"></use></svg> Добавить
+          </button>
         </div>
         <div class="phrases-list" id="phrasesList"></div>
       </section>
@@ -100,24 +132,28 @@
       <div class="search-section" id="searchSection" style="display: none">
         <div class="input-clear-wrapper">
           <input type="text" id="searchInput" placeholder="Поиск по нику или SteamID..." />
-          <button class="clear-btn" id="searchClearBtn">×</button>
+          <button class="clear-btn" id="searchClearBtn">
+            <svg class="icon icon-sm"><use href="#icon-cross"></use></svg>
+          </button>
         </div>
       </div>
 
       <!-- Пользователи -->
       <section class="targets-section" id="targetsSection" style="display: none">
-        <h2>👥 Пользователи</h2>
+        <h2><svg class="icon icon-inline"><use href="#icon-users"></use></svg> Пользователи</h2>
         <div class="targets-add">
           <input type="text" id="targetSteamInput" placeholder="SteamID64 или ссылка (steamcommunity.com/id/...)" />
           <input type="text" id="targetNameInput" placeholder="Ник (опционально)" />
-          <button class="btn btn-primary" id="addTargetBtn">Добавить</button>
+          <button class="btn btn-primary" id="addTargetBtn">
+            <svg class="icon icon-inline"><use href="#icon-check"></use></svg> Добавить
+          </button>
         </div>
         <div class="targets-grid" id="targetsGrid"></div>
       </section>
 
       <!-- Логи -->
       <section class="logs-section" id="logsSection" style="display: none">
-        <h2>📋 Последние ответы</h2>
+        <h2><svg class="icon icon-inline"><use href="#icon-clock"></use></svg> Последние ответы</h2>
         <div class="logs-list" id="logsList"></div>
       </section>
     </div>
@@ -132,7 +168,9 @@
         </div>
         <div class="modal-actions">
           <button class="btn btn-secondary" id="editPhraseCancel">Отмена</button>
-          <button class="btn btn-primary" id="editPhraseSave">Сохранить</button>
+          <button class="btn btn-primary" id="editPhraseSave">
+            <svg class="icon icon-inline"><use href="#icon-save"></use></svg> Сохранить
+          </button>
         </div>
       </div>
     </div>
@@ -159,7 +197,9 @@
         </div>
         <div class="modal-actions">
           <button class="btn btn-secondary" id="editTargetCancel">Отмена</button>
-          <button class="btn btn-primary" id="editTargetSave">Сохранить</button>
+          <button class="btn btn-primary" id="editTargetSave">
+            <svg class="icon icon-inline"><use href="#icon-save"></use></svg> Сохранить
+          </button>
         </div>
       </div>
     </div>
