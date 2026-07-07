@@ -43,16 +43,32 @@
         <button class="btn btn-stop" id="stopBotBtn" style="display: none">⏹ Остановить</button>
       </section>
 
-      <!-- Токен -->
+      <!-- Токен / QR-код -->
       <section class="token-section" id="tokenSection" style="display: none">
-        <h2>🔑 Refresh Token</h2>
+        <h2>🔑 Привязка Steam аккаунта</h2>
         <div class="token-warning">
-          ⚠️ Данные хранятся на сервере в зашифрованном виде (AES-256). Refresh token даёт полный доступ к вашему Steam аккаунту.
+          ⚠️ Данные хранятся на сервере в зашифрованном виде (AES-256).
         </div>
-        <div class="token-input-wrapper">
-          <input type="password" id="tokenInput" placeholder="Вставьте refresh token из login.js" />
-          <button class="btn btn-primary" id="saveTokenBtn">Сохранить</button>
+
+        <!-- QR-код -->
+        <div id="qrSection">
+          <p style="color: #ccc; margin-bottom: 15px;">Отсканируйте QR-код через приложение Steam на телефоне:</p>
+          <div id="qrCodeContainer" style="text-align: center; margin-bottom: 15px;"></div>
+          <div id="qrStatus" style="text-align: center; color: #999; margin-bottom: 15px;"></div>
+          <div style="text-align: center;">
+            <button class="btn btn-primary" id="startQrBtn">📱 Показать QR-код</button>
+            <button class="btn btn-secondary" id="cancelQrBtn" style="display: none;">❌ Отмена</button>
+          </div>
         </div>
+
+        <!-- Ручной ввод (скрыт по умолчанию) -->
+        <details style="margin-top: 20px;">
+          <summary style="color: #999; cursor: pointer; font-size: 0.85rem;">Или вставьте токен вручную</summary>
+          <div class="token-input-wrapper" style="margin-top: 10px;">
+            <input type="password" id="tokenInput" placeholder="Refresh token из login.js" />
+            <button class="btn btn-primary" id="saveTokenBtn">Сохранить</button>
+          </div>
+        </details>
       </section>
 
       <!-- Настройки -->

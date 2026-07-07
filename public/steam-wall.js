@@ -203,6 +203,8 @@ function bindEvents() {
   document.getElementById('startBotBtn').addEventListener('click', startBot);
   document.getElementById('stopBotBtn').addEventListener('click', stopBot);
   document.getElementById('saveTokenBtn').addEventListener('click', saveToken);
+  document.getElementById('startQrBtn').addEventListener('click', startQrLogin);
+  document.getElementById('cancelQrBtn').addEventListener('click', cancelQrLogin);
   document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
   document.getElementById('addPhraseBtn').addEventListener('click', addPhrase);
   document.getElementById('newPhraseInput').addEventListener('keydown', (e) => {
@@ -266,6 +268,99 @@ async function saveToken() {
   document.getElementById('tokenInput').value = '';
   document.getElementById('tokenInput').placeholder = '••••••••••••••••';
   alert('Токен сохранён!');
+}
+
+// ===== QR LOGIN =====
+
+let qrPollTimer = null;
+
+function generateQRSvg(url) {
+  // Простой генератор QR-кода через API
+  return `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(url)}`;
+}
+
+async function startQrLogin() {
+  const startBtn = document.getElementById('startQrBtn');
+  const cancelBtn = document.getElementById('cancelQrBtn');
+  const container = document.getElementById('qrCodeContainer');
+  const status = document.getElementById('qrStatus');
+
+  startBtn.style.display = 'none';
+  status.textContent = '⏳ Создание QR-кода...';
+  container.innerHTML = '';
+
+  const data = await apiCall('/api/steam-wall/qr/start', { method: 'POST' });
+
+  if (data.error) {
+    status.textContent = '❌ ' + data.error;
+    startBtn.style.display = 'inline-block';
+    return;
+  }
+
+  // Показываем QR-код
+  const img = document.createElement('img');
+  img.src = generateQRSvg(data.qrChallengeUrl);
+  img.alt = 'QR Code';
+  img.style.borderRadius = '8px';
+  img.style.background = 'white';
+  img.style.padding = '10px';
+  container.appendChild(img);
+
+  status.textContent = '📱 Отсканируйте код через Steam на телефоне';
+  cancelBtn.style.display = 'inline-block';
+
+  // Запускаем.polling
+  startQrPolling();
+}
+
+function startQrPolling() {
+  if (qrPollTimer) clearInterval(qrPollTimer);
+  qrPollTimer = setInterval(checkQrStatus, 2000);
+}
+
+async function checkQrStatus() {
+  const data = await apiCall('/api/steam-wall/qr/status');
+  const status = document.getElementById('qrStatus');
+
+  if (data.status === 'authenticated') {
+    stopQrPolling();
+    status.textContent = '✅ Аккаунт привязан!';
+    document.getElementById('qrCodeContainer').innerHTML = '';
+    document.getElementById('cancelQrBtn').style.display = 'none';
+    document.getElementById('startQrBtn').style.display = 'inline-block';
+    document.getElementById('tokenInput').placeholder = '••••••••••••••••';
+    alert('Steam аккаунт успешно привязан!');
+  } else if (data.status === 'timeout') {
+    stopQrPolling();
+    status.textContent = '⏰ Время вышло. Попробуйте снова.';
+    document.getElementById('qrCodeContainer').innerHTML = '';
+    document.getElementById('cancelQrBtn').style.display = 'none';
+    document.getElementById('startQrBtn').style.display = 'inline-block';
+  } else if (data.status === 'error') {
+    stopQrPolling();
+    status.textContent = '❌ Ошибка. Попробуйте снова.';
+    document.getElementById('cancelQrBtn').style.display = 'none';
+    document.getElementById('startQrBtn').style.display = 'inline-block';
+  } else if (data.status === 'none') {
+    stopQrPolling();
+  }
+  // 'waiting' — продолжаем polling
+}
+
+function stopQrPolling() {
+  if (qrPollTimer) {
+    clearInterval(qrPollTimer);
+    qrPollTimer = null;
+  }
+}
+
+async function cancelQrLogin() {
+  await apiCall('/api/steam-wall/qr/cancel', { method: 'POST' });
+  stopQrPolling();
+  document.getElementById('qrCodeContainer').innerHTML = '';
+  document.getElementById('qrStatus').textContent = '';
+  document.getElementById('cancelQrBtn').style.display = 'none';
+  document.getElementById('startQrBtn').style.display = 'inline-block';
 }
 
 // ===== SETTINGS =====
