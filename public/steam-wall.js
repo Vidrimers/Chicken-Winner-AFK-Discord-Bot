@@ -102,23 +102,23 @@ async function loadSettings() {
   if (data.error) return;
 
   document.getElementById('skipFriendsToggle').checked = data.skipFriends;
-  document.getElementById('cooldownInput').value = data.perUserCooldownMin;
-  document.getElementById('pollIntervalInput').value = data.pollIntervalMs / 1000;
 }
 
 async function loadPhrases() {
-  phrases = await apiCall('/api/steam-wall/phrases');
+  const data = await apiCall('/api/steam-wall/phrases');
+  phrases = Array.isArray(data) ? data : [];
   renderPhrases();
 }
 
 async function loadTargets() {
-  targets = await apiCall('/api/steam-wall/targets');
+  const data = await apiCall('/api/steam-wall/targets');
+  targets = Array.isArray(data) ? data : [];
   renderTargets();
 }
 
 async function loadLogs() {
-  const logs = await apiCall('/api/steam-wall/logs?limit=30');
-  renderLogs(logs);
+  const data = await apiCall('/api/steam-wall/logs?limit=30');
+  renderLogs(Array.isArray(data) ? data : []);
 }
 
 // ===== RENDER =====
@@ -273,8 +273,6 @@ async function saveToken() {
 async function saveSettings() {
   const settings = {
     skipFriends: document.getElementById('skipFriendsToggle').checked,
-    perUserCooldownMin: parseInt(document.getElementById('cooldownInput').value),
-    pollIntervalMs: parseInt(document.getElementById('pollIntervalInput').value) * 1000,
   };
 
   const data = await apiCall('/api/steam-wall/settings', {
