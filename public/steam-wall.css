@@ -714,7 +714,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -722,6 +722,7 @@
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s ease;
+  padding: 20px;
 }
 
 .modal-overlay.active {
@@ -730,16 +731,17 @@
 }
 
 .modal {
-  background: #1a1a2e;
+  background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
   border-radius: 16px;
-  padding: 25px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 80vh;
+  padding: 30px;
+  width: 100%;
+  max-width: 450px;
+  max-height: 85vh;
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.1);
   transform: scale(0.9);
   transition: transform 0.3s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 .modal-overlay.active .modal {
@@ -757,21 +759,33 @@
 
 .modal-field label {
   display: block;
-  color: #ccc;
+  color: #aaa;
   font-size: 0.85rem;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
 .modal-field input,
 .modal-field textarea {
   width: 100%;
-  padding: 10px 15px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   color: white;
   font-size: 0.9rem;
   box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.modal-field input:focus,
+.modal-field textarea:focus {
+  outline: none;
+  border-color: rgba(17, 153, 142, 0.6);
+}
+
+.modal-field input[readonly] {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .modal-field textarea {

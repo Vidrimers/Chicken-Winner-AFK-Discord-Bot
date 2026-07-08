@@ -72,6 +72,7 @@ export class SteamWallDatabase {
         steam_id64 TEXT NOT NULL,
         name TEXT,
         profile_url TEXT,
+        avatar_url TEXT,
         phrases_json TEXT DEFAULT '[]',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (discord_id) REFERENCES sw_users(discord_id) ON DELETE CASCADE
@@ -94,6 +95,9 @@ export class SteamWallDatabase {
     } catch {}
     try {
       this.db.exec(`ALTER TABLE sw_users ADD COLUMN use_user_phrases INTEGER DEFAULT 1`);
+    } catch {}
+    try {
+      this.db.exec(`ALTER TABLE sw_target_users ADD COLUMN avatar_url TEXT`);
     } catch {}
   }
 
@@ -246,12 +250,12 @@ export class SteamWallDatabase {
     ).all(discordId);
   }
 
-  addTargetUser(discordId, steamId64, name, profileUrl, phrases = []) {
+  addTargetUser(discordId, steamId64, name, profileUrl, avatarUrl, phrases = []) {
     this.createUser(discordId);
     const phrasesJson = JSON.stringify(phrases);
     return this.prepare(
-      'INSERT INTO sw_target_users (discord_id, steam_id64, name, profile_url, phrases_json) VALUES (?, ?, ?, ?, ?)'
-    ).run(discordId, steamId64, name || null, profileUrl || null, phrasesJson);
+      'INSERT INTO sw_target_users (discord_id, steam_id64, name, profile_url, avatar_url, phrases_json) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(discordId, steamId64, name || null, profileUrl || null, avatarUrl || null, phrasesJson);
   }
 
   updateTargetUser(id, discordId, data) {

@@ -235,7 +235,7 @@ function renderTargets() {
 
   container.innerHTML = targets.map(t => {
     const phrasesList = t.phrases_json ? JSON.parse(t.phrases_json) : [];
-    const avatarUrl = `https://avatars.akamai.steamstatic.com/${t.steam_id64}.jpg`;
+    const avatarUrl = t.avatar_url || `https://avatars.akamai.steamstatic.com/${t.steam_id64}_full.jpg`;
 
     return `
       <div class="target-card" data-id="${t.id}" data-name="${escapeHtml(t.name || '')}" data-steamid="${t.steam_id64}">

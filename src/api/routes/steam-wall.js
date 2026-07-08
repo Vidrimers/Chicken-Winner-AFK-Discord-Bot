@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session';
-import { resolveVanityUrl } from '../../steam/steamApi.js';
+import { resolveVanityUrl, getPlayerSummaries } from '../../steam/steamApi.js';
 import { log, error as logError } from '../../utils/logger.js';
 
 function getDiscordId(req) {
@@ -173,7 +173,20 @@ export function createSteamWallRouter(db, manager, steamApi) {
       resolvedUrl = `https://steamcommunity.com/profiles/${steamId64}`;
     }
 
-    const result = db.addTargetUser(discordId, steamId64, resolvedName, resolvedUrl, phrases || []);
+    // Получаем аватар и ник через Steam API
+    let resolvedAvatar = null;
+    try {
+      const summaries = await getPlayerSummaries([steamId64]);
+      if (summaries && summaries.length > 0) {
+        const player = summaries[0];
+        resolvedAvatar = player.avatarfull || null;
+        if (!resolvedName) resolvedName = player.personaname || null;
+      }
+    } catch (err) {
+      logError(`[SW API] Ошибка получения summary: ${err.message}`);
+    }
+
+    const result = db.addTargetUser(discordId, steamId64, resolvedName, resolvedUrl, resolvedAvatar, phrases || []);
     res.json({ success: true, id: result.lastInsertRowid });
   });
 
