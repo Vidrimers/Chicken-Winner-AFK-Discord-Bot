@@ -352,6 +352,7 @@ async function saveToken() {
   document.getElementById('tokenInput').value = '';
   document.getElementById('tokenInput').placeholder = '••••••••••••••••';
   showToast('Токен сохранён!');
+  await loadStatus(); // Обновляем статус привязки
 }
 
 // ===== QR LOGIN =====
@@ -414,6 +415,7 @@ async function checkQrStatus() {
     document.getElementById('startQrBtn').style.display = 'inline-block';
     document.getElementById('tokenInput').placeholder = '••••••••••••••••';
     showToast('Steam аккаунт успешно привязан!');
+    await loadStatus(); // Обновляем статус привязки
   } else if (data.status === 'timeout') {
     stopQrPolling();
     status.textContent = '⏰ Время вышло. Попробуйте снова.';

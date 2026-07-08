@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session';
+import { resolveVanityUrl } from '../../steam/steamApi.js';
 import { log, error as logError } from '../../utils/logger.js';
 
 function getDiscordId(req) {
@@ -17,13 +18,28 @@ function requireAuth(req, res) {
 }
 
 function parseSteamId(input) {
-  const urlMatch = input.match(/steamcommunity\.com\/(?:profiles\/(\d{17})|id\/([^/]+))/);
-  if (urlMatch) {
-    return { steamId64: urlMatch[1] || null, vanityUrl: urlMatch[2] || null };
+  // Полная ссылка на профиль
+  const profileMatch = input.match(/steamcommunity\.com\/profiles\/(\d{17})/);
+  if (profileMatch) {
+    return { steamId64: profileMatch[1], vanityUrl: null };
   }
+
+  // Ссылка на vanity URL
+  const vanityMatch = input.match(/steamcommunity\.com\/id\/([^/?]+)/);
+  if (vanityMatch) {
+    return { steamId64: null, vanityUrl: vanityMatch[1] };
+  }
+
+  // Просто 17-значный SteamID64
   if (/^\d{17}$/.test(input) && input.startsWith('765611')) {
     return { steamId64: input, vanityUrl: null };
   }
+
+  // Vanity URL без полной ссылки (просто username)
+  if (/^[a-zA-Z0-9_-]+$/.test(input) && input.length > 2 && input.length < 32) {
+    return { steamId64: null, vanityUrl: input };
+  }
+
   return null;
 }
 
@@ -102,22 +118,55 @@ export function createSteamWallRouter(db, manager, steamApi) {
     let resolvedName = name || null;
     let resolvedUrl = profileUrl || null;
 
+    // Пробуем распарсить URL
     const parsed = parseSteamId(inputSteamId);
-    if (parsed && parsed.vanityUrl && steamApi) {
-      try {
-        const info = await steamApi.resolveVanityUrl(parsed.vanityUrl);
-        if (info) {
-          steamId64 = info.steamId;
-          resolvedName = info.personaName || resolvedName;
-          resolvedUrl = info.profileUrl || resolvedUrl;
+
+    if (parsed) {
+      if (parsed.steamId64) {
+        // Уже SteamID64
+        steamId64 = parsed.steamId64;
+        if (!resolvedUrl) {
+          resolvedUrl = `https://steamcommunity.com/profiles/${steamId64}`;
         }
-      } catch (err) {
-        logError(`[SW API] Ошибка резолва vanity URL: ${err.message}`);
+      } else if (parsed.vanityUrl) {
+        // Vanity URL — резолвим через Steam API
+        try {
+          const resolved = await resolveVanityUrl(parsed.vanityUrl);
+          if (resolved) {
+            steamId64 = resolved;
+            if (!resolvedUrl) {
+              resolvedUrl = `https://steamcommunity.com/profiles/${steamId64}`;
+            }
+          }
+        } catch (err) {
+          logError(`[SW API] Ошибка резолва vanity URL: ${err.message}`);
+          return res.status(400).json({ error: 'Не удалось найти Steam профиль по этой ссылке' });
+        }
+      }
+    } else if (steamId64.match(/^https?:\/\/steamcommunity\.com\/(profiles|id)\/(.+)/)) {
+      // Прямая ссылка — парсим вручную
+      const urlMatch = steamId64.match(/^https?:\/\/steamcommunity\.com\/profiles\/(\d{17})/);
+      if (urlMatch) {
+        steamId64 = urlMatch[1];
+        if (!resolvedUrl) resolvedUrl = steamId64;
+      } else {
+        const idMatch = steamId64.match(/^https?:\/\/steamcommunity\.com\/id\/([^/]+)/);
+        if (idMatch) {
+          try {
+            const resolved = await resolveVanityUrl(idMatch[1]);
+            if (resolved) {
+              steamId64 = resolved;
+              if (!resolvedUrl) resolvedUrl = `https://steamcommunity.com/profiles/${steamId64}`;
+            }
+          } catch (err) {
+            return res.status(400).json({ error: 'Не удалось найти Steam профиль по этой ссылке' });
+          }
+        }
       }
     }
 
     if (!/^\d{17}$/.test(steamId64)) {
-      return res.status(400).json({ error: 'Невалидный SteamID64' });
+      return res.status(400).json({ error: 'Невалидный SteamID64. Вставьте ссылку на профиль или 17-значный ID.' });
     }
 
     if (!resolvedUrl) {
