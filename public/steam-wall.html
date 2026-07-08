@@ -207,8 +207,11 @@
           <input type="text" id="editTargetUrl" />
         </div>
         <div class="sw-modal-field">
-          <label>Фразы (каждая с новой строки)</label>
-          <textarea id="editTargetPhrases"></textarea>
+          <label>Фразы</label>
+          <div id="phrasesInputs"></div>
+          <button class="btn btn-secondary" onclick="addPhraseInput()" style="margin-top: 10px;">
+            <svg class="icon icon-inline"><use href="#icon-check"></use></svg> Добавить фразу
+          </button>
         </div>
         <div class="sw-modal-actions">
           <button class="btn btn-secondary" id="editTargetCancel">Отмена</button>

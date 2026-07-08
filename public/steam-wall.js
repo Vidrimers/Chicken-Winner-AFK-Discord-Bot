@@ -626,10 +626,35 @@ function editTarget(id) {
   document.getElementById('editTargetUrl').value = target.profile_url || '';
 
   const phrasesList = target.phrases_json ? JSON.parse(target.phrases_json) : [];
-  document.getElementById('editTargetPhrases').value = phrasesList.join('\n');
+  renderPhrasesInputs(phrasesList);
 
   document.getElementById('editTargetModal').classList.add('active');
   document.body.classList.add('modal-open');
+}
+
+function renderPhrasesInputs(phrases) {
+  const container = document.getElementById('phrasesInputs');
+  container.innerHTML = '';
+  phrases.forEach(p => addPhraseInput(p));
+  if (phrases.length === 0) addPhraseInput('');
+}
+
+function addPhraseInput(value = '') {
+  const container = document.getElementById('phrasesInputs');
+  const div = document.createElement('div');
+  div.className = 'phrase-input-row';
+  div.innerHTML = `
+    <input type="text" class="phrase-input-field" value="${escapeHtml(value)}" placeholder="Текст фразы..." />
+    <button class="btn-icon btn-delete" onclick="this.parentElement.remove()" title="Удалить">
+      <svg class="icon icon-btn"><use href="#icon-cross"></use></svg>
+    </button>
+  `;
+  container.appendChild(div);
+}
+
+function getPhrasesFromInputs() {
+  const inputs = document.querySelectorAll('#phrasesInputs .phrase-input-field');
+  return Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
 }
 
 function closeTargetModal() {
@@ -641,8 +666,7 @@ function closeTargetModal() {
 async function saveTargetEdit() {
   if (!editingTargetId) return;
 
-  const phrasesText = document.getElementById('editTargetPhrases').value;
-  const phrasesList = phrasesText.split('\n').map(p => p.trim()).filter(Boolean);
+  const phrasesList = getPhrasesFromInputs();
 
   const data = await apiCall(`/api/steam-wall/targets/${editingTargetId}`, {
     method: 'PUT',

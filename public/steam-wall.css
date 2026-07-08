@@ -808,6 +808,35 @@
   background: rgba(0, 0, 0, 0.2);
 }
 
+.phrase-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.phrase-input-field {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  color: white;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.phrase-input-field:focus {
+  outline: none;
+  border-color: rgba(17, 153, 142, 0.6);
+}
+
+.phrase-input-row .btn-delete {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
 .sw-modal-actions {
   display: flex;
   gap: 10px;
