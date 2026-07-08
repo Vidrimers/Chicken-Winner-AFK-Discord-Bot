@@ -821,6 +821,7 @@
   border-radius: 8px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.3);
+  height: 160px;
 }
 
 .line-numbers {
@@ -835,6 +836,7 @@
   min-width: 32px;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
+  white-space: pre;
 }
 
 .line-numbers-wrapper textarea {
@@ -842,17 +844,22 @@
   border-radius: 0 !important;
   background: transparent !important;
   flex: 1;
-  min-height: 80px;
+  height: 100%;
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 0.9rem;
   line-height: 1.5;
   padding: 12px;
   resize: none;
+  overflow-y: auto;
 }
 
 .line-numbers-wrapper textarea:focus {
   outline: none;
   box-shadow: none;
+}
+
+body.modal-open {
+  overflow: hidden;
 }
 
 .sw-modal-field textarea {

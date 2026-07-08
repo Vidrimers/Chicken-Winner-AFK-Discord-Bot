@@ -31,6 +31,7 @@ function showToast(message, type = 'success') {
 
 function showConfirm(message) {
   return new Promise((resolve) => {
+    document.body.classList.add('modal-open');
     const overlay = document.createElement('div');
     overlay.className = 'sw-modal-overlay active';
     overlay.innerHTML = `
@@ -47,17 +48,22 @@ function showConfirm(message) {
     `;
     document.body.appendChild(overlay);
 
-    overlay.querySelector('#confirmCancel').addEventListener('click', () => {
+    const cleanup = () => {
       overlay.remove();
+      document.body.classList.remove('modal-open');
+    };
+
+    overlay.querySelector('#confirmCancel').addEventListener('click', () => {
+      cleanup();
       resolve(false);
     });
     overlay.querySelector('#confirmOk').addEventListener('click', () => {
-      overlay.remove();
+      cleanup();
       resolve(true);
     });
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) {
-        overlay.remove();
+        cleanup();
         resolve(false);
       }
     });
@@ -499,10 +505,12 @@ function editPhrase(id) {
   editingPhraseId = id;
   document.getElementById('editPhraseText').value = phrase.text;
   document.getElementById('editPhraseModal').classList.add('active');
+  document.body.classList.add('modal-open');
 }
 
 function closePhraseModal() {
   document.getElementById('editPhraseModal').classList.remove('active');
+  document.body.classList.remove('modal-open');
   editingPhraseId = null;
 }
 
@@ -621,6 +629,7 @@ function editTarget(id) {
   document.getElementById('editTargetPhrases').value = phrasesList.join('\n');
 
   document.getElementById('editTargetModal').classList.add('active');
+  document.body.classList.add('modal-open');
   updateLineNumbers();
 }
 
@@ -639,6 +648,7 @@ function syncScroll() {
 
 function closeTargetModal() {
   document.getElementById('editTargetModal').classList.remove('active');
+  document.body.classList.remove('modal-open');
   editingTargetId = null;
 }
 
