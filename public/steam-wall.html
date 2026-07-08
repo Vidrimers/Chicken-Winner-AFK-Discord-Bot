@@ -208,7 +208,10 @@
         </div>
         <div class="sw-modal-field">
           <label>Фразы (каждая с новой строки)</label>
-          <textarea id="editTargetPhrases"></textarea>
+          <div class="line-numbers-wrapper">
+            <div class="line-numbers" id="lineNumbers">1</div>
+            <textarea id="editTargetPhrases" oninput="updateLineNumbers()" onscroll="syncScroll()"></textarea>
+          </div>
         </div>
         <div class="sw-modal-actions">
           <button class="btn btn-secondary" id="editTargetCancel">Отмена</button>

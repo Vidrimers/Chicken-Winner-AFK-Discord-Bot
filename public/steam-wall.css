@@ -642,6 +642,23 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+  max-height: 72px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.target-phrases-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.target-phrases-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.target-phrases-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
 }
 
 .target-phrase-tag {
@@ -789,6 +806,53 @@
   opacity: 0.6;
   cursor: not-allowed;
   background: rgba(0, 0, 0, 0.2);
+}
+
+.sw-modal-field textarea {
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.line-numbers-wrapper {
+  display: flex;
+  gap: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.line-numbers {
+  padding: 12px 8px 12px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #666;
+  font-size: 0.8rem;
+  font-family: 'Consolas', 'Monaco', monospace;
+  line-height: 1.5;
+  text-align: right;
+  user-select: none;
+  min-width: 32px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.line-numbers-wrapper textarea {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  flex: 1;
+  min-height: 80px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 12px;
+  resize: none;
+}
+
+.line-numbers-wrapper textarea:focus {
+  outline: none;
+  box-shadow: none;
 }
 
 .sw-modal-field textarea {

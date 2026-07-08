@@ -621,6 +621,20 @@ function editTarget(id) {
   document.getElementById('editTargetPhrases').value = phrasesList.join('\n');
 
   document.getElementById('editTargetModal').classList.add('active');
+  updateLineNumbers();
+}
+
+function updateLineNumbers() {
+  const textarea = document.getElementById('editTargetPhrases');
+  const lineNumbers = document.getElementById('lineNumbers');
+  const lines = textarea.value.split('\n').length;
+  lineNumbers.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('<br>');
+}
+
+function syncScroll() {
+  const textarea = document.getElementById('editTargetPhrases');
+  const lineNumbers = document.getElementById('lineNumbers');
+  lineNumbers.scrollTop = textarea.scrollTop;
 }
 
 function closeTargetModal() {
