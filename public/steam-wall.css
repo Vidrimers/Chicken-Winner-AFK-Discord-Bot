@@ -808,66 +808,6 @@
   background: rgba(0, 0, 0, 0.2);
 }
 
-.sw-modal-field textarea {
-  min-height: 100px;
-  resize: vertical;
-  font-family: inherit;
-}
-
-.line-numbers-wrapper {
-  display: flex;
-  gap: 0;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.3);
-  height: 160px;
-}
-
-.line-numbers {
-  padding: 12px 8px 12px 12px;
-  background: rgba(0, 0, 0, 0.4);
-  color: #666;
-  font-size: 0.8rem;
-  font-family: 'Consolas', 'Monaco', monospace;
-  line-height: 1.5;
-  text-align: right;
-  user-select: none;
-  min-width: 32px;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  white-space: pre;
-}
-
-.line-numbers-wrapper textarea {
-  border: none !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  flex: 1;
-  height: 100%;
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  padding: 12px;
-  resize: none;
-  overflow-y: auto;
-}
-
-.line-numbers-wrapper textarea:focus {
-  outline: none;
-  box-shadow: none;
-}
-
-body.modal-open {
-  overflow: hidden;
-}
-
-.sw-modal-field textarea {
-  min-height: 100px;
-  resize: vertical;
-  font-family: inherit;
-}
-
 .sw-modal-actions {
   display: flex;
   gap: 10px;
@@ -875,6 +815,10 @@ body.modal-open {
   margin-top: 24px;
   padding-top: 18px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.modal-open {
+  overflow: hidden;
 }
 
 /* Адаптивность */
