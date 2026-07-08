@@ -49,6 +49,8 @@ export class SteamWallDatabase {
         refresh_token TEXT,
         is_active INTEGER DEFAULT 0,
         skip_friends INTEGER DEFAULT 1,
+        use_general_phrases INTEGER DEFAULT 1,
+        use_user_phrases INTEGER DEFAULT 1,
         per_user_cooldown_min INTEGER DEFAULT 30,
         poll_interval_ms INTEGER DEFAULT 60000,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -85,6 +87,14 @@ export class SteamWallDatabase {
         FOREIGN KEY (discord_id) REFERENCES sw_users(discord_id) ON DELETE CASCADE
       );
     `);
+
+    // Миграция: добавляем новые колонки если их нет
+    try {
+      this.db.exec(`ALTER TABLE sw_users ADD COLUMN use_general_phrases INTEGER DEFAULT 1`);
+    } catch {}
+    try {
+      this.db.exec(`ALTER TABLE sw_users ADD COLUMN use_user_phrases INTEGER DEFAULT 1`);
+    } catch {}
   }
 
   prepare(sql) {
@@ -148,13 +158,13 @@ export class SteamWallDatabase {
       fields.push('skip_friends = ?');
       values.push(settings.skipFriends ? 1 : 0);
     }
-    if (settings.perUserCooldownMin !== undefined) {
-      fields.push('per_user_cooldown_min = ?');
-      values.push(settings.perUserCooldownMin);
+    if (settings.useGeneralPhrases !== undefined) {
+      fields.push('use_general_phrases = ?');
+      values.push(settings.useGeneralPhrases ? 1 : 0);
     }
-    if (settings.pollIntervalMs !== undefined) {
-      fields.push('poll_interval_ms = ?');
-      values.push(settings.pollIntervalMs);
+    if (settings.useUserPhrases !== undefined) {
+      fields.push('use_user_phrases = ?');
+      values.push(settings.useUserPhrases ? 1 : 0);
     }
 
     if (fields.length === 0) return;
@@ -173,6 +183,8 @@ export class SteamWallDatabase {
     if (!user) return null;
     return {
       skipFriends: Boolean(user.skip_friends),
+      useGeneralPhrases: Boolean(user.use_general_phrases),
+      useUserPhrases: Boolean(user.use_user_phrases),
       perUserCooldownMin: user.per_user_cooldown_min,
       pollIntervalMs: user.poll_interval_ms,
       isActive: Boolean(user.is_active),

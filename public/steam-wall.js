@@ -157,8 +157,27 @@ async function loadStatus() {
   const data = await apiCall('/api/steam-wall/status');
   if (data.error) return;
   updateBotStatus(data.running);
-  if (data.hasToken) {
-    document.getElementById('tokenInput').placeholder = '••••••••••••••••';
+  updateTokenStatus(data.hasToken);
+}
+
+function updateTokenStatus(hasToken) {
+  const statusEl = document.getElementById('tokenStatus');
+  if (hasToken) {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = `
+      <div class="token-status-linked">
+        <svg class="icon icon-inline"><use href="#icon-check"></use></svg>
+        <span>Steam аккаунт привязан</span>
+      </div>
+    `;
+  } else {
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = `
+      <div class="token-status-unlinked">
+        <svg class="icon icon-inline"><use href="#icon-warning"></use></svg>
+        <span>Аккаунт не привязан — отсканируйте QR-код или вставьте токен</span>
+      </div>
+    `;
   }
 }
 
@@ -167,6 +186,8 @@ async function loadSettings() {
   if (data.error) return;
 
   document.getElementById('skipFriendsToggle').checked = data.skipFriends;
+  document.getElementById('useGeneralPhrasesToggle').checked = data.useGeneralPhrases !== false;
+  document.getElementById('useUserPhrasesToggle').checked = data.useUserPhrases !== false;
 }
 
 async function loadPhrases() {
@@ -431,6 +452,8 @@ async function cancelQrLogin() {
 async function saveSettingsOnchange() {
   const settings = {
     skipFriends: document.getElementById('skipFriendsToggle').checked,
+    useGeneralPhrases: document.getElementById('useGeneralPhrasesToggle').checked,
+    useUserPhrases: document.getElementById('useUserPhrasesToggle').checked,
   };
 
   const data = await apiCall('/api/steam-wall/settings', {

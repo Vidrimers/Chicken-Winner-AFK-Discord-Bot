@@ -68,6 +68,10 @@
       <!-- Токен / QR-код -->
       <section class="token-section" id="tokenSection" style="display: none">
         <h2><svg class="icon icon-inline"><use href="#icon-link"></use></svg> Привязка Steam аккаунта</h2>
+
+        <!-- Статус привязки -->
+        <div id="tokenStatus" style="display: none; margin-bottom: 15px;"></div>
+
         <div class="token-warning">
           <svg class="icon icon-inline"><use href="#icon-warning"></use></svg> Данные хранятся на сервере в зашифрованном виде (AES-256).
         </div>
@@ -107,6 +111,20 @@
             <label>Не отвечать друзьям</label>
             <label class="toggle-switch">
               <input type="checkbox" id="skipFriendsToggle" checked onchange="saveSettingsOnchange()" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <label>Использовать общие фразы</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="useGeneralPhrasesToggle" checked onchange="saveSettingsOnchange()" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <label>Использовать фразы пользователей</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="useUserPhrasesToggle" checked onchange="saveSettingsOnchange()" />
               <span class="toggle-slider"></span>
             </label>
           </div>

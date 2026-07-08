@@ -148,14 +148,25 @@ export class SteamWallWorker {
   }
 
   _pickPhrase(authorId) {
-    const targetPhrases = this.db.getTargetPhrases(this.discordId, authorId);
-    if (targetPhrases.length > 0) {
-      return targetPhrases[Math.floor(Math.random() * targetPhrases.length)];
+    const settings = this.db.getSettings(this.discordId);
+
+    // Проверяем фразы пользователей (если включены)
+    if (settings.useUserPhrases) {
+      const targetPhrases = this.db.getTargetPhrases(this.discordId, authorId);
+      if (targetPhrases.length > 0) {
+        return targetPhrases[Math.floor(Math.random() * targetPhrases.length)];
+      }
     }
 
-    const phrases = this.db.getActivePhrases(this.discordId);
-    if (phrases.length === 0) return 'Спасибо за сообщение!';
-    return phrases[Math.floor(Math.random() * phrases.length)];
+    // Проверяем общие фразы (если включены)
+    if (settings.useGeneralPhrases) {
+      const phrases = this.db.getActivePhrases(this.discordId);
+      if (phrases.length > 0) {
+        return phrases[Math.floor(Math.random() * phrases.length)];
+      }
+    }
+
+    return 'Спасибо за сообщение!';
   }
 
   getStatus() {
