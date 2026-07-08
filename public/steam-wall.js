@@ -32,14 +32,14 @@ function showToast(message, type = 'success') {
 function showConfirm(message) {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay active';
+    overlay.className = 'sw-modal-overlay active';
     overlay.innerHTML = `
-      <div class="modal" style="max-width: 400px;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <svg class="icon" style="width: 2em; height: 2em; color: #ff9800;"><use href="#icon-warning"></use></svg>
+      <div class="sw-modal" style="max-width: 380px; text-align: center;">
+        <div style="margin-bottom: 16px;">
+          <svg class="icon" style="width: 2.5em; height: 2.5em; color: #ff9800;"><use href="#icon-warning"></use></svg>
         </div>
-        <p style="color: #ccc; text-align: center; margin: 0 0 20px 0;">${escapeHtml(message)}</p>
-        <div class="modal-actions" style="justify-content: center;">
+        <p style="color: #ccc; margin: 0 0 24px 0; font-size: 1rem;">${escapeHtml(message)}</p>
+        <div class="sw-modal-actions" style="justify-content: center; border-top: none; padding-top: 0; margin-top: 0;">
           <button class="btn btn-secondary" id="confirmCancel">Отмена</button>
           <button class="btn btn-danger" id="confirmOk">Удалить</button>
         </div>

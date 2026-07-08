@@ -174,14 +174,14 @@
     </div>
 
     <!-- Модальное окно редактирования фразы -->
-    <div class="modal-overlay" id="editPhraseModal">
-      <div class="modal">
+    <div class="sw-modal-overlay" id="editPhraseModal">
+      <div class="sw-modal">
         <h3>Редактировать фразу</h3>
-        <div class="modal-field">
+        <div class="sw-modal-field">
           <label>Текст фразы</label>
           <input type="text" id="editPhraseText" />
         </div>
-        <div class="modal-actions">
+        <div class="sw-modal-actions">
           <button class="btn btn-secondary" id="editPhraseCancel">Отмена</button>
           <button class="btn btn-primary" id="editPhraseSave">
             <svg class="icon icon-inline"><use href="#icon-save"></use></svg> Сохранить
@@ -191,26 +191,26 @@
     </div>
 
     <!-- Модальное окно редактирования пользователя -->
-    <div class="modal-overlay" id="editTargetModal">
-      <div class="modal">
+    <div class="sw-modal-overlay" id="editTargetModal">
+      <div class="sw-modal">
         <h3>Редактировать пользователя</h3>
-        <div class="modal-field">
+        <div class="sw-modal-field">
           <label>SteamID64</label>
           <input type="text" id="editTargetSteamId" readonly />
         </div>
-        <div class="modal-field">
+        <div class="sw-modal-field">
           <label>Ник</label>
           <input type="text" id="editTargetName" />
         </div>
-        <div class="modal-field">
+        <div class="sw-modal-field">
           <label>Ссылка на профиль</label>
           <input type="text" id="editTargetUrl" />
         </div>
-        <div class="modal-field">
+        <div class="sw-modal-field">
           <label>Фразы (каждая с новой строки)</label>
           <textarea id="editTargetPhrases"></textarea>
         </div>
-        <div class="modal-actions">
+        <div class="sw-modal-actions">
           <button class="btn btn-secondary" id="editTargetCancel">Отмена</button>
           <button class="btn btn-primary" id="editTargetSave">
             <svg class="icon icon-inline"><use href="#icon-save"></use></svg> Сохранить

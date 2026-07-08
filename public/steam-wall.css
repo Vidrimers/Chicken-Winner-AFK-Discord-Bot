@@ -707,31 +707,31 @@
   flex: 1;
 }
 
-/* Модальное окно */
-.modal-overlay {
+/* Модальное окно Steam Wall */
+.sw-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10000;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
   padding: 20px;
 }
 
-.modal-overlay.active {
+.sw-modal-overlay.active {
   opacity: 1;
   visibility: visible;
 }
 
-.modal {
-  background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+.sw-modal {
+  background: linear-gradient(145deg, #1e2a3a 0%, #162032 100%);
   border-radius: 16px;
   padding: 30px;
   width: 100%;
@@ -739,65 +739,71 @@
   max-height: 85vh;
   overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transform: scale(0.9);
-  transition: transform 0.3s ease;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  transform: scale(0.92);
+  transition: transform 0.25s ease;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
 
-.modal-overlay.active .modal {
+.sw-modal-overlay.active .sw-modal {
   transform: scale(1);
 }
 
-.modal h3 {
+.sw-modal h3 {
   color: white;
-  margin: 0 0 20px 0;
+  margin: 0 0 24px 0;
+  font-size: 1.2rem;
+  text-align: center;
 }
 
-.modal-field {
-  margin-bottom: 15px;
+.sw-modal-field {
+  margin-bottom: 18px;
 }
 
-.modal-field label {
+.sw-modal-field label {
   display: block;
   color: #aaa;
   font-size: 0.85rem;
   margin-bottom: 6px;
 }
 
-.modal-field input,
-.modal-field textarea {
+.sw-modal-field input,
+.sw-modal-field textarea {
   width: 100%;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.3);
   color: white;
   font-size: 0.9rem;
   box-sizing: border-box;
   transition: border-color 0.2s;
 }
 
-.modal-field input:focus,
-.modal-field textarea:focus {
+.sw-modal-field input:focus,
+.sw-modal-field textarea:focus {
   outline: none;
   border-color: rgba(17, 153, 142, 0.6);
 }
 
-.modal-field input[readonly] {
+.sw-modal-field input[readonly] {
   opacity: 0.6;
   cursor: not-allowed;
+  background: rgba(0, 0, 0, 0.2);
 }
 
-.modal-field textarea {
+.sw-modal-field textarea {
   min-height: 100px;
   resize: vertical;
+  font-family: inherit;
 }
 
-.modal-actions {
+.sw-modal-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Адаптивность */
