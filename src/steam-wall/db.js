@@ -197,9 +197,14 @@ export class SteamWallDatabase {
   }
 
   getActiveUsers() {
-    return this.prepare(
+    const users = this.prepare(
       'SELECT * FROM sw_users WHERE is_active = 1 AND refresh_token IS NOT NULL'
     ).all();
+    log(`[SW DB] getActiveUsers: найдено ${users.length} активных`);
+    if (users.length > 0) {
+      users.forEach(u => log(`[SW DB]   - ${u.discord_id} (active=${u.is_active}, hasToken=${!!u.refresh_token})`));
+    }
+    return users;
   }
 
   deleteUser(discordId) {

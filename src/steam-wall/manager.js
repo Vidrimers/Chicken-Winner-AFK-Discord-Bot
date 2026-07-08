@@ -63,6 +63,7 @@ export class SteamWallManager {
    * Запустить всех активных ботов (при старте приложения)
    */
   startAll() {
+    log(`[SW Manager] startAll() вызван`);
     const activeUsers = this.db.getActiveUsers();
     log(`[SW Manager] Запуск ${activeUsers.length} активных ботов...`);
 
