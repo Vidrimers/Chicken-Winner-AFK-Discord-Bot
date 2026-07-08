@@ -284,6 +284,7 @@ export function createSteamWallRouter(db, manager, steamApi) {
     if (!discordId) return;
 
     manager.stopWorker(discordId);
+    db.setUserActive(discordId, false); // Явная остановка пользователем
     res.json({ success: true });
   });
 

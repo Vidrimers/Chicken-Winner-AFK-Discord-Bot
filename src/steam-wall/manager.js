@@ -46,7 +46,7 @@ export class SteamWallManager {
 
     worker.stop();
     this.workers.delete(discordId);
-    this.db.setUserActive(discordId, false);
+    // is_active НЕ сбрасываем — бот должен перезапуститься при старте сервера
 
     log(`[SW Manager] Бот остановлен для ${discordId}`);
   }
