@@ -429,6 +429,9 @@ async function sendSteamWallPhrasesMenu(chatId) {
   const discordId = getLinkedDiscordId(chatId);
   if (!discordId || !steamWallDb) return;
 
+  // Очищаем состояние ввода
+  userStates.delete(chatId);
+
   const phrases = steamWallDb.getPhrases(discordId);
   let message = '<b>💬 Ваши фразы:</b>\n\n';
 
@@ -1413,6 +1416,7 @@ export function initTelegramBot(
           }
 
           case 'menu_steam_wall': {
+            userStates.delete(chatId);
             const discordIdSW = getLinkedDiscordId(chatId);
             if (!discordIdSW) {
               await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');

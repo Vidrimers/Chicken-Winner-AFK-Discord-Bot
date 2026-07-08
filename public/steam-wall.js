@@ -197,9 +197,8 @@ function renderPhrases() {
 
   container.innerHTML = phrases.map(p => `
     <div class="phrase-item" data-id="${p.id}">
-      <span class="phrase-text">${escapeHtml(p.text)}</span>
+      <input type="text" class="phrase-edit-input" value="${escapeHtml(p.text)}" data-id="${p.id}" onchange="savePhraseInline(${p.id}, this.value)" />
       <div class="phrase-actions">
-        <button class="btn-icon btn-edit" onclick="editPhrase(${p.id})" title="Редактировать"><svg class="icon icon-btn"><use href="#icon-edit"></use></svg></button>
         <button class="btn-icon btn-delete" onclick="deletePhrase(${p.id})" title="Удалить"><svg class="icon icon-btn"><use href="#icon-delete"></use></svg></button>
       </div>
     </div>
@@ -270,7 +269,6 @@ function bindEvents() {
   document.getElementById('saveTokenBtn').addEventListener('click', saveToken);
   document.getElementById('startQrBtn').addEventListener('click', startQrLogin);
   document.getElementById('cancelQrBtn').addEventListener('click', cancelQrLogin);
-  document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
   document.getElementById('addPhraseBtn').addEventListener('click', addPhrase);
   document.getElementById('newPhraseInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') addPhrase();
@@ -430,7 +428,7 @@ async function cancelQrLogin() {
 
 // ===== SETTINGS =====
 
-async function saveSettings() {
+async function saveSettingsOnchange() {
   const settings = {
     skipFriends: document.getElementById('skipFriendsToggle').checked,
   };
@@ -501,15 +499,56 @@ async function savePhraseEdit() {
   await loadPhrases();
 }
 
-async function deletePhrase(id) {
-  if (!await showConfirm('Удалить фразу?')) return;
+async function savePhraseInline(id, newText) {
+  const text = newText.trim();
+  if (!text) return;
 
+  const data = await apiCall(`/api/steam-wall/phrases/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ text }),
+  });
+
+  if (data.error) {
+    showToast('Ошибка: ' + data.error, 'error');
+    await loadPhrases();
+  } else {
+    showToast('Фраза обновлена');
+  }
+}
+
+async function deletePhrase(id) {
+  const item = document.querySelector(`.phrase-item[data-id="${id}"]`);
+  if (!item) return;
+
+  // Показываем подтверждение внутри элемента
+  const actions = item.querySelector('.phrase-actions');
+  const originalHTML = actions.innerHTML;
+  actions.innerHTML = `
+    <span class="phrase-confirm-text">Удалить?</span>
+    <button class="btn-icon btn-confirm-yes" onclick="confirmDeletePhrase(${id})" title="Да"><svg class="icon icon-btn"><use href="#icon-check"></use></svg></button>
+    <button class="btn-icon btn-confirm-no" onclick="cancelDeletePhrase(${id})" title="Нет"><svg class="icon icon-btn"><use href="#icon-cross"></use></svg></button>
+  `;
+  item.dataset.originalActions = originalHTML;
+}
+
+function confirmDeletePhrase(id) {
+  doDeletePhrase(id);
+}
+
+function cancelDeletePhrase(id) {
+  const item = document.querySelector(`.phrase-item[data-id="${id}"]`);
+  if (!item) return;
+  const actions = item.querySelector('.phrase-actions');
+  actions.innerHTML = item.dataset.originalActions || '';
+}
+
+async function doDeletePhrase(id) {
   const data = await apiCall(`/api/steam-wall/phrases/${id}`, { method: 'DELETE' });
   if (data.error) {
     showToast('Ошибка: ' + data.error, 'error');
     return;
   }
-
+  showToast('Фраза удалена');
   await loadPhrases();
 }
 

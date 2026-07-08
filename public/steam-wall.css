@@ -240,8 +240,8 @@
 }
 
 .settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 15px;
 }
 
@@ -252,6 +252,9 @@
   padding: 12px 15px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
+  min-width: 250px;
+  max-width: 350px;
+  flex: 1;
 }
 
 .setting-item label {
@@ -404,6 +407,46 @@
   flex: 1;
   color: #ccc;
   font-size: 0.9rem;
+}
+
+.phrase-edit-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.phrase-edit-input:focus {
+  outline: none;
+  border-color: rgba(17, 153, 142, 0.6);
+}
+
+.phrase-confirm-text {
+  color: #ff9800;
+  font-size: 0.85rem;
+  margin-right: 5px;
+}
+
+.btn-confirm-yes {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.btn-confirm-yes:hover {
+  background: rgba(76, 175, 80, 0.4);
+}
+
+.btn-confirm-no {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.btn-confirm-no:hover {
+  background: rgba(244, 67, 54, 0.4);
 }
 
 .phrase-item .phrase-actions {
@@ -761,6 +804,7 @@
   text-align: center;
   padding: 40px 20px;
   color: #999;
+  grid-column: 1 / -1;
 }
 
 .empty-state-icon {

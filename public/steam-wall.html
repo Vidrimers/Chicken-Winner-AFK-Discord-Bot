@@ -106,14 +106,11 @@
           <div class="setting-item">
             <label>Не отвечать друзьям</label>
             <label class="toggle-switch">
-              <input type="checkbox" id="skipFriendsToggle" checked />
+              <input type="checkbox" id="skipFriendsToggle" checked onchange="saveSettingsOnchange()" />
               <span class="toggle-slider"></span>
             </label>
           </div>
         </div>
-        <button class="btn btn-primary" id="saveSettingsBtn" style="margin-top: 15px">
-          <svg class="icon icon-inline"><use href="#icon-save"></use></svg> Сохранить настройки
-        </button>
       </section>
 
       <!-- Общие фразы -->
