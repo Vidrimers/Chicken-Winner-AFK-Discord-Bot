@@ -8,6 +8,62 @@ let targets = [];
 let editingPhraseId = null;
 let editingTargetId = null;
 
+// ===== КАСТОМНЫЕ МОДАЛКИ =====
+
+function showToast(message, type = 'success') {
+  const existing = document.querySelector('.sw-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = `sw-toast sw-toast-${type}`;
+  toast.innerHTML = `
+    <svg class="icon icon-inline"><use href="#icon-${type === 'success' ? 'check' : 'warning'}"></use></svg>
+    ${escapeHtml(message)}
+  `;
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => toast.classList.add('sw-toast-show'));
+  setTimeout(() => {
+    toast.classList.remove('sw-toast-show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+function showConfirm(message) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay active';
+    overlay.innerHTML = `
+      <div class="modal" style="max-width: 400px;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <svg class="icon" style="width: 2em; height: 2em; color: #ff9800;"><use href="#icon-warning"></use></svg>
+        </div>
+        <p style="color: #ccc; text-align: center; margin: 0 0 20px 0;">${escapeHtml(message)}</p>
+        <div class="modal-actions" style="justify-content: center;">
+          <button class="btn btn-secondary" id="confirmCancel">Отмена</button>
+          <button class="btn btn-danger" id="confirmOk">Удалить</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#confirmCancel').addEventListener('click', () => {
+      overlay.remove();
+      resolve(false);
+    });
+    overlay.querySelector('#confirmOk').addEventListener('click', () => {
+      overlay.remove();
+      resolve(true);
+    });
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+        resolve(false);
+      }
+    });
+  });
+}
+
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -240,7 +296,7 @@ function bindEvents() {
 async function startBot() {
   const data = await apiCall('/api/steam-wall/start', { method: 'POST' });
   if (data.error) {
-    alert('Ошибка: ' + data.error);
+    showToast('Ошибка: ' + data.error, 'error');
     return;
   }
   updateBotStatus(true);
@@ -249,7 +305,7 @@ async function startBot() {
 async function stopBot() {
   const data = await apiCall('/api/steam-wall/stop', { method: 'POST' });
   if (data.error) {
-    alert('Ошибка: ' + data.error);
+    showToast('Ошибка: ' + data.error, 'error');
     return;
   }
   updateBotStatus(false);
@@ -260,7 +316,7 @@ async function stopBot() {
 async function saveToken() {
   const token = document.getElementById('tokenInput').value.trim();
   if (!token) {
-    alert('Введите refresh token');
+    showToast('Введите refresh token', 'error');
     return;
   }
 
@@ -270,13 +326,13 @@ async function saveToken() {
   });
 
   if (data.error) {
-    alert('Ошибка: ' + data.error);
+    showToast('Ошибка: ' + data.error, 'error');
     return;
   }
 
   document.getElementById('tokenInput').value = '';
   document.getElementById('tokenInput').placeholder = '••••••••••••••••';
-  alert('Токен сохранён!');
+  showToast('Токен сохранён!');
 }
 
 // ===== QR LOGIN =====
@@ -338,7 +394,7 @@ async function checkQrStatus() {
     document.getElementById('cancelQrBtn').style.display = 'none';
     document.getElementById('startQrBtn').style.display = 'inline-block';
     document.getElementById('tokenInput').placeholder = '••••••••••••••••';
-    alert('Steam аккаунт успешно привязан!');
+    showToast('Steam аккаунт успешно привязан!');
   } else if (data.status === 'timeout') {
     stopQrPolling();
     status.textContent = '⏰ Время вышло. Попробуйте снова.';
@@ -385,11 +441,11 @@ async function saveSettings() {
   });
 
   if (data.error) {
-    alert('Ошибка: ' + data.error);
+    showToast('Ошибка: ' + data.error, 'error');
     return;
   }
 
-  alert('Настройки сохранены!');
+  showToast('Настройки сохранены!');
 }
 
 // ===== PHRASES =====
@@ -405,7 +461,7 @@ async function addPhrase() {
   });
 
   if (data.error) {
-    alert('Ошибка: ' + data.error);
+    showToast('Ошибка: ' + data.error, 'error');
     return;
   }
 
@@ -437,7 +493,7 @@ async function savePhraseEdit() {
   });
 
   if (data.error) {
-    alert('Ошибка: ' + data.error);
+    showToast('Ошибка: ' + data.error, 'error');
     return;
   }
 
@@ -446,11 +502,11 @@ async function savePhraseEdit() {
 }
 
 async function deletePhrase(id) {
-  if (!confirm('Удалить фразу?')) return;
+  if (!await showConfirm('Удалить фразу?')) return;
 
   const data = await apiCall(`/api/steam-wall/phrases/${id}`, { method: 'DELETE' });
   if (data.error) {
-    alert('Ошибка: ' + data.error);
+    showToast('Ошибка: ' + data.error, 'error');
     return;
   }
 
@@ -466,7 +522,7 @@ async function addTarget() {
   const nameValue = nameInput.value.trim();
 
   if (!steamValue) {
-    alert('Введите SteamID64 или ссылку');
+    showToast('Введите SteamID64 или ссылку', 'error');
     return;
   }
 
@@ -479,7 +535,7 @@ async function addTarget() {
   });
 
   if (data.error) {
-    alert('Ошибка: ' + data.error);
+    showToast('Ошибка: ' + data.error, 'error');
     return;
   }
 
@@ -524,7 +580,7 @@ async function saveTargetEdit() {
   });
 
   if (data.error) {
-    alert('Ошибка: ' + data.error);
+    showToast('Ошибка: ' + data.error, 'error');
     return;
   }
 
@@ -533,11 +589,11 @@ async function saveTargetEdit() {
 }
 
 async function deleteTarget(id) {
-  if (!confirm('Удалить пользователя?')) return;
+  if (!await showConfirm('Удалить пользователя?')) return;
 
   const data = await apiCall(`/api/steam-wall/targets/${id}`, { method: 'DELETE' });
   if (data.error) {
-    alert('Ошибка: ' + data.error);
+    showToast('Ошибка: ' + data.error, 'error');
     return;
   }
 

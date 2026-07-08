@@ -1,5 +1,37 @@
 /* ===== Steam Wall Auto-Answer — Стили ===== */
 
+/* Тост уведомления */
+.sw-toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 9999;
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.sw-toast-show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.sw-toast-success {
+  background: linear-gradient(135deg, #4caf50, #45a049);
+  color: white;
+}
+
+.sw-toast-error {
+  background: linear-gradient(135deg, #f44336, #d32f2f);
+  color: white;
+}
+
 /* Иконки */
 .icon {
   width: 1em;
