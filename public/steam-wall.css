@@ -850,10 +850,7 @@
   line-height: 1.5;
   padding: 12px;
   resize: none;
-  overflow: auto;
-  white-space: pre;
-  word-wrap: normal;
-  overflow-x: auto;
+  overflow-y: auto;
 }
 
 .line-numbers-wrapper textarea:focus {
