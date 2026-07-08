@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import crypto from 'crypto';
-import { success, error as logError } from '../utils/logger.js';
+import { log, success, error as logError } from '../utils/logger.js';
 
 const ALGORITHM = 'aes-256-cbc';
 
