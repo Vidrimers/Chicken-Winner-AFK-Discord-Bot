@@ -1,12 +1,17 @@
 import { Router } from 'express';
 import { log, error as logError } from '../../utils/logger.js';
 import { formatTime } from '../../utils/time.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 /**
  * Роуты для админ-панели
  */
 export function createAdminRouter(db, discordClient, telegram, notificationService, achievements) {
   const router = Router();
+
+  // Все admin-эндпоинты требуют авторизации и прав админа
+  router.use(requireAuth);
+  router.use(requireAdmin);
 
   /**
    * GET /api/admin/users

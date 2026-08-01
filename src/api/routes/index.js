@@ -14,6 +14,7 @@ import { createSteamRouter } from "./steam.js";
 import { sessionManager } from "../server.js";
 import { createGamePricesRouter } from "./game-prices.js";
 import { createSteamWallRouter } from "./steam-wall.js";
+import { requireAuth, requireOwnership } from "../middleware/auth.js";
 
 /**
  * Зарегистрировать все API роуты
@@ -33,8 +34,6 @@ export function registerRoutes(
   // Config роут - для загрузки конфигурации на фронтенде
   app.get("/api/config", (req, res) => {
     res.json({
-      ADMIN_USER_ID: USER_IDS.ADMIN_USER_ID,
-      ADMIN_LOGIN: process.env.ADMIN_LOGIN || "admin",
       SERVER_IP: SERVER_CONFIG.IP || "localhost",
       PORT: SERVER_CONFIG.PORT,
       SITE_URL: SERVER_CONFIG.SITE_URL,
@@ -44,11 +43,12 @@ export function registerRoutes(
 
   // Session роут - проверка текущей сессии
   app.get("/api/session", (req, res) => {
-    const userId = req.query.userId || req.session?.userId;
+    const userId = req.session?.userId;
     if (userId) {
-      res.json({ userId });
+      const isAdmin = userId === process.env.ADMIN_USER_ID;
+      res.json({ userId, isAdmin });
     } else {
-      res.json({ userId: null });
+      res.json({ userId: null, isAdmin: false });
     }
   });
 
@@ -146,7 +146,7 @@ export function registerRoutes(
     }
   });
 
-  app.post("/api/visit/:userId", async (req, res) => {
+  app.post("/api/visit/:userId", requireAuth, requireOwnership, async (req, res) => {
     try {
       const userId = req.params.userId;
 
@@ -197,7 +197,7 @@ export function registerRoutes(
 
   // Telegram роуты
   const telegramRouter = createTelegramRouter(db, telegram);
-  app.post("/api/register-telegram/:userId", async (req, res) => {
+  app.post("/api/register-telegram/:userId", requireAuth, requireOwnership, async (req, res) => {
     const userId = req.params.userId;
     const { telegramChatId } = req.body;
 

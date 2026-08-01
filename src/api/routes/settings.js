@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { log, error as logError } from '../../utils/logger.js';
 import { formatTime } from '../../utils/time.js';
+import { requireAuth, requireOwnership } from '../middleware/auth.js';
 
 /**
  * Роуты для настроек пользователей
@@ -12,7 +13,7 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
    * POST /api/settings/:userId
    * Сохранить настройки пользователя
    */
-  router.post('/:userId', async (req, res) => {
+  router.post('/:userId', requireAuth, requireOwnership, async (req, res) => {
     const userId = req.params.userId;
     const {
       dmNotifications,
@@ -62,7 +63,11 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
       }
 
       if (theme !== undefined) {
-        db.exec(`UPDATE user_settings SET theme = '${theme}' WHERE user_id = '${userId}'`);
+        const allowedThemes = ['standard', 'metal', 'discord', 'steam', 'die-my-darling'];
+        if (!allowedThemes.includes(theme)) {
+          return res.status(400).json({ error: 'Недопустимая тема' });
+        }
+        db.prepare('UPDATE user_settings SET theme = ? WHERE user_id = ?').run(theme, userId);
         
         const themeNames = {
           standard: '🎨 Стандарт',
@@ -236,7 +241,7 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
    * POST /activate-secret-theme/:userId
    * Активировать секретную тему
    */
-  router.post('/activate-secret-theme/:userId', async (req, res) => {
+  router.post('/activate-secret-theme/:userId', requireAuth, requireOwnership, async (req, res) => {
     const userId = req.params.userId;
 
     try {

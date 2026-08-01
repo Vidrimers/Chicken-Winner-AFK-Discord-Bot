@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { log, error as logError } from '../../utils/logger.js';
 import { USER_IDS, TELEGRAM_CONFIG } from '../../config.js';
+import { requireAuth, requireAdmin, requireOwnership } from '../middleware/auth.js';
 
 /**
  * Роуты для системы багрепортов
@@ -11,7 +12,7 @@ export function createBugReportsRouter(db, telegram) {
   /**
    * POST /api/bug-report — отправить багрепорт
    */
-  router.post('/bug-report', async (req, res) => {
+  router.post('/bug-report', requireAuth, async (req, res) => {
     try {
       const { userId, username, bugText } = req.body;
 
@@ -52,13 +53,8 @@ export function createBugReportsRouter(db, telegram) {
   /**
    * GET /api/bug-reports — получить все багрепорты (только админ)
    */
-  router.get('/bug-reports', (req, res) => {
+  router.get('/bug-reports', requireAuth, requireAdmin, (req, res) => {
     try {
-      const requestUserId = req.headers['x-user-id'];
-      if (requestUserId !== USER_IDS.ADMIN_USER_ID) {
-        return res.status(403).json({ error: 'Доступ запрещён' });
-      }
-
       const { status } = req.query;
       const reports = db.getBugReports(status || null);
       res.json(reports);
@@ -84,7 +80,7 @@ export function createBugReportsRouter(db, telegram) {
   /**
    * GET /api/bug-reports/my/:userId — багрепорты пользователя
    */
-  router.get('/bug-reports/my/:userId', (req, res) => {
+  router.get('/bug-reports/my/:userId', requireAuth, requireOwnership, (req, res) => {
     try {
       const { userId } = req.params;
       const reports = db.getBugReportsByUser(userId);
@@ -98,13 +94,8 @@ export function createBugReportsRouter(db, telegram) {
   /**
    * PUT /api/bug-reports/:id/status — изменить статус (только админ)
    */
-  router.put('/bug-reports/:id/status', async (req, res) => {
+  router.put('/bug-reports/:id/status', requireAuth, requireAdmin, async (req, res) => {
     try {
-      const requestUserId = req.headers['x-user-id'];
-      if (requestUserId !== USER_IDS.ADMIN_USER_ID) {
-        return res.status(403).json({ error: 'Доступ запрещён' });
-      }
-
       const { id } = req.params;
       const { status } = req.body;
 
@@ -146,13 +137,8 @@ export function createBugReportsRouter(db, telegram) {
   /**
    * DELETE /api/bug-reports/:id — удалить багрепорт (только админ)
    */
-  router.delete('/bug-reports/:id', (req, res) => {
+  router.delete('/bug-reports/:id', requireAuth, requireAdmin, (req, res) => {
     try {
-      const requestUserId = req.headers['x-user-id'];
-      if (requestUserId !== USER_IDS.ADMIN_USER_ID) {
-        return res.status(403).json({ error: 'Доступ запрещён' });
-      }
-
       const { id } = req.params;
       db.deleteBugReport(id);
       log(`🐛 Багрепорт #${id} удалён`);

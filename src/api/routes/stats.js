@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { log, error as logError } from '../../utils/logger.js';
+import { requireAuth, requireOwnership } from '../middleware/auth.js';
 
 /**
  * Роуты для статистики пользователей
@@ -143,7 +144,7 @@ export function createStatsRouter(db, discordClient, telegram, gamesDb) {
    * POST /api/visit/:userId
    * Отметить посещение веб-панели
    */
-  router.post('/visit/:userId', async (req, res) => {
+  router.post('/visit/:userId', requireAuth, requireOwnership, async (req, res) => {
     try {
       const userId = req.params.userId;
       

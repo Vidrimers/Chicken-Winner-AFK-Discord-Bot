@@ -24,7 +24,7 @@ export class SessionManager {
     this.sessions.set(sessionId, { userId, createdAt: Date.now() });
     res.setHeader(
       'Set-Cookie',
-      `sessionId=${sessionId}; Path=/; Max-Age=86400; SameSite=Strict`
+      `sessionId=${sessionId}; Path=/; Max-Age=86400; SameSite=Strict; HttpOnly`
     );
     return sessionId;
   }
@@ -74,7 +74,7 @@ export function createExpressServer() {
         const newId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         sessionManager.sessions.set(newId, req.session);
         req.sessionId = newId;
-        res.setHeader('Set-Cookie', `sessionId=${newId}; Path=/; Max-Age=86400; SameSite=Strict`);
+        res.setHeader('Set-Cookie', `sessionId=${newId}; Path=/; Max-Age=86400; SameSite=Strict; HttpOnly`);
       }
     };
 

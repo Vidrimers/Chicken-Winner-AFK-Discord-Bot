@@ -959,8 +959,7 @@ async function confirmDelete() {
 
   try {
     const response = await fetch(`/api/cheater-checker/profiles/${pendingDeleteSteamId}`, {
-      method: 'DELETE',
-      headers: { 'x-user-id': currentUserId },
+      method: 'DELETE'
     });
 
     const data = await response.json();

@@ -2,6 +2,36 @@ import { Router } from 'express';
 import { log, error as logError } from '../../utils/logger.js';
 
 /**
+ * In-memory rate limiter для auth эндпоинтов
+ */
+function createRateLimiter(maxRequests, windowMs) {
+  const requests = new Map();
+
+  return (req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+
+    if (!requests.has(ip)) {
+      requests.set(ip, []);
+    }
+
+    const timestamps = requests.get(ip).filter(ts => now - ts < windowMs);
+    requests.set(ip, timestamps);
+
+    if (timestamps.length >= maxRequests) {
+      return res.status(429).json({ error: 'Слишком много запросов, попробуйте позже' });
+    }
+
+    timestamps.push(now);
+    next();
+  };
+}
+
+// Rate limiters
+const requestLoginLimiter = createRateLimiter(5, 60 * 1000); // 5 запросов в минуту
+const verifyLoginLimiter = createRateLimiter(10, 60 * 1000); // 10 попыток в минуту
+
+/**
  * Роуты для авторизации через Discord ID + Telegram-код
  */
 export function createAuthRouter(db, telegram) {
@@ -16,7 +46,7 @@ export function createAuthRouter(db, telegram) {
    *   { requiresCode: true }                   — код отправлен в TG
    *   { error: string }                        — ошибка
    */
-  router.post('/request-login', async (req, res) => {
+  router.post('/request-login', requestLoginLimiter, async (req, res) => {
     const { userId } = req.body;
 
     if (!userId || typeof userId !== 'string' || !/^\d{17,20}$/.test(userId)) {
@@ -65,7 +95,7 @@ export function createAuthRouter(db, telegram) {
    *   { success: true }   — код верный
    *   { error: string }   — ошибка
    */
-  router.post('/verify-login', (req, res) => {
+  router.post('/verify-login', verifyLoginLimiter, (req, res) => {
     const { userId, code } = req.body;
 
     if (!userId || typeof userId !== 'string' || !/^\d{17,20}$/.test(userId)) {

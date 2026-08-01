@@ -3,6 +3,7 @@ import { checkProfiles } from '../../steam/steamApi.js';
 import { getCachedStats } from '../../steam/statsCache.js';
 import { USER_IDS, STEAM_CONFIG } from '../../config.js';
 import { EmbedBuilder } from 'discord.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 /**
  * In-memory rate limiter
@@ -175,15 +176,9 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    * DELETE /api/cheater-checker/profiles/:steamId
    * Удаление записи (только admin)
    */
-  router.delete('/profiles/:steamId', (req, res) => {
+  router.delete('/profiles/:steamId', requireAuth, requireAdmin, (req, res) => {
     try {
-      const userId = req.headers['x-user-id'];
       const { steamId } = req.params;
-
-      // Проверка admin
-      if (!userId || userId !== USER_IDS.ADMIN_USER_ID) {
-        return res.status(403).json({ error: 'Доступ запрещён' });
-      }
 
       // Валидация steamId (17 цифр)
       if (!/^\d{17}$/.test(steamId)) {

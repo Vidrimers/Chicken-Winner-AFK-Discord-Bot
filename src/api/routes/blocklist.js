@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireAuth, requireOwnership } from '../middleware/auth.js';
 
 export function createBlocklistRouter(db, telegram, discordClient) {
   const router = Router();
@@ -24,14 +25,14 @@ export function createBlocklistRouter(db, telegram, discordClient) {
   }
 
   // GET /api/blocklist/:userId — получить чёрный список пользователя
-  router.get('/:userId', (req, res) => {
+  router.get('/:userId', requireAuth, requireOwnership, (req, res) => {
     const { userId } = req.params;
     const blocklist = db.getUserBlocklist(userId);
     res.json(blocklist.map(b => b.blocked_user_id));
   });
 
   // POST /api/blocklist/:userId — добавить в чёрный список
-  router.post('/:userId', async (req, res) => {
+  router.post('/:userId', requireAuth, requireOwnership, async (req, res) => {
     const { userId } = req.params;
     const { blockedUserId } = req.body;
     if (!blockedUserId) return res.status(400).json({ error: 'blockedUserId required' });
@@ -58,7 +59,7 @@ export function createBlocklistRouter(db, telegram, discordClient) {
   });
 
   // DELETE /api/blocklist/:userId/:blockedUserId — удалить из чёрного списка
-  router.delete('/:userId/:blockedUserId', (req, res) => {
+  router.delete('/:userId/:blockedUserId', requireAuth, requireOwnership, (req, res) => {
     const { userId, blockedUserId } = req.params;
     if (!userId || userId === 'null' || userId === 'undefined') {
       return res.status(400).json({ error: 'Некорректный userId' });

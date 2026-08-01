@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuth } from '../middleware/auth.js';
 
 // Rate limiting для Hot.Game API
 const apiCallTimestamps = [];
@@ -384,9 +385,9 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
   });
 
   // ===== FAVORITES =====
-  router.get("/favorites", (req, res) => {
+  router.get("/favorites", requireAuth, (req, res) => {
     try {
-      const userId = req.query.user_id || req.headers["x-user-id"];
+      const userId = req.authenticatedUserId;
       if (!userId) {
         return res.status(401).json({ error: "Требуется user_id" });
       }
@@ -404,11 +405,12 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
     }
   });
 
-  router.post("/favorites", async (req, res) => {
+  router.post("/favorites", requireAuth, async (req, res) => {
     try {
-      const { user_id, game_slug } = req.body;
-      if (!user_id || !game_slug) {
-        return res.status(400).json({ error: "user_id и game_slug обязательны" });
+      const user_id = req.authenticatedUserId;
+      const { game_slug } = req.body;
+      if (!game_slug) {
+        return res.status(400).json({ error: "game_slug обязателен" });
       }
 
       gamesDb.addFavorite(user_id, game_slug);
@@ -442,9 +444,9 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
     }
   });
 
-  router.delete("/favorites/:slug", (req, res) => {
+  router.delete("/favorites/:slug", requireAuth, (req, res) => {
     try {
-      const userId = req.query.user_id || req.headers["x-user-id"];
+      const userId = req.authenticatedUserId;
       const { slug } = req.params;
 
       if (!userId) {
@@ -459,9 +461,9 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
     }
   });
 
-  router.get("/favorites/check/:slug", (req, res) => {
+  router.get("/favorites/check/:slug", requireAuth, (req, res) => {
     try {
-      const userId = req.query.user_id || req.headers["x-user-id"];
+      const userId = req.authenticatedUserId;
       const { slug } = req.params;
 
       if (!userId) {
@@ -476,9 +478,9 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
   });
 
   // ===== NOTIFICATIONS =====
-  router.get("/notifications", (req, res) => {
+  router.get("/notifications", requireAuth, (req, res) => {
     try {
-      const userId = req.query.user_id || req.headers["x-user-id"];
+      const userId = req.authenticatedUserId;
       if (!userId) {
         return res.status(401).json({ error: "Требуется user_id" });
       }
@@ -491,9 +493,9 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
     }
   });
 
-  router.post("/notifications", (req, res) => {
+  router.post("/notifications", requireAuth, (req, res) => {
     try {
-      const userId = req.body.user_id || req.headers["x-user-id"];
+      const userId = req.authenticatedUserId;
       if (!userId) {
         return res.status(401).json({ error: "Требуется user_id" });
       }

@@ -1,13 +1,12 @@
 // Конфигурация (будет загружена с сервера)
 window.CONFIG = {
-  ADMIN_USER_ID: "",
-  ADMIN_LOGIN: "",
   SERVER_IP: "localhost",
   PORT: 3000,
 };
 
 window.currentUserId = null;
 window.currentUsername = null;
+window.isAdmin = false;
 let showingUsername = true; // По умолчанию показываем имя
 
 // Проверяем флаг предупреждения при загрузке страницы
@@ -188,6 +187,7 @@ async function checkAuthStatus() {
     const data = await response.json();
     if (data.userId) {
       window.currentUserId = data.userId;
+      window.isAdmin = data.isAdmin || false;
       localStorage.setItem("afkBotUserId", data.userId);
       setTimeout(() => loadUserDataAuto(data.userId), 100);
       return true;
@@ -295,7 +295,7 @@ async function loadUserDataAuto(userId) {
 
     document.getElementById("clearBtn").style.display = "block";
 
-    if (window.currentUserId === window.CONFIG.ADMIN_USER_ID) {
+    if (window.isAdmin) {
       document.getElementById("adminPanel").style.display = "block";
       document.querySelectorAll(".admin-option").forEach((option) => {
         option.style.display = "block";
@@ -390,24 +390,6 @@ function switchTab(tabName) {
 async function loadUserData(skipSecurityCheck = false) {
   let userId = document.getElementById("userIdInput").value.trim();
   if (!userId) return;
-
-  if (userId.toLowerCase() === window.CONFIG.ADMIN_LOGIN.toLowerCase()) {
-    userId = window.CONFIG.ADMIN_USER_ID;
-  } else if (userId === window.CONFIG.ADMIN_USER_ID && !skipSecurityCheck) {
-    // Показываем предупреждение для попытки несанкционированного доступа
-    showUnauthorizedAccessWarning();
-
-    fetch("/api/unauthorized-access", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        attemptedId: window.CONFIG.ADMIN_USER_ID,
-        timestamp: new Date().toLocaleString("ru-RU"),
-      }),
-    }).catch((err) => console.error("Ошибка отправки уведомления:", err));
-
-    return;
-  }
 
   // Запрашиваем вход — проверяем нужен ли TG-код
   try {
@@ -578,7 +560,7 @@ async function _doLogin(userId) {
 
     document.getElementById("clearBtn").style.display = "block";
 
-    if (userId === window.CONFIG.ADMIN_USER_ID) {
+    if (window.isAdmin) {
       document.getElementById("adminPanel").style.display = "block";
 
       document.querySelectorAll(".admin-option").forEach((option) => {
@@ -1712,14 +1694,9 @@ function displayUsers(users) {
 
   let html = "";
   users.forEach((user) => {
-    const isAdmin = user.user_id === window.CONFIG.ADMIN_USER_ID;
-    const deleteBtn = isAdmin
-      ? '<span style="color: #999; font-size: 12px;">Админ</span>'
-      : `<button onclick="deleteUser('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;"><svg class="icon" aria-hidden="true"><use href="#icon-delete"></use></svg> Удалить</button>`;
+    const deleteBtn = `<button onclick="deleteUser('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;"><svg class="icon" aria-hidden="true"><use href="#icon-delete"></use></svg> Удалить</button>`;
     
-    const deleteMessagesBtn = isAdmin
-      ? ''
-      : `<button onclick="showDeleteMessagesMenu('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"><svg class="icon" aria-hidden="true"><use href="#icon-chat"></use></svg> Удалить сообщения</button>`;
+    const deleteMessagesBtn = `<button onclick="showDeleteMessagesMenu('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"><svg class="icon" aria-hidden="true"><use href="#icon-chat"></use></svg> Удалить сообщения</button>`;
 
     html += `
             <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333;">
@@ -2786,7 +2763,7 @@ async function openBugReportsModal() {
 
 async function loadBugReportsListAuto() {
   try {
-    const res = await fetch('/api/bug-reports', { headers: { 'x-user-id': window.currentUserId } });
+    const res = await fetch('/api/bug-reports');
     const reports = await res.json();
     
     // Обновляем счётчики на кнопках фильтров
@@ -2834,7 +2811,7 @@ function closeBugReportsListModal() {
 async function loadBugReportsList(status) {
   try {
     const url = status ? `/api/bug-reports?status=${status}` : '/api/bug-reports';
-    const res = await fetch(url, { headers: { 'x-user-id': window.currentUserId } });
+    const res = await fetch(url);
     const reports = await res.json();
     renderBugReports(reports, status);
 
@@ -2892,13 +2869,13 @@ async function changeBugReportStatus(id, status) {
   try {
     await fetch(`/api/bug-reports/${id}/status`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'x-user-id': window.currentUserId },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
     });
     // Перезагружаем с пересчётом счётчиков, сохраняя активный фильтр
     const activeFilter = document.querySelector('.bug-filter-btn.active');
     const currentStatus = activeFilter?.dataset.status || 'new';
-    const res = await fetch('/api/bug-reports', { headers: { 'x-user-id': window.currentUserId } });
+    const res = await fetch('/api/bug-reports');
     const reports = await res.json();
     updateBugFilterCounts(reports);
     loadBugReportsList(currentStatus);
@@ -2913,13 +2890,12 @@ async function deleteBugReportAdmin(id) {
   if (!confirm('Удалить этот багрепорт?')) return;
   try {
     await fetch(`/api/bug-reports/${id}`, {
-      method: 'DELETE',
-      headers: { 'x-user-id': window.currentUserId }
+      method: 'DELETE'
     });
     // Перезагружаем с пересчётом счётчиков, сохраняя активный фильтр
     const activeFilter = document.querySelector('.bug-filter-btn.active');
     const currentStatus = activeFilter?.dataset.status || 'new';
-    const res = await fetch('/api/bug-reports', { headers: { 'x-user-id': window.currentUserId } });
+    const res = await fetch('/api/bug-reports');
     const reports = await res.json();
     updateBugFilterCounts(reports);
     loadBugReportsList(currentStatus);
@@ -2939,10 +2915,10 @@ function escapeHtmlBug(text) {
 
 // Загрузка бейджа количества новых багрепортов (для админа) + обновление состояния иконки
 async function loadBugReportBadge() {
-  if (!window.currentUserId || window.currentUserId !== window.CONFIG?.ADMIN_USER_ID) return;
+  if (!window.isAdmin) return;
   try {
     // Получаем все багрепорты для определения состояния
-    const res = await fetch('/api/bug-reports', { headers: { 'x-user-id': window.currentUserId } });
+    const res = await fetch('/api/bug-reports');
     const reports = await res.json();
     
     if (!Array.isArray(reports)) return;
