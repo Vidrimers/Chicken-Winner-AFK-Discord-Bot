@@ -196,6 +196,90 @@ export class VacHandler {
   }
 
   /**
+   * Обработка команды .1. <url1> <url2> ... (несколько профилей, до 5)
+   */
+  async handleCheckMultipleCommand(message, urls) {
+    await message.react('🔍');
+
+    const discordDisplayName = this.db.getUserStats(message.author.id)?.username || message.member?.displayName || message.author.username;
+    const newProfiles = [];
+    const duplicates = [];
+    const errors = [];
+
+    for (const url of urls) {
+      try {
+        const { results, errors: checkErrors } = await checkProfiles([url]);
+
+        if (checkErrors.length > 0 && results.length === 0) {
+          errors.push(`${url}: ${checkErrors.join(', ')}`);
+          continue;
+        }
+
+        if (results.length > 0) {
+          const profile = results[0];
+          const existing = this.db.getCheaterCheckBySteamId(profile.steamId);
+
+          if (existing) {
+            // Обновляем данные о банах, автор не перезапишется
+            this.db.upsertCheaterCheck({
+              ...profile,
+              checkedByDiscordId: message.author.id,
+              checkedByUsername: discordDisplayName
+            });
+            duplicates.push({ profile, existing });
+          } else {
+            // Сохраняем новый профиль
+            this.db.upsertCheaterCheck({
+              ...profile,
+              checkedByDiscordId: message.author.id,
+              checkedByUsername: discordDisplayName
+            });
+            newProfiles.push(profile);
+          }
+        }
+      } catch (err) {
+        errors.push(`${url}: ошибка проверки`);
+      }
+    }
+
+    await message.reactions.cache.get('🔍')?.remove();
+
+    // Уведомление админу о новых профилях
+    if (newProfiles.length > 0 && this.telegram && this.telegram.sendNewCheaterNotification) {
+      try {
+        const profiles = newProfiles.map(p => ({
+          personaName: p.personaName || p.steamId,
+          profileUrl: p.profileUrl || `https://steamcommunity.com/profiles/${p.steamId}`,
+          steamId: p.steamId,
+        }));
+        await this.telegram.sendNewCheaterNotification(discordDisplayName, 'discord', profiles);
+      } catch (err) {
+        console.error('[VacHandler] Ошибка отправки уведомления:', err.message);
+      }
+    }
+
+    // Отправляем embed'ы пакетами по 5
+    const allProfiles = [...newProfiles, ...duplicates.map(d => d.profile)];
+    const batchSize = 5;
+    for (let i = 0; i < allProfiles.length; i += batchSize) {
+      const batch = allProfiles.slice(i, i + batchSize);
+      const embeds = batch.map(profile => this.buildProfileEmbed(profile, discordDisplayName));
+      await message.channel.send({ embeds });
+      if (i + batchSize < allProfiles.length) {
+        await delay(2000);
+      }
+    }
+
+    // Итоговое сообщение
+    let summary = `✅ Проверено: ${urls.length} ссылок`;
+    if (newProfiles.length > 0) summary += ` | Новых: ${newProfiles.length}`;
+    if (duplicates.length > 0) summary += ` | Уже в базе: ${duplicates.length}`;
+    if (errors.length > 0) summary += `\n⚠️ Ошибки: ${errors.join('; ')}`;
+    await message.channel.send(summary);
+    await message.react('✅');
+  }
+
+  /**
    * Обработка команды .!. vac N
    * Сканирует последние N сообщений в канале, находит Steam-ссылки, проверяет новые
    */
@@ -344,7 +428,7 @@ export class VacHandler {
         },
         {
           name: '📋 Команды',
-          value: '`.1. <steam_url>` — проверить профиль\n`.1. vac N` — сканировать последние N сообщений в чате и проверить найденные ссылки\n`.1. vac-help` — эта справка'
+          value: '`.1. <steam_url>` — проверить профиль\n`.1. <url1> <url2> ...` — проверить до 5 профилей за раз\n`.1. vac N` — сканировать последние N сообщений в чате и проверить найденные ссылки\n`.1. vac-help` — эта справка'
         },
         {
           name: '🔗 Форматы ссылок',

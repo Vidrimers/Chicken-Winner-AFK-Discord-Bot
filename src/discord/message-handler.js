@@ -168,10 +168,22 @@ export class MessageHandler {
         return;
       }
 
-      // Проверка Steam URL
+      // Проверка Steam URL (один или несколько)
       if (content.startsWith('.1. https://steamcommunity.com/') || content.startsWith('.1. http://steamcommunity.com/')) {
-        const url = message.content.trim().split(/\s+/).pop();
-        await this.vacHandler.handleCheckCommand(message, url);
+        const urls = message.content.match(/https?:\/\/steamcommunity\.com\/\S+/g);
+        if (!urls) {
+          await message.reply('❌ Steam-ссылка не найдена в сообщении.');
+          return;
+        }
+        if (urls.length > 5) {
+          await message.reply('❌ Максимум 5 ссылок за одно сообщение.');
+          return;
+        }
+        if (urls.length === 1) {
+          await this.vacHandler.handleCheckCommand(message, urls[0]);
+        } else {
+          await this.vacHandler.handleCheckMultipleCommand(message, urls);
+        }
         return;
       }
 
