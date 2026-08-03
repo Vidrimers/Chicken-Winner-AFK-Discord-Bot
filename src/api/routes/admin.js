@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { log, error as logError } from '../../utils/logger.js';
 import { formatTime } from '../../utils/time.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { stripRtl } from '../../utils/rtl.js';
 
 /**
  * Роуты для админ-панели
@@ -768,7 +769,7 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
         const periodText = hours === 0 ? 'все сообщения' : `сообщения за ${hours} ч.`;
         await telegram.sendReport(
           `🗑️ <b>Удалены сообщения пользователя</b>\n\n` +
-          `👤 Пользователь: ${username}\n` +
+          `👤 Пользователь: ${stripRtl(username)}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
           `📊 Период: ${periodText}\n` +
           `✅ Удалено: ${deletedCount} сообщений\n` +

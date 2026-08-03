@@ -4,6 +4,7 @@ dotenv.config();
 import { checkProfiles } from './src/steam/steamApi.js';
 import { STEAM_CONFIG, SERVER_CONFIG } from './src/config.js';
 import { EmbedBuilder } from 'discord.js';
+import { stripRtl } from './src/utils/rtl.js';
 
 // Telegram bot settings
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -47,7 +48,7 @@ export async function sendAchievementNotification(
 ) {
   const message =
     `🏆 <b>Новое достижение!</b>\n` +
-    `👤 Пользователь: ${username}\n` +
+    `👤 Пользователь: ${stripRtl(username)}\n` +
     `🎯 Достижение: ${achievementName}\n` +
     `📝 Описание: ${achievementDescription}\n` +
     `⭐ Очки: +${points}\n` +
@@ -71,7 +72,7 @@ export async function sendSpecialAchievementNotification(
 ) {
   let message =
     `🏆 <b>Новое специальное достижение!</b>\n` +
-    `👤 Пользователь: ${username}\n` +
+    `👤 Пользователь: ${stripRtl(username)}\n` +
     `🆔 ID: <code>${userId}</code>\n` +
     `🎯 Достижение: ${emoji} ${name}\n` +
     `📝 Описание: ${description}\n`;
@@ -126,7 +127,7 @@ export async function sendSettingsChangeNotification(
 ) {
   const message =
     `🔔 <b>Пользователь изменил настройки</b>\n` +
-    `👤 Пользователь: ${username}\n` +
+    `👤 Пользователь: ${stripRtl(username)}\n` +
     `🆔 ID: <code>${userId}</code>\n` +
     `${settings}\n` +
     `📅 Время: ${new Date().toLocaleString("ru-RU")}`;
@@ -145,7 +146,7 @@ export async function sendAchievementDeleteNotification(
   const pointsText = points > 0 ? `\n⭐ Очков удалено: -${points}` : "";
   const message =
     `🗑️ <b>Достижение удалено!</b>\n` +
-    `👤 Пользователь: ${userName}\n` +
+    `👤 Пользователь: ${stripRtl(userName)}\n` +
     `🎯 Достижение: ${achievementName}\n` +
     `📅 Время: ${new Date().toLocaleString("ru-RU")}${pointsText}\n` +
     `✅ Пользователь может получить его заново`;
@@ -163,7 +164,7 @@ export async function sendUserDeleteNotification(userId, userName) {
     userId +
     "</code>\n" +
     "Имя: " +
-    userName +
+    stripRtl(userName) +
     "\n" +
     "Время: " +
     new Date().toLocaleString("ru-RU");

@@ -1,13 +1,7 @@
 import { DISCORD_CONFIG, TIMEOUTS } from '../config.js';
 import { formatTime } from '../utils/time.js';
 import { log, error as logError } from '../utils/logger.js';
-
-/**
- * Убрать RTL-символы (арабский, иврит и т.д.) из строки для корректного отображения
- */
-function stripRtl(str) {
-  return str.replace(/[\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u0750-\u077F\u0780-\u07BF\u07C0-\u07FF\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g, '');
-}
+import { stripRtl } from '../utils/rtl.js';
 
 /**
  * Хранилище времени присоединения пользователей
@@ -168,7 +162,7 @@ export class VoiceStateHandler {
     if (this.telegram) {
       await this.telegram.sendReport(
         `🎤 <b>Пользователь зашел в канал</b>\n` +
-        `👤 Пользователь: ${username}\n` +
+        `👤 Пользователь: ${stripRtl(username)}\n` +
         `🆔 ID: <code>${userId}</code>\n` +
         `📺 Канал: ${newState.channel.name}\n` +
         `📅 Время захода: ${formatTime(joinTime)}`
@@ -227,7 +221,7 @@ export class VoiceStateHandler {
     if (this.telegram) {
       await this.telegram.sendReport(
         `👋 <b>Пользователь покинул канал</b>\n` +
-        `👤 Пользователь: ${username}\n` +
+        `👤 Пользователь: ${stripRtl(username)}\n` +
         `🆔 ID: <code>${userId}</code>\n` +
         `📺 Канал: ${oldState.channel.name}\n` +
         `📅 Время: ${formatTime(new Date())}`
@@ -274,7 +268,7 @@ export class VoiceStateHandler {
     if (this.telegram) {
       await this.telegram.sendReport(
         `🔄 <b>Пользователь переместился между каналами</b>\n` +
-        `👤 Пользователь: ${username}\n` +
+        `👤 Пользователь: ${stripRtl(username)}\n` +
         `🆔 ID: <code>${userId}</code>\n` +
         `📺 Из канала: ${oldState.channel.name}\n` +
         `📺 В канал: ${newState.channel.name}\n` +
@@ -329,7 +323,7 @@ export class VoiceStateHandler {
     if (this.telegram) {
       await this.telegram.sendReport(
         `🎙️❌ <b>Пользователь отключил микрофон</b>\n` +
-        `👤 Пользователь: ${username}\n` +
+        `👤 Пользователь: ${stripRtl(username)}\n` +
         `🆔 ID: <code>${userId}</code>\n` +
         `📺 Канал: ${newState.channel.name}\n` +
         `⏱️ Запущен таймер на: ${timeoutDisplay}\n` +
@@ -360,7 +354,7 @@ export class VoiceStateHandler {
     if (this.telegram) {
       await this.telegram.sendReport(
         `🎙️✅ <b>Пользователь включил микрофон</b>\n` +
-        `👤 Пользователь: ${username}\n` +
+        `👤 Пользователь: ${stripRtl(username)}\n` +
         `🆔 ID: <code>${userId}</code>\n` +
         `📺 Канал: ${newState.channel.name}\n` +
         `🛑 Таймер остановлен\n` +
@@ -380,7 +374,7 @@ export class VoiceStateHandler {
           if (this.telegram) {
             await this.telegram.sendReport(
               `↩️ <b>Пользователь возвращен из AFK</b>\n` +
-              `👤 Пользователь: ${username}\n` +
+              `👤 Пользователь: ${stripRtl(username)}\n` +
               `📺 Из канала: 😡 Токсичный канал\n` +
               `📺 В канал: ${originalChannel.name}\n` +
               `📅 Время: ${formatTime(new Date())}`
@@ -418,7 +412,7 @@ export class VoiceStateHandler {
     if (this.telegram) {
       await this.telegram.sendReport(
         `📡 <b>Пользователь включил трансляцию</b>\n` +
-        `👤 Пользователь: ${username}\n` +
+        `👤 Пользователь: ${stripRtl(username)}\n` +
         `🆔 ID: <code>${userId}</code>\n` +
         `📺 Канал: ${newState.channel.name}\n` +
         `📅 Время: ${formatTime(new Date())}`
@@ -439,7 +433,7 @@ export class VoiceStateHandler {
     if (this.telegram) {
       await this.telegram.sendReport(
         `📡❌ <b>Пользователь отключил трансляцию</b>\n` +
-        `👤 Пользователь: ${username}\n` +
+        `👤 Пользователь: ${stripRtl(username)}\n` +
         `🆔 ID: <code>${userId}</code>\n` +
         `📺 Канал: ${newState.channel.name}\n` +
         `📅 Время: ${formatTime(new Date())}`
@@ -516,7 +510,7 @@ export class VoiceStateHandler {
           if (this.telegram) {
             await this.telegram.sendReport(
               `😴 <b>Пользователь перемещен в AFK</b>\n` +
-              `👤 Пользователь: ${username}\n` +
+              `👤 Пользователь: ${stripRtl(username)}\n` +
               `🆔 ID: <code>${userId}</code>\n` +
               `📺 Из канала: ${originalChannelName}\n` +
               `📺 В канал: ${AFK_CHANNEL.name}\n` +

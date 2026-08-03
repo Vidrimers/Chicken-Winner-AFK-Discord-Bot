@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { log, error as logError } from '../../utils/logger.js';
 import { USER_IDS, TELEGRAM_CONFIG } from '../../config.js';
 import { requireAuth, requireAdmin, requireOwnership } from '../middleware/auth.js';
+import { stripRtl } from '../../utils/rtl.js';
 
 /**
  * Роуты для системы багрепортов
@@ -34,7 +35,7 @@ export function createBugReportsRouter(db, telegram) {
       if (telegram && telegram.sendTelegramReport) {
         const message =
           `🐛 <b>Новый багрепорт #${id}</b>\n\n` +
-          `👤 Пользователь: ${username}\n` +
+          `👤 Пользователь: ${stripRtl(username)}\n` +
           `🆔 ID: <code>${userId}</code>\n` +
           `📝 Текст: ${bugText.substring(0, 500)}${bugText.length > 500 ? '...' : ''}\n` +
           `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
