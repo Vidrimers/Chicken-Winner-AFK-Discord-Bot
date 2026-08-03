@@ -168,7 +168,7 @@ export class VoiceStateHandler {
       );
 
       await this.telegram.notifyChannelActivity(
-        `\u200E🎤 <b>\u200E${username}\u200E</b> зашел в канал <b>${newState.channel.name}</b>`
+        `\u2066🎤 <b>${username}</b> зашел в канал <b>${newState.channel.name}</b>\u2069`
       );
     }
 
@@ -227,7 +227,7 @@ export class VoiceStateHandler {
       );
 
       await this.telegram.notifyChannelActivity(
-        `\u200E👋 <b>\u200E${username}\u200E</b> вышел из канала <b>${oldState.channel.name}</b>`
+        `\u2066👋 <b>${username}</b> вышел из канала <b>${oldState.channel.name}</b>\u2069`
       );
     }
 
@@ -418,7 +418,7 @@ export class VoiceStateHandler {
       );
 
       await this.telegram.notifyChannelActivity(
-        `\u200E📡 <b>\u200E${username}\u200E</b> включил трансляцию в канале <b>${newState.channel.name}</b>`
+        `\u2066📡 <b>${username}</b> включил трансляцию в канале <b>${newState.channel.name}</b>\u2069`
       );
     }
   }
@@ -439,7 +439,7 @@ export class VoiceStateHandler {
       );
 
       await this.telegram.notifyChannelActivity(
-        `\u200E📡❌ <b>\u200E${username}\u200E</b> отключил трансляцию в канале <b>${newState.channel.name}</b>`
+        `\u2066📡❌ <b>${username}</b> отключил трансляцию в канале <b>${newState.channel.name}</b>\u2069`
       );
     }
   }
