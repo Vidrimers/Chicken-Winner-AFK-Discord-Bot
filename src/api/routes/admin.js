@@ -16,20 +16,103 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
 
   /**
    * GET /api/admin/users
-   * Получить список всех пользователей
+   * Получить список всех пользователей с Telegram данными
    */
   router.get('/users', (req, res) => {
     try {
       const stmt = db.prepare(`
-        SELECT user_id, username, total_sessions, total_voice_time, rank_points
-        FROM user_stats
-        ORDER BY username ASC
+        SELECT 
+          us.user_id, us.username, us.total_sessions, us.total_voice_time, 
+          us.rank_points, us.is_on_server,
+          tu.telegram_chat_id, tu.telegram_username, tu.started_bot
+        FROM user_stats us
+        LEFT JOIN telegram_users tu ON us.user_id = tu.user_id
+        ORDER BY us.username ASC
       `);
       const users = stmt.all();
       res.json(users);
     } catch (error) {
       logError(`Ошибка при получении пользователей: ${error.message}`);
       res.status(500).json({ error: 'Ошибка при получении пользователей' });
+    }
+  });
+
+  /**
+   * POST /api/admin/sync-membership
+   * Ручная синхронизация членства на сервере
+   */
+  router.post('/sync-membership', async (req, res) => {
+    try {
+      const guild = discordClient.guilds.cache.first();
+      if (!guild) {
+        return res.status(500).json({ error: 'Сервер не найден' });
+      }
+
+      const members = await guild.members.fetch();
+      const memberIds = new Set(members.map(m => m.id));
+
+      const allUsers = db.prepare('SELECT user_id FROM user_stats').all();
+
+      for (const user of allUsers) {
+        const isOnServer = memberIds.has(user.user_id) ? 1 : 0;
+        db.prepare('UPDATE user_stats SET is_on_server = ? WHERE user_id = ?').run(isOnServer, user.user_id);
+      }
+
+      const onServer = allUsers.filter(u => memberIds.has(u.user_id)).length;
+      const notOnServer = allUsers.length - onServer;
+
+      log(`🔄 Ручная синхронизация: ${onServer} на сервере, ${notOnServer} не на сервере`);
+
+      // Возвращаем обновлённый список пользователей
+      const updatedUsers = db.prepare(`
+        SELECT 
+          us.user_id, us.username, us.total_sessions, us.total_voice_time, 
+          us.rank_points, us.is_on_server,
+          tu.telegram_chat_id, tu.telegram_username, tu.started_bot
+        FROM user_stats us
+        LEFT JOIN telegram_users tu ON us.user_id = tu.user_id
+        ORDER BY us.username ASC
+      `).all();
+
+      res.json({ success: true, onServer, notOnServer, users: updatedUsers });
+    } catch (error) {
+      logError(`Ошибка синхронизации: ${error.message}`);
+      res.status(500).json({ error: 'Ошибка синхронизации' });
+    }
+  });
+
+  /**
+   * POST /api/admin/send-telegram
+   * Отправить сообщение пользователю в Telegram
+   * Body: { userId: string, message: string }
+   */
+  router.post('/send-telegram', async (req, res) => {
+    const { userId, message } = req.body;
+
+    if (!userId || !message) {
+      return res.status(400).json({ error: 'userId и message обязательны' });
+    }
+
+    try {
+      const telegramUser = db.prepare(
+        'SELECT telegram_chat_id FROM telegram_users WHERE user_id = ? AND started_bot = 1'
+      ).get(userId);
+
+      if (!telegramUser || !telegramUser.telegram_chat_id) {
+        return res.status(404).json({ error: 'У пользователя нет привязанного Telegram' });
+      }
+
+      const sent = await telegram.sendTelegramMessageToUser(telegramUser.telegram_chat_id, message);
+
+      if (sent) {
+        log(`✅ Сообщение отправлено в TG пользователю ${userId}`);
+        res.json({ success: true, delivered: true });
+      } else {
+        res.json({ success: false, delivered: false, error: 'Не удалось доставить сообщение' });
+      }
+    } catch (error) {
+      logError(`Ошибка отправки в Telegram: ${error.message}`);
+      res.status(500).json({ error: 'Ошибка отправки сообщения' });
     }
   });
 

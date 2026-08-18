@@ -987,10 +987,10 @@
               border-radius: 10px;
               padding: 20px;
               width: 90%;
-              max-width: 800px;
-              max-height: 80vh;
-              overflow: auto;
-              scrollbar-width: none;
+              max-width: 900px;
+              max-height: 85vh;
+              display: flex;
+              flex-direction: column;
             "
           >
             <div
@@ -998,29 +998,88 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-bottom: 20px;
+                margin-bottom: 15px;
+                flex-shrink: 0;
               "
             >
               <h2 style="color: white; margin: 0">
                 👥 Управление пользователями
               </h2>
-              <button
-                onclick="closeUsersModal()"
-                style="
-                  background: none;
-                  border: none;
-                  color: white;
-                  font-size: 24px;
-                  cursor: pointer;
-                "
-              >
-                &times;
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button
+                  onclick="syncServerMembership()"
+                  style="
+                    padding: 8px 14px;
+                    background: #4CAF50;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    font-weight: bold;
+                  "
+                  title="Проверить кто на сервере"
+                >
+                  🔄 Проверить членство
+                </button>
+                <button
+                  onclick="closeUsersModal()"
+                  style="
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 24px;
+                    cursor: pointer;
+                  "
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+
+            <!-- Поиск -->
+            <div style="margin-bottom: 12px; flex-shrink: 0;">
+              <div class="input-clear-wrapper" style="min-width:0;">
+                <input
+                  type="text"
+                  class="steam-input"
+                  id="usersSearchInput"
+                  placeholder="Поиск по username, Discord ID, Telegram..."
+                  style="width: 100%;"
+                  oninput="filterUsers(this.value)"
+                />
+                <button class="input-clear-btn" id="usersSearchClearBtn" title="Очистить" aria-label="Очистить поиск" onclick="clearUsersSearch()">&times;</button>
+              </div>
+            </div>
+
+            <!-- Фильтры -->
+            <div
+              id="usersFilterTabs"
+              style="
+                display: flex;
+                gap: 8px;
+                margin-bottom: 15px;
+                flex-wrap: wrap;
+                flex-shrink: 0;
+              "
+            >
+              <button class="user-filter-tab active" data-filter="all" onclick="setUsersFilter('all')">
+                Все <span id="filterCountAll">0</span>
+              </button>
+              <button class="user-filter-tab" data-filter="linked" onclick="setUsersFilter('linked')">
+                📱 Привязанные <span id="filterCountLinked">0</span>
+              </button>
+              <button class="user-filter-tab" data-filter="unlinked" onclick="setUsersFilter('unlinked')">
+                ❌ Непривязанные <span id="filterCountUnlinked">0</span>
+              </button>
+              <button class="user-filter-tab" data-filter="not_on_server" onclick="setUsersFilter('not_on_server')">
+                🚫 Не на сервере <span id="filterCountNotOnServer">0</span>
               </button>
             </div>
 
             <div
               id="usersList"
-              style="display: flex; flex-direction: column; gap: 10px"
+              style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; scrollbar-width: none;"
             >
               <!-- Список пользователей будет загружен здесь -->
             </div>

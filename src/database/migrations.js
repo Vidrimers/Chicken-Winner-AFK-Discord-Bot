@@ -274,5 +274,43 @@ export function runMigrations(db) {
     console.error(`❌ Ошибка создания таблицы active_voice_sessions: ${error.message}`);
   }
 
+  // Миграция telegram_users: добавить колонку telegram_username
+  {
+    const tuCols = db.prepare('PRAGMA table_info(telegram_users)').all();
+    const tuColNames = tuCols.map(c => c.name);
+
+    if (!tuColNames.includes('telegram_username')) {
+      try {
+        db.exec('ALTER TABLE telegram_users ADD COLUMN telegram_username TEXT');
+        console.log('✅ Добавлена колонка telegram_username в telegram_users');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка telegram_username уже существует в telegram_users');
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
+  // Миграция user_stats: добавить колонку is_on_server
+  {
+    const usCols = db.prepare('PRAGMA table_info(user_stats)').all();
+    const usColNames = usCols.map(c => c.name);
+
+    if (!usColNames.includes('is_on_server')) {
+      try {
+        db.exec('ALTER TABLE user_stats ADD COLUMN is_on_server INTEGER DEFAULT 1');
+        console.log('✅ Добавлена колонка is_on_server в user_stats');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка is_on_server уже существует в user_stats');
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

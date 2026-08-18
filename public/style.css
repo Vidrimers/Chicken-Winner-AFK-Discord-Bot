@@ -1652,3 +1652,179 @@ body[data-theme="steam"] .faceit-block,
 body[data-theme="die-my-darling"] .faceit-block {
   border-top-color: rgba(255, 255, 255, 0.1);
 }
+
+/* User filter tabs */
+.user-filter-tab {
+  padding: 8px 16px;
+  background: #2a2a2a;
+  color: #999;
+  border: 1px solid #444;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.user-filter-tab:hover {
+  background: #333;
+  color: white;
+}
+.user-filter-tab.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+.user-filter-tab span {
+  opacity: 0.7;
+  font-size: 11px;
+  margin-left: 4px;
+}
+
+/* Input clear wrapper */
+.input-clear-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-clear-wrapper .steam-input {
+  padding-right: 36px;
+}
+.input-clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  display: none;
+}
+.input-clear-btn:hover {
+  color: white;
+}
+.input-clear-btn.visible {
+  display: block;
+}
+
+/* User card */
+.user-card {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: border-color 0.2s;
+}
+.user-card:hover {
+  border-color: #667eea;
+}
+.user-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.user-card-name {
+  color: white;
+  font-weight: bold;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.user-card-meta {
+  color: #999;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.user-card-stats {
+  color: #667eea;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.user-card-actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+.user-card .status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: bold;
+}
+.status-badge.on-server {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+}
+.status-badge.not-on-server {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+.status-badge.tg-linked {
+  background: rgba(102, 126, 234, 0.2);
+  color: #667eea;
+}
+.status-badge.tg-unlinked {
+  background: rgba(153, 153, 153, 0.2);
+  color: #999;
+}
+
+/* Send telegram modal */
+.send-tg-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.send-tg-modal-content {
+  background: #1a1a1a;
+  border: 2px solid #667eea;
+  border-radius: 10px;
+  padding: 25px;
+  width: 90%;
+  max-width: 450px;
+}
+.send-tg-modal-content textarea {
+  width: 100%;
+  min-height: 100px;
+  background: #2a2a2a;
+  color: white;
+  border: 1px solid #444;
+  border-radius: 5px;
+  padding: 10px;
+  font-size: 14px;
+  resize: vertical;
+  font-family: inherit;
+}
+.send-tg-modal-content textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+.send-tg-result {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 13px;
+  display: none;
+}
+.send-tg-result.success {
+  display: block;
+  background: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+}
+.send-tg-result.error {
+  display: block;
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}

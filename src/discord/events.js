@@ -50,6 +50,13 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
 
       log(`👋 Пользователь ${username} (${userId}) покинул сервер`);
 
+      // Обновляем статус на сервере
+      try {
+        db.prepare('UPDATE user_stats SET is_on_server = 0 WHERE user_id = ?').run(userId);
+      } catch (e) {
+        log(`⚠️ Не удалось обновить is_on_server: ${e.message}`);
+      }
+
       // Получаем статистику пользователя
       const stats = db.getUserStats(userId);
       
@@ -79,6 +86,27 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
       }
     } catch (error) {
       log(`❌ Ошибка в guildMemberRemove: ${error.message}`);
+    }
+  });
+
+  // Пользователь присоединился к серверу
+  client.on('guildMemberAdd', async (member) => {
+    try {
+      if (member.user.bot) return;
+
+      const userId = member.id;
+      const username = member.displayName || member.user.username;
+
+      log(`👋 Пользователь ${username} (${userId}) присоединился к серверу`);
+
+      // Обновляем статус на сервере
+      try {
+        db.prepare('UPDATE user_stats SET is_on_server = 1 WHERE user_id = ?').run(userId);
+      } catch (e) {
+        log(`⚠️ Не удалось обновить is_on_server: ${e.message}`);
+      }
+    } catch (error) {
+      log(`❌ Ошибка в guildMemberAdd: ${error.message}`);
     }
   });
 

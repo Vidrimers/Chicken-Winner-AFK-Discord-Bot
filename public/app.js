@@ -1650,6 +1650,10 @@ async function backupDatabase() {
 }
 
 // Функции для управления пользователями
+let allUsersData = [];
+let currentUsersFilter = 'all';
+let usersSearchQuery = '';
+
 async function openUsersModal() {
   document.getElementById("usersModal").style.display = "block";
   document.body.classList.add("modal-open");
@@ -1674,8 +1678,9 @@ async function loadAllUsers() {
       throw new Error("Ошибка загрузки пользователей");
     }
 
-    const users = await response.json();
-    displayUsers(users);
+    allUsersData = await response.json();
+    updateFilterCounts();
+    renderUsers();
   } catch (error) {
     console.error("Ошибка при загрузке пользователей:", error);
     document.getElementById("usersList").innerHTML =
@@ -1683,41 +1688,257 @@ async function loadAllUsers() {
   }
 }
 
-function displayUsers(users) {
+function updateFilterCounts() {
+  const linked = allUsersData.filter(u => u.telegram_chat_id && u.started_bot).length;
+  const unlinked = allUsersData.length - linked;
+  const notOnServer = allUsersData.filter(u => !u.is_on_server).length;
+
+  document.getElementById("filterCountAll").textContent = allUsersData.length;
+  document.getElementById("filterCountLinked").textContent = linked;
+  document.getElementById("filterCountUnlinked").textContent = unlinked;
+  document.getElementById("filterCountNotOnServer").textContent = notOnServer;
+}
+
+function setUsersFilter(filter) {
+  currentUsersFilter = filter;
+  document.querySelectorAll('.user-filter-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.filter === filter);
+  });
+  renderUsers();
+}
+
+function filterUsers(query) {
+  usersSearchQuery = query.toLowerCase().trim();
+  const clearBtn = document.getElementById("usersSearchClearBtn");
+  if (clearBtn) {
+    clearBtn.classList.toggle("visible", query.length > 0);
+  }
+  renderUsers();
+}
+
+function clearUsersSearch() {
+  document.getElementById("usersSearchInput").value = '';
+  usersSearchQuery = '';
+  renderUsers();
+  document.getElementById("usersSearchInput").focus();
+}
+
+function getFilteredUsers() {
+  let users = allUsersData;
+
+  // Фильтр
+  if (currentUsersFilter === 'linked') {
+    users = users.filter(u => u.telegram_chat_id && u.started_bot);
+  } else if (currentUsersFilter === 'unlinked') {
+    users = users.filter(u => !u.telegram_chat_id || !u.started_bot);
+  } else if (currentUsersFilter === 'not_on_server') {
+    users = users.filter(u => !u.is_on_server);
+  }
+
+  // Поиск
+  if (usersSearchQuery) {
+    users = users.filter(u =>
+      (u.username || '').toLowerCase().includes(usersSearchQuery) ||
+      (u.user_id || '').includes(usersSearchQuery) ||
+      (u.telegram_chat_id || '').includes(usersSearchQuery) ||
+      (u.telegram_username || '').toLowerCase().includes(usersSearchQuery)
+    );
+  }
+
+  return users;
+}
+
+function renderUsers() {
+  const users = getFilteredUsers();
   const usersList = document.getElementById("usersList");
 
   if (users.length === 0) {
     usersList.innerHTML =
-      '<p style="color: #999; text-align: center;">Нет пользователей</p>';
+      '<p style="color: #999; text-align: center; padding: 20px;">Нет пользователей</p>';
     return;
   }
 
   let html = "";
   users.forEach((user) => {
-    const deleteBtn = `<button onclick="deleteUser('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;"><svg class="icon" aria-hidden="true"><use href="#icon-delete"></use></svg> Удалить</button>`;
-    
-    const deleteMessagesBtn = `<button onclick="showDeleteMessagesMenu('${user.user_id}', '${user.username}')" style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;"><svg class="icon" aria-hidden="true"><use href="#icon-chat"></use></svg> Удалить сообщения</button>`;
+    const isLinked = user.telegram_chat_id && user.started_bot;
+    const isOnServer = user.is_on_server;
+
+    const serverBadge = isOnServer
+      ? '<span class="status-badge on-server">На сервере</span>'
+      : '<span class="status-badge not-on-server">Не на сервере</span>';
+
+    const tgBadge = isLinked
+      ? '<span class="status-badge tg-linked">TG привязан</span>'
+      : '<span class="status-badge tg-unlinked">TG не привязан</span>';
+
+    let tgInfo = '';
+    if (isLinked) {
+      tgInfo = `<div style="color: #aaa; font-size: 11px; margin-top: 3px;">` +
+        `📱 TG Chat ID: <code>${user.telegram_chat_id}</code>` +
+        (user.telegram_username ? ` | @${user.telegram_username}` : '') +
+        `</div>`;
+    }
+
+    const deleteBtn = `<button onclick="deleteUser('${user.user_id}', '${escapeHtml(user.username)}')" style="padding: 6px 12px; background: #ff4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Удалить"><svg class="icon" aria-hidden="true"><use href="#icon-delete"></use></svg></button>`;
+
+    const deleteMessagesBtn = `<button onclick="showDeleteMessagesMenu('${user.user_id}', '${escapeHtml(user.username)}')" style="padding: 6px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Удалить сообщения"><svg class="icon" aria-hidden="true"><use href="#icon-chat"></use></svg></button>`;
+
+    const sendTgBtn = isLinked
+      ? `<button onclick="openSendTelegramModal('${user.user_id}', '${escapeHtml(user.username)}', '${user.telegram_chat_id}')" style="padding: 6px 12px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" title="Написать в Telegram">📱</button>`
+      : '';
 
     html += `
-            <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333;">
-                <div>
-                    <div style="color: white; font-weight: bold; margin-bottom: 5px;"><svg class="icon" aria-hidden="true"><use href="#icon-profile"></use></svg> ${user.username}</div>
-                    <div style="color: #999; font-size: 12px;">ID: ${user.user_id}</div>
-                    <div style="color: #667eea; font-size: 12px; margin-top: 5px;">
-                        <svg class="icon" aria-hidden="true"><use href="#icon-stats"></use></svg> Сессий: ${user.total_sessions || 0} | 
-                        <svg class="icon" aria-hidden="true"><use href="#icon-clock"></use></svg> Время: ${Math.floor((user.total_voice_time || 0) / 3600)}ч | 
-                        <svg class="icon" aria-hidden="true"><use href="#icon-star"></use></svg> Очки: ${user.rank_points || 0}
-                    </div>
-                </div>
-                <div style="display: flex; gap: 5px;">
-                    ${deleteBtn}
-                    ${deleteMessagesBtn}
-                </div>
-            </div>
-        `;
+      <div class="user-card">
+        <div class="user-card-info">
+          <div class="user-card-name">
+            <svg class="icon" aria-hidden="true"><use href="#icon-profile"></use></svg> ${escapeHtml(user.username)}
+            ${serverBadge}
+            ${tgBadge}
+          </div>
+          <div class="user-card-meta">
+            🆔 ID: <code>${user.user_id}</code>
+            ${tgInfo}
+          </div>
+          <div class="user-card-stats">
+            <svg class="icon" aria-hidden="true"><use href="#icon-stats"></use></svg> Сессий: ${user.total_sessions || 0} | 
+            <svg class="icon" aria-hidden="true"><use href="#icon-clock"></use></svg> Время: ${Math.floor((user.total_voice_time || 0) / 3600)}ч | 
+            <svg class="icon" aria-hidden="true"><use href="#icon-star"></use></svg> Очки: ${user.rank_points || 0}
+          </div>
+        </div>
+        <div class="user-card-actions">
+          ${sendTgBtn}
+          ${deleteMessagesBtn}
+          ${deleteBtn}
+        </div>
+      </div>
+    `;
   });
 
   usersList.innerHTML = html;
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+// Синхронизация членства
+async function syncServerMembership() {
+  try {
+    const btn = document.querySelector('[onclick="syncServerMembership()"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ Проверка...';
+    }
+
+    const response = await fetch('/api/admin/sync-membership', { method: 'POST' });
+    const data = await response.json();
+
+    if (data.success) {
+      allUsersData = data.users;
+      updateFilterCounts();
+      renderUsers();
+      showToast(`✅ Синхронизировано: ${data.onServer} на сервере, ${data.notOnServer} не на сервере`);
+    } else {
+      showToast('❌ Ошибка синхронизации', true);
+    }
+  } catch (error) {
+    console.error('Ошибка синхронизации:', error);
+    showToast('❌ Ошибка синхронизации', true);
+  } finally {
+    const btn = document.querySelector('[onclick="syncServerMembership()"]');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '🔄 Проверить членство';
+    }
+  }
+}
+
+// Отправка сообщения в Telegram
+function openSendTelegramModal(userId, username, chatId) {
+  const modalHtml = `
+    <div class="send-tg-modal" id="sendTgModal" onclick="closeSendTelegramModal(event)">
+      <div class="send-tg-modal-content" onclick="event.stopPropagation()">
+        <h3 style="color: white; margin: 0 0 15px; text-align: center;">
+          📱 Сообщение для ${escapeHtml(username)}
+        </h3>
+        <p style="color: #999; font-size: 12px; margin-bottom: 10px;">
+          Chat ID: <code>${chatId}</code>
+        </p>
+        <textarea id="sendTgMessageText" placeholder="Введите сообщение..."></textarea>
+        <div class="send-tg-result" id="sendTgResult"></div>
+        <div style="display: flex; gap: 10px; margin-top: 15px;">
+          <button onclick="sendTelegramMessage('${userId}')" style="flex: 1; padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
+            Отправить
+          </button>
+          <button onclick="closeSendTelegramModal()" style="padding: 10px 20px; background: #555; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            Отмена
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  document.getElementById('sendTgMessageText').focus();
+}
+
+function closeSendTelegramModal(event) {
+  if (event && event.target.id !== 'sendTgModal') return;
+  const modal = document.getElementById('sendTgModal');
+  if (modal) modal.remove();
+}
+
+async function sendTelegramMessage(userId) {
+  const message = document.getElementById('sendTgMessageText').value.trim();
+  const resultEl = document.getElementById('sendTgResult');
+
+  if (!message) {
+    resultEl.className = 'send-tg-result error';
+    resultEl.textContent = 'Введите текст сообщения';
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/admin/send-telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, message }),
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.delivered) {
+      resultEl.className = 'send-tg-result success';
+      resultEl.textContent = '✅ Сообщение доставлено';
+      setTimeout(() => closeSendTelegramModal(), 1500);
+    } else {
+      resultEl.className = 'send-tg-result error';
+      resultEl.textContent = '❌ ' + (data.error || 'Не удалось доставить');
+    }
+  } catch (error) {
+    resultEl.className = 'send-tg-result error';
+    resultEl.textContent = '❌ Ошибка отправки';
+  }
+}
+
+// Toast уведомления
+function showToast(message, isError = false) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed; bottom: 20px; right: 20px; z-index: 9999;
+    padding: 12px 20px; border-radius: 8px; font-size: 14px;
+    color: white; font-weight: bold; max-width: 400px;
+    background: ${isError ? '#f44336' : '#4CAF50'};
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: fadeIn 0.3s;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 // Функция для показа меню удаления сообщений

@@ -30,6 +30,43 @@ import {
 dotenv.config();
 
 /**
+ * Синхронизация статуса членства на сервере
+ * Запускается при старте бота — проверяет всех пользователей из user_stats
+ */
+async function syncServerMembership(discordClient, db) {
+  try {
+    const guild = discordClient.guilds.cache.first();
+    if (!guild) {
+      log('⚠️ Сервер не найден, синхронизация пропущена');
+      return;
+    }
+
+    log('🔄 Синхронизация членства на сервере...');
+
+    // Получаем всех участников сервера
+    const members = await guild.members.fetch();
+    const memberIds = new Set(members.map(m => m.id));
+
+    // Получаем всех пользователей из user_stats
+    const allUsers = db.prepare('SELECT user_id FROM user_stats').all();
+
+    let updated = 0;
+    for (const user of allUsers) {
+      const isOnServer = memberIds.has(user.user_id) ? 1 : 0;
+      db.prepare('UPDATE user_stats SET is_on_server = ? WHERE user_id = ?').run(isOnServer, user.user_id);
+      updated++;
+    }
+
+    const onServer = allUsers.filter(u => memberIds.has(u.user_id)).length;
+    const notOnServer = allUsers.length - onServer;
+
+    log(`✅ Синхронизация завершена: ${onServer} на сервере, ${notOnServer} не на сервере (всего ${updated})`);
+  } catch (error) {
+    logError(`❌ Ошибка синхронизации членства: ${error.message}`);
+  }
+}
+
+/**
  * Главная функция запуска бота
  */
 async function main() {
@@ -99,6 +136,9 @@ async function main() {
 
     // Подключение к Discord
     await connectDiscord(discordClient);
+
+    // Синхронизация is_on_server при запуске
+    syncServerMembership(discordClient, db);
 
     // Создание Express сервера
     const app = createExpressServer(db);

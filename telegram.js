@@ -1140,7 +1140,14 @@ export function initTelegramBot(
           return;
         }
 
-        // Всё ок — показываем приветствие и меню
+        // Всё ок — обновляем telegram_username и показываем приветствие
+        if (telegramUsername && db) {
+          try {
+            db.prepare('UPDATE telegram_users SET telegram_username = ? WHERE telegram_chat_id = ?')
+              .run(telegramUsername, chatId.toString());
+          } catch (e) { /* ignore */ }
+        }
+
         await telegramBot.sendMessage(chatId,
           `👋 <b>С возвращением, ${telegramUsername}!</b>`,
           { parse_mode: "HTML" },
@@ -1216,6 +1223,14 @@ export function initTelegramBot(
 
           let discordUsername = "Discord пользователь";
           if (discordClient && db) {
+            // Сохраняем telegram_username
+            if (telegramUsername) {
+              try {
+                db.prepare('UPDATE telegram_users SET telegram_username = ? WHERE telegram_chat_id = ?')
+                  .run(telegramUsername, chatId.toString());
+              } catch (e) { /* ignore */ }
+            }
+
             const userStat = db
               .prepare("SELECT username FROM user_stats WHERE user_id = ?")
               .get(result.userId);
