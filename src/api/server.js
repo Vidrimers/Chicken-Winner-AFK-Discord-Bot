@@ -7,21 +7,54 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Простая система сессий на основе памяти
+ * Система сессий на основе SQLite
  */
 export class SessionManager {
-  constructor() {
-    this.sessions = new Map();
+  constructor(db) {
+    this.db = db;
+    
+    // Создаём таблицу сессий если не существует
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        session_id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL
+      )
+    `);
+    
+    // Индекс для быстрой очистки_expired
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)
+    `);
+    
+    // Очищаем expired сессии при старте
+    this.cleanupExpired();
+    
+    success('SessionManager инициализирован (SQLite)');
   }
 
   getSession(req) {
     const sessionId = req.headers.cookie?.split('sessionId=')[1]?.split(';')[0];
-    return sessionId ? this.sessions.get(sessionId) : null;
+    if (!sessionId) return null;
+    
+    const now = Date.now();
+    const session = this.db.prepare(
+      'SELECT user_id, created_at FROM sessions WHERE session_id = ? AND expires_at > ?'
+    ).get(sessionId, now);
+    
+    return session ? { userId: session.user_id, createdAt: session.created_at } : null;
   }
 
   setSession(res, userId) {
     const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    this.sessions.set(sessionId, { userId, createdAt: Date.now() });
+    const now = Date.now();
+    const expiresAt = now + 86400 * 1000; // 24 часа
+    
+    this.db.prepare(
+      'INSERT INTO sessions (session_id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)'
+    ).run(sessionId, userId, now, expiresAt);
+    
     res.setHeader(
       'Set-Cookie',
       `sessionId=${sessionId}; Path=/; Max-Age=86400; SameSite=Strict; HttpOnly`
@@ -31,18 +64,31 @@ export class SessionManager {
 
   clearSession(res, req) {
     const sessionId = req.headers.cookie?.split('sessionId=')[1]?.split(';')[0];
-    if (sessionId) this.sessions.delete(sessionId);
+    if (sessionId) {
+      this.db.prepare('DELETE FROM sessions WHERE session_id = ?').run(sessionId);
+    }
     res.setHeader('Set-Cookie', 'sessionId=; Path=/; Max-Age=0');
+  }
+
+  cleanupExpired() {
+    const now = Date.now();
+    const result = this.db.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(now);
+    if (result.changes > 0) {
+      log(`Очищено ${result.changes} истёкших сессий`);
+    }
   }
 }
 
-// Глобальный экземпляр — единый для всего приложения
-export const sessionManager = new SessionManager();
+// Глобальный экземпляр — будет инициализирован с БД
+export let sessionManager = null;
 
 /**
  * Создать и настроить Express сервер
  */
-export function createExpressServer() {
+export function createExpressServer(db) {
+  // Инициализируем session manager с БД
+  sessionManager = new SessionManager(db);
+  
   const app = express();
 
   // Middleware
@@ -58,28 +104,38 @@ export function createExpressServer() {
       .find(c => c.startsWith('sessionId='))
       ?.split('=')?.[1];
 
-    if (sessionId && sessionManager.sessions.has(sessionId)) {
-      req.session = sessionManager.sessions.get(sessionId);
+    const session = sessionManager.getSession(req);
+    
+    if (session) {
+      req.session = session;
       req.sessionId = sessionId;
     } else {
       req.session = {};
       req.sessionId = null;
     }
 
-    // Записывает изменения req.session обратно в Map и выставляет куку если нужно
+    // Записывает изменения req.session обратно в БД и выставляет куку если нужно
     req.session.save = () => {
       if (req.sessionId) {
-        sessionManager.sessions.set(req.sessionId, req.session);
+        // Обновляем существующую сессию
+        const now = Date.now();
+        const expiresAt = now + 86400 * 1000;
+        sessionManager.db.prepare(
+          'UPDATE sessions SET user_id = ?, expires_at = ? WHERE session_id = ?'
+        ).run(req.session.userId, expiresAt, req.sessionId);
       } else {
-        const newId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        sessionManager.sessions.set(newId, req.session);
-        req.sessionId = newId;
-        res.setHeader('Set-Cookie', `sessionId=${newId}; Path=/; Max-Age=86400; SameSite=Strict; HttpOnly`);
+        // Создаём новую сессию
+        sessionManager.setSession(res, req.session.userId);
       }
     };
 
     next();
   });
+
+  // Периодическая очистка_expired сессий (каждый час)
+  setInterval(() => {
+    sessionManager.cleanupExpired();
+  }, 3600 * 1000);
 
   success('Express сервер создан');
   return app;

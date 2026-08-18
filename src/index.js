@@ -101,7 +101,7 @@ async function main() {
     await connectDiscord(discordClient);
 
     // Создание Express сервера
-    const app = createExpressServer();
+    const app = createExpressServer(db);
 
     // Запуск сервиса уведомлений о ценах
     const priceNotificationService = new PriceNotificationService(gamesDb, discordClient, telegramWrapper, db);
