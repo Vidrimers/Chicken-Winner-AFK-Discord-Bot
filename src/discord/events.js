@@ -14,6 +14,19 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
   client.once('clientReady', () => {
     success(`Discord бот запущен как ${client.user.tag}`);
     log(`Подключен к ${client.guilds.cache.size} серверам`);
+    
+    // Загружаем активные голосовые сессии из БД
+    const guild = client.guilds.cache.first();
+    if (guild) {
+      voiceHandler.loadActiveSessions(guild);
+    }
+    
+    // Graceful shutdown — сохраняем сессии при остановке
+    const gracefulShutdown = () => {
+      voiceHandler.saveActiveSessions();
+    };
+    process.on('SIGINT', gracefulShutdown);
+    process.on('SIGTERM', gracefulShutdown);
   });
 
   // Голосовые события

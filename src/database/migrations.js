@@ -257,5 +257,22 @@ export function runMigrations(db) {
     console.error(`❌ Ошибка создания таблицы login_codes: ${error.message}`);
   }
 
+  // Таблица активных голосовых сессий (персистентных через рестарты)
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS active_voice_sessions (
+        user_id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL,
+        join_time INTEGER NOT NULL,
+        afk_start_time INTEGER,
+        stream_start_time INTEGER,
+        last_seen INTEGER NOT NULL
+      )
+    `);
+    console.log('✅ Таблица active_voice_sessions создана/проверена');
+  } catch (error) {
+    console.error(`❌ Ошибка создания таблицы active_voice_sessions: ${error.message}`);
+  }
+
   console.log('✅ Миграции завершены');
 }

@@ -132,7 +132,26 @@ export class VoiceStateHandler {
    */
   async handleJoin(userId, username, newState) {
     const joinTime = new Date();
-    userJoinTimes.set(userId, joinTime.getTime());
+    const now = joinTime.getTime();
+    
+    // Проверяем есть ли уже активная сессия в БД (grace period)
+    const existingSession = this.db.prepare(
+      'SELECT join_time FROM active_voice_sessions WHERE user_id = ?'
+    ).get(userId);
+    
+    if (existingSession) {
+      // Сессия уже есть — не перезаписываем join_time, только обновляем last_seen и channel_id
+      userJoinTimes.set(userId, existingSession.join_time);
+      this.db.prepare(
+        'UPDATE active_voice_sessions SET channel_id = ?, last_seen = ? WHERE user_id = ?'
+      ).run(newState.channel.id, now, userId);
+    } else {
+      // Новая сессия
+      userJoinTimes.set(userId, now);
+      this.db.prepare(
+        'INSERT INTO active_voice_sessions (user_id, channel_id, join_time, last_seen) VALUES (?, ?, ?, ?)'
+      ).run(userId, newState.channel.id, now, now);
+    }
 
     log(`🎤 ${username} присоединился к ${newState.channel.name}`);
 
@@ -142,12 +161,14 @@ export class VoiceStateHandler {
     if (newState.channel.id === DISCORD_CONFIG.AFK_CHANNEL_ID) {
       this.db.incrementUserStat(userId, 'total_afk_moves');
       userAFKStartTimes.set(userId, Date.now());
+      this.db.prepare('UPDATE active_voice_sessions SET afk_start_time = ? WHERE user_id = ?').run(Date.now(), userId);
       log(`😴 ${username} зашел в AFK канал сам`);
     }
 
     // Отслеживаем стрим-канал
     if (newState.channel.id === DISCORD_CONFIG.STREAM_CHANNEL_ID) {
       userStreamJoinTimes.set(userId, Date.now());
+      this.db.prepare('UPDATE active_voice_sessions SET stream_start_time = ? WHERE user_id = ?').run(Date.now(), userId);
     }
 
     // Проверяем достижение "Первый шаг"
@@ -194,7 +215,13 @@ export class VoiceStateHandler {
     }
 
     // Обновляем время в голосовых каналах
-    const joinTime = userJoinTimes.get(userId);
+    // Читаем join_time из памяти или из БД (на случай если сессия была восстановлена)
+    let joinTime = userJoinTimes.get(userId);
+    if (!joinTime) {
+      const dbSession = this.db.prepare('SELECT join_time FROM active_voice_sessions WHERE user_id = ?').get(userId);
+      if (dbSession) joinTime = dbSession.join_time;
+    }
+    
     if (joinTime) {
       const sessionDuration = Math.floor((Date.now() - joinTime) / 1000);
       this.db.incrementUserStat(userId, 'total_voice_time', sessionDuration);
@@ -237,6 +264,9 @@ export class VoiceStateHandler {
     userOriginalChannels.delete(userId);
     userAFKStartTimes.delete(userId);
     userStreamJoinTimes.delete(userId);
+    
+    // Удаляем из БД
+    this.db.prepare('DELETE FROM active_voice_sessions WHERE user_id = ?').run(userId);
   }
 
   /**
@@ -252,6 +282,7 @@ export class VoiceStateHandler {
         const afkDuration = Math.floor((Date.now() - afkStartTime) / 1000);
         this.db.incrementUserStat(userId, 'total_afk_time', afkDuration);
         userAFKStartTimes.delete(userId);
+        this.db.prepare('UPDATE active_voice_sessions SET afk_start_time = NULL WHERE user_id = ?').run(userId);
       }
     }
 
@@ -259,9 +290,11 @@ export class VoiceStateHandler {
     if (newState.channel.id === DISCORD_CONFIG.AFK_CHANNEL_ID) {
       this.db.incrementUserStat(userId, 'total_afk_moves');
       userAFKStartTimes.set(userId, Date.now());
+      this.db.prepare('UPDATE active_voice_sessions SET afk_start_time = ? WHERE user_id = ?').run(Date.now(), userId);
       log(`😴 ${username} переместился в AFK канал сам`);
     } else {
       userAFKStartTimes.delete(userId);
+      this.db.prepare('UPDATE active_voice_sessions SET afk_start_time = NULL WHERE user_id = ?').run(userId);
     }
 
     // Отправляем уведомления
@@ -277,6 +310,11 @@ export class VoiceStateHandler {
     }
 
     userJoinTimes.set(userId, new Date().getTime());
+    
+    // Обновляем channel_id в БД (join_time не трогаем — это реальный момент захода)
+    this.db.prepare(
+      'UPDATE active_voice_sessions SET channel_id = ?, last_seen = ? WHERE user_id = ?'
+    ).run(newState.channel.id, Date.now(), userId);
 
     // Обрабатываем стрим-канал
     const streamJoinTime = userStreamJoinTimes.get(userId);
@@ -284,11 +322,13 @@ export class VoiceStateHandler {
       const streamDuration = Math.floor((Date.now() - streamJoinTime) / 1000);
       this.db.incrementUserStat(userId, 'stream_channel_time', streamDuration);
       userStreamJoinTimes.delete(userId);
+      this.db.prepare('UPDATE active_voice_sessions SET stream_start_time = NULL WHERE user_id = ?').run(userId);
       await this.achievements.checkAll(userId, username);
     }
 
     if (newState.channel.id === DISCORD_CONFIG.STREAM_CHANNEL_ID) {
       userStreamJoinTimes.set(userId, Date.now());
+      this.db.prepare('UPDATE active_voice_sessions SET stream_start_time = ? WHERE user_id = ?').run(Date.now(), userId);
     }
 
     if (newState.selfMute) {
@@ -582,5 +622,94 @@ export class VoiceStateHandler {
     } catch (err) {
       return '/avatars/nopic.png';
     }
+  }
+
+  /**
+   * Загрузить активные сессии из БД при старте бота
+   * Проверяет кто реально в голосе, обрабатывает grace period
+   */
+  async loadActiveSessions(guild) {
+    const sessions = this.db.prepare('SELECT * FROM active_voice_sessions').all();
+    if (!sessions.length) return;
+
+    const now = Date.now();
+    const GRACE_PERIOD = 60 * 1000; // 1 минута
+
+    log(`📋 Загружено ${sessions.length} активных голосовых сессий из БД`);
+
+    for (const session of sessions) {
+      const { user_id, channel_id, join_time, afk_start_time, stream_start_time, last_seen } = session;
+      
+      // Проверяем есть ли пользователь в голосовом канале
+      try {
+        const member = await guild.members.fetch(user_id).catch(() => null);
+        const voiceState = member?.voice;
+        
+        if (voiceState?.channel) {
+          // Пользователь в голосе — восстанавливаем сессию
+          userJoinTimes.set(user_id, join_time);
+          
+          if (afk_start_time) userAFKStartTimes.set(user_id, afk_start_time);
+          if (stream_start_time) userStreamJoinTimes.set(user_id, stream_start_time);
+          
+          // Обновляем channel_id на случай если переехал
+          this.db.prepare(
+            'UPDATE active_voice_sessions SET channel_id = ?, last_seen = ? WHERE user_id = ?'
+          ).run(voiceState.channel.id, now, user_id);
+          
+          log(`✅ Восстановлена сессия ${user_id} в канале ${voiceState.channel.name} (join: ${new Date(join_time).toLocaleString()})`);
+        } else if (now - last_seen < GRACE_PERIOD) {
+          // Пользователь не в голосе, но grace period ещё не истёк
+          // Оставляем сессию в БД, ждём переподключения
+          log(`⏳ Grace period для ${user_id} (last_seen: ${new Date(last_seen).toLocaleString()})`);
+          
+          // Запускаем таймер grace period
+          setTimeout(() => {
+            const stillExists = this.db.prepare(
+              'SELECT 1 FROM active_voice_sessions WHERE user_id = ?'
+            ).get(user_id);
+            
+            if (stillExists) {
+              // Пользователь не переподключился — завершаем сессию
+              const duration = Math.floor((last_seen - join_time) / 1000);
+              if (duration > 0) {
+                this.db.incrementUserStat(user_id, 'total_voice_time', duration);
+                const stats = this.db.getUserStats(user_id);
+                if (stats && duration > (stats.longest_session || 0)) {
+                  this.db.updateUserStats(user_id, 'longest_session', duration);
+                }
+              }
+              this.db.prepare('DELETE FROM active_voice_sessions WHERE user_id = ?').run(user_id);
+              log(`❌ Grace period истёк для ${user_id}, сессия завершена (${duration} сек)`);
+            }
+          }, GRACE_PERIOD);
+        } else {
+          // Grace period истёк — завершаем сессию с last_seen
+          const duration = Math.floor((last_seen - join_time) / 1000);
+          if (duration > 0) {
+            this.db.incrementUserStat(user_id, 'total_voice_time', duration);
+            const stats = this.db.getUserStats(user_id);
+            if (stats && duration > (stats.longest_session || 0)) {
+              this.db.updateUserStats(user_id, 'longest_session', duration);
+            }
+          }
+          this.db.prepare('DELETE FROM active_voice_sessions WHERE user_id = ?').run(user_id);
+          log(`❌ Сессия ${user_id} завершена (grace period истёк, ${duration} сек)`);
+        }
+      } catch (err) {
+        logError(`Ошибка при загрузке сессии ${user_id}: ${err.message}`);
+      }
+    }
+  }
+
+  /**
+   * Graceful shutdown — обновить last_seen для всех активных сессий
+   */
+  saveActiveSessions() {
+    const now = Date.now();
+    const result = this.db.prepare(
+      'UPDATE active_voice_sessions SET last_seen = ?'
+    ).run(now);
+    log(`💾 Сохранено ${result.changes} активных голосовых сессий (last_seen: ${new Date(now).toLocaleString()})`);
   }
 }
