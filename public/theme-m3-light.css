@@ -1,0 +1,728 @@
+/* ===== ТЕМА: M3 EXPRESSIVE LIGHT ===== */
+/* Seed: #667eea, палитра адаптирована из Material 3 */
+
+body[data-theme="m3-light"] {
+  color-scheme: light;
+  font-family: 'Roboto Flex', 'Segoe UI', system-ui, sans-serif;
+
+  /* Primary */
+  --md-sys-color-primary: #5B6DCD;
+  --md-sys-color-on-primary: #FFFFFF;
+  --md-sys-color-primary-container: #DEE0FF;
+  --md-sys-color-on-primary-container: #00105C;
+
+  /* Secondary */
+  --md-sys-color-secondary: #5B5D72;
+  --md-sys-color-on-secondary: #FFFFFF;
+  --md-sys-color-secondary-container: #DFE0F9;
+  --md-sys-color-on-secondary-container: #181A2C;
+
+  /* Tertiary */
+  --md-sys-color-tertiary: #78536B;
+  --md-sys-color-on-tertiary: #FFFFFF;
+  --md-sys-color-tertiary-container: #FFD7EE;
+  --md-sys-color-on-tertiary-container: #2D1228;
+
+  /* Error */
+  --md-sys-color-error: #BA1A1A;
+  --md-sys-color-on-error: #FFFFFF;
+  --md-sys-color-error-container: #FFDAD6;
+  --md-sys-color-on-error-container: #410002;
+
+  /* Surface */
+  --md-sys-color-surface: #FEF7FF;
+  --md-sys-color-on-surface: #1C1B1F;
+  --md-sys-color-on-surface-variant: #45464F;
+  --md-sys-color-surface-container-lowest: #FFFFFF;
+  --md-sys-color-surface-container-low: #F6F2FA;
+  --md-sys-color-surface-container: #F0ECF4;
+  --md-sys-color-surface-container-high: #EAE7EF;
+  --md-sys-color-surface-container-highest: #E5E1E9;
+
+  /* Outline */
+  --md-sys-color-outline: #767680;
+  --md-sys-color-outline-variant: #C6C5D0;
+
+  /* Inverse */
+  --md-sys-color-inverse-surface: #313033;
+  --md-sys-color-inverse-on-surface: #F4EFF7;
+  --md-sys-color-inverse-primary: #BCC3FF;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-shadow: #000000;
+
+  /* Shape */
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-full: 9999px;
+}
+
+/* === БАЗОВЫЕ ФОНЫ === */
+body[data-theme="m3-light"] {
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-light"] .container {
+  background: var(--md-sys-color-surface-container-lowest);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+}
+
+body[data-theme="m3-light"] .content {
+  background: var(--md-sys-color-surface-container-lowest);
+}
+
+/* === ШАПКА === */
+body[data-theme="m3-light"] .header {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-extra-large) var(--md-sys-shape-corner-extra-large) 0 0;
+}
+
+body[data-theme="m3-light"] .header h1 {
+  color: var(--md-sys-color-on-primary);
+  text-shadow: none;
+}
+
+body[data-theme="m3-light"] .header p {
+  color: var(--md-sys-color-on-primary);
+  opacity: 0.9;
+}
+
+/* === КАРТОЧКИ === */
+body[data-theme="m3-light"] .stat-card,
+body[data-theme="m3-light"] .setting-card,
+body[data-theme="m3-light"] .achievement,
+body[data-theme="m3-light"] .project-card {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+body[data-theme="m3-light"] .setting-card-title {
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-light"] .setting-card-description {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* === ТАБЫ === */
+body[data-theme="m3-light"] .tabs {
+  border-bottom-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-light"] .tab {
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  border-bottom: 3px solid transparent;
+  padding: 10px 15px;
+}
+
+body[data-theme="m3-light"] .tab.active {
+  background: transparent;
+  color: var(--md-sys-color-primary);
+  border-bottom-color: var(--md-sys-color-primary);
+}
+
+/* === КНОПКИ === */
+body[data-theme="m3-light"] .admin-btn,
+body[data-theme="m3-light"] .save-settings-btn {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-light"] .user-search button {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+/* === ПОЛЯ ВВОДА === */
+body[data-theme="m3-light"] .user-search input,
+body[data-theme="m3-light"] .setting-select {
+  background: var(--md-sys-color-surface-container-highest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+body[data-theme="m3-light"] .user-search input:focus,
+body[data-theme="m3-light"] .setting-select:focus {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px rgba(91, 109, 205, 0.2);
+}
+
+/* === ТЕКСТ === */
+body[data-theme="m3-light"] h1,
+body[data-theme="m3-light"] h2,
+body[data-theme="m3-light"] h3 {
+  color: var(--md-sys-color-on-surface);
+  text-shadow: none;
+}
+
+body[data-theme="m3-light"] p,
+body[data-theme="m3-light"] small {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-light"] h2 {
+  border-bottom-color: var(--md-sys-color-outline-variant);
+}
+
+/* === САЙДБАР === */
+body[data-theme="m3-light"] .sidebar {
+  background: var(--md-sys-color-surface-container-low);
+  border-right-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-light"] .sidebar a {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-light"] .sidebar a:hover,
+body[data-theme="m3-light"] .sidebar a.active {
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-secondary-container);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+/* === КОД / CMD === */
+body[data-theme="m3-light"] .cmd,
+body[data-theme="m3-light"] .cmd-block {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+body[data-theme="m3-light"] .cmd-block .comment {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* === НАЗАД / TOAST === */
+body[data-theme="m3-light"] .hlae-back {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-light"] .copy-toast {
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+/* === ПОИСК === */
+body[data-theme="m3-light"] .search-wrap input {
+  background: var(--md-sys-color-surface-container-highest);
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-light"] .search-wrap input:focus {
+  border-color: var(--md-sys-color-primary);
+}
+
+/* === FAQ === */
+body[data-theme="m3-light"] .faq-item {
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+body[data-theme="m3-light"] .faq-item:hover {
+  border-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-light"] .faq-q {
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-light"] .faq-q:hover {
+  background: var(--md-sys-color-surface-container);
+}
+
+body[data-theme="m3-light"] .faq-q .num {
+  color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-light"] .faq-q .arrow {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-light"] .faq-a {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-light"] .acc-header {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-light"] .acc-header:hover {
+  color: var(--md-sys-color-on-surface);
+}
+
+/* === ТАБЛИЦЫ === */
+body[data-theme="m3-light"] table th,
+body[data-theme="m3-light"] table td {
+  border-bottom-color: var(--md-sys-color-outline-variant);
+}
+
+/* === АДМИН ПАНЕЛЬ === */
+body[data-theme="m3-light"] .admin-panel {
+  background: var(--md-sys-color-surface-container);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-light"] .admin-panel-header {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-bottom: none;
+}
+
+/* === ЛИДЕРБОРД === */
+body[data-theme="m3-light"] .leaderboard {
+  background: var(--md-sys-color-surface-container-lowest);
+  border-radius: var(--md-sys-shape-corner-large);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+body[data-theme="m3-light"] .leaderboard-item {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+body[data-theme="m3-light"] .leaderboard-item:hover {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: var(--md-sys-color-primary);
+}
+
+/* === МОДАЛКИ === */
+body[data-theme="m3-light"] #createSpecialAchievementModal > div,
+body[data-theme="m3-light"] #editSpecialAchievementModal > div,
+body[data-theme="m3-light"] #achievementsModal .modal-content {
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+}
+
+body[data-theme="m3-light"] .modal-header {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-bottom: none;
+  border-radius: var(--md-sys-shape-corner-extra-large) var(--md-sys-shape-corner-extra-large) 0 0;
+}
+
+body[data-theme="m3-light"] .modal-tab-button {
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface-variant);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-light"] .modal-tab-button.active {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+body[data-theme="m3-light"] .modal-body {
+  background: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-light"] .modal-achievements .achievement {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* === СТАТИСТИКА === */
+body[data-theme="m3-light"] .stat-item {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+body[data-theme="m3-light"] .modal .stats-grid .stat-item {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-light"] .stat-value {
+  color: var(--md-sys-color-on-surface) !important;
+}
+
+body[data-theme="m3-light"] .stat-label {
+  color: var(--md-sys-color-on-surface-variant) !important;
+}
+
+/* === ПРОГРЕСС-БАР === */
+body[data-theme="m3-light"] .progressbar {
+  background: var(--md-sys-color-surface-container) !important;
+  border: 1px solid var(--md-sys-color-outline-variant) !important;
+  color: var(--md-sys-color-on-surface) !important;
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-light"] .progressbar strong {
+  color: var(--md-sys-color-on-surface) !important;
+}
+
+body[data-theme="m3-light"] .progressbar > div {
+  background: var(--md-sys-color-surface-container-highest) !important;
+}
+
+body[data-theme="m3-light"] .progressbar > div > div {
+  background: var(--md-sys-color-primary) !important;
+}
+
+/* === МОДАЛКИ ДОСТИЖЕНИЙ === */
+body[data-theme="m3-light"] #createSpecialAchievementModal input,
+body[data-theme="m3-light"] #createSpecialAchievementModal textarea,
+body[data-theme="m3-light"] #editSpecialAchievementModal input,
+body[data-theme="m3-light"] #editSpecialAchievementModal textarea {
+  background: var(--md-sys-color-surface-container-highest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+body[data-theme="m3-light"] #createSpecialAchievementModal button,
+body[data-theme="m3-light"] #editSpecialAchievementModal button {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-light"] #specialAchievementPreview,
+body[data-theme="m3-light"] #editSpecialAchievementPreview {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* === ТУТОРИАЛ / HLAE === */
+body[data-theme="m3-light"] .tutorial-content {
+  background: var(--md-sys-color-surface-container-lowest);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-light"] .hlae-nav {
+  border-bottom-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-light"] .hlae-nav-btn:not(.active) {
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-light"] .hlae-nav-btn:not(.active):hover {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+/* === ЧЕКЕР ЧИТЕРОВ === */
+body[data-theme="m3-light"] .checker-header {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-light"] .check-btn,
+body[data-theme="m3-light"] .start-mass-btn {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-light"] .modal-box-header {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large) 0 0;
+}
+
+body[data-theme="m3-light"] .profile-card {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-light"] .profile-card.banned {
+  border-left-color: var(--md-sys-color-error);
+}
+
+body[data-theme="m3-light"] .profile-card.clean {
+  border-left-color: #4a8b4a;
+}
+
+body[data-theme="m3-light"] .profile-link-btn,
+body[data-theme="m3-light"] .discord-publish-btn {
+  background: rgba(91, 109, 205, 0.12);
+  color: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-light"] .steam-input {
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+body[data-theme="m3-light"] .steam-input:focus {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px rgba(91, 109, 205, 0.2);
+}
+
+/* === GAME PRICE === */
+body[data-theme="m3-light"] .gp-header {
+  background: var(--md-sys-color-primary-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-primary-container);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-light"] .gp-game-card {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-light"] .gp-game-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-light"] .gp-tabs {
+  border-bottom-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-light"] .gp-tab {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-light"] .gp-tab:hover {
+  border-bottom-color: rgba(91, 109, 205, 0.5);
+}
+
+body[data-theme="m3-light"] .gp-tab.active {
+  color: var(--md-sys-color-primary);
+  border-bottom-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-light"] .gp-subtab {
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-light"] .gp-subtab.active {
+  background: var(--md-sys-color-secondary-container);
+  border-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+body[data-theme="m3-light"] .gp-page-btn {
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-light"] .gp-page-btn.active {
+  background: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+body[data-theme="m3-light"] .gp-fav-btn.active {
+  color: #f59e0b;
+}
+
+body[data-theme="m3-light"] .gp-game-modal {
+  background: var(--md-sys-color-surface-container-lowest);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+}
+
+body[data-theme="m3-light"] .gp-game-modal-header {
+  background: var(--md-sys-color-surface-container-lowest);
+  border-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-light"] .gp-price-row {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+body[data-theme="m3-light"] .gp-price-value {
+  color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-light"] .gp-setting select,
+body[data-theme="m3-light"] .gp-filter-group select {
+  background: var(--md-sys-color-surface-container-highest);
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+/* === ДОПОЛНИТЕЛЬНЫЕ СЕЛЕКТОРЫ === */
+
+/* Ранг в лидерборде */
+body[data-theme="m3-light"] .rank {
+  color: var(--md-sys-color-primary);
+}
+
+/* Форма настроек */
+body[data-theme="m3-light"] .settings-form {
+  background: var(--md-sys-color-surface-container);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+/* Загрузка */
+body[data-theme="m3-light"] .loading {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Ошибка */
+body[data-theme="m3-light"] .error {
+  color: var(--md-sys-color-error);
+}
+
+/* Заблокированное достижение */
+body[data-theme="m3-light"] .achievement.locked {
+  border-left-color: var(--md-sys-color-outline);
+  opacity: 0.6;
+}
+
+/* Tooltip при наведении на лидерборд */
+body[data-theme="m3-light"] .leaderboard-item:hover::after {
+  color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: var(--md-sys-shape-corner-full);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Чекер — дополнительные элементы */
+body[data-theme="m3-light"] .auth-warning {
+  background: rgba(255, 152, 0, 0.1);
+  border-color: rgba(255, 152, 0, 0.3);
+  color: #ff9800;
+}
+
+body[data-theme="m3-light"] .input-section {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-light"] .back-btn {
+  color: var(--md-sys-color-on-primary);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+body[data-theme="m3-light"] .back-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+body[data-theme="m3-light"] .column-title {
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-light"] .banned-title {
+  background: rgba(255, 0, 0, 0.1);
+  border-color: rgba(255, 0, 0, 0.3);
+}
+
+body[data-theme="m3-light"] .clean-title {
+  background: rgba(0, 204, 68, 0.1);
+  border-color: rgba(0, 204, 68, 0.3);
+}
+
+body[data-theme="m3-light"] .card-name {
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-light"] .card-name:hover {
+  color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-light"] .card-checker {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-light"] .card-detail-label {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-light"] .card-detail-value {
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-light"] .spinner {
+  border-color: var(--md-sys-color-outline-variant);
+  border-top-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-light"] .loading-indicator {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-light"] .mass-check-btn {
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  border-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-light"] .mass-check-btn:hover {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-light"] .info-btn {
+  border-color: var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-light"] .info-btn:hover {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-light"] .header-title h1 {
+  color: var(--md-sys-color-on-primary);
+}
+
+/* Game Price — скелетон */
+body[data-theme="m3-light"] .gp-skeleton-card {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+/* Game Price — избранное пустое */
+body[data-theme="m3-light"] .gp-empty {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Game Price — кнопка поделиться */
+body[data-theme="m3-light"] .gp-share-btn {
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-light"] .gp-share-btn:hover {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: var(--md-sys-color-primary);
+}

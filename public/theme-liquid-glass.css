@@ -1,0 +1,777 @@
+/* ===== ТЕМА: LIQUID GLASS ===== */
+/* Стеклянные эффекты для навигации, контент непрозрачный */
+
+body[data-theme="liquid-glass"] {
+  color-scheme: dark;
+
+  /* Фоновая "сцена" */
+  --lg-bg-gradient: radial-gradient(circle at 20% 20%, #3a1c71, #12071f 60%),
+                    linear-gradient(160deg, #1b0e30, #05030a);
+
+  /* Текстовые цвета */
+  --lg-text-primary: rgba(255, 255, 255, 0.96);
+  --lg-text-secondary: rgba(255, 255, 255, 0.68);
+  --lg-text-tertiary: rgba(255, 255, 255, 0.45);
+
+  /* Акцент */
+  --lg-accent: #8B9FFF;
+  --lg-accent-on: #FFFFFF;
+  --lg-accent-container: rgba(139, 159, 255, 0.2);
+
+  /* Стекло */
+  --lg-blur: 24px;
+  --lg-blur-strong: 40px;
+  --lg-frost: 0.14;
+  --lg-border: rgba(255, 255, 255, 0.25);
+  --lg-border-soft: rgba(255, 255, 255, 0.12);
+  --lg-highlight: rgba(255, 255, 255, 0.45);
+  --lg-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+
+  /* Скругления */
+  --lg-radius-control: 20px;
+  --lg-radius-panel: 28px;
+  --lg-radius-sheet: 36px;
+
+  /* Контент */
+  --lg-content-bg: rgba(255, 255, 255, 0.06);
+  --lg-content-border: rgba(255, 255, 255, 0.1);
+  --lg-content-bg-hover: rgba(255, 255, 255, 0.1);
+}
+
+/* === ФОН === */
+body[data-theme="liquid-glass"] {
+  background: var(--lg-bg-gradient) fixed;
+  color: var(--lg-text-primary);
+  font-family: 'Roboto Flex', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* === КОНТЕЙНЕР — НЕ стекло, контент остаётся читаемым === */
+body[data-theme="liquid-glass"] .container {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--lg-content-border);
+  border-radius: var(--lg-radius-sheet);
+  box-shadow: var(--lg-shadow);
+}
+
+body[data-theme="liquid-glass"] .content {
+  background: transparent;
+}
+
+/* === ШАПКА — СТЕКЛО === */
+body[data-theme="liquid-glass"] .header {
+  background: rgba(255, 255, 255, var(--lg-frost));
+  backdrop-filter: blur(var(--lg-blur-strong)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--lg-blur-strong)) saturate(160%);
+  border: 1px solid var(--lg-border-soft);
+  border-bottom: 1px solid var(--lg-border);
+  box-shadow: var(--lg-shadow), inset 0 1px 0 var(--lg-highlight);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-sheet) var(--lg-radius-sheet) 0 0;
+}
+
+body[data-theme="liquid-glass"] .header h1 {
+  color: var(--lg-text-primary);
+  text-shadow: none;
+}
+
+body[data-theme="liquid-glass"] .header p {
+  color: var(--lg-text-secondary);
+}
+
+/* === КАРТОЧКИ КОНТЕНТА — НЕ стекло === */
+body[data-theme="liquid-glass"] .stat-card,
+body[data-theme="liquid-glass"] .setting-card,
+body[data-theme="liquid-glass"] .achievement,
+body[data-theme="liquid-glass"] .project-card {
+  background: var(--lg-content-bg);
+  border: 1px solid var(--lg-content-border);
+  border-radius: var(--lg-radius-control);
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .stat-card:hover,
+body[data-theme="liquid-glass"] .setting-card:hover {
+  background: var(--lg-content-bg-hover);
+}
+
+body[data-theme="liquid-glass"] .setting-card-title {
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .setting-card-description {
+  color: var(--lg-text-secondary);
+}
+
+/* === ТАБЫ — СТЕКЛО === */
+body[data-theme="liquid-glass"] .tabs {
+  border-bottom-color: var(--lg-border-soft);
+}
+
+body[data-theme="liquid-glass"] .tab {
+  background: transparent;
+  color: var(--lg-text-secondary);
+  border-bottom: 3px solid transparent;
+  padding: 10px 15px;
+}
+
+body[data-theme="liquid-glass"] .tab.active {
+  background: transparent;
+  color: var(--lg-accent);
+  border-bottom-color: var(--lg-accent);
+}
+
+/* === КНОПКИ — СТЕКЛО === */
+body[data-theme="liquid-glass"] .admin-btn,
+body[data-theme="liquid-glass"] .save-settings-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--lg-text-primary);
+  border: 1px solid var(--lg-border-soft);
+  border-radius: var(--lg-radius-control);
+  backdrop-filter: blur(var(--lg-blur));
+  -webkit-backdrop-filter: blur(var(--lg-blur));
+  box-shadow: inset 0 1px 0 var(--lg-highlight);
+}
+
+body[data-theme="liquid-glass"] .admin-btn:hover,
+body[data-theme="liquid-glass"] .save-settings-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+body[data-theme="liquid-glass"] .user-search button {
+  background: var(--lg-accent);
+  color: var(--lg-accent-on);
+  border-radius: var(--lg-radius-control);
+}
+
+/* === ПОЛЯ ВВОДА === */
+body[data-theme="liquid-glass"] .user-search input,
+body[data-theme="liquid-glass"] .setting-select {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--lg-border-soft);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .user-search input:focus,
+body[data-theme="liquid-glass"] .setting-select:focus {
+  border-color: var(--lg-accent);
+  box-shadow: 0 0 0 2px rgba(139, 159, 255, 0.2);
+}
+
+/* === ТЕКСТ === */
+body[data-theme="liquid-glass"] h1,
+body[data-theme="liquid-glass"] h2,
+body[data-theme="liquid-glass"] h3 {
+  color: var(--lg-text-primary);
+  text-shadow: none;
+}
+
+body[data-theme="liquid-glass"] p,
+body[data-theme="liquid-glass"] small {
+  color: var(--lg-text-secondary);
+}
+
+body[data-theme="liquid-glass"] h2 {
+  border-bottom-color: var(--lg-border-soft);
+}
+
+/* === САЙДБАР — СТЕКЛО === */
+body[data-theme="liquid-glass"] .sidebar {
+  background: rgba(255, 255, 255, var(--lg-frost));
+  backdrop-filter: blur(var(--lg-blur-strong)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--lg-blur-strong)) saturate(160%);
+  border-right-color: var(--lg-border-soft);
+}
+
+body[data-theme="liquid-glass"] .sidebar a {
+  color: var(--lg-text-secondary);
+}
+
+body[data-theme="liquid-glass"] .sidebar a:hover,
+body[data-theme="liquid-glass"] .sidebar a.active {
+  color: var(--lg-text-primary);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--lg-radius-control);
+}
+
+/* === КОД / CMD === */
+body[data-theme="liquid-glass"] .cmd,
+body[data-theme="liquid-glass"] .cmd-block {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: var(--lg-border-soft);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .cmd-block .comment {
+  color: var(--lg-text-tertiary);
+}
+
+/* === НАЗАД / TOAST === */
+body[data-theme="liquid-glass"] .hlae-back {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--lg-border-soft);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .copy-toast {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-control);
+  backdrop-filter: blur(var(--lg-blur));
+  -webkit-backdrop-filter: blur(var(--lg-blur));
+}
+
+/* === ПОИСК === */
+body[data-theme="liquid-glass"] .search-wrap input {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--lg-border-soft);
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .search-wrap input:focus {
+  border-color: var(--lg-accent);
+}
+
+/* === FAQ === */
+body[data-theme="liquid-glass"] .faq-item {
+  border-color: var(--lg-content-border);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .faq-item:hover {
+  border-color: var(--lg-accent);
+  background: var(--lg-content-bg-hover);
+}
+
+body[data-theme="liquid-glass"] .faq-q {
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .faq-q:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body[data-theme="liquid-glass"] .faq-q .num {
+  color: var(--lg-accent);
+}
+
+body[data-theme="liquid-glass"] .faq-q .arrow {
+  color: var(--lg-text-tertiary);
+}
+
+body[data-theme="liquid-glass"] .faq-a {
+  color: var(--lg-text-secondary);
+}
+
+body[data-theme="liquid-glass"] .acc-header {
+  color: var(--lg-text-secondary);
+}
+
+body[data-theme="liquid-glass"] .acc-header:hover {
+  color: var(--lg-text-primary);
+}
+
+/* === ТАБЛИЦЫ === */
+body[data-theme="liquid-glass"] table th,
+body[data-theme="liquid-glass"] table td {
+  border-bottom-color: var(--lg-border-soft);
+}
+
+/* === АДМИН ПАНЕЛЬ — СТЕКЛО === */
+body[data-theme="liquid-glass"] .admin-panel {
+  background: rgba(255, 255, 255, var(--lg-frost));
+  backdrop-filter: blur(var(--lg-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(160%);
+  border: 1px solid var(--lg-border-soft);
+  border-radius: var(--lg-radius-panel);
+}
+
+body[data-theme="liquid-glass"] .admin-panel-header {
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--lg-border);
+  color: var(--lg-text-primary);
+}
+
+/* === ЛИДЕРБОРД === */
+body[data-theme="liquid-glass"] .leaderboard {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--lg-content-border);
+  border-radius: var(--lg-radius-panel);
+}
+
+body[data-theme="liquid-glass"] .leaderboard-item {
+  background: var(--lg-content-bg);
+  border: 1px solid var(--lg-content-border);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .leaderboard-item:hover {
+  background: var(--lg-content-bg-hover);
+  border-color: var(--lg-accent);
+}
+
+/* === МОДАЛКИ — СТЕКЛО === */
+body[data-theme="liquid-glass"] #createSpecialAchievementModal > div,
+body[data-theme="liquid-glass"] #editSpecialAchievementModal > div,
+body[data-theme="liquid-glass"] #achievementsModal .modal-content {
+  background: rgba(255, 255, 255, var(--lg-frost));
+  backdrop-filter: blur(var(--lg-blur-strong)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--lg-blur-strong)) saturate(160%);
+  border: 1px solid var(--lg-border);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-sheet);
+  box-shadow: var(--lg-shadow), inset 0 1px 0 var(--lg-highlight);
+}
+
+body[data-theme="liquid-glass"] .modal-header {
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--lg-border);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-sheet) var(--lg-radius-sheet) 0 0;
+}
+
+body[data-theme="liquid-glass"] .modal-tab-button {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--lg-text-secondary);
+  border: 1px solid var(--lg-border-soft);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .modal-tab-button.active {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--lg-text-primary);
+  border-color: var(--lg-border);
+}
+
+body[data-theme="liquid-glass"] .modal-body {
+  background: transparent;
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .modal-achievements .achievement {
+  background: var(--lg-content-bg);
+  border: 1px solid var(--lg-content-border);
+  color: var(--lg-text-primary);
+}
+
+/* === СТАТИСТИКА === */
+body[data-theme="liquid-glass"] .stat-item {
+  background: var(--lg-content-bg);
+  border: 1px solid var(--lg-content-border);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .modal .stats-grid .stat-item {
+  background: var(--lg-content-bg);
+  border: 1px solid var(--lg-content-border);
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .stat-value {
+  color: var(--lg-text-primary) !important;
+}
+
+body[data-theme="liquid-glass"] .stat-label {
+  color: var(--lg-text-secondary) !important;
+}
+
+/* === ПРОГРЕСС-БАР === */
+body[data-theme="liquid-glass"] .progressbar {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid var(--lg-border-soft) !important;
+  color: var(--lg-text-primary) !important;
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .progressbar strong {
+  color: var(--lg-text-primary) !important;
+}
+
+body[data-theme="liquid-glass"] .progressbar > div {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+body[data-theme="liquid-glass"] .progressbar > div > div {
+  background: var(--lg-accent) !important;
+}
+
+/* === МОДАЛКИ ДОСТИЖЕНИЙ === */
+body[data-theme="liquid-glass"] #createSpecialAchievementModal input,
+body[data-theme="liquid-glass"] #createSpecialAchievementModal textarea,
+body[data-theme="liquid-glass"] #editSpecialAchievementModal input,
+body[data-theme="liquid-glass"] #editSpecialAchievementModal textarea {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--lg-border-soft);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] #createSpecialAchievementModal button,
+body[data-theme="liquid-glass"] #editSpecialAchievementModal button {
+  background: var(--lg-accent);
+  color: var(--lg-accent-on);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] #specialAchievementPreview,
+body[data-theme="liquid-glass"] #editSpecialAchievementPreview {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--lg-border-soft);
+}
+
+/* === ТУТОРИАЛ / HLAE === */
+body[data-theme="liquid-glass"] .tutorial-content {
+  background: transparent;
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .hlae-nav {
+  border-bottom-color: var(--lg-border-soft);
+}
+
+body[data-theme="liquid-glass"] .hlae-nav-btn:not(.active) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--lg-text-secondary);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .hlae-nav-btn:not(.active):hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* === ЧЕКЕР ЧИТЕРОВ — СТЕКЛО === */
+body[data-theme="liquid-glass"] .checker-header {
+  background: rgba(255, 255, 255, var(--lg-frost));
+  backdrop-filter: blur(var(--lg-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(160%);
+  border: 1px solid var(--lg-border-soft);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-panel);
+  box-shadow: var(--lg-shadow), inset 0 1px 0 var(--lg-highlight);
+}
+
+body[data-theme="liquid-glass"] .check-btn,
+body[data-theme="liquid-glass"] .start-mass-btn {
+  background: var(--lg-accent);
+  color: var(--lg-accent-on);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .modal-box-header {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-panel) var(--lg-radius-panel) 0 0;
+}
+
+body[data-theme="liquid-glass"] .profile-card {
+  background: var(--lg-content-bg);
+  border: 1px solid var(--lg-content-border);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .profile-card.banned {
+  border-left-color: #ff4444;
+}
+
+body[data-theme="liquid-glass"] .profile-card.clean {
+  border-left-color: #4a8b4a;
+}
+
+body[data-theme="liquid-glass"] .profile-link-btn,
+body[data-theme="liquid-glass"] .discord-publish-btn {
+  background: rgba(139, 159, 255, 0.15);
+  color: var(--lg-accent);
+  border-color: var(--lg-accent);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .steam-input {
+  border-color: var(--lg-border-soft);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .steam-input:focus {
+  border-color: var(--lg-accent);
+  box-shadow: 0 0 0 2px rgba(139, 159, 255, 0.2);
+}
+
+/* === GAME PRICE === */
+body[data-theme="liquid-glass"] .gp-header {
+  background: rgba(255, 255, 255, var(--lg-frost));
+  backdrop-filter: blur(var(--lg-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(160%);
+  border: 1px solid var(--lg-border-soft);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-panel);
+  box-shadow: var(--lg-shadow), inset 0 1px 0 var(--lg-highlight);
+}
+
+body[data-theme="liquid-glass"] .gp-game-card {
+  background: var(--lg-content-bg);
+  border-color: var(--lg-content-border);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .gp-game-card:hover {
+  background: var(--lg-content-bg-hover);
+  border-color: var(--lg-accent);
+}
+
+body[data-theme="liquid-glass"] .gp-tabs {
+  border-bottom-color: var(--lg-border-soft);
+}
+
+body[data-theme="liquid-glass"] .gp-tab {
+  color: var(--lg-text-secondary);
+}
+
+body[data-theme="liquid-glass"] .gp-tab:hover {
+  border-bottom-color: rgba(139, 159, 255, 0.5);
+}
+
+body[data-theme="liquid-glass"] .gp-tab.active {
+  color: var(--lg-accent);
+  border-bottom-color: var(--lg-accent);
+}
+
+body[data-theme="liquid-glass"] .gp-subtab {
+  border-color: var(--lg-border-soft);
+  color: var(--lg-text-tertiary);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .gp-subtab.active {
+  background: rgba(139, 159, 255, 0.15);
+  border-color: var(--lg-accent);
+  color: var(--lg-accent);
+}
+
+body[data-theme="liquid-glass"] .gp-page-btn {
+  border-color: var(--lg-border-soft);
+  color: var(--lg-text-tertiary);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .gp-page-btn.active {
+  background: var(--lg-accent);
+  border-color: var(--lg-accent);
+  color: var(--lg-accent-on);
+}
+
+body[data-theme="liquid-glass"] .gp-fav-btn.active {
+  color: #f59e0b;
+}
+
+body[data-theme="liquid-glass"] .gp-game-modal {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(var(--lg-blur-strong)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--lg-blur-strong)) saturate(160%);
+  border-color: var(--lg-border);
+  border-radius: var(--lg-radius-sheet);
+}
+
+body[data-theme="liquid-glass"] .gp-game-modal-header {
+  background: transparent;
+  border-color: var(--lg-border-soft);
+}
+
+body[data-theme="liquid-glass"] .gp-price-row {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--lg-border-soft);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .gp-price-value {
+  color: var(--lg-accent);
+}
+
+body[data-theme="liquid-glass"] .gp-setting select,
+body[data-theme="liquid-glass"] .gp-filter-group select {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--lg-border-soft);
+  color: var(--lg-text-primary);
+  border-radius: var(--lg-radius-control);
+}
+
+/* === ДОПОЛНИТЕЛЬНЫЕ СЕЛЕКТОРЫ === */
+
+body[data-theme="liquid-glass"] .rank {
+  color: var(--lg-accent);
+}
+
+body[data-theme="liquid-glass"] .settings-form {
+  background: var(--lg-content-bg);
+  border: 1px solid var(--lg-content-border);
+  border-radius: var(--lg-radius-panel);
+}
+
+body[data-theme="liquid-glass"] .loading {
+  color: var(--lg-text-secondary);
+}
+
+body[data-theme="liquid-glass"] .error {
+  color: #ff6b6b;
+}
+
+body[data-theme="liquid-glass"] .achievement.locked {
+  border-left-color: var(--lg-text-tertiary);
+  opacity: 0.6;
+}
+
+body[data-theme="liquid-glass"] .leaderboard-item:hover::after {
+  color: var(--lg-accent);
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .auth-warning {
+  background: rgba(255, 152, 0, 0.1);
+  border-color: rgba(255, 152, 0, 0.3);
+  color: #ff9800;
+}
+
+body[data-theme="liquid-glass"] .input-section {
+  background: var(--lg-content-bg);
+  border-color: var(--lg-content-border);
+  border-radius: var(--lg-radius-panel);
+}
+
+body[data-theme="liquid-glass"] .back-btn {
+  color: var(--lg-text-primary);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="liquid-glass"] .back-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+body[data-theme="liquid-glass"] .column-title {
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .banned-title {
+  background: rgba(255, 0, 0, 0.15);
+  border-color: rgba(255, 0, 0, 0.3);
+}
+
+body[data-theme="liquid-glass"] .clean-title {
+  background: rgba(0, 204, 68, 0.15);
+  border-color: rgba(0, 204, 68, 0.3);
+}
+
+body[data-theme="liquid-glass"] .card-name {
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .card-name:hover {
+  color: var(--lg-accent);
+}
+
+body[data-theme="liquid-glass"] .card-checker {
+  color: var(--lg-text-secondary);
+}
+
+body[data-theme="liquid-glass"] .card-detail-label {
+  color: var(--lg-text-secondary);
+}
+
+body[data-theme="liquid-glass"] .card-detail-value {
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .spinner {
+  border-color: var(--lg-border-soft);
+  border-top-color: var(--lg-accent);
+}
+
+body[data-theme="liquid-glass"] .loading-indicator {
+  color: var(--lg-text-secondary);
+}
+
+body[data-theme="liquid-glass"] .mass-check-btn {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--lg-text-primary);
+  border-color: var(--lg-border-soft);
+}
+
+body[data-theme="liquid-glass"] .mass-check-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--lg-accent);
+}
+
+body[data-theme="liquid-glass"] .info-btn {
+  border-color: var(--lg-border-soft);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .info-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--lg-accent);
+}
+
+body[data-theme="liquid-glass"] .header-title h1 {
+  color: var(--lg-text-primary);
+}
+
+body[data-theme="liquid-glass"] .gp-skeleton-card {
+  background: var(--lg-content-bg);
+  border-color: var(--lg-content-border);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .gp-empty {
+  color: var(--lg-text-secondary);
+}
+
+body[data-theme="liquid-glass"] .gp-share-btn {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--lg-text-primary);
+  border-color: var(--lg-border-soft);
+  border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .gp-share-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--lg-accent);
+}
+
+/* === FALLBACK для Reduced Transparency === */
+@media (prefers-reduced-transparency: reduce) {
+  body[data-theme="liquid-glass"] .header,
+  body[data-theme="liquid-glass"] .sidebar,
+  body[data-theme="liquid-glass"] .admin-panel,
+  body[data-theme="liquid-glass"] .checker-header,
+  body[data-theme="liquid-glass"] .gp-header,
+  body[data-theme="liquid-glass"] #createSpecialAchievementModal > div,
+  body[data-theme="liquid-glass"] #editSpecialAchievementModal > div,
+  body[data-theme="liquid-glass"] #achievementsModal .modal-content,
+  body[data-theme="liquid-glass"] .gp-game-modal {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: #1c1c1e;
+  }
+
+  body[data-theme="liquid-glass"] .tab,
+  body[data-theme="liquid-glass"] .admin-btn,
+  body[data-theme="liquid-glass"] .save-settings-btn {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* === FALLBACK для старых браузеров === */
+@supports not (backdrop-filter: blur(1px)) {
+  body[data-theme="liquid-glass"] .header,
+  body[data-theme="liquid-glass"] .sidebar,
+  body[data-theme="liquid-glass"] .admin-panel,
+  body[data-theme="liquid-glass"] .checker-header,
+  body[data-theme="liquid-glass"] .gp-header,
+  body[data-theme="liquid-glass"] .modal-content,
+  body[data-theme="liquid-glass"] .gp-game-modal {
+    background: #1c1c1e;
+  }
+}

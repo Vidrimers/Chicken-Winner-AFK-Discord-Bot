@@ -1,0 +1,714 @@
+/* ===== ТЕМА: M3 EXPRESSIVE DARK ===== */
+/* Seed: #667eea, тёмная палитра Material 3 */
+
+body[data-theme="m3-dark"] {
+  color-scheme: dark;
+  font-family: 'Roboto Flex', 'Segoe UI', system-ui, sans-serif;
+
+  /* Primary */
+  --md-sys-color-primary: #BCC3FF;
+  --md-sys-color-on-primary: #1B2DA2;
+  --md-sys-color-primary-container: #3646AB;
+  --md-sys-color-on-primary-container: #DEE0FF;
+
+  /* Secondary */
+  --md-sys-color-secondary: #C3C4DD;
+  --md-sys-color-on-secondary: #2D2F42;
+  --md-sys-color-secondary-container: #444559;
+  --md-sys-color-on-secondary-container: #DFE0F9;
+
+  /* Tertiary */
+  --md-sys-color-tertiary: #E7BAD5;
+  --md-sys-color-on-tertiary: #45263C;
+  --md-sys-color-tertiary-container: #5E3C52;
+  --md-sys-color-on-tertiary-container: #FFD7EE;
+
+  /* Error */
+  --md-sys-color-error: #FFB4AB;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000A;
+  --md-sys-color-on-error-container: #FFDAD6;
+
+  /* Surface */
+  --md-sys-color-surface: #141218;
+  --md-sys-color-on-surface: #E5E1E9;
+  --md-sys-color-on-surface-variant: #C6C5D0;
+  --md-sys-color-surface-container-lowest: #0F0D13;
+  --md-sys-color-surface-container-low: #1C1B1F;
+  --md-sys-color-surface-container: #211F26;
+  --md-sys-color-surface-container-high: #2B2930;
+  --md-sys-color-surface-container-highest: #36343B;
+
+  /* Outline */
+  --md-sys-color-outline: #908F99;
+  --md-sys-color-outline-variant: #45464F;
+
+  /* Inverse */
+  --md-sys-color-inverse-surface: #E5E1E9;
+  --md-sys-color-inverse-on-surface: #313033;
+  --md-sys-color-inverse-primary: #5B6DCD;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-shadow: #000000;
+
+  /* Shape */
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-full: 9999px;
+}
+
+/* === БАЗОВЫЕ ФОНЫ === */
+body[data-theme="m3-dark"] {
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .container {
+  background: var(--md-sys-color-surface-container-low);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+}
+
+body[data-theme="m3-dark"] .content {
+  background: var(--md-sys-color-surface-container-low);
+}
+
+/* === ШАПКА === */
+body[data-theme="m3-dark"] .header {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-radius: var(--md-sys-shape-corner-extra-large) var(--md-sys-shape-corner-extra-large) 0 0;
+}
+
+body[data-theme="m3-dark"] .header h1 {
+  color: var(--md-sys-color-on-primary-container);
+  text-shadow: none;
+}
+
+body[data-theme="m3-dark"] .header p {
+  color: var(--md-sys-color-on-primary-container);
+  opacity: 0.9;
+}
+
+/* === КАРТОЧКИ === */
+body[data-theme="m3-dark"] .stat-card,
+body[data-theme="m3-dark"] .setting-card,
+body[data-theme="m3-dark"] .achievement,
+body[data-theme="m3-dark"] .project-card {
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .setting-card-title {
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .setting-card-description {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* === ТАБЫ === */
+body[data-theme="m3-dark"] .tabs {
+  border-bottom-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-dark"] .tab {
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  border-bottom: 3px solid transparent;
+  padding: 10px 15px;
+}
+
+body[data-theme="m3-dark"] .tab.active {
+  background: transparent;
+  color: var(--md-sys-color-primary);
+  border-bottom-color: var(--md-sys-color-primary);
+}
+
+/* === КНОПКИ === */
+body[data-theme="m3-dark"] .admin-btn,
+body[data-theme="m3-dark"] .save-settings-btn {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] .user-search button {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+/* === ПОЛЯ ВВОДА === */
+body[data-theme="m3-dark"] .user-search input,
+body[data-theme="m3-dark"] .setting-select {
+  background: var(--md-sys-color-surface-container-highest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+body[data-theme="m3-dark"] .user-search input:focus,
+body[data-theme="m3-dark"] .setting-select:focus {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px rgba(188, 195, 255, 0.2);
+}
+
+/* === ТЕКСТ === */
+body[data-theme="m3-dark"] h1,
+body[data-theme="m3-dark"] h2,
+body[data-theme="m3-dark"] h3 {
+  color: var(--md-sys-color-on-surface);
+  text-shadow: none;
+}
+
+body[data-theme="m3-dark"] p,
+body[data-theme="m3-dark"] small {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-dark"] h2 {
+  border-bottom-color: var(--md-sys-color-outline-variant);
+}
+
+/* === САЙДБАР === */
+body[data-theme="m3-dark"] .sidebar {
+  background: var(--md-sys-color-surface-container);
+  border-right-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-dark"] .sidebar a {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-dark"] .sidebar a:hover,
+body[data-theme="m3-dark"] .sidebar a.active {
+  color: var(--md-sys-color-on-secondary-container);
+  background: var(--md-sys-color-secondary-container);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+/* === КОД / CMD === */
+body[data-theme="m3-dark"] .cmd,
+body[data-theme="m3-dark"] .cmd-block {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+body[data-theme="m3-dark"] .cmd-block .comment {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* === НАЗАД / TOAST === */
+body[data-theme="m3-dark"] .hlae-back {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] .copy-toast {
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+/* === ПОИСК === */
+body[data-theme="m3-dark"] .search-wrap input {
+  background: var(--md-sys-color-surface-container-highest);
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .search-wrap input:focus {
+  border-color: var(--md-sys-color-primary);
+}
+
+/* === FAQ === */
+body[data-theme="m3-dark"] .faq-item {
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+body[data-theme="m3-dark"] .faq-item:hover {
+  border-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-dark"] .faq-q {
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .faq-q:hover {
+  background: var(--md-sys-color-surface-container);
+}
+
+body[data-theme="m3-dark"] .faq-q .num {
+  color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-dark"] .faq-q .arrow {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-dark"] .faq-a {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-dark"] .acc-header {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-dark"] .acc-header:hover {
+  color: var(--md-sys-color-on-surface);
+}
+
+/* === ТАБЛИЦЫ === */
+body[data-theme="m3-dark"] table th,
+body[data-theme="m3-dark"] table td {
+  border-bottom-color: var(--md-sys-color-outline-variant);
+}
+
+/* === АДМИН ПАНЕЛЬ === */
+body[data-theme="m3-dark"] .admin-panel {
+  background: var(--md-sys-color-surface-container);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-dark"] .admin-panel-header {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-bottom: none;
+}
+
+/* === ЛИДЕРБОРД === */
+body[data-theme="m3-dark"] .leaderboard {
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-dark"] .leaderboard-item {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+body[data-theme="m3-dark"] .leaderboard-item:hover {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: var(--md-sys-color-primary);
+}
+
+/* === МОДАЛКИ === */
+body[data-theme="m3-dark"] #createSpecialAchievementModal > div,
+body[data-theme="m3-dark"] #editSpecialAchievementModal > div,
+body[data-theme="m3-dark"] #achievementsModal .modal-content {
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+}
+
+body[data-theme="m3-dark"] .modal-header {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-bottom: none;
+  border-radius: var(--md-sys-shape-corner-extra-large) var(--md-sys-shape-corner-extra-large) 0 0;
+}
+
+body[data-theme="m3-dark"] .modal-tab-button {
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface-variant);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] .modal-tab-button.active {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+body[data-theme="m3-dark"] .modal-body {
+  background: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .modal-achievements .achievement {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* === СТАТИСТИКА === */
+body[data-theme="m3-dark"] .stat-item {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+body[data-theme="m3-dark"] .modal .stats-grid .stat-item {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .stat-value {
+  color: var(--md-sys-color-on-surface) !important;
+}
+
+body[data-theme="m3-dark"] .stat-label {
+  color: var(--md-sys-color-on-surface-variant) !important;
+}
+
+/* === ПРОГРЕСС-БАР === */
+body[data-theme="m3-dark"] .progressbar {
+  background: var(--md-sys-color-surface-container) !important;
+  border: 1px solid var(--md-sys-color-outline-variant) !important;
+  color: var(--md-sys-color-on-surface) !important;
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] .progressbar strong {
+  color: var(--md-sys-color-on-surface) !important;
+}
+
+body[data-theme="m3-dark"] .progressbar > div {
+  background: var(--md-sys-color-surface-container-highest) !important;
+}
+
+body[data-theme="m3-dark"] .progressbar > div > div {
+  background: var(--md-sys-color-primary) !important;
+}
+
+/* === МОДАЛКИ ДОСТИЖЕНИЙ === */
+body[data-theme="m3-dark"] #createSpecialAchievementModal input,
+body[data-theme="m3-dark"] #createSpecialAchievementModal textarea,
+body[data-theme="m3-dark"] #editSpecialAchievementModal input,
+body[data-theme="m3-dark"] #editSpecialAchievementModal textarea {
+  background: var(--md-sys-color-surface-container-highest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+body[data-theme="m3-dark"] #createSpecialAchievementModal button,
+body[data-theme="m3-dark"] #editSpecialAchievementModal button {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] #specialAchievementPreview,
+body[data-theme="m3-dark"] #editSpecialAchievementPreview {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* === ТУТОРИАЛ / HLAE === */
+body[data-theme="m3-dark"] .tutorial-content {
+  background: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .hlae-nav {
+  border-bottom-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-dark"] .hlae-nav-btn:not(.active) {
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] .hlae-nav-btn:not(.active):hover {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+/* === ЧЕКЕР ЧИТЕРОВ === */
+body[data-theme="m3-dark"] .checker-header {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-dark"] .check-btn,
+body[data-theme="m3-dark"] .start-mass-btn {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] .modal-box-header {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-radius: var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large) 0 0;
+}
+
+body[data-theme="m3-dark"] .profile-card {
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-dark"] .profile-card.banned {
+  border-left-color: var(--md-sys-color-error);
+}
+
+body[data-theme="m3-dark"] .profile-card.clean {
+  border-left-color: #4a8b4a;
+}
+
+body[data-theme="m3-dark"] .profile-link-btn,
+body[data-theme="m3-dark"] .discord-publish-btn {
+  background: rgba(188, 195, 255, 0.12);
+  color: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] .steam-input {
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+body[data-theme="m3-dark"] .steam-input:focus {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px rgba(188, 195, 255, 0.2);
+}
+
+/* === GAME PRICE === */
+body[data-theme="m3-dark"] .gp-header {
+  background: var(--md-sys-color-primary-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-primary-container);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-dark"] .gp-game-card {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-dark"] .gp-game-card:hover {
+  border-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-dark"] .gp-tabs {
+  border-bottom-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-dark"] .gp-tab {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-dark"] .gp-tab:hover {
+  border-bottom-color: rgba(188, 195, 255, 0.5);
+}
+
+body[data-theme="m3-dark"] .gp-tab.active {
+  color: var(--md-sys-color-primary);
+  border-bottom-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-dark"] .gp-subtab {
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] .gp-subtab.active {
+  background: var(--md-sys-color-secondary-container);
+  border-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+body[data-theme="m3-dark"] .gp-page-btn {
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] .gp-page-btn.active {
+  background: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+body[data-theme="m3-dark"] .gp-fav-btn.active {
+  color: #f59e0b;
+}
+
+body[data-theme="m3-dark"] .gp-game-modal {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+}
+
+body[data-theme="m3-dark"] .gp-game-modal-header {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-dark"] .gp-price-row {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+body[data-theme="m3-dark"] .gp-price-value {
+  color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-dark"] .gp-setting select,
+body[data-theme="m3-dark"] .gp-filter-group select {
+  background: var(--md-sys-color-surface-container-highest);
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+/* === ДОПОЛНИТЕЛЬНЫЕ СЕЛЕКТОРЫ === */
+
+body[data-theme="m3-dark"] .rank {
+  color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-dark"] .settings-form {
+  background: var(--md-sys-color-surface-container);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-dark"] .loading {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-dark"] .error {
+  color: var(--md-sys-color-error);
+}
+
+body[data-theme="m3-dark"] .achievement.locked {
+  border-left-color: var(--md-sys-color-outline);
+  opacity: 0.6;
+}
+
+body[data-theme="m3-dark"] .leaderboard-item:hover::after {
+  color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-surface-container-highest);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] .auth-warning {
+  background: rgba(255, 152, 0, 0.1);
+  border-color: rgba(255, 152, 0, 0.3);
+  color: #ff9800;
+}
+
+body[data-theme="m3-dark"] .input-section {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-dark"] .back-btn {
+  color: var(--md-sys-color-on-primary-container);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme="m3-dark"] .back-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+body[data-theme="m3-dark"] .column-title {
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .banned-title {
+  background: rgba(255, 0, 0, 0.1);
+  border-color: rgba(255, 0, 0, 0.3);
+}
+
+body[data-theme="m3-dark"] .clean-title {
+  background: rgba(0, 204, 68, 0.1);
+  border-color: rgba(0, 204, 68, 0.3);
+}
+
+body[data-theme="m3-dark"] .card-name {
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .card-name:hover {
+  color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-dark"] .card-checker {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-dark"] .card-detail-label {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-dark"] .card-detail-value {
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .spinner {
+  border-color: var(--md-sys-color-outline-variant);
+  border-top-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-dark"] .loading-indicator {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-dark"] .mass-check-btn {
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  border-color: var(--md-sys-color-outline-variant);
+}
+
+body[data-theme="m3-dark"] .mass-check-btn:hover {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-dark"] .info-btn {
+  border-color: var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+}
+
+body[data-theme="m3-dark"] .info-btn:hover {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: var(--md-sys-color-primary);
+}
+
+body[data-theme="m3-dark"] .header-title h1 {
+  color: var(--md-sys-color-on-primary-container);
+}
+
+body[data-theme="m3-dark"] .gp-skeleton-card {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
+}
+
+body[data-theme="m3-dark"] .gp-empty {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+body[data-theme="m3-dark"] .gp-share-btn {
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  border-color: var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+body[data-theme="m3-dark"] .gp-share-btn:hover {
+  background: var(--md-sys-color-surface-container-high);
+  border-color: var(--md-sys-color-primary);
+}
