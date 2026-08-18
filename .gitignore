@@ -20,5 +20,7 @@ avatars/
 Запросы.txt
 steam-vac-checker-tutorial.md
 steam-integration-plan.md
+steam-auto-answer.db-shm
+steam-auto-answer.db-wal
 
 DISCORD_OAUTH_SETUP.md
