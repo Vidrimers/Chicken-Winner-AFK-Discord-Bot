@@ -151,6 +151,11 @@ body[data-theme="m3-light"] .setting-select {
   border-radius: var(--md-sys-shape-corner-small);
 }
 
+body[data-theme="m3-light"] .setting-select option {
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+}
+
 body[data-theme="m3-light"] .user-search input:focus,
 body[data-theme="m3-light"] .setting-select:focus {
   border-color: var(--md-sys-color-primary);
@@ -576,6 +581,12 @@ body[data-theme="m3-light"] .gp-filter-group select {
   border-color: var(--md-sys-color-outline-variant);
   color: var(--md-sys-color-on-surface);
   border-radius: var(--md-sys-shape-corner-small);
+}
+
+body[data-theme="m3-light"] .gp-setting select option,
+body[data-theme="m3-light"] .gp-filter-group select option {
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
 }
 
 /* === ДОПОЛНИТЕЛЬНЫЕ СЕЛЕКТОРЫ === */

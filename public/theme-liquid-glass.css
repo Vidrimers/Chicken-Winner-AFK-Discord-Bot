@@ -152,6 +152,11 @@ body[data-theme="liquid-glass"] .setting-select {
   border-radius: var(--lg-radius-control);
 }
 
+body[data-theme="liquid-glass"] .setting-select option {
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--lg-text-primary);
+}
+
 body[data-theme="liquid-glass"] .user-search input:focus,
 body[data-theme="liquid-glass"] .setting-select:focus {
   border-color: var(--lg-accent);
@@ -599,6 +604,12 @@ body[data-theme="liquid-glass"] .gp-filter-group select {
   border-color: var(--lg-border-soft);
   color: var(--lg-text-primary);
   border-radius: var(--lg-radius-control);
+}
+
+body[data-theme="liquid-glass"] .gp-setting select option,
+body[data-theme="liquid-glass"] .gp-filter-group select option {
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--lg-text-primary);
 }
 
 /* === ДОПОЛНИТЕЛЬНЫЕ СЕЛЕКТОРЫ === */
