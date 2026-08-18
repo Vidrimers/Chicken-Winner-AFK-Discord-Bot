@@ -95,17 +95,41 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
 
     try {
       const telegramUser = db.prepare(
-        'SELECT telegram_chat_id FROM telegram_users WHERE user_id = ? AND started_bot = 1'
+        'SELECT telegram_chat_id, telegram_username FROM telegram_users WHERE user_id = ? AND started_bot = 1'
       ).get(userId);
 
       if (!telegramUser || !telegramUser.telegram_chat_id) {
         return res.status(404).json({ error: 'У пользователя нет привязанного Telegram' });
       }
 
-      const sent = await telegram.sendTelegramMessageToUser(telegramUser.telegram_chat_id, message);
+      // Получаем Discord username
+      const userStats = db.prepare('SELECT username FROM user_stats WHERE user_id = ?').get(userId);
+      const discordUsername = userStats ? userStats.username : 'Unknown';
+
+      // Формируем сообщение для получателя
+      const recipientMessage =
+        `🐔 <b>Отправлено с помощью Chicken Winner Bot</b>\n\n` +
+        `${message}\n\n` +
+        `⚠️ <i>Это автоматическое сообщение. Админы Chicken Winner Team не увидят вашего ответа.</i>`;
+
+      const sent = await telegram.sendTelegramMessageToUser(telegramUser.telegram_chat_id, recipientMessage);
 
       if (sent) {
         log(`✅ Сообщение отправлено в TG пользователю ${userId}`);
+
+        // Отправляем копию админу
+        const tgUsername = telegramUser.telegram_username ? `@${telegramUser.telegram_username}` : 'нет';
+        const adminCopy =
+          `📨 <b>Сообщение отправлено пользователю</b>\n\n` +
+          `👤 Получатель: ${discordUsername}\n` +
+          `🆔 Discord ID: <code>${userId}</code>\n` +
+          `📱 Telegram: ${tgUsername}\n` +
+          `💬 Chat ID: <code>${telegramUser.telegram_chat_id}</code>\n\n` +
+          `📝 Текст: ${message}\n\n` +
+          `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
+
+        await telegram.sendReport(adminCopy);
+
         res.json({ success: true, delivered: true });
       } else {
         res.json({ success: false, delivered: false, error: 'Не удалось доставить сообщение' });
