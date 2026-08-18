@@ -318,6 +318,10 @@ body[data-theme="m3-dark"] .modal-header {
   border-radius: var(--md-sys-shape-corner-extra-large) var(--md-sys-shape-corner-extra-large) 0 0;
 }
 
+body[data-theme="m3-dark"] .modal-tabs {
+  background: var(--md-sys-color-surface-container);
+}
+
 body[data-theme="m3-dark"] .modal-tab-button {
   background: var(--md-sys-color-surface-container);
   color: var(--md-sys-color-on-surface-variant);

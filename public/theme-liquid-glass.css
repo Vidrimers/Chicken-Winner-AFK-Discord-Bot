@@ -332,6 +332,11 @@ body[data-theme="liquid-glass"] .modal-header {
   border-radius: var(--lg-radius-sheet) var(--lg-radius-sheet) 0 0;
 }
 
+body[data-theme="liquid-glass"] .modal-tabs {
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid var(--lg-border-soft);
+}
+
 body[data-theme="liquid-glass"] .modal-tab-button {
   background: rgba(255, 255, 255, 0.06);
   color: var(--lg-text-secondary);
