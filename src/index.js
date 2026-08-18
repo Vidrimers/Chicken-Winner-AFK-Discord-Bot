@@ -23,7 +23,8 @@ import {
   sendUserDeleteNotification,
   sendSpecialAchievementNotification,
   sendBlocklistAddNotification,
-  sendNewCheaterNotification
+  sendNewCheaterNotification,
+  backfillTelegramUsernames
 } from '../telegram.js';
 
 // Загружаем переменные окружения
@@ -378,6 +379,11 @@ async function main() {
         );
 
         success('Telegram бот инициализирован');
+
+        // Загружаем telegram_username для существующих пользователей
+        backfillTelegramUsernames().catch((err) => {
+          logError(`Ошибка backfill telegram_username: ${err.message}`);
+        });
         
         // Запуск всех активных Steam Wall ботов
         try {

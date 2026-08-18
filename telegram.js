@@ -1728,3 +1728,45 @@ export async function sendTelegramMessageToUser(chatId, message) {
     return false;
   }
 }
+
+/**
+ * Ретроспективная загрузка telegram_username для существующих пользователей
+ * Вызывается после инициализации бота
+ */
+export async function backfillTelegramUsernames() {
+  if (!telegramBot || !db) return;
+
+  try {
+    const users = db.prepare(
+      'SELECT telegram_chat_id FROM telegram_users WHERE telegram_username IS NULL OR telegram_username = ""'
+    ).all();
+
+    if (users.length === 0) {
+      console.log('ℹ️ Все telegram_username уже заполнены');
+      return;
+    }
+
+    console.log(`🔄 Загрузка telegram_username для ${users.length} пользователей...`);
+
+    let updated = 0;
+    for (const user of users) {
+      try {
+        const chat = await telegramBot.getChat(user.telegram_chat_id);
+        const username = chat.username || chat.first_name || null;
+        if (username) {
+          db.prepare('UPDATE telegram_users SET telegram_username = ? WHERE telegram_chat_id = ?')
+            .run(username, user.telegram_chat_id);
+          updated++;
+        }
+        // Небольшая задержка чтобы не получить rate limit
+        await new Promise(r => setTimeout(r, 100));
+      } catch (e) {
+        console.log(`⚠️ Не удалось получить данные для chat_id ${user.telegram_chat_id}: ${e.message}`);
+      }
+    }
+
+    console.log(`✅ telegram_username обновлён для ${updated} из ${users.length} пользователей`);
+  } catch (error) {
+    console.error(`❌ Ошибка backfill telegram_username: ${error.message}`);
+  }
+}
