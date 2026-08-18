@@ -323,6 +323,22 @@ function getDiscordUsername(discordId) {
   return result ? result.username : 'Unknown';
 }
 
+/**
+ * Проверить, является ли пользователь участником Discord сервера
+ */
+async function isGuildMember(discordId) {
+  if (!discordClient || !discordClient.guilds || discordClient.guilds.cache.size === 0) {
+    return true; // Если Discord не готов — не блокируем
+  }
+  try {
+    const guild = discordClient.guilds.cache.first();
+    await guild.members.fetch(discordId);
+    return guild.members.cache.has(discordId);
+  } catch {
+    return false;
+  }
+}
+
 // ===== INLINE MENU FUNCTIONS =====
 
 /**
@@ -1088,198 +1104,51 @@ export function initTelegramBot(
       );
 
       try {
-        // Проверяем, был ли пользователь уже зарегистрирован ранее
-        let wasRegistered = false;
-        let previousChatId = null;
+        // Проверяем, есть ли привязанный реальный Discord ID
+        const linkedDiscordId = getLinkedDiscordId(chatId);
 
-        if (db) {
-          try {
-            const existingUser = db
-              .prepare(
-                "SELECT telegram_chat_id, started_bot, created_at FROM telegram_users WHERE telegram_chat_id = ?",
-              )
-              .get(chatId.toString());
-
-            if (existingUser && existingUser.started_bot) {
-              wasRegistered = true;
-              previousChatId = existingUser.telegram_chat_id;
-              console.log(
-                `ℹ️ Пользователь уже был зарегистрирован ранее (chat_id: ${previousChatId}, дата: ${existingUser.created_at})`,
-              );
-            }
-          } catch (dbError) {
-            console.log(`⚠️ Ошибка проверки регистрации: ${dbError.message}`);
-          }
-        }
-
-        // Сохраняем/обновляем информацию о том, что пользователь нажал /start
-        if (db) {
-          try {
-            if (wasRegistered) {
-              db.prepare(
-                `UPDATE telegram_users SET started_bot = 1 WHERE telegram_chat_id = ?`,
-              ).run(chatId.toString());
-              console.log(
-                `✅ Флаг started_bot обновлен для существующего пользователя`,
-              );
-            } else {
-              db.prepare(
-                `INSERT OR REPLACE INTO telegram_users (user_id, telegram_chat_id, started_bot, created_at) 
-                 VALUES ('telegram_' || ?, ?, 1, CURRENT_TIMESTAMP)`,
-              ).run(chatId.toString(), chatId.toString());
-              console.log(`✅ Новый пользователь создан в БД`);
-            }
-          } catch (dbError) {
-            console.log(`⚠️ Ошибка сохранения в БД: ${dbError.message}`);
-          }
-        }
-
-        const welcomeMessage = wasRegistered
-          ? `👋 <b>С возвращением, ${telegramUsername}!</b>\n\n` +
-            `✅ Бот снова активирован!\n\n` +
-            `Теперь вы можете снова включить уведомления "Кто в канале" в настройках веб-панели.\n\n` +
-            `📊 Напоминаем:\n` +
-            `1️⃣ Зайти на веб-панель бота\n` +
-            `2️⃣ Перейти в настройки\n` +
-            `3️⃣ Включить уведомления "Кто в канале"\n\n` +
-            `После этого вы будете получать уведомления о том, кто заходит и выходит из голосовых каналов! 🔔`
-          : `👋 <b>Привет, ${telegramUsername}!</b>\n\n` +
-            `✅ Вы успешно активировали бота!\n\n` +
-            `Теперь вы можете включить уведомления "Кто в канале" в настройках веб-панели.\n\n` +
-            `📊 Чтобы связать ваш Discord аккаунт с Telegram, вам нужно:\n` +
-            `1️⃣ Зайти на веб-панель бота\n` +
-            `2️⃣ Перейти в настройки\n` +
-            `3️⃣ Включить уведомления "Кто в канале"\n\n` +
-            `После этого вы будете получать уведомления о том, кто заходит и выходит из голосовых каналов! 🔔`;
-
-        try {
-          console.log(`📤 Отправка приветственного сообщения пользователю...`);
-
-          await telegramBot.sendMessage(chatId, welcomeMessage, {
-            parse_mode: "HTML",
-          });
-
-          // Отправляем главное меню
-          await sendMainMenu(chatId);
-
-          console.log(`✅ Приветственное сообщение и меню отправлены`);
-        } catch (sendError) {
-          console.error(
-            `❌ Ошибка отправки приветственного сообщения: ${sendError.message}`,
+        if (!linkedDiscordId) {
+          // Не привязан — не пускаем
+          await telegramBot.sendMessage(chatId,
+            '🚫 Этот бот только для участников сервера.',
           );
-        }
 
-        // Пытаемся найти пользователя в Discord по username
-        let discordUsername = "Не найден";
-        let discordUserId = "Не найден";
-
-        console.log(`🔍 Начинаем поиск пользователя Discord...`);
-
-        if (
-          discordClient &&
-          discordClient.guilds &&
-          discordClient.guilds.cache.size > 0
-        ) {
-          const guild = discordClient.guilds.cache.first();
-
-          try {
-            console.log(`🔍 Поиск пользователя Discord в кеше...`);
-            // Используем кеш вместо fetch() чтобы не получать rate limit
-            const members = guild.members.cache;
-            console.log(`📋 В кеше ${members.size} участников`);
-
-            const foundMember = members.find((member) => {
-              const username = member.user.username.toLowerCase();
-              const displayName = member.displayName.toLowerCase();
-              const telegramName = telegramUsername
-                .toLowerCase()
-                .replace("@", "");
-
-              return (
-                username.includes(telegramName) ||
-                displayName.includes(telegramName) ||
-                telegramName.includes(username)
-              );
-            });
-
-            if (foundMember) {
-              discordUsername =
-                foundMember.displayName || foundMember.user.username;
-              discordUserId = foundMember.user.id;
-              console.log(
-                `✅ Найден пользователь Discord: ${discordUsername} (${discordUserId})`,
-              );
-
-              if (db) {
-                try {
-                  db.prepare(
-                    `INSERT OR REPLACE INTO telegram_users (user_id, telegram_chat_id, started_bot, created_at) 
-                     VALUES (?, ?, 1, COALESCE((SELECT created_at FROM telegram_users WHERE user_id = ?), CURRENT_TIMESTAMP))`,
-                  ).run(discordUserId, chatId.toString(), discordUserId);
-                  console.log(
-                    `✅ Связь Discord ID ${discordUserId} ↔ Telegram chat ${chatId} сохранена`,
-                  );
-                } catch (linkError) {
-                  console.error(
-                    `❌ Ошибка сохранения связи: ${linkError.message}`,
-                  );
-                }
-              }
-            } else {
-              console.log(
-                `⚠️ Пользователь Discord не найден по имени: ${telegramUsername}`,
-              );
-            }
-          } catch (searchError) {
-            console.error(
-              `❌ Ошибка поиска пользователя Discord: ${searchError.message}`,
-            );
-            console.error(searchError.stack);
-          }
-        } else {
-          console.log(`⚠️ Discord client не готов или нет серверов`);
-        }
-
-        console.log(
-          `🎯 Discord пользователь: ${discordUsername} (${discordUserId})`,
-        );
-
-        // Отправляем уведомление админу только для новых пользователей
-        if (!wasRegistered) {
-          const notificationTitle = `🆕 <b>Новый пользователь нажал /start</b>`;
-
-          console.log(`📤 Отправка уведомления админу: НОВЫЙ ПОЛЬЗОВАТЕЛЬ`);
-
-          const adminNotification =
-            `${notificationTitle}\n\n` +
+          // Уведомляем админа о попытке
+          await sendTelegramReport(
+            `🚫 <b>Попытка доступа не привязанного пользователя</b>\n\n` +
             `👤 Telegram: @${telegramUsername}\n` +
             `🆔 Telegram ID: <code>${telegramUserId}</code>\n` +
             `💬 Chat ID: <code>${chatId}</code>\n` +
-            `🎮 Discord: ${discordUsername}\n` +
-            `🆔 Discord ID: <code>${discordUserId}</code>\n` +
-            `📅 Время: ${new Date().toLocaleString("ru-RU")}`;
-
-          console.log(`📨 Текст уведомления:\n${adminNotification}`);
-
-          try {
-            await sendTelegramReport(adminNotification);
-            console.log(`✅ Уведомление админу отправлено успешно`);
-          } catch (reportError) {
-            console.error(
-              `❌ Ошибка отправки уведомления админу: ${reportError.message}`,
-            );
-            console.error(reportError.stack);
-          }
-        } else {
-          console.log(
-            `⏭️ Повторная активация - уведомление админу не отправляется`,
+            `📅 Время: ${new Date().toLocaleString("ru-RU")}`,
           );
+
+          console.log(`🚫 Пользователь ${telegramUsername} не привязан — доступ заблокирован`);
+          return;
         }
 
-        const statusMessage = wasRegistered
-          ? `✅ Пользователь ${telegramUsername} вернулся и получил приветственное сообщение`
-          : `✅ Пользователь ${telegramUsername} получил приветственное сообщение`;
-        console.log(statusMessage);
+        // Привязан — проверяем членство на сервере
+        const isMember = await isGuildMember(linkedDiscordId);
+
+        if (!isMember) {
+          await telegramBot.sendMessage(chatId,
+            '🚫 Вы больше не являетесь участником сервера.',
+          );
+
+          await sendNotOnServerAttempt(linkedDiscordId, new Date().toLocaleString("ru-RU"));
+
+          console.log(`🚫 Пользователь ${telegramUsername} (${linkedDiscordId}) не на сервере — доступ заблокирован`);
+          return;
+        }
+
+        // Всё ок — показываем приветствие и меню
+        await telegramBot.sendMessage(chatId,
+          `👋 <b>С возвращением, ${telegramUsername}!</b>`,
+          { parse_mode: "HTML" },
+        );
+
+        await sendMainMenu(chatId);
+
+        console.log(`✅ Пользователь ${telegramUsername} (${linkedDiscordId}) получил меню`);
       } catch (error) {
         console.error("❌ Ошибка при обработке /start:", error);
       }
@@ -1287,7 +1156,21 @@ export function initTelegramBot(
 
     // Обработчик команды /menu
     telegramBot.onText(/\/menu/, async (msg) => {
-      await sendMainMenu(msg.chat.id);
+      const chatId = msg.chat.id;
+      const linkedDiscordId = getLinkedDiscordId(chatId);
+
+      if (!linkedDiscordId) {
+        await telegramBot.sendMessage(chatId, '🚫 Этот бот только для участников сервера.');
+        return;
+      }
+
+      const isMember = await isGuildMember(linkedDiscordId);
+      if (!isMember) {
+        await telegramBot.sendMessage(chatId, '🚫 Вы больше не являетесь участником сервера.');
+        return;
+      }
+
+      await sendMainMenu(chatId);
     });
 
     // Обработчик команды /link для связывания аккаунтов через код
@@ -1313,6 +1196,24 @@ export function initTelegramBot(
         const result = linkCodeHandler(code, chatId.toString());
 
         if (result.success) {
+          // Проверяем членство на сервере
+          const isMember = await isGuildMember(result.userId);
+
+          if (!isMember) {
+            // Откатываем привязку
+            db.prepare('DELETE FROM telegram_users WHERE user_id = ? AND telegram_chat_id = ?')
+              .run(result.userId, chatId.toString());
+
+            await telegramBot.sendMessage(chatId,
+              '🚫 Вы не являетесь участником сервера. Привязка невозможна.',
+            );
+
+            await sendNotOnServerAttempt(result.userId, new Date().toLocaleString("ru-RU"));
+
+            console.log(`🚫 /link: пользователь ${result.userId} не на сервере — привязка отклонена`);
+            return;
+          }
+
           let discordUsername = "Discord пользователь";
           if (discordClient && db) {
             const userStat = db
