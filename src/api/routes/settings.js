@@ -63,7 +63,7 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
       }
 
       if (theme !== undefined) {
-        const allowedThemes = ['standard', 'metal', 'discord', 'steam', 'die-my-darling'];
+        const allowedThemes = ['standard', 'metal', 'discord', 'steam', 'die-my-darling', 'm3-light', 'm3-dark', 'liquid-glass'];
         if (!allowedThemes.includes(theme)) {
           return res.status(400).json({ error: 'Недопустимая тема' });
         }
@@ -75,6 +75,9 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
           discord: '💬 Дискорд',
           steam: '🎮 Стим',
           'die-my-darling': '💀 Die My Darling',
+          'm3-light': '🌤️ M3 Light',
+          'm3-dark': '🌙 M3 Dark',
+          'liquid-glass': '✨ Liquid Glass',
         };
         changedSettingText = `🎨 Тема оформления: ${themeNames[theme] || theme}`;
         
