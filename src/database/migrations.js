@@ -312,5 +312,25 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: таблица ban_check_log
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='ban_check_log'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE ban_check_log (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          type TEXT NOT NULL CHECK(type IN ('auto', 'manual')),
+          timestamp INTEGER NOT NULL,
+          total_checked INTEGER NOT NULL DEFAULT 0,
+          updated INTEGER NOT NULL DEFAULT 0,
+          notified INTEGER NOT NULL DEFAULT 0,
+          duration_seconds INTEGER NOT NULL DEFAULT 0,
+          error TEXT
+        )
+      `);
+      console.log('✅ Таблица ban_check_log создана');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

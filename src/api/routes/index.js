@@ -244,14 +244,21 @@ export function registerRoutes(
   // Ban check API (admin only)
   if (banCheckState && triggerBanCheck) {
     app.get("/api/admin/ban-check-status", requireAuth, requireAdmin, (req, res) => {
+      const lastAuto = db.getLastBanCheck('auto');
+      const lastManual = db.getLastBanCheck('manual');
+
+      // Следующая автоматическая: 24ч от последней авто-проверки, либо от старта процесса
+      const lastAutoTimestamp = lastAuto ? lastAuto.timestamp : banCheckState.processStartedAt;
+      const nextScheduledAt = lastAutoTimestamp
+        ? lastAutoTimestamp + 24 * 60 * 60 * 1000
+        : null;
+
       res.json({
         isChecking: banCheckState.isChecking,
         startedAt: banCheckState.startedAt,
-        lastAuto: banCheckState.lastAuto,
-        lastManual: banCheckState.lastManual,
-        nextScheduledAt: banCheckState.processStartedAt
-          ? banCheckState.processStartedAt + 24 * 60 * 60 * 1000
-          : null,
+        lastAuto,
+        lastManual,
+        nextScheduledAt,
       });
     });
 
@@ -260,10 +267,15 @@ export function registerRoutes(
         return res.json({ skipped: true, message: 'Проверка уже выполняется' });
       }
       // Запускаем в фоне, отвечаем сразу
+      const startTime = Date.now();
       triggerBanCheck().then(result => {
-        if (result) banCheckState.lastManual = result;
+        if (result) {
+          const elapsed = Math.round((Date.now() - startTime) / 1000);
+          db.saveBanCheckResult('manual', result, elapsed);
+        }
       }).catch(err => {
-        banCheckState.lastManual = { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, error: err.message };
+        const errorResult = { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, error: err.message };
+        db.saveBanCheckResult('manual', errorResult, 0);
       });
       res.json({ skipped: false, message: 'Проверка запущена' });
     });

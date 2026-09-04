@@ -584,6 +584,29 @@ export class DatabaseManager {
     this.prepare('DELETE FROM user_blocklist WHERE user_id = ? AND blocked_user_id = ?').run(userId, blockedUserId);
   }
 
+  // ===== BAN CHECK LOG =====
+
+  saveBanCheckResult(type, result, durationSeconds) {
+    this.prepare(
+      'INSERT INTO ban_check_log (type, timestamp, total_checked, updated, notified, duration_seconds, error) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(type, result.timestamp, result.totalChecked || 0, result.updated || 0, result.notified || 0, durationSeconds || 0, result.error || null);
+  }
+
+  getLastBanCheck(type) {
+    const row = this.prepare(
+      'SELECT * FROM ban_check_log WHERE type = ? ORDER BY id DESC LIMIT 1'
+    ).get(type);
+    if (!row) return null;
+    return {
+      timestamp: row.timestamp,
+      totalChecked: row.total_checked,
+      updated: row.updated,
+      notified: row.notified,
+      durationSeconds: row.duration_seconds,
+      error: row.error,
+    };
+  }
+
   close() {
     this.db.close();
   }

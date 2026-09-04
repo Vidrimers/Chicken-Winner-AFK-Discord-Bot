@@ -3591,10 +3591,14 @@ function renderBanCheckResult(containerDateId, containerStatsId, result) {
     return;
   }
   dateEl.textContent = formatBanCheckDate(result.timestamp);
+  const duration = result.durationSeconds
+    ? `${Math.floor(result.durationSeconds / 60)} мин ${result.durationSeconds % 60} сек`
+    : '';
   statsEl.innerHTML =
     `Проверено: ${result.totalChecked}<br>` +
     `Обновлено: ${result.updated}<br>` +
     `Уведомлений: ${result.notified}` +
+    (duration ? `<br>⏱ ${duration}` : '') +
     (result.error ? `<br><span style="color:#f44336;">Ошибка: ${result.error}</span>` : '');
 }
 

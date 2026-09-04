@@ -34,8 +34,6 @@ dotenv.config();
 export const banCheckState = {
   isChecking: false,
   startedAt: null,
-  lastAuto: null,   // { timestamp, totalChecked, updated, notified }
-  lastManual: null,  // { timestamp, totalChecked, updated, notified }
   processStartedAt: null,
 };
 
@@ -161,10 +159,10 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
     }
 
     const result = { timestamp: Date.now(), totalChecked, updated, notified };
+    const elapsed = Math.round((Date.now() - banCheckState.startedAt) / 1000);
     log(`✅ Перепроверка завершена. Проверено: ${totalChecked}, обновлено: ${updated}, уведомлений отправлено: ${notified}`);
 
     // Уведомление админу о завершении
-    const elapsed = Math.round((Date.now() - banCheckState.startedAt) / 1000);
     const minutes = Math.floor(elapsed / 60);
     const seconds = elapsed % 60;
     const timeStr = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
@@ -180,10 +178,12 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
   } catch (error) {
     logError(`Ошибка перепроверки: ${error.message}`);
 
+    const errorElapsed = Math.round((Date.now() - banCheckState.startedAt) / 1000);
+    const errorResult = { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, error: error.message };
+
     // Уведомление админу об ошибке
-    const elapsed = Math.round((Date.now() - banCheckState.startedAt) / 1000);
-    const minutes = Math.floor(elapsed / 60);
-    const seconds = elapsed % 60;
+    const minutes = Math.floor(errorElapsed / 60);
+    const seconds = errorElapsed % 60;
     const timeStr = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
     await sendTelegramReport(
       `❌ <b>Ошибка проверки читеров</b>\n\n` +
@@ -191,7 +191,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
       `⏱ Время: ${timeStr}`
     ).catch(() => {});
 
-    return { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, error: error.message };
+    return errorResult;
   } finally {
     banCheckState.isChecking = false;
     banCheckState.startedAt = null;
@@ -671,8 +671,12 @@ async function main() {
     // Ежедневная перепроверка всех профилей из БД на изменение статуса банов
     banCheckState.processStartedAt = Date.now();
     setInterval(async () => {
+      const startTime = Date.now();
       const result = await runBanCheck(db, sendTelegramReport, sendTelegramMessageToUser);
-      if (result) banCheckState.lastAuto = result;
+      if (result) {
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
+        db.saveBanCheckResult('auto', result, elapsed);
+      }
     }, 24 * 60 * 60 * 1000); // Каждые 24 часа
 
     // Обработка завершения
