@@ -3632,6 +3632,10 @@ async function refreshBanCheckStatus() {
       ? formatBanCheckDate(data.nextScheduledAt)
       : '—';
 
+    if (data.checkTime) {
+      document.getElementById('banCheckTimeInput').value = data.checkTime;
+    }
+
     renderBanCheckResult('banCheckAutoDate', 'banCheckAutoStats', data.lastAuto);
     renderBanCheckResult('banCheckManualDate', 'banCheckManualStats', data.lastManual);
   } catch (err) {
@@ -3662,4 +3666,26 @@ async function runManualBanCheck() {
   btn.disabled = false;
   btn.textContent = 'Запустить проверку';
   btn.style.opacity = '1';
+}
+
+async function saveBanCheckTime() {
+  const time = document.getElementById('banCheckTimeInput').value;
+  if (!time) return;
+
+  try {
+    const res = await fetch('/api/admin/ban-check-time', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ time }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      showNotification(`Время проверки установлено: ${time}`, 'success');
+      refreshBanCheckStatus();
+    } else {
+      showNotification(data.error || 'Ошибка', 'error');
+    }
+  } catch (err) {
+    showNotification('Ошибка сохранения', 'error');
+  }
 }

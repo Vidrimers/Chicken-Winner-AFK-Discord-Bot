@@ -332,5 +332,20 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: таблица ban_check_settings
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='ban_check_settings'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE ban_check_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
+      `);
+      db.prepare("INSERT INTO ban_check_settings (key, value) VALUES ('check_time', '04:30')").run();
+      console.log('✅ Таблица ban_check_settings создана');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

@@ -34,7 +34,7 @@ dotenv.config();
 export const banCheckState = {
   isChecking: false,
   startedAt: null,
-  processStartedAt: null,
+  scheduledTimer: null,
 };
 
 /**
@@ -679,16 +679,37 @@ async function main() {
       }
     }, 60000); // Проверяем каждую минуту
 
-    // Ежедневная перепроверка всех профилей из БД на изменение статуса банов
-    banCheckState.processStartedAt = Date.now();
-    setInterval(async () => {
-      const startTime = Date.now();
-      const result = await runBanCheck(db, sendTelegramReport, sendTelegramMessageToUser);
-      if (result) {
-        const elapsed = Math.round((Date.now() - startTime) / 1000);
-        db.saveBanCheckResult('auto', result, elapsed);
-      }
-    }, 24 * 60 * 60 * 1000); // Каждые 24 часа
+    // === Планировщик проверки читеров ===
+    function getMsUntilCheckTime(timeStr) {
+      const [targetH, targetM] = timeStr.split(':').map(Number);
+      const now = new Date();
+      const target = new Date(now);
+      target.setHours(targetH, targetM, 0, 0);
+      if (target <= now) target.setDate(target.getDate() + 1);
+      return target - now;
+    }
+
+    function scheduleNextBanCheck() {
+      if (banCheckState.scheduledTimer) clearTimeout(banCheckState.scheduledTimer);
+
+      const checkTime = db.getBanCheckTime();
+      const delay = getMsUntilCheckTime(checkTime);
+
+      banCheckState.scheduledTimer = setTimeout(async () => {
+        const startTime = Date.now();
+        const result = await runBanCheck(db, sendTelegramReport, sendTelegramMessageToUser);
+        if (result) {
+          const elapsed = Math.round((Date.now() - startTime) / 1000);
+          db.saveBanCheckResult('auto', result, elapsed);
+        }
+        scheduleNextBanCheck(); // планируем следующую
+      }, delay);
+
+      log(`📅 Следующая проверка читеров в ${checkTime} (через ${Math.round(delay / 60000)} мин)`);
+    }
+
+    banCheckState.reschedule = scheduleNextBanCheck;
+    scheduleNextBanCheck();
 
     // Обработка завершения
     process.on('SIGINT', async () => {

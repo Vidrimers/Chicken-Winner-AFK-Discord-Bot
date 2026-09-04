@@ -607,6 +607,17 @@ export class DatabaseManager {
     };
   }
 
+  // ===== BAN CHECK SETTINGS =====
+
+  getBanCheckTime() {
+    const row = this.prepare("SELECT value FROM ban_check_settings WHERE key = 'check_time'").get();
+    return row ? row.value : '04:30';
+  }
+
+  setBanCheckTime(time) {
+    this.prepare("INSERT OR REPLACE INTO ban_check_settings (key, value) VALUES ('check_time', ?)").run(time);
+  }
+
   close() {
     this.db.close();
   }

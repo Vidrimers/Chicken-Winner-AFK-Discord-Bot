@@ -246,27 +246,46 @@ export function registerRoutes(
     app.get("/api/admin/ban-check-status", requireAuth, requireAdmin, (req, res) => {
       const lastAuto = db.getLastBanCheck('auto');
       const lastManual = db.getLastBanCheck('manual');
+      const checkTime = db.getBanCheckTime();
 
-      // Следующая автоматическая: 24ч от последней авто-проверки, либо от старта процесса
-      const lastAutoTimestamp = lastAuto ? lastAuto.timestamp : banCheckState.processStartedAt;
-      const nextScheduledAt = lastAutoTimestamp
-        ? lastAutoTimestamp + 24 * 60 * 60 * 1000
-        : null;
+      // Следующая проверка: вычисляем точное время
+      const [targetH, targetM] = checkTime.split(':').map(Number);
+      const now = new Date();
+      const nextRun = new Date(now);
+      nextRun.setHours(targetH, targetM, 0, 0);
+      if (nextRun <= now) nextRun.setDate(nextRun.getDate() + 1);
 
       res.json({
         isChecking: banCheckState.isChecking,
         startedAt: banCheckState.startedAt,
         lastAuto,
         lastManual,
-        nextScheduledAt,
+        checkTime,
+        nextScheduledAt: nextRun.getTime(),
       });
+    });
+
+    app.post("/api/admin/ban-check-time", requireAuth, requireAdmin, (req, res) => {
+      const { time } = req.body;
+      if (!time || !/^\d{2}:\d{2}$/.test(time)) {
+        return res.status(400).json({ error: 'Формат времени HH:MM' });
+      }
+      const [h, m] = time.split(':').map(Number);
+      if (h < 0 || h > 23 || m < 0 || m > 59) {
+        return res.status(400).json({ error: 'Некорректное время' });
+      }
+      db.setBanCheckTime(time);
+
+      // Перепланируем проверку с новым временем
+      if (banCheckState.reschedule) banCheckState.reschedule();
+
+      res.json({ success: true, time });
     });
 
     app.post("/api/admin/run-ban-check", requireAuth, requireAdmin, async (req, res) => {
       if (banCheckState.isChecking) {
         return res.json({ skipped: true, message: 'Проверка уже выполняется' });
       }
-      // Запускаем в фоне, отвечаем сразу
       const startTime = Date.now();
       triggerBanCheck().then(result => {
         if (result) {
