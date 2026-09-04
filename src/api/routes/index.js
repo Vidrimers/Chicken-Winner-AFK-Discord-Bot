@@ -14,7 +14,7 @@ import { createSteamRouter } from "./steam.js";
 import { sessionManager } from "../server.js";
 import { createGamePricesRouter } from "./game-prices.js";
 import { createSteamWallRouter } from "./steam-wall.js";
-import { requireAuth, requireOwnership } from "../middleware/auth.js";
+import { requireAuth, requireAdmin, requireOwnership } from "../middleware/auth.js";
 
 /**
  * Зарегистрировать все API роуты
@@ -30,6 +30,8 @@ export function registerRoutes(
   priceNotificationService,
   steamWallDb = null,
   steamWallManager = null,
+  banCheckState = null,
+  triggerBanCheck = null,
 ) {
   // Config роут - для загрузки конфигурации на фронтенде
   app.get("/api/config", (req, res) => {
@@ -238,6 +240,30 @@ export function registerRoutes(
     achievements,
   );
   app.use("/api/admin", adminRouter);
+
+  // Ban check API (admin only)
+  if (banCheckState && triggerBanCheck) {
+    app.get("/api/admin/ban-check-status", requireAuth, requireAdmin, (req, res) => {
+      res.json({
+        isChecking: banCheckState.isChecking,
+        startedAt: banCheckState.startedAt,
+        lastAuto: banCheckState.lastAuto,
+        lastManual: banCheckState.lastManual,
+        nextScheduledAt: banCheckState.processStartedAt
+          ? banCheckState.processStartedAt + 24 * 60 * 60 * 1000
+          : null,
+      });
+    });
+
+    app.post("/api/admin/run-ban-check", requireAuth, requireAdmin, async (req, res) => {
+      const result = await triggerBanCheck();
+      if (result === null) {
+        return res.json({ skipped: true, message: 'Проверка уже выполняется' });
+      }
+      banCheckState.lastManual = result;
+      res.json({ skipped: false, result });
+    });
+  }
 
   // Cheater Checker роуты
   const cheaterCheckerRouter = createCheaterCheckerRouter(

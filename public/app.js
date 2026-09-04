@@ -3529,3 +3529,105 @@ async function deleteBackupFiles(filenames) {
   }
   await loadBackupList();
 }
+
+// ===== BAN CHECK MODAL =====
+
+let banCheckPollInterval = null;
+
+function openBanCheckModal() {
+  document.getElementById('banCheckModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  refreshBanCheckStatus();
+  banCheckPollInterval = setInterval(refreshBanCheckStatus, 5000);
+}
+
+function closeBanCheckModal() {
+  document.getElementById('banCheckModal').style.display = 'none';
+  document.body.style.overflow = '';
+  if (banCheckPollInterval) {
+    clearInterval(banCheckPollInterval);
+    banCheckPollInterval = null;
+  }
+}
+
+function formatBanCheckDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleString('ru-RU');
+}
+
+function renderBanCheckResult(containerDateId, containerStatsId, result) {
+  const dateEl = document.getElementById(containerDateId);
+  const statsEl = document.getElementById(containerStatsId);
+  if (!result) {
+    dateEl.textContent = '—';
+    statsEl.textContent = 'Не запускалась';
+    return;
+  }
+  dateEl.textContent = formatBanCheckDate(result.timestamp);
+  statsEl.innerHTML =
+    `Проверено: ${result.totalChecked}<br>` +
+    `Обновлено: ${result.updated}<br>` +
+    `Уведомлений: ${result.notified}` +
+    (result.error ? `<br><span style="color:#f44336;">Ошибка: ${result.error}</span>` : '');
+}
+
+async function refreshBanCheckStatus() {
+  try {
+    const res = await fetch('/api/admin/ban-check-status');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const runningBadge = document.getElementById('banCheckRunningBadge');
+    const idleBadge = document.getElementById('banCheckIdleBadge');
+    const runBtn = document.getElementById('banCheckRunBtn');
+
+    if (data.isChecking) {
+      runningBadge.style.display = 'inline';
+      idleBadge.style.display = 'none';
+      runBtn.disabled = true;
+      runBtn.textContent = 'Проверка выполняется...';
+      runBtn.style.opacity = '0.5';
+      runBtn.style.cursor = 'not-allowed';
+    } else {
+      runningBadge.style.display = 'none';
+      idleBadge.style.display = 'inline';
+      runBtn.disabled = false;
+      runBtn.textContent = 'Запустить проверку';
+      runBtn.style.opacity = '1';
+      runBtn.style.cursor = 'pointer';
+    }
+
+    document.getElementById('banCheckNextRun').textContent = data.nextScheduledAt
+      ? formatBanCheckDate(data.nextScheduledAt)
+      : '—';
+
+    renderBanCheckResult('banCheckAutoDate', 'banCheckAutoStats', data.lastAuto);
+    renderBanCheckResult('banCheckManualDate', 'banCheckManualStats', data.lastManual);
+  } catch (err) {
+    console.error('Ошибка получения статуса проверки:', err);
+  }
+}
+
+async function runManualBanCheck() {
+  const btn = document.getElementById('banCheckRunBtn');
+  btn.disabled = true;
+  btn.textContent = 'Запуск...';
+  btn.style.opacity = '0.5';
+
+  try {
+    const res = await fetch('/api/admin/run-ban-check', { method: 'POST' });
+    const data = await res.json();
+
+    if (data.skipped) {
+      alert('Проверка уже выполняется');
+    } else {
+      await refreshBanCheckStatus();
+    }
+  } catch (err) {
+    alert('Ошибка запуска проверки');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Запустить проверку';
+  btn.style.opacity = '1';
+}
