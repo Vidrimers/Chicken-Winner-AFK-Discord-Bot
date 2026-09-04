@@ -57,6 +57,11 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
     let totalChecked = 0;
     let updated = 0;
     let notified = 0;
+    let lastProgressReport = 0;
+
+    // Уведомление админу о начале проверки
+    const totalCount = db.getCheaterChecksCount('all');
+    await sendTelegramReport(`🔍 <b>Начата проверка читеров</b>\n📊 Всего профилей: ${totalCount}`);
 
     while (true) {
       const batch = db.getCheaterChecks({ limit: batchSize, offset, filter: 'all' });
@@ -153,6 +158,12 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
 
       totalChecked += batch.length;
       offset += batchSize;
+
+      // Прогресс каждые 100 профилей
+      if (totalChecked - lastProgressReport >= 100) {
+        lastProgressReport = totalChecked;
+        await sendTelegramReport(`⏳ Проверено ${totalChecked} из ${totalCount}`);
+      }
 
       if (batch.length < batchSize) break;
       await new Promise(r => setTimeout(r, delayMs));
