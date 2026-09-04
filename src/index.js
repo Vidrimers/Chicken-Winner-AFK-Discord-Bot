@@ -122,7 +122,8 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
           const ownNotificationsEnabled = db.getUserCheaterOwnNotificationSetting(existing.checked_by_discord_id);
           if (ownNotificationsEnabled) {
             const telegramChatId = db.getTelegramChatId(existing.checked_by_discord_id);
-            if (telegramChatId) {
+            // Пропускаем если это тот же чат что и админ (уже получил уведомление выше)
+            if (telegramChatId && telegramChatId.toString() !== (process.env.TELEGRAM_CHAT_ID || '')) {
               const userMessage =
                 `⚠️ <b>Потенциальный читер получил ограничения!</b>\n\n` +
                 `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
