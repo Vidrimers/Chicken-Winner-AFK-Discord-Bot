@@ -2730,6 +2730,33 @@ function showUnauthorizedAccessWarning() {
   document.body.style.overflow = "hidden";
 }
 
+/**
+ * Показать уведомление-тост
+ */
+function showNotification(text, type = 'info') {
+  let container = document.getElementById('notification-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'notification-container';
+    container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;';
+    document.body.appendChild(container);
+  }
+
+  const colors = { success: '#4CAF50', error: '#f44336', warning: '#ff9800', info: '#2196F3' };
+  const toast = document.createElement('div');
+  toast.style.cssText = `padding:12px 20px;border-radius:8px;color:#fff;font-size:14px;font-weight:500;background:${colors[type] || colors.info};box-shadow:0 4px 12px rgba(0,0,0,0.3);opacity:0;transform:translateX(100%);transition:all 0.3s ease;max-width:350px;`;
+  toast.textContent = text;
+  container.appendChild(toast);
+
+  requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; });
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(100%)';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
+
 // Универсальная функция для показа кастомных алертов
 function showCustomAlert(title, message, buttons = []) {
   // Создаем оверлей
