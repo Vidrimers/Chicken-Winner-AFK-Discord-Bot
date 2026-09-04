@@ -271,6 +271,26 @@
     } catch {}
   }
 
+  function reloadVisiblePrices() {
+    const favTab = document.getElementById('tab-favorites');
+    if (favTab && favTab.classList.contains('active')) {
+      loadFavoritesTab();
+      return;
+    }
+    // Популярные
+    if (allPopularGames.length > 0) {
+      loadPopular();
+    }
+    // Результаты поиска
+    if (allSearchResults.length > 0) {
+      renderSearchPage();
+    }
+    // Открытая модалка
+    if (currentGameSlug) {
+      openGameModal(currentGameSlug, document.getElementById('gpModalTitle').textContent);
+    }
+  }
+
   function getCurrencySymbol(code) {
     const symbols = { KZT: '₸', RUB: '₽', USD: '$', EUR: '€', UAH: '₴', BYN: 'р.', GBP: '£', GEL: '₾' };
     return symbols[code] || code;
@@ -599,9 +619,11 @@
 
     region.addEventListener('change', () => {
       saveSettings({ ...getSettings(), region: region.value });
+      reloadVisiblePrices();
     });
     currency.addEventListener('change', () => {
       saveSettings({ ...getSettings(), currency: currency.value });
+      reloadVisiblePrices();
     });
   }
 
