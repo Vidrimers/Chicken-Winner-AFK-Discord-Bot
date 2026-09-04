@@ -113,6 +113,15 @@
       await apiDelete(`/favorites/${slug}?user_id=${userId}`);
       favoriteSlugs.delete(slug);
       showToast('Удалено из избранного');
+      // Убираем карточку из вкладки «Избранное» сразу
+      const favTab = document.getElementById('tab-favorites');
+      if (favTab && favTab.classList.contains('active')) {
+        const card = favTab.querySelector(`.gp-game-card[data-slug="${slug}"]`);
+        if (card) card.remove();
+        if (!favTab.querySelector('.gp-game-card')) {
+          document.getElementById('gpFavEmptyState').style.display = 'block';
+        }
+      }
     } else {
       await apiPost('/favorites', { user_id: userId, game_slug: slug });
       favoriteSlugs.add(slug);
