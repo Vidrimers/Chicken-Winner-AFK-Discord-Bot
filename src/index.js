@@ -161,9 +161,35 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
 
     const result = { timestamp: Date.now(), totalChecked, updated, notified };
     log(`✅ Перепроверка завершена. Проверено: ${totalChecked}, обновлено: ${updated}, уведомлений отправлено: ${notified}`);
+
+    // Уведомление админу о завершении
+    const elapsed = Math.round((Date.now() - banCheckState.startedAt) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    const timeStr = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
+    await sendTelegramReport(
+      `✅ <b>Проверка читеров завершена</b>\n\n` +
+      `📊 Проверено: ${totalChecked}\n` +
+      `🔄 Обновлено: ${updated}\n` +
+      `📨 Уведомлений: ${notified}\n` +
+      `⏱ Время: ${timeStr}`
+    );
+
     return result;
   } catch (error) {
     logError(`Ошибка перепроверки: ${error.message}`);
+
+    // Уведомление админу об ошибке
+    const elapsed = Math.round((Date.now() - banCheckState.startedAt) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    const timeStr = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
+    await sendTelegramReport(
+      `❌ <b>Ошибка проверки читеров</b>\n\n` +
+      `⚠️ Ошибка: ${error.message}\n` +
+      `⏱ Время: ${timeStr}`
+    ).catch(() => {});
+
     return { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, error: error.message };
   } finally {
     banCheckState.isChecking = false;
