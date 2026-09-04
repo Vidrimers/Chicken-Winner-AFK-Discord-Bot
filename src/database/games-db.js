@@ -221,7 +221,7 @@ export class GamesDatabase {
 
   getCachedPrices(gameSlug) {
     return this.prepare(
-      "SELECT * FROM game_prices WHERE game_slug = ? AND last_checked > datetime('now', '-1 hour')"
+      "SELECT * FROM game_prices WHERE game_slug = ?"
     ).all(gameSlug);
   }
 
