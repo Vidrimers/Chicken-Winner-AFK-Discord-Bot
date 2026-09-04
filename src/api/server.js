@@ -49,7 +49,7 @@ export class SessionManager {
   setSession(res, userId) {
     const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     const now = Date.now();
-    const expiresAt = now + 86400 * 1000; // 24 часа
+    const expiresAt = now + 30 * 86400 * 1000; // 30 дней
     
     this.db.prepare(
       'INSERT INTO sessions (session_id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)'
@@ -57,7 +57,7 @@ export class SessionManager {
     
     res.setHeader(
       'Set-Cookie',
-      `sessionId=${sessionId}; Path=/; Max-Age=86400; SameSite=Strict; HttpOnly`
+      `sessionId=${sessionId}; Path=/; Max-Age=${30 * 86400}; SameSite=Strict; HttpOnly`
     );
     return sessionId;
   }
@@ -119,7 +119,7 @@ export function createExpressServer(db) {
       if (req.sessionId) {
         // Обновляем существующую сессию
         const now = Date.now();
-        const expiresAt = now + 86400 * 1000;
+        const expiresAt = now + 30 * 86400 * 1000;
         sessionManager.db.prepare(
           'UPDATE sessions SET user_id = ?, expires_at = ? WHERE session_id = ?'
         ).run(req.session.userId, expiresAt, req.sessionId);
