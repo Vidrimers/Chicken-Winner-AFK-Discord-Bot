@@ -219,7 +219,12 @@ export class GamesDatabase {
     transaction(prices);
   }
 
-  getCachedPrices(gameSlug) {
+  getCachedPrices(gameSlug, currency) {
+    if (currency) {
+      return this.prepare(
+        "SELECT * FROM game_prices WHERE game_slug = ? AND currency = ?"
+      ).all(gameSlug, currency);
+    }
     return this.prepare(
       "SELECT * FROM game_prices WHERE game_slug = ?"
     ).all(gameSlug);

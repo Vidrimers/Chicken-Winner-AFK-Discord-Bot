@@ -245,8 +245,9 @@
       const currency = document.getElementById('gpCurrency').value;
       const data = await apiGet(`/prices-batch?slugs=${slugs.join(',')}&currency=${currency}`);
       for (const [slug, price] of Object.entries(data)) {
+        if (price == null) continue;
         const cards = document.querySelectorAll(`.gp-game-card[data-slug="${slug}"] .gp-card-price`);
-        cards.forEach(el => { el.textContent = `${price} ${getCurrencySymbol(currency)}`; el.style.display = 'block'; });
+        cards.forEach(el => { el.textContent = `${price} ${getCurrencySymbol(currency)}`; el.classList.remove('gp-card-price-empty'); el.style.display = 'block'; });
         // Если бейджа нет — создаём
         if (cards.length === 0) {
           const card = document.querySelector(`.gp-game-card[data-slug="${slug}"]`);
@@ -374,11 +375,14 @@
         empty.style.display = 'block';
         return;
       }
+      // Синхронизируем favoriteSlugs с сервером перед рендером
+      favoriteSlugs = new Set(favs.map(f => f.slug).filter(Boolean));
       empty.style.display = 'none';
       renderGrid(grid, favs);
       const slugs = favs.map(f => f.slug).filter(Boolean);
       loadPosters(slugs);
-      loadPrices(slugs);
+      await loadPrices(slugs);
+      updateAllFavButtons();
     } catch {
       grid.innerHTML = '';
       empty.style.display = 'block';
@@ -453,7 +457,7 @@
           slider.innerHTML = storeLinks.map(s => `
             <a href="${s.url}" target="_blank" rel="noopener" class="gp-store-link">
               <span class="gp-store-name">${s.source || 'Магазин'}</span>
-              ${s.price ? `<span class="gp-store-price">${s.price} ₸</span>` : ''}
+              ${s.price ? `<span class="gp-store-price">${s.price} ${getCurrencySymbol(document.getElementById('gpCurrency').value)}</span>` : ''}
               <span class="gp-store-buy">Купить →</span>
             </a>
           `).join('');

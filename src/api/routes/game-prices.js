@@ -357,7 +357,7 @@ export function createGamePricesRouter(db, gamesDb, discordClient, telegram, pri
         }
       }
 
-      const prices = gamesDb.getCachedPrices(slug);
+      const prices = gamesDb.getCachedPrices(slug, currency);
       const priceHistory = gamesDb.getOldPrices(slug);
 
       res.json({
