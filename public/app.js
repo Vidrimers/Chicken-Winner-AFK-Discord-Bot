@@ -3619,12 +3619,13 @@ async function runManualBanCheck() {
     const data = await res.json();
 
     if (data.skipped) {
-      alert('Проверка уже выполняется');
+      showNotification('Проверка уже выполняется', 'warning');
     } else {
-      await refreshBanCheckStatus();
+      showNotification('Проверка запущена', 'success');
+      refreshBanCheckStatus();
     }
   } catch (err) {
-    alert('Ошибка запуска проверки');
+    showNotification('Ошибка запуска проверки', 'error');
   }
 
   btn.disabled = false;

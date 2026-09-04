@@ -256,12 +256,16 @@ export function registerRoutes(
     });
 
     app.post("/api/admin/run-ban-check", requireAuth, requireAdmin, async (req, res) => {
-      const result = await triggerBanCheck();
-      if (result === null) {
+      if (banCheckState.isChecking) {
         return res.json({ skipped: true, message: 'Проверка уже выполняется' });
       }
-      banCheckState.lastManual = result;
-      res.json({ skipped: false, result });
+      // Запускаем в фоне, отвечаем сразу
+      triggerBanCheck().then(result => {
+        if (result) banCheckState.lastManual = result;
+      }).catch(err => {
+        banCheckState.lastManual = { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, error: err.message };
+      });
+      res.json({ skipped: false, message: 'Проверка запущена' });
     });
   }
 
