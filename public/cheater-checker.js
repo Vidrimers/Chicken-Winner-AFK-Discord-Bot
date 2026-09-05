@@ -638,30 +638,33 @@ function bindCardDelegation() {
     if (!container) return;
     
     container.addEventListener('click', (e) => {
-      // Клик по имени → раскрытие деталей
-      const nameEl = e.target.closest('.card-name');
-      if (nameEl) {
-        const steamId = nameEl.dataset.steamId;
-        const details = document.getElementById(`details-${steamId}`);
-        if (details) {
-          details.classList.toggle('visible');
-          nameEl.classList.toggle('expanded');
-        }
-        return;
-      }
-      
       // Клик по кнопке "Дискорд"
       const publishBtn = e.target.closest('.discord-publish-btn');
       if (publishBtn) {
         publishToDiscord(publishBtn.dataset.steamId);
         return;
       }
-      
+
       // Клик по кнопке удаления (admin)
       const deleteBtn = e.target.closest('.card-delete-btn');
       if (deleteBtn) {
         showConfirmDialog(deleteBtn.dataset.steamId, deleteBtn.dataset.name);
         return;
+      }
+
+      // Клик по ссылке/кнопке — не раскрываем карточку
+      if (e.target.closest('a, button')) return;
+
+      // Клик по карточке → раскрытие деталей
+      const card = e.target.closest('.profile-card');
+      if (card) {
+        const steamId = card.dataset.steamId;
+        const details = document.getElementById(`details-${steamId}`);
+        const nameEl = card.querySelector('.card-name');
+        if (details) {
+          details.classList.toggle('visible');
+          if (nameEl) nameEl.classList.toggle('expanded');
+        }
       }
     });
   });
