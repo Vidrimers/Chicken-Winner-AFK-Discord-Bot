@@ -93,6 +93,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
           checkedByDiscordId: existing.checked_by_discord_id,
           checkedByUsername: existing.checked_by_username
         });
+        db.markCheaterBanUpdated(profile.steamId);
         updated++;
         log(`🔄 Обновлён профиль ${profile.personaName} (${profile.steamId}) — статус бана изменился`);
 

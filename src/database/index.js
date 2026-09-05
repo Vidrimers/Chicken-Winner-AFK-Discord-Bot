@@ -438,7 +438,7 @@ export class DatabaseManager {
       sql += ' WHERE cc.vac_banned = 0 AND cc.number_of_game_bans = 0 AND cc.community_banned = 0 AND cc.economy_ban = \'none\'';
     }
 
-    sql += ' ORDER BY cc.checked_at DESC LIMIT ? OFFSET ?';
+    sql += ' ORDER BY COALESCE(cc.updated_at, cc.checked_at) DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
     return this.db.prepare(sql).all(...params);
@@ -476,6 +476,23 @@ export class DatabaseManager {
        LEFT JOIN user_stats us ON cc.checked_by_discord_id = us.user_id 
        WHERE cc.steam_id = ?`
     ).get(steamId);
+  }
+
+  markCheaterBanUpdated(steamId) {
+    return this.prepare(
+      'UPDATE cheater_checks SET updated_at = CURRENT_TIMESTAMP WHERE steam_id = ?'
+    ).run(steamId);
+  }
+
+  getCheaterLastView(userId) {
+    const row = this.prepare('SELECT viewed_at FROM cheater_last_view WHERE user_id = ?').get(userId);
+    return row ? row.viewed_at : null;
+  }
+
+  markCheaterLastView(userId) {
+    return this.prepare(
+      'INSERT OR REPLACE INTO cheater_last_view (user_id, viewed_at) VALUES (?, ?)'
+    ).run(userId, Date.now());
   }
 
   getUserCheaterStats(discordId) {

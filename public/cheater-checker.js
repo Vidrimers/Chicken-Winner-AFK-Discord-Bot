@@ -8,6 +8,7 @@ let CONFIG = { ADMIN_USER_ID: '' };
 let currentUserId = null;
 let currentUsername = null;
 let profiles = [];
+let lastViewedAt = null;
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 
@@ -122,6 +123,9 @@ async function loadProfiles() {
     const bannedData = await bannedRes.json();
     const cleanData = await cleanRes.json();
 
+    // lastViewedAt от сервера (одинаковый в обоих ответах)
+    lastViewedAt = bannedData.lastViewedAt || cleanData.lastViewedAt || null;
+
     allBannedProfiles = bannedData.profiles || [];
     allCleanProfiles = cleanData.profiles || [];
     profiles = [...allBannedProfiles, ...allCleanProfiles];
@@ -132,6 +136,11 @@ async function loadProfiles() {
     renderBannedPage();
     renderCleanPage();
     updateCounters();
+
+    // Отмечаем что пользователь просмотрел страницу
+    if (currentUserId) {
+      fetch('/api/cheater-checker/mark-viewed', { method: 'POST' }).catch(() => {});
+    }
   } catch (err) {
     console.error('❌ Ошибка загрузки профилей:', err);
   }
@@ -310,6 +319,22 @@ function isBannedProfile(profile) {
 }
 
 /**
+ * Проверяет обновлён ли профиль с момента последнего просмотра
+ */
+function isProfileUpdated(profile) {
+  if (!profile.updated_at || !lastViewedAt) return false;
+  return new Date(profile.updated_at).getTime() > lastViewedAt;
+}
+
+/**
+ * Форматирует дату обновления для бейджа
+ */
+function formatUpdatedAt(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+/**
  * Вычисляет сигналы подозрительности по данным steam_cache.
  * Возвращает массив объектов { icon, text }.
  *
@@ -411,6 +436,12 @@ function createProfileCard(profile, isBanned) {
     ? `<span class="suspicious-badge">⚠️ Подозрительно</span>`
     : '';
 
+  // Бейдж обновления
+  const updated = isProfileUpdated(profile);
+  const updatedBadge = updated
+    ? `<span class="updated-badge">🔔 Обновлён ${formatUpdatedAt(profile.updated_at)}</span>`
+    : '';
+
   // Сигналы в виде списка (отображаются в деталях)
   const signalsHtml = signals.length > 0
     ? `<div class="signals-section">
@@ -434,6 +465,7 @@ function createProfileCard(profile, isBanned) {
             <span class="expand-icon">▶</span>
             ${personaName}
             ${suspiciousBadge}
+            ${updatedBadge}
           </div>
         </div>
         ${deleteBtn}

@@ -166,7 +166,24 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       const profiles = db.getCheaterChecks({ limit, offset, filter });
       const total = db.getCheaterChecksCount(filter);
 
-      res.json({ profiles, total });
+      // lastViewedAt для авторизованных пользователей
+      const userId = req.session?.userId || null;
+      const lastViewedAt = userId ? db.getCheaterLastView(userId) : null;
+
+      res.json({ profiles, total, lastViewedAt });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * POST /api/cheater-checker/mark-viewed
+   * Отметить что пользователь просмотрел страницу чекера
+   */
+  router.post('/mark-viewed', requireAuth, (req, res) => {
+    try {
+      db.markCheaterLastView(req.authenticatedUserId);
+      res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }

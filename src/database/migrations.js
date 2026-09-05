@@ -357,5 +357,30 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: добавление колонки updated_at в cheater_checks
+  {
+    const columns = db.prepare("PRAGMA table_info(cheater_checks)").all();
+    const hasUpdatedAt = columns.some(c => c.name === 'updated_at');
+    if (!hasUpdatedAt) {
+      db.exec("ALTER TABLE cheater_checks ADD COLUMN updated_at TIMESTAMP");
+      db.exec("CREATE INDEX IF NOT EXISTS idx_cheater_checks_updated_at ON cheater_checks(updated_at DESC)");
+      console.log('✅ Колонка updated_at добавлена в cheater_checks');
+    }
+  }
+
+  // Миграция: таблица cheater_last_view (последний просмотр страницы чекера)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cheater_last_view'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE cheater_last_view (
+          user_id TEXT PRIMARY KEY,
+          viewed_at INTEGER NOT NULL
+        )
+      `);
+      console.log('✅ Таблица cheater_last_view создана');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }
