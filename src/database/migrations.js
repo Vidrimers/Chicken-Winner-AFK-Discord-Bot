@@ -347,5 +347,15 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: добавление колонки notified_others в ban_check_log
+  {
+    const columns = db.prepare("PRAGMA table_info(ban_check_log)").all();
+    const hasColumn = columns.some(c => c.name === 'notified_others');
+    if (!hasColumn) {
+      db.exec("ALTER TABLE ban_check_log ADD COLUMN notified_others INTEGER NOT NULL DEFAULT 0");
+      console.log('✅ Колонка notified_others добавлена в ban_check_log');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

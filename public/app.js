@@ -3597,7 +3597,7 @@ function renderBanCheckResult(containerDateId, containerStatsId, result) {
   statsEl.innerHTML =
     `Проверено: ${result.totalChecked}<br>` +
     `Обновлено: ${result.updated}<br>` +
-    `Уведомлений: ${result.notified}` +
+    `Уведомлений: ${(result.notified || 0) + (result.notifiedOthers || 0)} (свои: ${result.notified || 0} / чужие: ${result.notifiedOthers || 0})` +
     (duration ? `<br>⏱ ${duration}` : '') +
     (result.error ? `<br><span style="color:#f44336;">Ошибка: ${result.error}</span>` : '');
 }

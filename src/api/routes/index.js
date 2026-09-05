@@ -293,7 +293,7 @@ export function registerRoutes(
           db.saveBanCheckResult('manual', result, elapsed);
         }
       }).catch(err => {
-        const errorResult = { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, error: err.message };
+        const errorResult = { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, notifiedOthers: 0, error: err.message };
         db.saveBanCheckResult('manual', errorResult, 0);
       });
       res.json({ skipped: false, message: 'Проверка запущена' });

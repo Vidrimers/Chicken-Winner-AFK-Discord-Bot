@@ -588,8 +588,8 @@ export class DatabaseManager {
 
   saveBanCheckResult(type, result, durationSeconds) {
     this.prepare(
-      'INSERT INTO ban_check_log (type, timestamp, total_checked, updated, notified, duration_seconds, error) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).run(type, result.timestamp, result.totalChecked || 0, result.updated || 0, result.notified || 0, durationSeconds || 0, result.error || null);
+      'INSERT INTO ban_check_log (type, timestamp, total_checked, updated, notified, notified_others, duration_seconds, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(type, result.timestamp, result.totalChecked || 0, result.updated || 0, result.notified || 0, result.notifiedOthers || 0, durationSeconds || 0, result.error || null);
   }
 
   getLastBanCheck(type) {
@@ -602,6 +602,7 @@ export class DatabaseManager {
       totalChecked: row.total_checked,
       updated: row.updated,
       notified: row.notified,
+      notifiedOthers: row.notified_others || 0,
       durationSeconds: row.duration_seconds,
       error: row.error,
     };

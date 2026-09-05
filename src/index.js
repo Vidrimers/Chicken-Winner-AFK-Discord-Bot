@@ -57,6 +57,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
     let totalChecked = 0;
     let updated = 0;
     let notified = 0;
+    let notifiedOthers = 0;
     let lastProgressReport = 0;
 
     // Уведомление админу о начале проверки
@@ -153,6 +154,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             `👁 Добавил: ${existing.checked_by_username || 'Неизвестно'}\n` +
             `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
           await sendTelegramMessageToUser(subscriber.telegram_chat_id, othersMessage);
+          notifiedOthers++;
         }
       }
 
@@ -169,9 +171,9 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
       await new Promise(r => setTimeout(r, delayMs));
     }
 
-    const result = { timestamp: Date.now(), totalChecked, updated, notified };
+    const result = { timestamp: Date.now(), totalChecked, updated, notified, notifiedOthers };
     const elapsed = Math.round((Date.now() - banCheckState.startedAt) / 1000);
-    log(`✅ Перепроверка завершена. Проверено: ${totalChecked}, обновлено: ${updated}, уведомлений отправлено: ${notified}`);
+    log(`✅ Перепроверка завершена. Проверено: ${totalChecked}, обновлено: ${updated}, уведомлений: ${notified} свои / ${notifiedOthers} чужие`);
 
     // Уведомление админу о завершении
     const minutes = Math.floor(elapsed / 60);
@@ -181,7 +183,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
       `✅ <b>Проверка читеров завершена</b>\n\n` +
       `📊 Проверено: ${totalChecked}\n` +
       `🔄 Обновлено: ${updated}\n` +
-      `📨 Уведомлений: ${notified}\n` +
+      `📨 Уведомлений: ${notified + notifiedOthers} (свои: ${notified} / чужие: ${notifiedOthers})\n` +
       `⏱ Время: ${timeStr}`
     );
 
@@ -190,7 +192,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
     logError(`Ошибка перепроверки: ${error.message}`);
 
     const errorElapsed = Math.round((Date.now() - banCheckState.startedAt) / 1000);
-    const errorResult = { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, error: error.message };
+    const errorResult = { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, notifiedOthers: 0, error: error.message };
 
     // Уведомление админу об ошибке
     const minutes = Math.floor(errorElapsed / 60);
