@@ -96,8 +96,6 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
         updated++;
         log(`🔄 Обновлён профиль ${profile.personaName} (${profile.steamId}) — статус бана изменился`);
 
-        if (!wasClean) continue;
-
         // Определяем типы банов
         const banDetails = [];
         if (profile.vacBanned) banDetails.push(`VAC-бан (${profile.numberOfVacBans || 1})`);
@@ -110,9 +108,16 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
         const profileName = profile.personaName || profile.steamId;
         const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
 
+        const ownTitle = wasClean
+          ? '⚠️ <b>Потенциальный читер получил ограничения!</b>'
+          : '🔔 <b>Обновление ограничений читера</b>';
+        const othersTitle = wasClean
+          ? '🔔 <b>Изменение статуса читера</b>'
+          : '🔔 <b>Обновление ограничений читера</b>';
+
         // Уведомление админу
         const adminMessage =
-          `⚠️ <b>Потенциальный читер получил ограничения!</b>\n\n` +
+          `${ownTitle}\n\n` +
           `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
           `🆔 SteamID: ${profile.steamId}\n` +
           `🚫 Ограничения: ${banDetails.join(', ')}\n` +
@@ -129,7 +134,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             // Пропускаем если это тот же чат что и админ (уже получил уведомление выше)
             if (telegramChatId && telegramChatId.toString() !== (process.env.TELEGRAM_CHAT_ID || '')) {
               const userMessage =
-                `⚠️ <b>Потенциальный читер получил ограничения!</b>\n\n` +
+                `${ownTitle}\n\n` +
                 `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
                 `🆔 SteamID: ${profile.steamId}\n` +
                 `🚫 Ограничения: ${banDetails.join(', ')}\n` +
@@ -147,7 +152,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
         for (const subscriber of otherSubscribers) {
           if (subscriber.user_id === existing.checked_by_discord_id) continue;
           const othersMessage =
-            `🔔 <b>Изменение статуса читера</b>\n\n` +
+            `${othersTitle}\n\n` +
             `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
             `🆔 SteamID: ${profile.steamId}\n` +
             `🚫 Ограничения: ${banDetails.join(', ')}\n` +
