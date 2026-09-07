@@ -382,5 +382,15 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: добавление колонки original_vanity_url в cheater_checks
+  {
+    const columns = db.prepare("PRAGMA table_info(cheater_checks)").all();
+    const hasVanityUrl = columns.some(c => c.name === 'original_vanity_url');
+    if (!hasVanityUrl) {
+      db.exec("ALTER TABLE cheater_checks ADD COLUMN original_vanity_url TEXT");
+      console.log('✅ Колонка original_vanity_url добавлена в cheater_checks');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

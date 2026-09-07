@@ -115,7 +115,7 @@ export async function checkProfiles(urls) {
     }
 
     if (parsed.type === 'steamid64') {
-      resolvedIds.push({ steamId: parsed.value, originalUrl: url });
+      resolvedIds.push({ steamId: parsed.value, originalUrl: url, vanityName: null });
     } else if (parsed.type === 'vanity') {
       vanityUrls.push({ vanityName: parsed.value, originalUrl: url });
     }
@@ -130,7 +130,7 @@ export async function checkProfiles(urls) {
       }
       isFirstRequest = false;
       const steamId = await resolveVanityUrl(vanityName);
-      resolvedIds.push({ steamId, originalUrl });
+      resolvedIds.push({ steamId, originalUrl, vanityName });
     } catch (err) {
       if (err.message.startsWith('VANITY_NOT_FOUND:')) {
         const name = err.message.split(':')[1];
@@ -186,7 +186,7 @@ export async function checkProfiles(urls) {
   }
 
   // 5. Merge results
-  for (const { steamId } of resolvedIds) {
+  for (const { steamId, vanityName } of resolvedIds) {
     const ban = allBans.find(b => b.SteamId === steamId);
     const summary = allSummaries.find(s => s.steamid === steamId);
 
@@ -195,6 +195,7 @@ export async function checkProfiles(urls) {
       personaName: summary?.personaname || 'Unknown',
       avatarUrl: summary?.avatarfull || '',
       profileUrl: summary?.profileurl || `https://steamcommunity.com/profiles/${steamId}`,
+      originalVanityUrl: vanityName || null,
       vacBanned: ban?.VACBanned || false,
       numberOfVacBans: ban?.NumberOfVACBans || 0,
       numberOfGameBans: ban?.NumberOfGameBans || 0,

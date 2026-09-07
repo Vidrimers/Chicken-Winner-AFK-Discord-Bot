@@ -396,10 +396,10 @@ export class DatabaseManager {
   upsertCheaterCheck(profile) {
     return this.prepare(
       `INSERT INTO cheater_checks 
-       (steam_id, persona_name, avatar_url, profile_url, vac_banned, number_of_vac_bans, 
+       (steam_id, persona_name, avatar_url, profile_url, original_vanity_url, vac_banned, number_of_vac_bans, 
         number_of_game_bans, days_since_last_ban, community_banned, economy_ban, 
         checked_by_discord_id, checked_by_username, checked_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
        ON CONFLICT(steam_id) DO UPDATE SET
         persona_name = excluded.persona_name,
         avatar_url = excluded.avatar_url,
@@ -409,12 +409,14 @@ export class DatabaseManager {
         number_of_game_bans = excluded.number_of_game_bans,
         days_since_last_ban = excluded.days_since_last_ban,
         community_banned = excluded.community_banned,
-        economy_ban = excluded.economy_ban`
+        economy_ban = excluded.economy_ban,
+        original_vanity_url = COALESCE(excluded.original_vanity_url, cheater_checks.original_vanity_url)`
     ).run(
       profile.steamId,
       profile.personaName || null,
       profile.avatarUrl || null,
       profile.profileUrl,
+      profile.originalVanityUrl || null,
       profile.vacBanned ? 1 : 0,
       profile.numberOfVacBans || 0,
       profile.numberOfGameBans || 0,
