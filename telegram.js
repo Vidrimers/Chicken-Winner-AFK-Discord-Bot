@@ -381,6 +381,8 @@ async function sendMainMenu(chatId) {
  * Отправка подменю чекера читеров
  */
 async function sendCheckerMenu(chatId) {
+  const isAdmin = chatId.toString() === TELEGRAM_CHAT_ID;
+
   const checkerButtons = {
     inline_keyboard: [
       [
@@ -389,6 +391,9 @@ async function sendCheckerMenu(chatId) {
       [
         { text: '🔎 Проверить читера', callback_data: 'checker_check' }
       ],
+      ...(isAdmin ? [[
+        { text: '🔍 CheatWatcher', callback_data: 'cw_qr_start' }
+      ]] : []),
       [
         { text: '◀️ Назад', callback_data: 'back_to_menu' }
       ]
