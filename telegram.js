@@ -806,6 +806,26 @@ async function handleSteamUrlCheck(chatId, text) {
     urlsToCheck = urlsToCheck.slice(0, 5);
   }
 
+  const adminSteamId = (process.env.ADMIN_STEAM_ID || '').trim();
+  if (adminSteamId && urlsToCheck.some((u) => u && u.includes(adminSteamId))) {
+    await telegramBot.sendMessage(chatId, '❌ Ты сильно-то не охуевай там, малютка');
+
+    try {
+      const attemptName = discordUsername || 'Unknown';
+      await sendTelegramReport(
+        `🚨 <b>Попытка добавить защищённый профиль</b>\n\n` +
+        `👤 Пользователь: ${attemptName}\n` +
+        `🆔 Discord ID: <code>${discordId}</code>\n` +
+        `📱 Источник: telegram\n` +
+        `📅 Время: ${new Date().toLocaleString('ru-RU')}`
+      );
+    } catch (notifyErr) {
+      console.error('[TG] Ошибка уведомления админа о попытке добавить защищённый профиль:', notifyErr.message);
+    }
+
+    return;
+  }
+
   const countText = urlsToCheck.length > 1 ? `${urlsToCheck.length} профилей` : 'профиль';
   await telegramBot.sendMessage(chatId, `⏳ Проверяю ${countText}... Это может занять несколько секунд.`);
 

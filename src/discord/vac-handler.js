@@ -112,6 +112,28 @@ export class VacHandler {
       // Добавляем реакцию "поиск"
       await message.react('🔍');
 
+      const adminSteamId = (process.env.ADMIN_STEAM_ID || '').trim();
+      if (adminSteamId && url && url.includes(adminSteamId)) {
+        await message.reactions.cache.get('🔍')?.remove();
+        await message.react('🚫');
+        await message.reply('❌ Ты сильно-то не охуевай там, малютка');
+
+        try {
+          const attemptName = this.db.getUserStats(message.author.id)?.username || message.member?.displayName || message.author.username;
+          await this.telegram?.sendTelegramReport?.(
+            `🚨 <b>Попытка добавить защищённый профиль</b>\n\n` +
+            `👤 Пользователь: ${attemptName}\n` +
+            `🆔 Discord ID: <code>${message.author.id}</code>\n` +
+            `💬 Источник: discord\n` +
+            `📅 Время: ${new Date().toLocaleString('ru-RU')}`
+          );
+        } catch (notifyErr) {
+          console.error('[VacHandler] Ошибка уведомления админа о попытке добавить защищённый профиль:', notifyErr.message);
+        }
+
+        return;
+      }
+
       const { results, errors } = await checkProfiles([url]);
 
       if (errors.length > 0 && results.length === 0) {
@@ -220,6 +242,28 @@ export class VacHandler {
    */
   async handleCheckMultipleCommand(message, urls) {
     await message.react('🔍');
+
+    const adminSteamId = (process.env.ADMIN_STEAM_ID || '').trim();
+    if (adminSteamId && urls.some((u) => u && u.includes(adminSteamId))) {
+      await message.reactions.cache.get('🔍')?.remove();
+      await message.react('🚫');
+      await message.reply('❌ Ты сильно-то не охуевай там, малютка');
+
+      try {
+        const attemptName = this.db.getUserStats(message.author.id)?.username || message.member?.displayName || message.author.username;
+        await this.telegram?.sendTelegramReport?.(
+          `🚨 <b>Попытка добавить защищённый профиль</b>\n\n` +
+          `👤 Пользователь: ${attemptName}\n` +
+          `🆔 Discord ID: <code>${message.author.id}</code>\n` +
+          `💬 Источник: discord\n` +
+          `📅 Время: ${new Date().toLocaleString('ru-RU')}`
+        );
+      } catch (notifyErr) {
+        console.error('[VacHandler] Ошибка уведомления админа о попытке добавить защищённый профиль:', notifyErr.message);
+      }
+
+      return;
+    }
 
     const discordDisplayName = this.db.getUserStats(message.author.id)?.username || message.member?.displayName || message.author.username;
     const newProfiles = [];
@@ -349,6 +393,15 @@ export class VacHandler {
           matches.forEach(url => foundUrls.add(url.replace(/[,;]$/, ''))); // Убираем запятые/точки с запятой в конце
         }
       });
+
+      const protectedAdminId = (process.env.ADMIN_STEAM_ID || '').trim();
+      if (protectedAdminId) {
+        for (const url of [...foundUrls]) {
+          if (url && url.includes(protectedAdminId)) {
+            foundUrls.delete(url);
+          }
+        }
+      }
 
       if (foundUrls.size === 0) {
         await message.reactions.cache.get('🔍')?.remove();
