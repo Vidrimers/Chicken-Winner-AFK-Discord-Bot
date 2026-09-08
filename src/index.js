@@ -155,6 +155,12 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
 
         if (!banChanged && !nickChanged && !vanityChanged) continue;
 
+        // Собираем причины обновления
+        const updateReasons = [];
+        if (nickChanged) updateReasons.push('nick');
+        if (vanityChanged) updateReasons.push('url');
+        if (banChanged) updateReasons.push('ban');
+
         // Обновляем профиль в БД если бан изменился
         if (banChanged) {
           db.upsertCheaterCheck({
@@ -163,7 +169,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             checkedByUsername: existing.checked_by_username
           });
         }
-        db.markCheaterBanUpdated(profile.steamId);
+        db.markCheaterBanUpdated(profile.steamId, updateReasons.join(','));
         updated++;
 
         const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;

@@ -438,9 +438,15 @@ function createProfileCard(profile, isBanned) {
 
   // Бейдж обновления
   const updated = isProfileUpdated(profile);
-  const updatedBadge = updated
-    ? `<span class="updated-badge">🔔 Обновлён ${formatUpdatedAt(profile.updated_at)}</span>`
-    : '';
+  let updatedBadge = '';
+  if (updated) {
+    const reasonIcons = { ban: '🚫', nick: '✏️', url: '🔗' };
+    const reasons = (profile.update_reason || '').split(',').filter(Boolean);
+    const icons = reasons.length > 0
+      ? reasons.map(r => reasonIcons[r] || '🔔').join(' ')
+      : '🔔';
+    updatedBadge = `<span class="updated-badge">${icons} Обновлён ${formatUpdatedAt(profile.updated_at)}</span>`;
+  }
 
   // Сигналы в виде списка (отображаются в деталях)
   const signalsHtml = signals.length > 0

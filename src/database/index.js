@@ -480,10 +480,10 @@ export class DatabaseManager {
     ).get(steamId);
   }
 
-  markCheaterBanUpdated(steamId) {
+  markCheaterBanUpdated(steamId, reason = null) {
     return this.prepare(
-      'UPDATE cheater_checks SET updated_at = CURRENT_TIMESTAMP WHERE steam_id = ?'
-    ).run(steamId);
+      'UPDATE cheater_checks SET updated_at = CURRENT_TIMESTAMP, update_reason = ? WHERE steam_id = ?'
+    ).run(reason, steamId);
   }
 
   getCheaterLastView(userId) {

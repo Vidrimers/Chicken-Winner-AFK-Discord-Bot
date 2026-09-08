@@ -392,6 +392,16 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: добавление колонки update_reason в cheater_checks
+  {
+    const columns = db.prepare("PRAGMA table_info(cheater_checks)").all();
+    const hasUpdateReason = columns.some(c => c.name === 'update_reason');
+    if (!hasUpdateReason) {
+      db.exec("ALTER TABLE cheater_checks ADD COLUMN update_reason TEXT");
+      console.log('✅ Колонка update_reason добавлена в cheater_checks');
+    }
+  }
+
   // Миграция: таблица cheat_watcher_queue (очередь комментариев для Steam Wall)
   {
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cheat_watcher_queue'").all();
