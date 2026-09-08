@@ -102,6 +102,22 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
         });
 
         if (hasBlockedAdmin) {
+          const attemptName = checkedByUsername || 'Unknown';
+          const adminMessage =
+            `🚨 <b>Попытка добавить защищённый профиль</b>\n\n` +
+            `👤 Пользователь: ${attemptName}\n` +
+            `🆔 Discord ID: <code>${checkedByDiscordId}</code>\n` +
+            `🔗 Источник: web\n` +
+            `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
+
+          try {
+            if (telegram?.sendTelegramReport) {
+              await telegram.sendTelegramReport(adminMessage);
+            }
+          } catch (notifyErr) {
+            console.error('[CheaterChecker] Ошибка уведомления админа о попытке добавить защищённый профиль:', notifyErr.message);
+          }
+
           return res.status(403).json({ error: 'Ты сильно-то не охуевай там, малютка' });
         }
       }
