@@ -735,7 +735,8 @@ async function main() {
           getVoiceChannelActivity,
           getOnlineUsers,
           steamWallDb,
-          steamWallManager
+          steamWallManager,
+          cheatWatcher
         );
 
         success('Telegram бот инициализирован');

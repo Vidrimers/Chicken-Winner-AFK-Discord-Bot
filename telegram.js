@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+import fs from 'fs';
+import { LoginSession, EAuthTokenPlatformType } from 'steam-session';
 import { checkProfiles } from './src/steam/steamApi.js';
 import { STEAM_CONFIG, SERVER_CONFIG } from './src/config.js';
 import { EmbedBuilder } from 'discord.js';
@@ -287,6 +289,7 @@ let getVoiceActivityHandler = null;
 let getOnlineUsersHandler = null;
 let steamWallDb = null;
 let steamWallManager = null;
+let cheatWatcher = null;
 
 // Состояния пользователей для пошаговых диалогов
 const userStates = new Map(); // chatId → state string
@@ -925,6 +928,123 @@ async function handleSteamUrlCheck(chatId, text) {
   }
 }
 
+// ===== CHEAT WATCHER QR LOGIN =====
+
+let cwQrSession = null;
+
+async function handleCheatWatcherQrStart(chatId) {
+  // Только админ
+  if (chatId.toString() !== TELEGRAM_CHAT_ID) {
+    await telegramBot.sendMessage(chatId, '❌ Только админ может подключить CheatWatcher.');
+    return;
+  }
+
+  if (!cheatWatcher) {
+    await telegramBot.sendMessage(chatId, '❌ CheatWatcher не инициализирован.');
+    return;
+  }
+
+  // Отменяем старую сессию если есть
+  if (cwQrSession) {
+    try { cwQrSession.session.cancelLoginAttempt(); } catch {}
+    if (cwQrSession.timeout) clearTimeout(cwQrSession.timeout);
+    if (cwQrSession.pollTimer) clearInterval(cwQrSession.pollTimer);
+    cwQrSession = null;
+  }
+
+  try {
+    const session = new LoginSession(EAuthTokenPlatformType.SteamClient);
+    session.loginTimeout = 120000;
+
+    const result = await session.startWithQR();
+
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(result.qrChallengeUrl)}`;
+
+    const msg = await telegramBot.sendPhoto(chatId, qrImageUrl, {
+      caption: '📱 Scan this QR code with your Steam mobile app (TheCheatWatcher account)\n\n⏳ Waiting for scan... (3 min timeout)',
+    });
+
+    cwQrSession = {
+      session,
+      chatId,
+      messageId: msg.message_id,
+      status: 'waiting',
+      refreshToken: null,
+      timeout: null,
+      pollTimer: null,
+    };
+
+    session.on('authenticated', () => {
+      cwQrSession.status = 'authenticated';
+      cwQrSession.refreshToken = session.refreshToken;
+    });
+
+    session.on('timeout', () => {
+      cwQrSession = null;
+    });
+
+    session.on('error', () => {
+      cwQrSession = null;
+    });
+
+    // Poll for status
+    cwQrSession.pollTimer = setInterval(async () => {
+      if (!cwQrSession || cwQrSession.status !== 'authenticated' || !cwQrSession.refreshToken) return;
+
+      clearInterval(cwQrSession.pollTimer);
+      const token = cwQrSession.refreshToken;
+
+      // Save to .env
+      try {
+        const envPath = '.env';
+        let envContent = fs.readFileSync(envPath, 'utf-8');
+        if (envContent.includes('CHEAT_WATCHER_REFRESH_TOKEN=')) {
+          envContent = envContent.replace(
+            /CHEAT_WATCHER_REFRESH_TOKEN=.*/,
+            `CHEAT_WATCHER_REFRESH_TOKEN=${token}`
+          );
+        } else {
+          envContent += `\nCHEAT_WATCHER_REFRESH_TOKEN=${token}`;
+        }
+        fs.writeFileSync(envPath, envContent);
+        process.env.CHEAT_WATCHER_REFRESH_TOKEN = token;
+      } catch {}
+
+      // Start worker
+      cheatWatcher.start(token);
+
+      if (cwQrSession.timeout) clearTimeout(cwQrSession.timeout);
+      cwQrSession = null;
+
+      await telegramBot.sendMessage(chatId, '✅ CheatWatcher connected successfully!\nTheCheatWatcher is now active and will post comments on cheater profiles.');
+    }, 3000);
+
+    // Auto-cancel after 3 minutes
+    cwQrSession.timeout = setTimeout(async () => {
+      if (cwQrSession) {
+        try { cwQrSession.session.cancelLoginAttempt(); } catch {}
+        if (cwQrSession.pollTimer) clearInterval(cwQrSession.pollTimer);
+        cwQrSession = null;
+        await telegramBot.sendMessage(chatId, '⏰ QR login timed out. Try again.');
+      }
+    }, 180000);
+
+  } catch (err) {
+    console.error('[TG CheatWatcher] QR start error:', err.message);
+    await telegramBot.sendMessage(chatId, '❌ Error starting QR session. Try again later.');
+  }
+}
+
+async function handleCheatWatcherQrCancel(chatId) {
+  if (cwQrSession) {
+    try { cwQrSession.session.cancelLoginAttempt(); } catch {}
+    if (cwQrSession.timeout) clearTimeout(cwQrSession.timeout);
+    if (cwQrSession.pollTimer) clearInterval(cwQrSession.pollTimer);
+    cwQrSession = null;
+  }
+  await telegramBot.sendMessage(chatId, '❌ QR login cancelled.');
+}
+
 /**
  * Публикация профиля в Discord
  */
@@ -1086,6 +1206,7 @@ export function initTelegramBot(
   onlineUsersHandler,
   swDb = null,
   swManager = null,
+  cwWorker = null,
 ) {
   if (!TELEGRAM_TOKEN) {
     console.log(
@@ -1100,6 +1221,7 @@ export function initTelegramBot(
   getOnlineUsersHandler = onlineUsersHandler;
   steamWallDb = swDb;
   steamWallManager = swManager;
+  cheatWatcher = cwWorker;
 
   try {
     telegramBot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
@@ -1109,7 +1231,8 @@ export function initTelegramBot(
     telegramBot.setMyCommands([
       { command: 'menu', description: 'Главное меню' },
       { command: 'start', description: 'Запустить бота' },
-      { command: 'link', description: 'Связать с Discord (код)' }
+      { command: 'link', description: 'Связать с Discord (код)' },
+      { command: 'cheatwatcher', description: 'CheatWatcher QR login (admin)' }
     ]).catch(err => console.error('Ошибка setMyCommands:', err.message));
 
     // Обработчик команды /start
@@ -1316,6 +1439,52 @@ export function initTelegramBot(
           "❌ Произошла ошибка при связывании аккаунта. Попробуйте позже.",
         );
       }
+    });
+
+    // CheatWatcher QR login command (admin only)
+    telegramBot.onText(/\/cheatwatcher/, async (msg) => {
+      const chatId = msg.chat.id;
+
+      if (chatId.toString() !== TELEGRAM_CHAT_ID) {
+        await telegramBot.sendMessage(chatId, '❌ This command is for admin only.');
+        return;
+      }
+
+      if (!cheatWatcher) {
+        await telegramBot.sendMessage(chatId, '❌ CheatWatcher is not initialized.');
+        return;
+      }
+
+      if (cheatWatcher.isConnected()) {
+        await telegramBot.sendMessage(chatId,
+          `✅ CheatWatcher is already connected.\n` +
+          `SteamID: ${cheatWatcher.getSteamId()}\n\n` +
+          `To reconnect, use the button below.`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🔄 Reconnect', callback_data: 'cw_qr_start' }],
+              ]
+            }
+          }
+        );
+        return;
+      }
+
+      const hasToken = !!process.env.CHEAT_WATCHER_REFRESH_TOKEN;
+      await telegramBot.sendMessage(chatId,
+        `🔍 <b>CheatWatcher</b>\n\n` +
+        `Status: ${hasToken ? 'Token set, not connected' : 'Not configured'}\n\n` +
+        `Connect TheCheatWatcher account to post comments on cheater profiles.`,
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📱 Connect via QR', callback_data: 'cw_qr_start' }],
+            ]
+          }
+        }
+      );
     });
 
     // ===== CALLBACK QUERY HANDLER (inline кнопки) =====
@@ -1555,6 +1724,15 @@ export function initTelegramBot(
           }
 
           default:
+            // CheatWatcher QR login
+            if (data === 'cw_qr_start') {
+              await handleCheatWatcherQrStart(chatId);
+              break;
+            }
+            if (data === 'cw_qr_cancel') {
+              await handleCheatWatcherQrCancel(chatId);
+              break;
+            }
             // Обработка публикации в Discord
             if (data.startsWith('checker_publish_')) {
               const steamId = data.replace('checker_publish_', '');
