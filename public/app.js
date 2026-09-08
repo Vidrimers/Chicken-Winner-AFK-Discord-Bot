@@ -3689,3 +3689,120 @@ async function saveBanCheckTime() {
     showNotification('Ошибка сохранения', 'error');
   }
 }
+
+// ===== CHEAT WATCHER =====
+
+let cwPollInterval = null;
+
+function openCheatWatcherModal() {
+  document.getElementById('cheatWatcherModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  refreshCheatWatcherStatus();
+  cwPollInterval = setInterval(refreshCheatWatcherStatus, 5000);
+}
+
+function closeCheatWatcherModal() {
+  document.getElementById('cheatWatcherModal').style.display = 'none';
+  document.body.style.overflow = '';
+  if (cwPollInterval) {
+    clearInterval(cwPollInterval);
+    cwPollInterval = null;
+  }
+}
+
+async function refreshCheatWatcherStatus() {
+  try {
+    const res = await fetch('/api/admin/cheat-watcher/status');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const connectedBadge = document.getElementById('cwConnectedBadge');
+    const disconnectedBadge = document.getElementById('cwDisconnectedBadge');
+    const steamIdEl = document.getElementById('cwSteamId');
+    const loginBtn = document.getElementById('cwLoginBtn');
+
+    if (data.connected) {
+      connectedBadge.style.display = 'inline';
+      disconnectedBadge.style.display = 'none';
+      steamIdEl.textContent = data.steamId || '—';
+      loginBtn.textContent = 'Reconnect';
+    } else {
+      connectedBadge.style.display = 'none';
+      disconnectedBadge.style.display = 'inline';
+      steamIdEl.textContent = data.hasToken ? 'Token set, not connected' : '—';
+      loginBtn.textContent = 'Connect TheCheatWatcher';
+    }
+
+    if (data.queue) {
+      document.getElementById('cwQueuePending').textContent = data.queue.pending;
+      document.getElementById('cwQueueDone').textContent = data.queue.done;
+      document.getElementById('cwQueueErrors').textContent = data.queue.errors;
+    }
+  } catch {}
+}
+
+async function startCheatWatcherQr() {
+  const qrSection = document.getElementById('cwQrSection');
+  const qrContainer = document.getElementById('cwQrContainer');
+  const qrStatus = document.getElementById('cwQrStatus');
+  const loginBtn = document.getElementById('cwLoginBtn');
+
+  try {
+    const res = await fetch('/api/admin/cheat-watcher/qr/start', { method: 'POST' });
+    const data = await res.json();
+
+    if (!data.success) {
+      showNotification(data.error || 'Ошибка', 'error');
+      return;
+    }
+
+    qrSection.style.display = 'block';
+    loginBtn.style.display = 'none';
+    qrStatus.textContent = 'Waiting for scan...';
+
+    // Генерируем QR-код через сторонний сервис
+    qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.qrChallengeUrl)}" alt="QR Code" style="width:200px;height:200px;">`;
+
+    // Поллинг статуса
+    const pollQr = setInterval(async () => {
+      try {
+        const statusRes = await fetch('/api/admin/cheat-watcher/qr/status');
+        const statusData = await statusRes.json();
+
+        if (statusData.status === 'authenticated') {
+          clearInterval(pollQr);
+          qrStatus.textContent = 'Connected!';
+          qrContainer.innerHTML = '<div style="font-size:40px;">✅</div>';
+          showNotification('CheatWatcher connected!', 'success');
+          setTimeout(() => {
+            qrSection.style.display = 'none';
+            loginBtn.style.display = 'block';
+            refreshCheatWatcherStatus();
+          }, 2000);
+        } else if (statusData.status === 'none' || statusData.status === 'timeout' || statusData.status === 'error') {
+          clearInterval(pollQr);
+          qrStatus.textContent = 'Timeout or error. Try again.';
+          qrContainer.innerHTML = '';
+          loginBtn.style.display = 'block';
+        }
+      } catch {
+        clearInterval(pollQr);
+        qrStatus.textContent = 'Error checking status';
+        loginBtn.style.display = 'block';
+      }
+    }, 3000);
+
+    // Автоочистка через 3 минуты
+    setTimeout(() => {
+      clearInterval(pollQr);
+      if (qrSection.style.display !== 'none') {
+        qrStatus.textContent = 'Timed out';
+        qrContainer.innerHTML = '';
+        loginBtn.style.display = 'block';
+      }
+    }, 180000);
+
+  } catch (err) {
+    showNotification('Ошибка запуска QR-сессии', 'error');
+  }
+}

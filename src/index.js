@@ -30,6 +30,26 @@ import {
 // Загружаем переменные окружения
 dotenv.config();
 
+/**
+ * Форматирует детали банов для CheatWatcher комментария (английский)
+ */
+function formatCheatWatcherBanDetails(profile) {
+  const vac = profile.vacBanned ?? false;
+  const vacCount = profile.numberOfVacBans || 0;
+  const gameBans = profile.numberOfGameBans || 0;
+  const days = profile.daysSinceLastBan || 0;
+  const community = profile.communityBanned ?? false;
+  const economy = profile.economyBan || 'none';
+
+  return [
+    `• VAC Ban: ${vac ? `Yes (${vacCount} ban${vacCount !== 1 ? 's' : ''})` : 'No'}`,
+    `• Game Bans: ${gameBans > 0 ? gameBans : 'No'}`,
+    `• Days Since Last Ban: ${(vac || gameBans > 0) ? days : '—'}`,
+    `• Community Ban: ${community ? 'Yes' : 'No'}`,
+    `• Trade Ban: ${economy !== 'none' ? economy : 'No'}`,
+  ].join('\n');
+}
+
 // ===== BAN CHECK STATE =====
 export const banCheckState = {
   isChecking: false,
@@ -155,6 +175,18 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             await sendTelegramMessageToUser(subscriber.telegram_chat_id, nickAdminMessage);
             notifiedOthers++;
           }
+
+          // CheatWatcher: смена ника
+          const cwNickComment =
+            `✏️ Nickname changed\n\n` +
+            `Was: ${existing.persona_name}\n` +
+            `Now: ${profile.personaName}\n` +
+            `Profile: ${profileUrl}\n` +
+            `SteamID64: ${profile.steamId}\n` +
+            `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+            `Added to CheatWatchers Community database and Valve database.\n\n` +
+            `— Sent to Valve employees`;
+          db.addCheatWatcherComment(profile.steamId, cwNickComment);
         }
 
         // === Уведомление о смене vanity URL ===
@@ -196,6 +228,18 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             await sendTelegramMessageToUser(subscriber.telegram_chat_id, urlAdminMessage);
             notifiedOthers++;
           }
+
+          // CheatWatcher: смена URL
+          const cwUrlComment =
+            `🔗 Profile URL changed\n\n` +
+            `Was: steamcommunity.com/id/${existing.original_vanity_url}\n` +
+            `Now: ${canonicalUrl}\n` +
+            `Player: ${profile.personaName}\n` +
+            `SteamID64: ${profile.steamId}\n` +
+            `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+            `Added to CheatWatchers Community database and Valve database.\n\n` +
+            `— Sent to Valve employees`;
+          db.addCheatWatcherComment(profile.steamId, cwUrlComment);
         }
 
         // === Уведомление о бане ===
@@ -265,6 +309,19 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
               await sendTelegramMessageToUser(subscriber.telegram_chat_id, othersMessage);
               notifiedOthers++;
             }
+
+            // CheatWatcher: бан обнаружен
+            const cwBanComment =
+              `🔄 Status update — ban detected!\n\n` +
+              `Player: ${profile.personaName}\n` +
+              `Profile: ${profileUrl}\n` +
+              `SteamID64: ${profile.steamId}\n\n` +
+              `Ban Details:\n${formatCheatWatcherBanDetails(profile)}\n` +
+              `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+              `Previously: ${wasClean ? 'Clean' : 'Banned'}\n\n` +
+              `Added to CheatWatchers Community database and Valve database.\n\n` +
+              `— Sent to Valve employees`;
+            db.addCheatWatcherComment(profile.steamId, cwBanComment);
           }
         }
       }
@@ -380,6 +437,17 @@ async function main() {
     const steamWallManager = new SteamWallManager(steamWallDb);
     success('Steam Wall Auto-Answer инициализирован');
 
+    // Инициализация CheatWatcher
+    const { CheatWatcherWorker } = await import('./steam-wall/cheat-watcher.js');
+    const cheatWatcher = new CheatWatcherWorker(db);
+    const cwToken = process.env.CHEAT_WATCHER_REFRESH_TOKEN;
+    if (cwToken) {
+      cheatWatcher.start(cwToken);
+      success('CheatWatcher запущен');
+    } else {
+      log('CheatWatcher: нет токена, ожидает авторизации через админ-панель');
+    }
+
     // Создание Discord клиента
     const discordClient = createDiscordClient();
 
@@ -441,7 +509,7 @@ async function main() {
     priceNotificationService.start();
 
     // Регистрация API роутов
-    registerRoutes(app, db, discordClient, achievements, telegramWrapper, notificationService, gamesDb, priceNotificationService, steamWallDb, steamWallManager, banCheckState, () => runBanCheck(db, sendTelegramReport, sendTelegramMessageToUser));
+    registerRoutes(app, db, discordClient, achievements, telegramWrapper, notificationService, gamesDb, priceNotificationService, steamWallDb, steamWallManager, banCheckState, () => runBanCheck(db, sendTelegramReport, sendTelegramMessageToUser), cheatWatcher);
 
     // Запуск сервера
     await startServer(app, SERVER_CONFIG.PORT);
@@ -832,6 +900,12 @@ async function main() {
         steamWallManager.stopAll();
       } catch (error) {
         logError(`Ошибка остановки Steam Wall ботов: ${error.message}`);
+      }
+
+      try {
+        cheatWatcher.stop();
+      } catch (error) {
+        logError(`Ошибка остановки CheatWatcher: ${error.message}`);
       }
 
       try {

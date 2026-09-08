@@ -6,6 +6,26 @@ import { EmbedBuilder } from 'discord.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 /**
+ * Форматирует детали банов для CheatWatcher комментария (английский)
+ */
+function formatBanDetails(profile) {
+  const vac = profile.vacBanned ?? profile.vac_banned ?? false;
+  const vacCount = profile.numberOfVacBans || profile.number_of_vac_bans || 0;
+  const gameBans = profile.numberOfGameBans || profile.number_of_game_bans || 0;
+  const days = profile.daysSinceLastBan || profile.days_since_last_ban || 0;
+  const community = profile.communityBanned ?? profile.community_banned ?? false;
+  const economy = profile.economyBan || profile.economy_ban || 'none';
+
+  return [
+    `• VAC Ban: ${vac ? `Yes (${vacCount} ban${vacCount !== 1 ? 's' : ''})` : 'No'}`,
+    `• Game Bans: ${gameBans > 0 ? gameBans : 'No'}`,
+    `• Days Since Last Ban: ${(vac || gameBans > 0) ? days : '—'}`,
+    `• Community Ban: ${community ? 'Yes' : 'No'}`,
+    `• Trade Ban: ${economy !== 'none' ? economy : 'No'}`,
+  ].join('\n');
+}
+
+/**
  * In-memory rate limiter
  * @param {number} maxRequests — максимум запросов
  * @param {number} windowMs — окно в миллисекундах
@@ -44,7 +64,7 @@ const EMBED_COLORS = {
 /**
  * Роуты для cheater checker API
  */
-export function createCheaterCheckerRouter(db, discordClient, telegram, achievements) {
+export function createCheaterCheckerRouter(db, discordClient, telegram, achievements, cheatWatcher = null) {
   const router = Router();
 
   // Rate limiters
@@ -126,6 +146,25 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
           await telegram.sendNewCheaterNotification(checkedByUsername || 'Unknown', 'web', profiles);
         } catch (err) {
           console.error('[CheaterChecker] Ошибка отправки уведомления:', err.message);
+        }
+      }
+
+      // CheatWatcher: постинг комментариев на стенах новых читеров
+      if (cheatWatcher && newProfiles.length > 0) {
+        for (const profile of newProfiles) {
+          const banDetails = formatBanDetails(profile);
+          const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
+          const commentText =
+            `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
+            `Player: ${profile.personaName || 'Unknown'}\n` +
+            `Profile: ${profileUrl}\n` +
+            `SteamID64: ${profile.steamId}\n\n` +
+            `Ban Details:\n${banDetails}\n` +
+            `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+            `Added to CheatWatchers Community database and Valve database.\n\n` +
+            `— Sent to Valve employees`;
+
+          db.addCheatWatcherComment(profile.steamId, commentText);
         }
       }
 

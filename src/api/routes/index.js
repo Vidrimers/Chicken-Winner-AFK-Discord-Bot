@@ -3,6 +3,7 @@ import { createSettingsRouter } from "./settings.js";
 import { createTelegramRouter } from "./telegram.js";
 import { createAdminRouter } from "./admin.js";
 import { createAchievementsRouter } from "./achievements.js";
+import fs from 'fs';
 import { createCheaterCheckerRouter } from "./cheater-checker.js";
 import { createBugReportsRouter } from "./bug-reports.js";
 import { createBlocklistRouter } from "./blocklist.js";
@@ -15,6 +16,7 @@ import { sessionManager } from "../server.js";
 import { createGamePricesRouter } from "./game-prices.js";
 import { createSteamWallRouter } from "./steam-wall.js";
 import { requireAuth, requireAdmin, requireOwnership } from "../middleware/auth.js";
+import { LoginSession, EAuthTokenPlatformType } from 'steam-session';
 
 /**
  * Зарегистрировать все API роуты
@@ -32,6 +34,7 @@ export function registerRoutes(
   steamWallManager = null,
   banCheckState = null,
   triggerBanCheck = null,
+  cheatWatcher = null,
 ) {
   // Config роут - для загрузки конфигурации на фронтенде
   app.get("/api/config", (req, res) => {
@@ -306,6 +309,7 @@ export function registerRoutes(
     discordClient,
     telegram,
     achievements,
+    cheatWatcher,
   );
   app.use("/api/cheater-checker", cheaterCheckerRouter);
 
@@ -342,6 +346,110 @@ export function registerRoutes(
   if (steamWallDb && steamWallManager) {
     const steamWallRouter = createSteamWallRouter(steamWallDb, steamWallManager);
     app.use("/api/steam-wall", steamWallRouter);
+  }
+
+  // CheatWatcher роуты
+  if (cheatWatcher) {
+    let cwQrSession = null;
+
+    // Статус CheatWatcher
+    app.get('/api/admin/cheat-watcher/status', requireAuth, requireAdmin, (req, res) => {
+      res.json({
+        connected: cheatWatcher.isConnected(),
+        steamId: cheatWatcher.getSteamId(),
+        hasToken: !!process.env.CHEAT_WATCHER_REFRESH_TOKEN,
+        queue: db.getCheatWatcherQueueStats(),
+      });
+    });
+
+    // QR-логин для CheatWatcher
+    app.post('/api/admin/cheat-watcher/qr/start', requireAuth, requireAdmin, async (req, res) => {
+      try {
+        if (cwQrSession) {
+          try { cwQrSession.session.cancelLoginAttempt(); } catch {}
+          if (cwQrSession.timeout) clearTimeout(cwQrSession.timeout);
+          cwQrSession = null;
+        }
+
+        const session = new LoginSession(EAuthTokenPlatformType.SteamClient);
+        session.loginTimeout = 120000;
+
+        const result = await session.startWithQR();
+
+        cwQrSession = {
+          session,
+          status: 'waiting',
+          timeout: null,
+        };
+
+        session.on('authenticated', () => {
+          cwQrSession.status = 'authenticated';
+          cwQrSession.refreshToken = session.refreshToken;
+        });
+
+        session.on('timeout', () => {
+          cwQrSession = null;
+        });
+
+        session.on('error', () => {
+          cwQrSession = null;
+        });
+
+        cwQrSession.timeout = setTimeout(() => {
+          try { session.cancelLoginAttempt(); } catch {}
+          cwQrSession = null;
+        }, 180000);
+
+        res.json({ success: true, qrChallengeUrl: result.qrChallengeUrl });
+      } catch (err) {
+        res.status(500).json({ error: 'Ошибка создания QR-сессии' });
+      }
+    });
+
+    // Проверка статуса QR-логина
+    app.get('/api/admin/cheat-watcher/qr/status', requireAuth, requireAdmin, (req, res) => {
+      if (!cwQrSession) return res.json({ status: 'none' });
+
+      if (cwQrSession.status === 'authenticated' && cwQrSession.refreshToken) {
+        const token = cwQrSession.refreshToken;
+
+        // Обновляем .env файл
+        try {
+          const envPath = '.env';
+          let envContent = fs.readFileSync(envPath, 'utf-8');
+          if (envContent.includes('CHEAT_WATCHER_REFRESH_TOKEN=')) {
+            envContent = envContent.replace(
+              /CHEAT_WATCHER_REFRESH_TOKEN=.*/,
+              `CHEAT_WATCHER_REFRESH_TOKEN=${token}`
+            );
+          } else {
+            envContent += `\nCHEAT_WATCHER_REFRESH_TOKEN=${token}`;
+          }
+          fs.writeFileSync(envPath, envContent);
+          process.env.CHEAT_WATCHER_REFRESH_TOKEN = token;
+        } catch {}
+
+        // Запускаем воркер
+        cheatWatcher.start(token);
+
+        if (cwQrSession.timeout) clearTimeout(cwQrSession.timeout);
+        cwQrSession = null;
+
+        return res.json({ status: 'authenticated' });
+      }
+
+      res.json({ status: cwQrSession.status });
+    });
+
+    // Отмена QR-логина
+    app.post('/api/admin/cheat-watcher/qr/cancel', requireAuth, requireAdmin, (req, res) => {
+      if (cwQrSession) {
+        try { cwQrSession.session.cancelLoginAttempt(); } catch {}
+        if (cwQrSession.timeout) clearTimeout(cwQrSession.timeout);
+        cwQrSession = null;
+      }
+      res.json({ success: true });
+    });
   }
 
   success("API роуты зарегистрированы");

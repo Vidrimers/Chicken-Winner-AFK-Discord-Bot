@@ -1522,6 +1522,14 @@
                   <span class="admin-btn-icon"><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg></span>
                   <span class="admin-btn-text">Проверка читеров</span>
                 </button>
+                <button
+                  id="cheatWatcherBtn"
+                  onclick="openCheatWatcherModal()"
+                  class="admin-btn"
+                >
+                  <span class="admin-btn-icon">🔍</span>
+                  <span class="admin-btn-text">CheatWatcher</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1615,6 +1623,57 @@
 
     <!-- Кнопка "Сообщить об ошибке" для всех залогиненных пользователей -->
     <button id="bugReportFloatingBtn" onclick="openBugReportModal()" style="display:none;position:fixed;bottom:20px;right:20px;padding:5px 6px;border:none;border-radius:50px;background:transparent;color:white;font-weight:600;cursor:pointer;z-index:999;box-shadow:0 4px 15px rgba(102,126,234,0.4);font-size:12px;"><svg class="icon" aria-hidden="true"><use href="#icon-bug"></use></svg> Баг</button>
+
+    <!-- Модалка CheatWatcher -->
+    <div class="modal-overlay" id="cheatWatcherModal" style="display:none" onclick="if(event.target===this)closeCheatWatcherModal()">
+      <div class="modal-box">
+        <div class="modal-box-header">
+          <h2>🔍 CheatWatcher</h2>
+          <button class="modal-close-btn" onclick="closeCheatWatcherModal()">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <div style="margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <span id="cwConnectedBadge" style="display:none;padding:4px 10px;border-radius:12px;background:#4CAF50;color:#fff;font-size:12px;font-weight:600;">✅ Connected</span>
+              <span id="cwDisconnectedBadge" style="padding:4px 10px;border-radius:12px;background:#f44336;color:#fff;font-size:12px;font-weight:600;">❌ Disconnected</span>
+            </div>
+            <div style="font-size:13px;opacity:0.8;margin-bottom:4px;">
+              SteamID: <strong id="cwSteamId">—</strong>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:12px;opacity:0.6;margin-bottom:4px;">Pending</div>
+              <div id="cwQueuePending" style="font-size:20px;font-weight:700;">0</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:12px;opacity:0.6;margin-bottom:4px;">Done</div>
+              <div id="cwQueueDone" style="font-size:20px;font-weight:700;">0</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:12px;text-align:center;">
+              <div style="font-size:12px;opacity:0.6;margin-bottom:4px;">Errors</div>
+              <div id="cwQueueErrors" style="font-size:20px;font-weight:700;">0</div>
+            </div>
+          </div>
+
+          <div id="cwQrSection" style="display:none;margin-bottom:16px;text-align:center;">
+            <div style="font-size:13px;opacity:0.8;margin-bottom:12px;">Scan QR with Steam mobile app</div>
+            <div id="cwQrContainer" style="background:#fff;padding:16px;border-radius:8px;display:inline-block;"></div>
+            <div id="cwQrStatus" style="margin-top:8px;font-size:13px;opacity:0.7;"></div>
+          </div>
+
+          <button
+            id="cwLoginBtn"
+            onclick="startCheatWatcherQr()"
+            class="start-mass-btn"
+            style="width:100%;"
+          >
+            Connect TheCheatWatcher
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Модалка настроек Game Price -->
     <div class="modal-overlay" id="gamePriceSettingsModal" style="display:none" onclick="if(event.target===this)closeGamePriceSettingsModal()">

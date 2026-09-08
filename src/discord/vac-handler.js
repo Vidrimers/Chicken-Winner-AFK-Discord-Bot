@@ -175,6 +175,26 @@ export class VacHandler {
           }
         }
 
+        // CheatWatcher: постинг комментария на стене нового читера
+        const cwProfileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
+        const cwBanDetails = [
+          `• VAC Ban: ${profile.vacBanned ? `Yes (${profile.numberOfVacBans || 1} ban${(profile.numberOfVacBans || 1) !== 1 ? 's' : ''})` : 'No'}`,
+          `• Game Bans: ${profile.numberOfGameBans > 0 ? profile.numberOfGameBans : 'No'}`,
+          `• Days Since Last Ban: ${(profile.vacBanned || profile.numberOfGameBans > 0) ? (profile.daysSinceLastBan || 0) : '—'}`,
+          `• Community Ban: ${profile.communityBanned ? 'Yes' : 'No'}`,
+          `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
+        ].join('\n');
+        const cwComment =
+          `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
+          `Player: ${profile.personaName || 'Unknown'}\n` +
+          `Profile: ${cwProfileUrl}\n` +
+          `SteamID64: ${profile.steamId}\n\n` +
+          `Ban Details:\n${cwBanDetails}\n` +
+          `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+          `Added to CheatWatchers Community database and Valve database.\n\n` +
+          `— Sent to Valve employees`;
+        this.db.addCheatWatcherComment(profile.steamId, cwComment);
+
         // Строим и отправляем embed
         const embed = this.buildProfileEmbed(profile, discordDisplayName);
         await message.reply({ embeds: [embed] });
@@ -256,6 +276,28 @@ export class VacHandler {
       } catch (err) {
         console.error('[VacHandler] Ошибка отправки уведомления:', err.message);
       }
+    }
+
+    // CheatWatcher: постинг комментариев на стенах новых читеров
+    for (const profile of newProfiles) {
+      const cwProfileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
+      const cwBanDetails = [
+        `• VAC Ban: ${profile.vacBanned ? `Yes (${profile.numberOfVacBans || 1} ban${(profile.numberOfVacBans || 1) !== 1 ? 's' : ''})` : 'No'}`,
+        `• Game Bans: ${profile.numberOfGameBans > 0 ? profile.numberOfGameBans : 'No'}`,
+        `• Days Since Last Ban: ${(profile.vacBanned || profile.numberOfGameBans > 0) ? (profile.daysSinceLastBan || 0) : '—'}`,
+        `• Community Ban: ${profile.communityBanned ? 'Yes' : 'No'}`,
+        `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
+      ].join('\n');
+      const cwComment =
+        `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
+        `Player: ${profile.personaName || 'Unknown'}\n` +
+        `Profile: ${cwProfileUrl}\n` +
+        `SteamID64: ${profile.steamId}\n\n` +
+        `Ban Details:\n${cwBanDetails}\n` +
+        `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+        `Added to CheatWatchers Community database and Valve database.\n\n` +
+        `— Sent to Valve employees`;
+      this.db.addCheatWatcherComment(profile.steamId, cwComment);
     }
 
     // Отправляем embed'ы пакетами по 5
@@ -365,6 +407,28 @@ export class VacHandler {
           } catch (err) {
             console.error('[VacHandler] Ошибка отправки уведомления:', err.message);
           }
+        }
+
+        // CheatWatcher: постинг комментариев на стенах новых читеров
+        for (const profile of newResults) {
+          const cwProfileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
+          const cwBanDetails = [
+            `• VAC Ban: ${profile.vacBanned ? `Yes (${profile.numberOfVacBans || 1} ban${(profile.numberOfVacBans || 1) !== 1 ? 's' : ''})` : 'No'}`,
+            `• Game Bans: ${profile.numberOfGameBans > 0 ? profile.numberOfGameBans : 'No'}`,
+            `• Days Since Last Ban: ${(profile.vacBanned || profile.numberOfGameBans > 0) ? (profile.daysSinceLastBan || 0) : '—'}`,
+            `• Community Ban: ${profile.communityBanned ? 'Yes' : 'No'}`,
+            `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
+          ].join('\n');
+          const cwComment =
+            `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
+            `Player: ${profile.personaName || 'Unknown'}\n` +
+            `Profile: ${cwProfileUrl}\n` +
+            `SteamID64: ${profile.steamId}\n\n` +
+            `Ban Details:\n${cwBanDetails}\n` +
+            `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+            `Added to CheatWatchers Community database and Valve database.\n\n` +
+            `— Sent to Valve employees`;
+          this.db.addCheatWatcherComment(profile.steamId, cwComment);
         }
       }
 

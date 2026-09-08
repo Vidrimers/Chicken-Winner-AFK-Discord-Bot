@@ -638,6 +638,45 @@ export class DatabaseManager {
     this.prepare("INSERT OR REPLACE INTO ban_check_settings (key, value) VALUES ('check_time', ?)").run(time);
   }
 
+  // ===== CHEAT WATCHER QUEUE =====
+
+  addCheatWatcherComment(steamId, commentText) {
+    return this.prepare(
+      'INSERT INTO cheat_watcher_queue (steam_id, comment_text) VALUES (?, ?)'
+    ).run(steamId, commentText);
+  }
+
+  getPendingCheatWatcherComments() {
+    return this.prepare(
+      `SELECT * FROM cheat_watcher_queue WHERE status = 'pending' ORDER BY created_at ASC`
+    ).all();
+  }
+
+  markCheatWatcherCommentPosted(id) {
+    return this.prepare(
+      "UPDATE cheat_watcher_queue SET status = 'done', posted_at = CURRENT_TIMESTAMP WHERE id = ?"
+    ).run(id);
+  }
+
+  markCheatWatcherCommentError(id, errorMessage) {
+    return this.prepare(
+      "UPDATE cheat_watcher_queue SET status = 'error', error_message = ? WHERE id = ?"
+    ).run(errorMessage, id);
+  }
+
+  getCheatWatcherQueueStats() {
+    const pending = this.prepare(
+      "SELECT COUNT(*) as count FROM cheat_watcher_queue WHERE status = 'pending'"
+    ).get();
+    const done = this.prepare(
+      "SELECT COUNT(*) as count FROM cheat_watcher_queue WHERE status = 'done'"
+    ).get();
+    const errors = this.prepare(
+      "SELECT COUNT(*) as count FROM cheat_watcher_queue WHERE status = 'error'"
+    ).get();
+    return { pending: pending.count, done: done.count, errors: errors.count };
+  }
+
   close() {
     this.db.close();
   }

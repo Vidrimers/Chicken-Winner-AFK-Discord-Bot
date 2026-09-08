@@ -392,5 +392,26 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: таблица cheat_watcher_queue (очередь комментариев для Steam Wall)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cheat_watcher_queue'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE cheat_watcher_queue (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          steam_id TEXT NOT NULL,
+          comment_text TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'pending',
+          error_message TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          posted_at TIMESTAMP
+        )
+      `);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cw_queue_status ON cheat_watcher_queue(status)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cw_queue_steam_id ON cheat_watcher_queue(steam_id)');
+      console.log('✅ Таблица cheat_watcher_queue создана');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

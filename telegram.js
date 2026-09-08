@@ -867,6 +867,26 @@ async function handleSteamUrlCheck(chatId, text) {
         console.error('[TG] Ошибка отправки уведомления о читере:', err.message);
       }
 
+      // CheatWatcher: постинг комментария на стене нового читера
+      const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
+      const banDetails = [
+        `• VAC Ban: ${profile.vacBanned ? `Yes (${profile.numberOfVacBans || 1} ban${(profile.numberOfVacBans || 1) !== 1 ? 's' : ''})` : 'No'}`,
+        `• Game Bans: ${profile.numberOfGameBans > 0 ? profile.numberOfGameBans : 'No'}`,
+        `• Days Since Last Ban: ${(profile.vacBanned || profile.numberOfGameBans > 0) ? (profile.daysSinceLastBan || 0) : '—'}`,
+        `• Community Ban: ${profile.communityBanned ? 'Yes' : 'No'}`,
+        `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
+      ].join('\n');
+      const cwComment =
+        `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
+        `Player: ${profile.personaName || 'Unknown'}\n` +
+        `Profile: ${profileUrl}\n` +
+        `SteamID64: ${profile.steamId}\n\n` +
+        `Ban Details:\n${banDetails}\n` +
+        `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+        `Added to CheatWatchers Community database and Valve database.\n\n` +
+        `— Sent to Valve employees`;
+      db.addCheatWatcherComment(profile.steamId, cwComment);
+
       const isBanned = profile.vacBanned || profile.numberOfGameBans > 0 || profile.communityBanned || (profile.economyBan && profile.economyBan !== 'none');
       const statusEmoji = isBanned ? '🔴' : '🟢';
       const statusText = isBanned ? 'ЗАБАНЕН' : 'ЧИСТО';
