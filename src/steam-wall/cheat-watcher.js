@@ -125,8 +125,9 @@ export class CheatWatcherWorker {
         return reject(new Error('Not logged in'));
       }
 
+      // Постим на СВОЮ стену (профиль TheCheatWatcher), не на стену читера
       this.community.postUserComment(
-        targetSteamId,
+        this.client.steamID,
         message,
         (err) => {
           if (err) {
