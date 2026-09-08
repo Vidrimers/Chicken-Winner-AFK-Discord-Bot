@@ -126,7 +126,7 @@ export class CheatWatcherWorker {
       }
 
       this.community.postUserComment(
-        { steamid: targetSteamId },
+        targetSteamId,
         message,
         (err) => {
           if (err) {
