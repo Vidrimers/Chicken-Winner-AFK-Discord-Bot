@@ -58,6 +58,33 @@ export const banCheckState = {
 };
 
 /**
+ * Собирает уведомления для пользователей (свои + чужие) в массив
+ */
+function collectUserNotifications(db, existing, message) {
+  const notifications = [];
+
+  // Уведомление тому, кто добавил профиль
+  if (existing.checked_by_discord_id) {
+    const ownEnabled = db.getUserCheaterOwnNotificationSetting(existing.checked_by_discord_id);
+    if (ownEnabled) {
+      const chatId = db.getTelegramChatId(existing.checked_by_discord_id);
+      if (chatId && chatId.toString() !== (process.env.TELEGRAM_CHAT_ID || '')) {
+        notifications.push({ type: 'user', chatId, message, countAs: 'own' });
+      }
+    }
+  }
+
+  // Уведомление подписчикам "чужие читеры"
+  const otherSubscribers = db.getUsersSubscribedToOthersCheaterNotifications();
+  for (const subscriber of otherSubscribers) {
+    if (subscriber.user_id === existing.checked_by_discord_id) continue;
+    notifications.push({ type: 'user', chatId: subscriber.telegram_chat_id, message, countAs: 'others' });
+  }
+
+  return notifications;
+}
+
+/**
  * Запуск проверки банов. Вызывается из setInterval (auto) и API (manual).
  * Возвращает результат или null если уже идёт проверка.
  */
@@ -79,6 +106,9 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
     let notified = 0;
     let notifiedOthers = 0;
     let lastProgressReport = 0;
+
+    // Очередь уведомлений — собираем во время проверки, отправляем после
+    const notificationQueue = [];
 
     // Уведомление админу о начале проверки
     const totalCount = db.getCheaterChecksCount('all');
@@ -138,16 +168,15 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
 
         const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
 
-        // === Уведомление о смене ника ===
+        // === Смена ника ===
         if (nickChanged) {
           log(`✏️ Смена ника: ${existing.persona_name} → ${profile.personaName} (${profile.steamId})`);
 
-          // Обновляем ник в БД
           db.prepare('UPDATE cheater_checks SET persona_name = ? WHERE steam_id = ?')
             .run(profile.personaName, profile.steamId);
 
           const nickTitle = '✏️ <b>Смена ника читера</b>';
-          const nickAdminMessage =
+          const nickMessage =
             `${nickTitle}\n\n` +
             `👤 Было: ${existing.persona_name}\n` +
             `👤 Стало: ${profile.personaName}\n` +
@@ -156,27 +185,10 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             `👁 Добавил: ${existing.checked_by_username || 'Неизвестно'}\n` +
             `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
 
-          await sendTelegramReport(nickAdminMessage);
+          notificationQueue.push({ type: 'admin', message: nickMessage });
+          notificationQueue.push(...collectUserNotifications(db, existing, nickMessage));
 
-          if (existing.checked_by_discord_id) {
-            const ownEnabled = db.getUserCheaterOwnNotificationSetting(existing.checked_by_discord_id);
-            if (ownEnabled) {
-              const chatId = db.getTelegramChatId(existing.checked_by_discord_id);
-              if (chatId && chatId.toString() !== (process.env.TELEGRAM_CHAT_ID || '')) {
-                await sendTelegramMessageToUser(chatId, nickAdminMessage);
-                notified++;
-              }
-            }
-          }
-
-          const otherSubscribers = db.getUsersSubscribedToOthersCheaterNotifications();
-          for (const subscriber of otherSubscribers) {
-            if (subscriber.user_id === existing.checked_by_discord_id) continue;
-            await sendTelegramMessageToUser(subscriber.telegram_chat_id, nickAdminMessage);
-            notifiedOthers++;
-          }
-
-          // CheatWatcher: смена ника
+          // CheatWatcher
           const cwNickComment =
             `✏️ Nickname changed\n\n` +
             `Was: ${existing.persona_name}\n` +
@@ -189,18 +201,17 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
           db.addCheatWatcherComment(profile.steamId, cwNickComment);
         }
 
-        // === Уведомление о смене vanity URL ===
+        // === Смена vanity URL ===
         if (vanityChanged) {
           const change = vanityChanges.get(profile.steamId);
           log(`🔗 Vanity URL изменён: ${existing.original_vanity_url} (${profile.steamId}) — ${change.type}`);
 
-          // Очищаем original_vanity_url
           db.prepare('UPDATE cheater_checks SET original_vanity_url = NULL WHERE steam_id = ?')
             .run(profile.steamId);
 
           const canonicalUrl = `https://steamcommunity.com/profiles/${profile.steamId}`;
           const urlTitle = '🔗 <b>Смена URL профиля</b>';
-          const urlAdminMessage =
+          const urlMessage =
             `${urlTitle}\n\n` +
             `🔗 Было: steamcommunity.com/id/${existing.original_vanity_url}\n` +
             `🔗 Стало: ${canonicalUrl} (числовой)\n` +
@@ -209,27 +220,10 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             `👁 Добавил: ${existing.checked_by_username || 'Неизвестно'}\n` +
             `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
 
-          await sendTelegramReport(urlAdminMessage);
+          notificationQueue.push({ type: 'admin', message: urlMessage });
+          notificationQueue.push(...collectUserNotifications(db, existing, urlMessage));
 
-          if (existing.checked_by_discord_id) {
-            const ownEnabled = db.getUserCheaterOwnNotificationSetting(existing.checked_by_discord_id);
-            if (ownEnabled) {
-              const chatId = db.getTelegramChatId(existing.checked_by_discord_id);
-              if (chatId && chatId.toString() !== (process.env.TELEGRAM_CHAT_ID || '')) {
-                await sendTelegramMessageToUser(chatId, urlAdminMessage);
-                notified++;
-              }
-            }
-          }
-
-          const otherSubscribers = db.getUsersSubscribedToOthersCheaterNotifications();
-          for (const subscriber of otherSubscribers) {
-            if (subscriber.user_id === existing.checked_by_discord_id) continue;
-            await sendTelegramMessageToUser(subscriber.telegram_chat_id, urlAdminMessage);
-            notifiedOthers++;
-          }
-
-          // CheatWatcher: смена URL
+          // CheatWatcher
           const cwUrlComment =
             `🔗 Profile URL changed\n\n` +
             `Was: steamcommunity.com/id/${existing.original_vanity_url}\n` +
@@ -242,7 +236,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
           db.addCheatWatcherComment(profile.steamId, cwUrlComment);
         }
 
-        // === Уведомление о бане ===
+        // === Бан ===
         if (banChanged) {
           const wasClean = existing.vac_banned === 0 &&
             existing.number_of_game_bans === 0 &&
@@ -263,11 +257,8 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             const ownTitle = wasClean
               ? '⚠️ <b>Потенциальный читер получил ограничения!</b>'
               : '🔔 <b>Обновление ограничений читера</b>';
-            const othersTitle = wasClean
-              ? '🔔 <b>Изменение статуса читера</b>'
-              : '🔔 <b>Обновление ограничений читера</b>';
 
-            const adminMessage =
+            const banMessage =
               `${ownTitle}\n\n` +
               `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
               `🆔 SteamID: ${profile.steamId}\n` +
@@ -275,42 +266,10 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
               `👁 Добавил: ${existing.checked_by_username || 'Неизвестно'}\n` +
               `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
 
-            await sendTelegramReport(adminMessage);
+            notificationQueue.push({ type: 'admin', message: banMessage });
+            notificationQueue.push(...collectUserNotifications(db, existing, banMessage));
 
-            if (existing.checked_by_discord_id) {
-              const ownNotificationsEnabled = db.getUserCheaterOwnNotificationSetting(existing.checked_by_discord_id);
-              if (ownNotificationsEnabled) {
-                const telegramChatId = db.getTelegramChatId(existing.checked_by_discord_id);
-                if (telegramChatId && telegramChatId.toString() !== (process.env.TELEGRAM_CHAT_ID || '')) {
-                  const userMessage =
-                    `${ownTitle}\n\n` +
-                    `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
-                    `🆔 SteamID: ${profile.steamId}\n` +
-                    `🚫 Ограничения: ${banDetails.join(', ')}\n` +
-                    `👁 Добавил: ${existing.checked_by_username || 'Неизвестно'}\n` +
-                    `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
-
-                  await sendTelegramMessageToUser(telegramChatId, userMessage);
-                  notified++;
-                }
-              }
-            }
-
-            const otherSubscribers = db.getUsersSubscribedToOthersCheaterNotifications();
-            for (const subscriber of otherSubscribers) {
-              if (subscriber.user_id === existing.checked_by_discord_id) continue;
-              const othersMessage =
-                `${othersTitle}\n\n` +
-                `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
-                `🆔 SteamID: ${profile.steamId}\n` +
-                `🚫 Ограничения: ${banDetails.join(', ')}\n` +
-                `👁 Добавил: ${existing.checked_by_username || 'Неизвестно'}\n` +
-                `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
-              await sendTelegramMessageToUser(subscriber.telegram_chat_id, othersMessage);
-              notifiedOthers++;
-            }
-
-            // CheatWatcher: бан обнаружен
+            // CheatWatcher
             const cwBanComment =
               `🔄 Status update — ban detected!\n\n` +
               `Player: ${profile.personaName}\n` +
@@ -337,6 +296,33 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
 
       if (batch.length < batchSize) break;
       await new Promise(r => setTimeout(r, delayMs));
+    }
+
+    // === Отправка уведомлений после завершения проверки ===
+    if (notificationQueue.length > 0) {
+      log(`📨 Отправка ${notificationQueue.length} уведомлений с задержкой 1.5с...`);
+
+      for (let i = 0; i < notificationQueue.length; i++) {
+        const n = notificationQueue[i];
+        try {
+          if (n.type === 'admin') {
+            await sendTelegramReport(n.message);
+          } else {
+            await sendTelegramMessageToUser(n.chatId, n.message);
+            if (n.countAs === 'own') notified++;
+            if (n.countAs === 'others') notifiedOthers++;
+          }
+        } catch (err) {
+          logError(`Ошибка отправки уведомления ${i + 1}/${notificationQueue.length}: ${err.message}`);
+        }
+
+        // Задержка между сообщениями (кроме последнего)
+        if (i < notificationQueue.length - 1) {
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+
+      log(`✅ Уведомления отправлены: ${notificationQueue.length} за ${Math.round(notificationQueue.length * 1.5)}с`);
     }
 
     const result = { timestamp: Date.now(), totalChecked, updated, notified, notifiedOthers };
