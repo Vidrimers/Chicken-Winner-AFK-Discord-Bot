@@ -841,6 +841,12 @@ async function handleMassCheck() {
     return;
   }
 
+  const adminSteamId = String(CONFIG?.ADMIN_STEAM_ID || '').trim();
+  if (adminSteamId && urls.some((u) => u && u.includes(adminSteamId))) {
+    showNotification('Ты сильно-то не охуевай там, малютка', 'error');
+    return;
+  }
+
   closeMassCheckModal();
   showLoading(true);
 

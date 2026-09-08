@@ -92,6 +92,20 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
         return res.status(400).json({ error: 'checkedByDiscordId обязательное поле' });
       }
 
+      const adminSteamId = (process.env.ADMIN_STEAM_ID || '').trim();
+      if (adminSteamId) {
+        const hasBlockedAdmin = urls.some((url) => {
+          if (!url || typeof url !== 'string') return false;
+          if (url.includes(adminSteamId)) return true;
+          if (url.toLowerCase().includes('/profiles/' + adminSteamId.toLowerCase())) return true;
+          return false;
+        });
+
+        if (hasBlockedAdmin) {
+          return res.status(403).json({ error: 'Ты сильно-то не охуевай там, малютка' });
+        }
+      }
+
       // Проверка профилей через Steam API
       const { results, errors } = await checkProfiles(urls);
 

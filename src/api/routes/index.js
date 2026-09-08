@@ -43,6 +43,7 @@ export function registerRoutes(
       PORT: SERVER_CONFIG.PORT,
       SITE_URL: SERVER_CONFIG.SITE_URL,
       TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME || "",
+      ADMIN_STEAM_ID: process.env.ADMIN_STEAM_ID || "",
     });
   });
 
