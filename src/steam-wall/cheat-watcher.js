@@ -125,10 +125,13 @@ export class CheatWatcherWorker {
         return reject(new Error('Not logged in'));
       }
 
+      // Убираем https:// чтобы Steam spam filter не скрыл комментарий
+      const sanitizedMessage = message.replace(/https:\/\//g, '');
+
       // Постим на СВОЮ стену (профиль TheCheatWatcher), не на стену читера
       this.community.postUserComment(
         this.client.steamID,
-        message,
+        sanitizedMessage,
         (err) => {
           if (err) {
             reject(err);
