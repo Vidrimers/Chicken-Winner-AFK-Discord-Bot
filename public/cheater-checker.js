@@ -1154,12 +1154,8 @@ async function showNameHistory(steamId, currentName) {
     const existingModal = document.getElementById('nameHistoryModal');
     if (existingModal) existingModal.remove();
 
-    const historyHtml = history.map(item =>
-      `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;">
-        <span style="color:#e0e0e0;font-size:14px;">${escapeHtml(item.persona_name)}</span>
-        <span style="color:rgba(255,255,255,0.4);font-size:12px;">${formatUpdatedAt(item.changed_at)}</span>
-      </div>`
-    ).join('');
+    const PAGE_SIZE = 15;
+    let displayed = 0;
 
     const modal = document.createElement('div');
     modal.id = 'nameHistoryModal';
@@ -1171,7 +1167,8 @@ async function showNameHistory(steamId, currentName) {
           <h3 style="margin:0;color:#e0e0e0;font-size:16px;">📜 Прошлые имена — ${escapeHtml(currentName)}</h3>
           <button onclick="document.getElementById('nameHistoryModal').remove();document.body.style.overflow='';" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:24px;cursor:pointer;padding:0;line-height:1;">&times;</button>
         </div>
-        <div>${historyHtml}</div>
+        <div id="nameHistoryList"></div>
+        <div id="nameHistoryLoadMore" style="text-align:center;margin-top:12px;"></div>
       </div>
     `;
 
@@ -1184,6 +1181,35 @@ async function showNameHistory(steamId, currentName) {
 
     document.body.appendChild(modal);
     document.body.style.overflow = 'hidden';
+
+    function renderPage() {
+      const list = document.getElementById('nameHistoryList');
+      const loadMore = document.getElementById('nameHistoryLoadMore');
+      if (!list || !loadMore) return;
+
+      const end = Math.min(displayed + PAGE_SIZE, history.length);
+      for (let i = displayed; i < end; i++) {
+        const item = history[i];
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;';
+        row.innerHTML = `<span style="color:#e0e0e0;font-size:14px;">${escapeHtml(item.persona_name)}</span><span style="color:rgba(255,255,255,0.4);font-size:12px;">${formatUpdatedAt(item.changed_at)}</span>`;
+        list.appendChild(row);
+      }
+      displayed = end;
+
+      if (displayed < history.length) {
+        const remaining = history.length - displayed;
+        loadMore.innerHTML = `<button onclick="loadMoreNames_${steamId.replace(/\D/g, '')}()" style="background:rgba(102,126,234,0.15);border:1px solid rgba(102,126,234,0.3);color:#a0b0ff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:13px;">Показать ещё (${remaining})</button>`;
+      } else {
+        loadMore.innerHTML = '';
+      }
+    }
+
+    // Глобальная функция для кнопки "Показать ещё"
+    const fnName = `loadMoreNames_${steamId.replace(/\D/g, '')}`;
+    window[fnName] = renderPage;
+
+    renderPage();
   } catch (err) {
     showNotification('Ошибка соединения с сервером', 'error');
   }
