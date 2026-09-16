@@ -473,7 +473,7 @@ function createProfileCard(profile, isBanned) {
             ${suspiciousBadge}
             ${updatedBadge}
           </div>
-          ${profile.name_history_count > 0 ? `<button class="name-history-btn" onclick="showNameHistory('${steamId}', '${personaName}')" title="Показать историю имён">📜 Прошлые имена (${profile.name_history_count})</button>` : ''}
+          <button class="name-history-btn${profile.name_history_count > 0 ? '' : ' name-history-btn--empty'}" onclick="${profile.name_history_count > 0 ? `showNameHistory('${steamId}', '${personaName}')` : ''}" title="Прошлые имена">📜 Прошлые имена${profile.name_history_count > 0 ? ` (${profile.name_history_count})` : ''}</button>
         </div>
         ${deleteBtn}
       </div>
