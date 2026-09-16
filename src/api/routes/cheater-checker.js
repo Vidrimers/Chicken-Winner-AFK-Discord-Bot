@@ -239,7 +239,32 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       const userId = req.session?.userId || null;
       const lastViewedAt = userId ? db.getCheaterLastView(userId) : null;
 
-      res.json({ profiles, total, lastViewedAt });
+      // Добавляем количество смен имени к каждому профилю
+      const profilesWithNameCount = profiles.map(profile => ({
+        ...profile,
+        name_history_count: db.getCheaterNameHistoryCount(profile.steam_id),
+      }));
+
+      res.json({ profiles: profilesWithNameCount, total, lastViewedAt });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * GET /api/cheater-checker/profiles/:steamId/names
+   * Получение истории смены ников для профиля
+   */
+  router.get('/profiles/:steamId/names', (req, res) => {
+    try {
+      const { steamId } = req.params;
+
+      if (!/^\d{17}$/.test(steamId)) {
+        return res.status(400).json({ error: 'Невалидный SteamID64' });
+      }
+
+      const history = db.getCheaterNameHistory(steamId);
+      res.json(history);
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }

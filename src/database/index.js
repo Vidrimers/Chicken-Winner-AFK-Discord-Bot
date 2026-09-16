@@ -638,6 +638,27 @@ export class DatabaseManager {
     this.prepare("INSERT OR REPLACE INTO ban_check_settings (key, value) VALUES ('check_time', ?)").run(time);
   }
 
+  // ===== CHEATER NAME HISTORY =====
+
+  addCheaterNameHistory(steamId, personaName) {
+    return this.prepare(
+      'INSERT INTO cheater_name_history (steam_id, persona_name) VALUES (?, ?)'
+    ).run(steamId, personaName);
+  }
+
+  getCheaterNameHistory(steamId) {
+    return this.prepare(
+      'SELECT persona_name, changed_at FROM cheater_name_history WHERE steam_id = ? ORDER BY changed_at DESC'
+    ).all(steamId);
+  }
+
+  getCheaterNameHistoryCount(steamId) {
+    const row = this.prepare(
+      'SELECT COUNT(*) as count FROM cheater_name_history WHERE steam_id = ?'
+    ).get(steamId);
+    return row ? row.count : 0;
+  }
+
   // ===== CHEAT WATCHER QUEUE =====
 
   addCheatWatcherComment(steamId, commentText) {

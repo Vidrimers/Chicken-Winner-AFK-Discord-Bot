@@ -402,6 +402,23 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: таблица cheater_name_history (история смены ников читеров)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cheater_name_history'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE cheater_name_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          steam_id TEXT NOT NULL,
+          persona_name TEXT NOT NULL,
+          changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_name_history_steam_id ON cheater_name_history(steam_id)');
+      console.log('✅ Таблица cheater_name_history создана');
+    }
+  }
+
   // Миграция: таблица cheat_watcher_queue (очередь комментариев для Steam Wall)
   {
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cheat_watcher_queue'").all();

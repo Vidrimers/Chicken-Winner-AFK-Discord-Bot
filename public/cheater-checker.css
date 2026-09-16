@@ -935,6 +935,27 @@
   white-space: nowrap;
 }
 
+.name-history-btn {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #81c784;
+  vertical-align: middle;
+  margin-left: 4px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.name-history-btn:hover {
+  background: rgba(76, 175, 80, 0.25);
+  border-color: rgba(76, 175, 80, 0.6);
+}
+
 /* Блок сигналов подозрительности внутри card-details */
 .signals-section {
   margin-bottom: 10px;

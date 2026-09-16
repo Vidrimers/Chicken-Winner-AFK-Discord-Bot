@@ -472,6 +472,7 @@ function createProfileCard(profile, isBanned) {
             ${personaName}
             ${suspiciousBadge}
             ${updatedBadge}
+            ${profile.name_history_count > 0 ? `<button class="name-history-btn" onclick="showNameHistory('${steamId}', '${personaName}')" title="Показать историю имён">📜 Прошлые имена (${profile.name_history_count})</button>` : ''}
           </div>
         </div>
         ${deleteBtn}
@@ -1135,6 +1136,58 @@ async function sendBugReport() {
 }
 
 // ===== ИНПУТЫ С КРЕСТИКОМ И АВТО-ОЧИСТКОЙ =====
+
+// ===== ИСТОРИЯ ИМЁН =====
+
+async function showNameHistory(steamId, currentName) {
+  try {
+    const res = await fetch(`/api/cheater-checker/profiles/${steamId}/names`);
+    if (!res.ok) {
+      showNotification('Ошибка загрузки истории имён', 'error');
+      return;
+    }
+
+    const history = await res.json();
+    if (history.length === 0) return;
+
+    // Удаляем старую модалку если есть
+    const existingModal = document.getElementById('nameHistoryModal');
+    if (existingModal) existingModal.remove();
+
+    const historyHtml = history.map(item =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:6px;">
+        <span style="color:#e0e0e0;font-size:14px;">${escapeHtml(item.persona_name)}</span>
+        <span style="color:rgba(255,255,255,0.4);font-size:12px;">${formatUpdatedAt(item.changed_at)}</span>
+      </div>`
+    ).join('');
+
+    const modal = document.createElement('div');
+    modal.id = 'nameHistoryModal';
+    modal.className = 'modal-overlay active';
+    modal.style.cssText = 'display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:10000;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:#1e1e2e;border-radius:16px;padding:24px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <h3 style="margin:0;color:#e0e0e0;font-size:16px;">📜 Прошлые имена — ${escapeHtml(currentName)}</h3>
+          <button onclick="document.getElementById('nameHistoryModal').remove();document.body.style.overflow='';" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:24px;cursor:pointer;padding:0;line-height:1;">&times;</button>
+        </div>
+        <div>${historyHtml}</div>
+      </div>
+    `;
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+        document.body.style.overflow = '';
+      }
+    });
+
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+  } catch (err) {
+    showNotification('Ошибка соединения с сервером', 'error');
+  }
+}
 
 /**
  * Инициализация инпута с кнопкой очистки и авто-очисткой при повторном вводе.

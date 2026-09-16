@@ -178,6 +178,9 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
         if (nickChanged) {
           log(`✏️ Смена ника: ${existing.persona_name} → ${profile.personaName} (${profile.steamId})`);
 
+          // Сохраняем старое имя в историю
+          db.addCheaterNameHistory(profile.steamId, existing.persona_name);
+
           db.prepare('UPDATE cheater_checks SET persona_name = ? WHERE steam_id = ?')
             .run(profile.personaName, profile.steamId);
 
