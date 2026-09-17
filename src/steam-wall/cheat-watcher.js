@@ -359,10 +359,12 @@ export class CheatWatcherWorker {
       this.community.postUserComment(
         { steamid: targetSteamId },
         sanitizedMessage,
-        (err) => {
+        (err, result) => {
           if (err) {
+            logError(`[CheatWatcher] postUserComment error: ${err.message}`);
             reject(err);
           } else {
+            log(`[CheatWatcher] postUserComment success: ${JSON.stringify(result)}`);
             resolve();
           }
         }
