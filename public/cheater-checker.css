@@ -964,6 +964,23 @@
   pointer-events: none;
 }
 
+.source-badge {
+  display: inline-block;
+  font-size: 0.55rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  vertical-align: middle;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.source-badge--external {
+  background: rgba(156, 39, 176, 0.2);
+  border: 1px solid rgba(156, 39, 176, 0.5);
+  color: #ce93d8;
+}
+
 /* Блок сигналов подозрительности внутри card-details */
 .signals-section {
   margin-bottom: 10px;

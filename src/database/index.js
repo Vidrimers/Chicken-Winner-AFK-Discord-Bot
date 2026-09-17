@@ -398,8 +398,8 @@ export class DatabaseManager {
       `INSERT INTO cheater_checks 
        (steam_id, persona_name, avatar_url, profile_url, original_vanity_url, vac_banned, number_of_vac_bans, 
         number_of_game_bans, days_since_last_ban, community_banned, economy_ban, 
-        checked_by_discord_id, checked_by_username, checked_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        checked_by_discord_id, checked_by_username, report_source, reported_by_name, reported_by_url, checked_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
        ON CONFLICT(steam_id) DO UPDATE SET
         persona_name = excluded.persona_name,
         avatar_url = excluded.avatar_url,
@@ -410,7 +410,10 @@ export class DatabaseManager {
         days_since_last_ban = excluded.days_since_last_ban,
         community_banned = excluded.community_banned,
         economy_ban = excluded.economy_ban,
-        original_vanity_url = COALESCE(excluded.original_vanity_url, cheater_checks.original_vanity_url)`
+        original_vanity_url = COALESCE(excluded.original_vanity_url, cheater_checks.original_vanity_url),
+        report_source = COALESCE(excluded.report_source, cheater_checks.report_source),
+        reported_by_name = COALESCE(excluded.reported_by_name, cheater_checks.reported_by_name),
+        reported_by_url = COALESCE(excluded.reported_by_url, cheater_checks.reported_by_url)`
     ).run(
       profile.steamId,
       profile.personaName || null,
@@ -423,8 +426,11 @@ export class DatabaseManager {
       profile.daysSinceLastBan || 0,
       profile.communityBanned ? 1 : 0,
       profile.economyBan || 'none',
-      profile.checkedByDiscordId,
-      profile.checkedByUsername || null
+      profile.checkedByDiscordId || null,
+      profile.checkedByUsername || null,
+      profile.reportSource || 'web',
+      profile.reportedByName || null,
+      profile.reportedByUrl || null
     );
   }
 
@@ -438,6 +444,8 @@ export class DatabaseManager {
       sql += ' WHERE cc.vac_banned = 1 OR cc.number_of_game_bans > 0 OR cc.community_banned = 1 OR cc.economy_ban != \'none\'';
     } else if (filter === 'clean') {
       sql += ' WHERE cc.vac_banned = 0 AND cc.number_of_game_bans = 0 AND cc.community_banned = 0 AND cc.economy_ban = \'none\'';
+    } else if (filter === 'steam_wall') {
+      sql += ' WHERE cc.report_source = \'steam_wall\'';
     }
 
     sql += ' ORDER BY COALESCE(cc.updated_at, cc.checked_at) DESC LIMIT ? OFFSET ?';
@@ -453,6 +461,8 @@ export class DatabaseManager {
       sql += ' WHERE vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != \'none\'';
     } else if (filter === 'clean') {
       sql += ' WHERE vac_banned = 0 AND number_of_game_bans = 0 AND community_banned = 0 AND economy_ban = \'none\'';
+    } else if (filter === 'steam_wall') {
+      sql += ' WHERE report_source = \'steam_wall\'';
     }
 
     const result = this.db.prepare(sql).get();
@@ -683,6 +693,22 @@ export class DatabaseManager {
     return this.prepare(
       "UPDATE cheat_watcher_queue SET status = 'error', error_message = ? WHERE id = ?"
     ).run(errorMessage, id);
+  }
+
+  // ===== STEAM WALL REPORTS (rate limiting) =====
+
+  addSteamWallReport(reporterSteamId, targetSteamId) {
+    return this.prepare(
+      'INSERT INTO steam_wall_reports (reporter_steam_id, target_steam_id) VALUES (?, ?)'
+    ).run(reporterSteamId, targetSteamId);
+  }
+
+  getSteamWallReportCount(reporterSteamId, windowMs = 30 * 60 * 1000) {
+    const since = new Date(Date.now() - windowMs).toISOString();
+    const row = this.prepare(
+      'SELECT COUNT(*) as count FROM steam_wall_reports WHERE reporter_steam_id = ? AND created_at > ?'
+    ).get(reporterSteamId, since);
+    return row ? row.count : 0;
   }
 
   getCheatWatcherQueueStats() {

@@ -228,8 +228,8 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       if (offset < 0) offset = 0;
 
       // Валидация filter
-      if (!['all', 'banned', 'clean'].includes(filter)) {
-        return res.status(400).json({ error: 'filter должен быть: all, banned или clean' });
+      if (!['all', 'banned', 'clean', 'steam_wall'].includes(filter)) {
+        return res.status(400).json({ error: 'filter должен быть: all, banned, clean или steam_wall' });
       }
 
       const profiles = db.getCheaterChecks({ limit, offset, filter });

@@ -419,6 +419,44 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: добавление колонок report_source и reported_by_name в cheater_checks
+  {
+    const columns = db.prepare("PRAGMA table_info(cheater_checks)").all();
+    const colNames = columns.map(c => c.name);
+
+    if (!colNames.includes('report_source')) {
+      db.exec("ALTER TABLE cheater_checks ADD COLUMN report_source TEXT NOT NULL DEFAULT 'web'");
+      console.log('✅ Колонка report_source добавлена в cheater_checks');
+    }
+
+    if (!colNames.includes('reported_by_name')) {
+      db.exec("ALTER TABLE cheater_checks ADD COLUMN reported_by_name TEXT");
+      console.log('✅ Колонка reported_by_name добавлена в cheater_checks');
+    }
+
+    if (!colNames.includes('reported_by_url')) {
+      db.exec("ALTER TABLE cheater_checks ADD COLUMN reported_by_url TEXT");
+      console.log('✅ Колонка reported_by_url добавлена в cheater_checks');
+    }
+  }
+
+  // Миграция: таблица steam_wall_reports (rate limiting внешних репортов)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='steam_wall_reports'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE steam_wall_reports (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          reporter_steam_id TEXT NOT NULL,
+          target_steam_id TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_swr_reporter ON steam_wall_reports(reporter_steam_id, created_at)');
+      console.log('✅ Таблица steam_wall_reports создана');
+    }
+  }
+
   // Миграция: таблица cheat_watcher_queue (очередь комментариев для Steam Wall)
   {
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cheat_watcher_queue'").all();

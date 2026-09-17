@@ -434,7 +434,7 @@ async function main() {
 
     // Инициализация CheatWatcher
     const { CheatWatcherWorker } = await import('./steam-wall/cheat-watcher.js');
-    const cheatWatcher = new CheatWatcherWorker(db);
+    const cheatWatcher = new CheatWatcherWorker(db, sendTelegramReport);
     const cwToken = process.env.CHEAT_WATCHER_REFRESH_TOKEN;
     if (cwToken) {
       cheatWatcher.start(cwToken);
