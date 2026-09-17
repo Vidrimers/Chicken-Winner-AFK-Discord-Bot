@@ -115,31 +115,25 @@ function updateAuthState() {
  */
 async function loadProfiles() {
   try {
-    // Загружаем забаненных, чистых и внешние репорты отдельно
-    const [bannedRes, cleanRes, externalRes] = await Promise.all([
+    const [bannedRes, cleanRes] = await Promise.all([
       fetch('/api/cheater-checker/profiles?limit=1000&filter=banned'),
       fetch('/api/cheater-checker/profiles?limit=1000&filter=clean'),
-      fetch('/api/cheater-checker/profiles?limit=1000&filter=steam_wall'),
     ]);
     const bannedData = await bannedRes.json();
     const cleanData = await cleanRes.json();
-    const externalData = await externalRes.json();
 
-    // lastViewedAt от сервера (одинаковый в обоих ответах)
     lastViewedAt = bannedData.lastViewedAt || cleanData.lastViewedAt || null;
 
-    allBannedProfiles = bannedData.profiles || [];
-    allCleanProfiles = cleanData.profiles || [];
-    allExternalProfiles = externalData.profiles || [];
-    profiles = [...allBannedProfiles, ...allCleanProfiles, ...allExternalProfiles];
+    allBannedProfilesUnfiltered = bannedData.profiles || [];
+    allCleanProfilesUnfiltered = cleanData.profiles || [];
+
+    applyReportFilter();
 
     bannedPage = 1;
     cleanPage = 1;
-    externalPage = 1;
 
     renderBannedPage();
     renderCleanPage();
-    renderExternalPage();
     updateCounters();
 
     // Отмечаем что пользователь просмотрел страницу
@@ -157,24 +151,48 @@ async function loadProfiles() {
 let PAGE_SIZE = parseInt(localStorage.getItem('cheaterCheckerPageSize') || '5', 10);
 let bannedPage = 1;
 let cleanPage = 1;
-let externalPage = 1;
 let allBannedProfiles = [];
 let allCleanProfiles = [];
-let allExternalProfiles = [];
+let allBannedProfilesUnfiltered = [];
+let allCleanProfilesUnfiltered = [];
+let currentReportFilter = 'all';
 
 function renderProfiles(profilesList) {
-  allBannedProfiles = profilesList.filter(p => isBannedProfile(p));
-  allCleanProfiles = profilesList.filter(p => !isBannedProfile(p) && (p.report_source || 'web') !== 'steam_wall');
-  allExternalProfiles = profilesList.filter(p => (p.report_source || 'web') === 'steam_wall');
-  
+  allBannedProfilesUnfiltered = profilesList.filter(p => isBannedProfile(p));
+  allCleanProfilesUnfiltered = profilesList.filter(p => !isBannedProfile(p));
+
+  applyReportFilter();
+
   bannedPage = 1;
   cleanPage = 1;
-  externalPage = 1;
-  
+
   renderBannedPage();
   renderCleanPage();
-  renderExternalPage();
   updateCounters();
+}
+
+function setReportFilter(filter) {
+  currentReportFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filter);
+  });
+  applyReportFilter();
+  bannedPage = 1;
+  cleanPage = 1;
+  renderBannedPage();
+  renderCleanPage();
+  updateCounters();
+}
+
+function applyReportFilter() {
+  if (currentReportFilter === 'steam_wall') {
+    allBannedProfiles = allBannedProfilesUnfiltered.filter(p => (p.report_source || 'web') === 'steam_wall');
+    allCleanProfiles = allCleanProfilesUnfiltered.filter(p => (p.report_source || 'web') === 'steam_wall');
+  } else {
+    allBannedProfiles = [...allBannedProfilesUnfiltered];
+    allCleanProfiles = [...allCleanProfilesUnfiltered];
+  }
+  profiles = [...allBannedProfiles, ...allCleanProfiles];
 }
 
 function renderBannedPage() {
@@ -206,25 +224,7 @@ function renderCleanPage() {
 }
 
 function renderExternalPage() {
-  const section = document.getElementById('externalSection');
-  if (allExternalProfiles.length === 0) {
-    section.style.display = 'none';
-    return;
-  }
-  section.style.display = 'block';
-
-  const container = document.getElementById('externalCards');
-  container.innerHTML = '';
-
-  const start = (externalPage - 1) * PAGE_SIZE;
-  const toShow = allExternalProfiles.slice(start, start + PAGE_SIZE);
-  toShow.forEach(profile => {
-    const isBanned = profile.vac_banned || profile.number_of_game_bans > 0 || profile.community_banned || (profile.economy_ban && profile.economy_ban !== 'none');
-    container.insertAdjacentHTML('beforeend', createProfileCard(profile, isBanned));
-  });
-
-  renderPagination('external', allExternalProfiles.length, externalPage);
-  bindCardEvents();
+  // removed — external filter handled by setReportFilter
 }
 
 function renderPagination(type, total, currentPage) {
@@ -284,20 +284,15 @@ function goToPage(type, page) {
   if (type === 'banned') {
     bannedPage = page;
     renderBannedPage();
-  } else if (type === 'clean') {
+  } else {
     cleanPage = page;
     renderCleanPage();
-  } else if (type === 'external') {
-    externalPage = page;
-    renderExternalPage();
   }
 }
 
 function updateCounters() {
   document.getElementById('bannedCount').textContent = `(${allBannedProfiles.length})`;
   document.getElementById('cleanCount').textContent = `(${allCleanProfiles.length})`;
-  document.getElementById('externalCount').textContent = `(${allExternalProfiles.length})`;
-  document.getElementById('externalSection').style.display = allExternalProfiles.length > 0 ? 'block' : 'none';
 }
 
 /**
@@ -315,43 +310,30 @@ function filterProfileCards(query) {
   
   const filteredBanned = allBannedProfiles.filter(p => 
     (p.persona_name || '').toLowerCase().includes(q) || 
-    (p.steam_id || '').includes(q)
+    (p.steam_id || '').includes(q) ||
+    (p.reported_by_name || '').toLowerCase().includes(q)
   );
   const filteredClean = allCleanProfiles.filter(p => 
     (p.persona_name || '').toLowerCase().includes(q) || 
-    (p.steam_id || '').includes(q)
-  );
-  const filteredExternal = allExternalProfiles.filter(p =>
-    (p.persona_name || '').toLowerCase().includes(q) ||
     (p.steam_id || '').includes(q) ||
     (p.reported_by_name || '').toLowerCase().includes(q)
   );
   
   const bannedContainer = document.getElementById('bannedCards');
   const cleanContainer = document.getElementById('cleanCards');
-  const externalContainer = document.getElementById('externalCards');
   
   bannedContainer.innerHTML = '';
   filteredBanned.forEach(p => bannedContainer.insertAdjacentHTML('beforeend', createProfileCard(p, true)));
   
   cleanContainer.innerHTML = '';
   filteredClean.forEach(p => cleanContainer.insertAdjacentHTML('beforeend', createProfileCard(p, false)));
-
-  externalContainer.innerHTML = '';
-  filteredExternal.forEach(p => {
-    const isBanned = p.vac_banned || p.number_of_game_bans > 0 || p.community_banned || (p.economy_ban && p.economy_ban !== 'none');
-    externalContainer.insertAdjacentHTML('beforeend', createProfileCard(p, isBanned));
-  });
   
   // Скрываем пагинацию при поиске
   document.getElementById('bannedPagination').innerHTML = '';
   document.getElementById('cleanPagination').innerHTML = '';
-  document.getElementById('externalPagination').innerHTML = '';
   
   document.getElementById('bannedCount').textContent = `(${filteredBanned.length})`;
   document.getElementById('cleanCount').textContent = `(${filteredClean.length})`;
-  document.getElementById('externalCount').textContent = `(${filteredExternal.length})`;
-  document.getElementById('externalSection').style.display = 'block';
   bindCardEvents();
 }
 

@@ -981,6 +981,29 @@
   color: #ce93d8;
 }
 
+.filter-tab {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-tab:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.filter-tab.active {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.5);
+  color: #a0b0ff;
+}
+
 /* Блок сигналов подозрительности внутри card-details */
 .signals-section {
   margin-bottom: 10px;
