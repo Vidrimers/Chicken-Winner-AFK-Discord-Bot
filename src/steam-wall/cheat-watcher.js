@@ -22,6 +22,7 @@ export class CheatWatcherWorker {
     this.running = false;
     this.processing = false;
     this.lastWallCommentId = null;
+    this.pendingHiddenComments = new Set(); // ID скрытых комментариев для повторной проверки
     this._bindEvents();
   }
 
@@ -149,17 +150,42 @@ export class CheatWatcherWorker {
       if (!comments || comments.length === 0) return;
 
       const newest = comments[0];
+      const SPAM_PLACEHOLDER = 'автоматической проверки контента';
 
-      // Инициализация — запоминаем последний комментарий
+      // Инициализация — запоминаем последний комментарий и скрытые
       if (this.lastWallCommentId === null) {
         this.lastWallCommentId = newest.id;
-        log(`[CheatWatcher] Wall initialized, last comment: ${newest.id}`);
+        // При первом запуске запоминаем все скрытые комментарии для будущей проверки
+        for (const c of comments) {
+          if (c.author.steamID.getSteamID64() !== this.client.steamID.getSteamID64() &&
+              c.text && c.text.includes(SPAM_PLACEHOLDER)) {
+            this.pendingHiddenComments.add(c.id);
+          }
+        }
+        if (this.pendingHiddenComments.size > 0) {
+          log(`[CheatWatcher] Wall initialized, ${this.pendingHiddenComments.size} hidden comments queued for re-check`);
+        }
         return;
+      }
+
+      // 1. Проверяем ранее скрытые комментарии — может Steam уже одобрил
+      if (this.pendingHiddenComments.size > 0) {
+        for (const comment of comments) {
+          if (!this.pendingHiddenComments.has(comment.id)) continue;
+          // Если текст больше не содержит плейсхолдер — Steam одобрил
+          if (comment.text && !comment.text.includes(SPAM_PLACEHOLDER)) {
+            this.pendingHiddenComments.delete(comment.id);
+            const authorId = comment.author.steamID.getSteamID64();
+            if (authorId !== this.client.steamID.getSteamID64()) {
+              this._processRepCommand(comment);
+            }
+          }
+        }
       }
 
       if (newest.id === this.lastWallCommentId) return;
 
-      // Собираем новые комментарии
+      // 2. Собираем новые комментарии
       const freshOnes = [];
       for (const c of comments) {
         if (c.id === this.lastWallCommentId) break;
@@ -173,6 +199,13 @@ export class CheatWatcherWorker {
         // Игнорируем свои комментарии
         const authorId = comment.author.steamID.getSteamID64();
         if (authorId === this.client.steamID.getSteamID64()) continue;
+
+        // Если комментарий скрыт спам-фильтром — запоминаем для повторной проверки
+        if (comment.text && comment.text.includes(SPAM_PLACEHOLDER)) {
+          this.pendingHiddenComments.add(comment.id);
+          log(`[CheatWatcher] Hidden comment detected, queued for re-check: ${comment.id}`);
+          continue;
+        }
 
         this._processRepCommand(comment);
       }
