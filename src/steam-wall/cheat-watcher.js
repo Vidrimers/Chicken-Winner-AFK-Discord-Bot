@@ -277,7 +277,7 @@ export class CheatWatcherWorker {
       // Сохраняем в БД
       this.db.upsertCheaterCheck({
         ...profile,
-        checkedByDiscordId: null,
+        checkedByDiscordId: reporterId,
         checkedByUsername: reporterName,
         reportSource: 'steam_wall',
         reportedByName: reporterName,
