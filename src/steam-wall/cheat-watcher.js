@@ -57,6 +57,10 @@ export class CheatWatcherWorker {
       log('[CheatWatcher] No refresh token, skipping startup');
       return;
     }
+    // Если уже залогинен — перелогиниваемся
+    if (this.client.steamID) {
+      this.stop();
+    }
     log('[CheatWatcher] Starting...');
     this.client.logOn({ refreshToken });
   }
