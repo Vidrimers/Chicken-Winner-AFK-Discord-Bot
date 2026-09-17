@@ -911,8 +911,8 @@ async function handleSteamUrlCheck(chatId, text) {
         `SteamID64: ${profile.steamId}\n\n` +
         `Ban Details:\n${banDetails}\n` +
         `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-        `Added to CheatWatchers Community database and Valve database.\n\n` +
-        `— Sent to Valve employees`;
+        `Evidence archived for review.\n` +
+        `Added to CheatWatchers Community database and Valve database.`;
       db.addCheatWatcherComment(profile.steamId, cwComment);
 
       const isBanned = profile.vacBanned || profile.numberOfGameBans > 0 || profile.communityBanned || (profile.economyBan && profile.economyBan !== 'none');

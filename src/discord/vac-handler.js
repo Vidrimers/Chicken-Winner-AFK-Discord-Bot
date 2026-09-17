@@ -213,8 +213,8 @@ export class VacHandler {
           `SteamID64: ${profile.steamId}\n\n` +
           `Ban Details:\n${cwBanDetails}\n` +
           `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-          `Added to CheatWatchers Community database and Valve database.\n\n` +
-          `— Sent to Valve employees`;
+          `Evidence archived for review.\n` +
+          `Added to CheatWatchers Community database and Valve database.`;
         this.db.addCheatWatcherComment(profile.steamId, cwComment);
 
         // Строим и отправляем embed
@@ -339,8 +339,8 @@ export class VacHandler {
         `SteamID64: ${profile.steamId}\n\n` +
         `Ban Details:\n${cwBanDetails}\n` +
         `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-        `Added to CheatWatchers Community database and Valve database.\n\n` +
-        `— Sent to Valve employees`;
+        `Evidence archived for review.\n` +
+        `Added to CheatWatchers Community database and Valve database.`;
       this.db.addCheatWatcherComment(profile.steamId, cwComment);
     }
 
@@ -479,8 +479,8 @@ export class VacHandler {
             `SteamID64: ${profile.steamId}\n\n` +
             `Ban Details:\n${cwBanDetails}\n` +
             `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-            `Added to CheatWatchers Community database and Valve database.\n\n` +
-            `— Sent to Valve employees`;
+            `Evidence archived for review.\n` +
+            `Added to CheatWatchers Community database and Valve database.`;
           this.db.addCheatWatcherComment(profile.steamId, cwComment);
         }
       }

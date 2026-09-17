@@ -205,8 +205,8 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             `Profile: ${profileUrl}\n` +
             `SteamID64: ${profile.steamId}\n` +
             `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-            `Added to CheatWatchers Community database and Valve database.\n\n` +
-            `— Sent to Valve employees`;
+            `Evidence archived for review.\n` +
+            `Added to CheatWatchers Community database and Valve database.`;
           db.addCheatWatcherComment(profile.steamId, cwNickComment);
         }
 
@@ -240,8 +240,8 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             `Player: ${profile.personaName}\n` +
             `SteamID64: ${profile.steamId}\n` +
             `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-            `Added to CheatWatchers Community database and Valve database.\n\n` +
-            `— Sent to Valve employees`;
+            `Evidence archived for review.\n` +
+            `Added to CheatWatchers Community database and Valve database.`;
           db.addCheatWatcherComment(profile.steamId, cwUrlComment);
         }
 
@@ -287,8 +287,8 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
               `Ban Details:\n${formatCheatWatcherBanDetails(profile)}\n` +
               `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
               `Previously: ${wasClean ? 'Clean' : 'Banned'}\n\n` +
-              `Added to CheatWatchers Community database and Valve database.\n\n` +
-              `— Sent to Valve employees`;
+              `Evidence archived for review.\n` +
+              `Added to CheatWatchers Community database and Valve database.`;
             db.addCheatWatcherComment(profile.steamId, cwBanComment);
           }
         }
