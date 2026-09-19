@@ -1474,7 +1474,7 @@ function editNote(noteId, steamId) {
   // Заменяем содержимое note-item на textarea
   noteItem.innerHTML = `
     <div class="note-edit-row">
-      <textarea class="note-input note-textarea note-edit-input">${escapeHtml(currentText)}</textarea>
+      <textarea class="note-input note-textarea note-edit-input auto-resize">${escapeHtml(currentText)}</textarea>
       <div class="note-edit-buttons">
         <button class="note-save-btn" onclick="saveNoteEdit(${noteId}, '${steamId}')">Сохранить</button>
         <button class="note-cancel-btn" onclick="renderNotes('${steamId}')">Отмена</button>
@@ -1483,6 +1483,7 @@ function editNote(noteId, steamId) {
   `;
 
   const textarea = noteItem.querySelector('.note-edit-input');
+  initAutoResize(textarea);
   textarea.focus();
   textarea.setSelectionRange(textarea.value.length, textarea.value.length);
   textarea.addEventListener('keydown', (e) => {
@@ -1614,12 +1615,15 @@ function renderNotes(steamId) {
   // Поле ввода для новой заметки
   html += `
     <div class="note-input-row">
-      <textarea class="note-input note-textarea" id="note-input-${steamId}" placeholder="Добавить заметку..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addNote('${steamId}')}"></textarea>
+      <textarea class="note-input note-textarea auto-resize" id="note-input-${steamId}" placeholder="Добавить заметку..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addNote('${steamId}')}"></textarea>
       <button class="note-save-btn" onclick="addNote('${steamId}')">Сохранить</button>
     </div>
   `;
 
   container.innerHTML = html;
+
+  // Автоувеличение textarea
+  container.querySelectorAll('.auto-resize').forEach(initAutoResize);
 }
 
 /**
@@ -1645,4 +1649,17 @@ function showConfirmDialogCustom(message) {
     deleteBtn.onclick = () => { cleanup(); resolve(true); };
     cancelBtn.onclick = () => { cleanup(); resolve(false); };
   });
+}
+
+/**
+ * Автоувеличение textarea при вводе/вставке
+ */
+function initAutoResize(textarea) {
+  const resize = () => {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  };
+  textarea.addEventListener('input', resize);
+  textarea.addEventListener('paste', () => setTimeout(resize, 0));
+  resize();
 }
