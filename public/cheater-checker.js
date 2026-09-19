@@ -751,8 +751,8 @@ function bindCardDelegation() {
         return;
       }
 
-      // Клик по ссылке/кнопке — не раскрываем карточку
-      if (e.target.closest('a, button')) return;
+      // Клик по ссылке/кнопке/инпуту или в секции заметок — не раскрываем карточку
+      if (e.target.closest('a, button, input, .notes-section')) return;
 
       // Клик по карточке → раскрытие деталей
       const card = e.target.closest('.profile-card');
