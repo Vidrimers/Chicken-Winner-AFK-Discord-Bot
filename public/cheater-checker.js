@@ -1391,6 +1391,16 @@ async function toggleFavorite(steamId, event) {
     }
 
     showNotification(data.isFavorite ? 'Добавлено в избранное' : 'Удалено из избранного', 'success');
+
+    // Если сейчас вкладка "Избранное" — обновляем отфильтрованные массивы и перерисовываем
+    if (currentReportFilter === 'favorites') {
+      applyReportFilter();
+      bannedPage = 1;
+      cleanPage = 1;
+      renderBannedPage();
+      renderCleanPage();
+      updateCounters();
+    }
   } catch (err) {
     showNotification('Ошибка соединения', 'error');
   }
