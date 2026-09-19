@@ -1330,7 +1330,7 @@ function toggleClearBtn(input, clearBtn) {
  * Конвертирует URL в тексте в кликабельные ссылки
  */
 function linkifyUrls(text) {
-  const escaped = escapeHtml(text);
+  const escaped = escapeHtml(text).replace(/\n/g, '<br>');
   const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g;
   return escaped.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener" class="note-link">$1</a>');
 }
@@ -1471,28 +1471,30 @@ function editNote(noteId, steamId) {
   const noteTextEl = noteItem.querySelector('.note-text');
   const currentText = noteTextEl.textContent;
 
-  // Заменяем содержимое note-item на инпут
+  // Заменяем содержимое note-item на textarea
   noteItem.innerHTML = `
     <div class="note-edit-row">
-      <input type="text" class="note-input note-edit-input" value="${escapeHtml(currentText)}">
-      <button class="note-save-btn" onclick="saveNoteEdit(${noteId}, '${steamId}')">Сохранить</button>
-      <button class="note-cancel-btn" onclick="renderNotes('${steamId}')">Отмена</button>
+      <textarea class="note-input note-textarea note-edit-input">${escapeHtml(currentText)}</textarea>
+      <div class="note-edit-buttons">
+        <button class="note-save-btn" onclick="saveNoteEdit(${noteId}, '${steamId}')">Сохранить</button>
+        <button class="note-cancel-btn" onclick="renderNotes('${steamId}')">Отмена</button>
+      </div>
     </div>
   `;
 
-  const input = noteItem.querySelector('.note-edit-input');
-  input.focus();
-  input.select();
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') saveNoteEdit(noteId, steamId);
+  const textarea = noteItem.querySelector('.note-edit-input');
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveNoteEdit(noteId, steamId);
     if (e.key === 'Escape') renderNotes(steamId);
   });
 }
 
 async function saveNoteEdit(noteId, steamId) {
-  const input = document.querySelector('.note-edit-input');
-  if (!input) return;
-  const newText = input.value.trim();
+  const textarea = document.querySelector('.note-edit-input');
+  if (!textarea) return;
+  const newText = textarea.value.trim();
   if (!newText) return;
 
   try {
@@ -1612,7 +1614,7 @@ function renderNotes(steamId) {
   // Поле ввода для новой заметки
   html += `
     <div class="note-input-row">
-      <input type="text" class="note-input" id="note-input-${steamId}" placeholder="Добавить заметку..." onkeydown="if(event.key==='Enter')addNote('${steamId}')">
+      <textarea class="note-input note-textarea" id="note-input-${steamId}" placeholder="Добавить заметку..." rows="2" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))addNote('${steamId}')"></textarea>
       <button class="note-save-btn" onclick="addNote('${steamId}')">Сохранить</button>
     </div>
   `;
