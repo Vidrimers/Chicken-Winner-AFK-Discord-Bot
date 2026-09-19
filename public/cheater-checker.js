@@ -135,6 +135,7 @@ async function loadProfiles() {
     renderBannedPage();
     renderCleanPage();
     updateCounters();
+    updateFavoritesCount();
 
     // Отмечаем что пользователь просмотрел страницу
     if (currentUserId) {
@@ -296,6 +297,13 @@ function goToPage(type, page) {
 function updateCounters() {
   document.getElementById('bannedCount').textContent = `(${allBannedProfiles.length})`;
   document.getElementById('cleanCount').textContent = `(${allCleanProfiles.length})`;
+}
+
+function updateFavoritesCount() {
+  const count = allBannedProfilesUnfiltered.filter(p => p.isFavorite).length +
+                allCleanProfilesUnfiltered.filter(p => p.isFavorite).length;
+  const el = document.getElementById('favoritesCount');
+  if (el) el.textContent = count > 0 ? `(${count})` : '';
 }
 
 /**
@@ -1391,6 +1399,9 @@ async function toggleFavorite(steamId, event) {
     }
 
     showNotification(data.isFavorite ? 'Добавлено в избранное' : 'Удалено из избранного', 'success');
+
+    // Обновляем счётчик избранного
+    updateFavoritesCount();
 
     // Если сейчас вкладка "Избранное" — обновляем отфильтрованные массивы и перерисовываем
     if (currentReportFilter === 'favorites') {
