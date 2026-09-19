@@ -1227,6 +1227,7 @@
   display: flex;
   gap: 8px;
   margin-top: 8px;
+  align-items: flex-end;
 }
 
 .note-input {
@@ -1269,7 +1270,7 @@
 
 .note-textarea {
   resize: vertical;
-  min-height: 40px;
+  min-height: 34px;
   max-height: 150px;
   font-family: inherit;
   line-height: 1.4;

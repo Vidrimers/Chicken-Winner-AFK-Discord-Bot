@@ -1614,7 +1614,7 @@ function renderNotes(steamId) {
   // Поле ввода для новой заметки
   html += `
     <div class="note-input-row">
-      <textarea class="note-input note-textarea" id="note-input-${steamId}" placeholder="Добавить заметку..." rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addNote('${steamId}')}"></textarea>
+      <textarea class="note-input note-textarea" id="note-input-${steamId}" placeholder="Добавить заметку..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addNote('${steamId}')}"></textarea>
       <button class="note-save-btn" onclick="addNote('${steamId}')">Сохранить</button>
     </div>
   `;
