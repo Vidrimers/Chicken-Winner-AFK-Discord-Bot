@@ -478,5 +478,42 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: таблица cheater_favorites (избранное чекера)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cheater_favorites'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE cheater_favorites (
+          user_id TEXT NOT NULL,
+          steam_id TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY (user_id, steam_id)
+        )
+      `);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cf_user ON cheater_favorites(user_id)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cf_steam ON cheater_favorites(steam_id)');
+      console.log('✅ Таблица cheater_favorites создана');
+    }
+  }
+
+  // Миграция: таблица cheater_notes (заметки к профилям чекера)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cheater_notes'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE cheater_notes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          steam_id TEXT NOT NULL,
+          text TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      `);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cn_user_steam ON cheater_notes(user_id, steam_id)');
+      console.log('✅ Таблица cheater_notes создана');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

@@ -188,6 +188,9 @@ function applyReportFilter() {
   if (currentReportFilter === 'steam_wall') {
     allBannedProfiles = allBannedProfilesUnfiltered.filter(p => (p.report_source || 'web') === 'steam_wall');
     allCleanProfiles = allCleanProfilesUnfiltered.filter(p => (p.report_source || 'web') === 'steam_wall');
+  } else if (currentReportFilter === 'favorites') {
+    allBannedProfiles = allBannedProfilesUnfiltered.filter(p => p.isFavorite);
+    allCleanProfiles = allCleanProfilesUnfiltered.filter(p => p.isFavorite);
   } else {
     allBannedProfiles = [...allBannedProfilesUnfiltered];
     allCleanProfiles = [...allCleanProfilesUnfiltered];
@@ -503,6 +506,16 @@ function createProfileCard(profile, isBanned) {
   // FACEIT-секция в деталях (только если faceit !== null)
   const faceitHtml = renderFaceitSection(steamCache);
 
+  // Избранное и заметки
+  const isFavorite = profile.isFavorite || false;
+  const hasNotes = profile.notes && profile.notes.length > 0;
+  const favBtn = currentUserId
+    ? `<button class="card-fav-btn${isFavorite ? ' active' : ''}" data-steam-id="${steamId}" onclick="toggleFavorite('${steamId}', event)" title="Избранное">★</button>`
+    : '';
+  const pencilIcon = currentUserId && hasNotes
+    ? `<span class="card-pencil" data-steam-id="${steamId}" title="Есть заметки"><svg class="icon" aria-hidden="true"><use href="#icon-edit"></use></svg></span>`
+    : `<span class="card-pencil" data-steam-id="${steamId}" style="display:none"><svg class="icon" aria-hidden="true"><use href="#icon-edit"></use></svg></span>`;
+
   return `
     <div class="profile-card ${statusClass}" data-steam-id="${steamId}">
       <div class="card-header">
@@ -517,7 +530,11 @@ function createProfileCard(profile, isBanned) {
           </div>
           <button class="name-history-btn${profile.name_history_count > 0 ? '' : ' name-history-btn--empty'}" onclick="${profile.name_history_count > 0 ? `showNameHistory('${steamId}', '${personaName}')` : ''}" title="Прошлые имена">📜 Прошлые имена${profile.name_history_count > 0 ? ` (${profile.name_history_count})` : ''}</button>
         </div>
-        ${deleteBtn}
+        <div class="card-header-actions">
+          ${pencilIcon}
+          ${favBtn}
+          ${deleteBtn}
+        </div>
       </div>
       <div class="card-details" id="details-${steamId}">
         ${signalsHtml}
@@ -547,6 +564,7 @@ function createProfileCard(profile, isBanned) {
         </div>
         ${cs2Html}
         ${faceitHtml}
+        <div class="notes-section" id="notes-${steamId}"></div>
       </div>
       <div class="card-actions">
         <a href="${profileUrl}" target="_blank" rel="noopener" class="card-action-btn profile-link-btn"><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Профиль</a>
@@ -745,6 +763,10 @@ function bindCardDelegation() {
         if (details) {
           details.classList.toggle('visible');
           if (nameEl) nameEl.classList.toggle('expanded');
+          // Рендерим заметки при раскрытии
+          if (details.classList.contains('visible')) {
+            renderNotes(steamId);
+          }
         }
       }
     });
@@ -1300,4 +1322,291 @@ function toggleClearBtn(input, clearBtn) {
   } else {
     clearBtn.classList.remove('visible');
   }
+}
+
+// ===== ИЗБРАННОЕ И ЗАМЕТКИ =====
+
+/**
+ * Конвертирует URL в тексте в кликабельные ссылки
+ */
+function linkifyUrls(text) {
+  const escaped = escapeHtml(text);
+  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g;
+  return escaped.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener" class="note-link">$1</a>');
+}
+
+/**
+ * Toggle избранное для профиля
+ */
+async function toggleFavorite(steamId, event) {
+  if (event) event.stopPropagation();
+  if (!currentUserId) {
+    showNotification('Войдите в систему', 'error');
+    return;
+  }
+
+  const profile = [...allBannedProfilesUnfiltered, ...allCleanProfilesUnfiltered]
+    .find(p => p.steam_id === steamId);
+  const wasFavorite = profile?.isFavorite;
+
+  // Если снимаем из избранное и есть заметки — предупреждаем
+  if (wasFavorite && profile.notes && profile.notes.length > 0) {
+    const confirmed = await showConfirmDialogCustom(
+      `У этого профиля ${profile.notes.length} ${profile.notes.length === 1 ? 'заметка' : 'заметок'}. ` +
+      `Удалить из избранного? Заметки будут удалены.`
+    );
+    if (!confirmed) return;
+  }
+
+  try {
+    const res = await fetch(`/api/cheater-checker/favorites/${steamId}`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) {
+      showNotification(data.error || 'Ошибка', 'error');
+      return;
+    }
+
+    // Обновляем состояние во всех массивах
+    const updateProfile = (arr) => {
+      const p = arr.find(x => x.steam_id === steamId);
+      if (p) {
+        p.isFavorite = data.isFavorite;
+        if (data.notesDeleted) p.notes = [];
+      }
+    };
+    updateProfile(allBannedProfilesUnfiltered);
+    updateProfile(allCleanProfilesUnfiltered);
+    updateProfile(allBannedProfiles);
+    updateProfile(allCleanProfiles);
+
+    // Обновляем звёздочку в DOM
+    const star = document.querySelector(`.card-fav-btn[data-steam-id="${steamId}"]`);
+    if (star) {
+      star.classList.toggle('active', data.isFavorite);
+    }
+
+    // Скрываем карандаш если заметки удалены
+    if (data.notesDeleted) {
+      const pencil = document.querySelector(`.card-pencil[data-steam-id="${steamId}"]`);
+      if (pencil) pencil.style.display = 'none';
+      // Удаляем заметки из DOM
+      const notesContainer = document.getElementById(`notes-${steamId}`);
+      if (notesContainer) notesContainer.innerHTML = '';
+    }
+
+    showNotification(data.isFavorite ? 'Добавлено в избранное' : 'Удалено из избранного', 'success');
+  } catch (err) {
+    showNotification('Ошибка соединения', 'error');
+  }
+}
+
+/**
+ * Добавить заметку к профилю
+ */
+async function addNote(steamId) {
+  if (!currentUserId) {
+    showNotification('Войдите в систему', 'error');
+    return;
+  }
+
+  const input = document.getElementById(`note-input-${steamId}`);
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  try {
+    const res = await fetch(`/api/cheater-checker/notes/${steamId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showNotification(data.error || 'Ошибка', 'error');
+      return;
+    }
+
+    // Обновляем профиль в массивах
+    const updateProfile = (arr) => {
+      const p = arr.find(x => x.steam_id === steamId);
+      if (p) {
+        p.notes = p.notes || [];
+        p.notes.push({ id: data.noteId, text, created_at: Date.now(), updated_at: Date.now() });
+        p.isFavorite = true;
+      }
+    };
+    updateProfile(allBannedProfilesUnfiltered);
+    updateProfile(allCleanProfilesUnfiltered);
+    updateProfile(allBannedProfiles);
+    updateProfile(allCleanProfiles);
+
+    // Обновляем звёздочку (могла стать активной из-за авто-добавления)
+    const star = document.querySelector(`.card-fav-btn[data-steam-id="${steamId}"]`);
+    if (star) star.classList.add('active');
+
+    // Показываем карандаш
+    const pencil = document.querySelector(`.card-pencil[data-steam-id="${steamId}"]`);
+    if (pencil) pencil.style.display = 'inline-flex';
+
+    // Очищаем инпут
+    input.value = '';
+
+    // Рендерим заметки
+    renderNotes(steamId);
+    showNotification('Заметка добавлена', 'success');
+  } catch (err) {
+    showNotification('Ошибка соединения', 'error');
+  }
+}
+
+/**
+ * Редактировать заметку
+ */
+async function editNote(noteId, steamId) {
+  const noteEl = document.querySelector(`.note-text[data-note-id="${noteId}"]`);
+  if (!noteEl) return;
+
+  const currentText = noteEl.textContent;
+  const newText = prompt('Редактировать заметку:', currentText);
+  if (newText === null || !newText.trim()) return;
+
+  try {
+    const res = await fetch(`/api/cheater-checker/notes/${noteId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: newText.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showNotification(data.error || 'Ошибка', 'error');
+      return;
+    }
+
+    // Обновляем в массивах
+    const updateProfile = (arr) => {
+      const p = arr.find(x => x.steam_id === steamId);
+      if (p && p.notes) {
+        const note = p.notes.find(n => n.id === noteId);
+        if (note) {
+          note.text = newText.trim();
+          note.updated_at = Date.now();
+        }
+      }
+    };
+    updateProfile(allBannedProfilesUnfiltered);
+    updateProfile(allCleanProfilesUnfiltered);
+    updateProfile(allBannedProfiles);
+    updateProfile(allCleanProfiles);
+
+    renderNotes(steamId);
+    showNotification('Заметка обновлена', 'success');
+  } catch (err) {
+    showNotification('Ошибка соединения', 'error');
+  }
+}
+
+/**
+ * Удалить заметку
+ */
+async function deleteNote(noteId, steamId) {
+  if (!confirm('Удалить заметку?')) return;
+
+  try {
+    const res = await fetch(`/api/cheater-checker/notes/${noteId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) {
+      showNotification(data.error || 'Ошибка', 'error');
+      return;
+    }
+
+    // Обновляем в массивах
+    const updateProfile = (arr) => {
+      const p = arr.find(x => x.steam_id === steamId);
+      if (p && p.notes) {
+        p.notes = p.notes.filter(n => n.id !== noteId);
+      }
+    };
+    updateProfile(allBannedProfilesUnfiltered);
+    updateProfile(allCleanProfilesUnfiltered);
+    updateProfile(allBannedProfiles);
+    updateProfile(allCleanProfiles);
+
+    // Скрываем карандаш если заметок больше нет
+    const profile = [...allBannedProfilesUnfiltered, ...allCleanProfilesUnfiltered]
+      .find(p => p.steam_id === steamId);
+    if (profile && (!profile.notes || profile.notes.length === 0)) {
+      const pencil = document.querySelector(`.card-pencil[data-steam-id="${steamId}"]`);
+      if (pencil) pencil.style.display = 'none';
+    }
+
+    renderNotes(steamId);
+    showNotification('Заметка удалена', 'success');
+  } catch (err) {
+    showNotification('Ошибка соединения', 'error');
+  }
+}
+
+/**
+ * Рендерит заметки в контейнере карточки
+ */
+function renderNotes(steamId) {
+  const container = document.getElementById(`notes-${steamId}`);
+  if (!container) return;
+
+  const profile = [...allBannedProfilesUnfiltered, ...allCleanProfilesUnfiltered, ...allBannedProfiles, ...allCleanProfiles]
+    .find(p => p.steam_id === steamId);
+  const notes = profile?.notes || [];
+
+  let html = '';
+
+  // Список существующих заметок
+  notes.forEach(note => {
+    html += `
+      <div class="note-item">
+        <div class="note-content">
+          <span class="note-text" data-note-id="${note.id}">${linkifyUrls(note.text)}</span>
+          <span class="note-date">${new Date(note.created_at).toLocaleString('ru-RU')}</span>
+        </div>
+        <div class="note-actions">
+          <button class="note-action-btn" onclick="editNote(${note.id}, '${steamId}')" title="Редактировать"><svg class="icon" aria-hidden="true"><use href="#icon-edit"></use></svg></button>
+          <button class="note-action-btn note-delete-btn" onclick="deleteNote(${note.id}, '${steamId}')" title="Удалить">✕</button>
+        </div>
+      </div>
+    `;
+  });
+
+  // Поле ввода для новой заметки
+  html += `
+    <div class="note-input-row">
+      <input type="text" class="note-input" id="note-input-${steamId}" placeholder="Добавить заметку..." onkeydown="if(event.key==='Enter')addNote('${steamId}')">
+      <button class="note-save-btn" onclick="addNote('${steamId}')">Сохранить</button>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+/**
+ * Кастомный confirm с промисом
+ */
+function showConfirmDialogCustom(message) {
+  return new Promise(resolve => {
+    const dialog = document.getElementById('confirmDialog');
+    const text = document.getElementById('confirmText');
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+    const cancelBtn = document.getElementById('confirmCancelBtn');
+
+    text.textContent = message;
+    deleteBtn.textContent = 'Удалить';
+    dialog.style.display = 'flex';
+
+    const cleanup = () => {
+      dialog.style.display = 'none';
+      deleteBtn.onclick = null;
+      cancelBtn.onclick = null;
+    };
+
+    deleteBtn.onclick = () => { cleanup(); resolve(true); };
+    cancelBtn.onclick = () => { cleanup(); resolve(false); };
+  });
 }

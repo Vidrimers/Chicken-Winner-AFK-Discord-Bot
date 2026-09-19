@@ -235,17 +235,20 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       const profiles = db.getCheaterChecks({ limit, offset, filter });
       const total = db.getCheaterChecksCount(filter);
 
-      // lastViewedAt для авторизованных пользователей
+      // lastViewedAt и избранное для авторизованных пользователей
       const userId = req.session?.userId || null;
       const lastViewedAt = userId ? db.getCheaterLastView(userId) : null;
+      const favoriteSteamIds = userId ? db.getCheaterFavoriteSteamIds(userId) : [];
 
-      // Добавляем количество смен имени к каждому профилю
-      const profilesWithNameCount = profiles.map(profile => ({
+      // Добавляем количество смен имени, isFavorite и notes к каждому профилю
+      const enrichedProfiles = profiles.map(profile => ({
         ...profile,
         name_history_count: db.getCheaterNameHistoryCount(profile.steam_id),
+        isFavorite: favoriteSteamIds.includes(profile.steam_id),
+        notes: userId ? db.getCheaterNotes(userId, profile.steam_id) : [],
       }));
 
-      res.json({ profiles: profilesWithNameCount, total, lastViewedAt });
+      res.json({ profiles: enrichedProfiles, total, lastViewedAt });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
@@ -278,6 +281,111 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
     try {
       db.markCheaterLastView(req.authenticatedUserId);
       res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * POST /api/cheater-checker/favorites/:steamId
+   * Toggle избранное для профиля
+   */
+  router.post('/favorites/:steamId', requireAuth, (req, res) => {
+    try {
+      const { steamId } = req.params;
+      if (!/^\d{17}$/.test(steamId)) {
+        return res.status(400).json({ error: 'Невалидный SteamID64' });
+      }
+      const result = db.toggleCheaterFavorite(req.authenticatedUserId, steamId);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * GET /api/cheater-checker/notes/:steamId
+   * Получить заметки пользователя к профилю
+   */
+  router.get('/notes/:steamId', requireAuth, (req, res) => {
+    try {
+      const { steamId } = req.params;
+      const notes = db.getCheaterNotes(req.authenticatedUserId, steamId);
+      res.json({ notes });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * POST /api/cheater-checker/notes/:steamId
+   * Добавить заметку к профилю (автоматически добавляет в избранное)
+   */
+  router.post('/notes/:steamId', requireAuth, (req, res) => {
+    try {
+      const { steamId } = req.params;
+      const { text } = req.body;
+      if (!text || !text.trim()) {
+        return res.status(400).json({ error: 'Текст заметки обязателен' });
+      }
+      // Автоматически добавляем в избранное
+      if (!db.isCheaterFavorite(req.authenticatedUserId, steamId)) {
+        db.addCheaterFavorite(req.authenticatedUserId, steamId);
+      }
+      const result = db.addCheaterNote(req.authenticatedUserId, steamId, text.trim());
+      res.json({ success: true, noteId: result.lastInsertRowid });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * PUT /api/cheater-checker/notes/:noteId
+   * Редактировать заметку
+   */
+  router.put('/notes/:noteId', requireAuth, (req, res) => {
+    try {
+      const { noteId } = req.params;
+      const { text } = req.body;
+      if (!text || !text.trim()) {
+        return res.status(400).json({ error: 'Текст заметки обязателен' });
+      }
+      const result = db.updateCheaterNote(noteId, req.authenticatedUserId, text.trim());
+      if (result.changes === 0) {
+        return res.status(404).json({ error: 'Заметка не найдена' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * DELETE /api/cheater-checker/notes/:noteId
+   * Удалить заметку
+   */
+  router.delete('/notes/:noteId', requireAuth, (req, res) => {
+    try {
+      const { noteId } = req.params;
+      const result = db.deleteCheaterNote(noteId, req.authenticatedUserId);
+      if (result.changes === 0) {
+        return res.status(404).json({ error: 'Заметка не найдена' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * GET /api/cheater-checker/favorites/notes-count/:steamId
+   * Получить количество заметок к профилю (для предупреждения при удалении из избранного)
+   */
+  router.get('/favorites/notes-count/:steamId', requireAuth, (req, res) => {
+    try {
+      const { steamId } = req.params;
+      const count = db.getCheaterFavoritesCount(req.authenticatedUserId, steamId);
+      res.json({ count });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }

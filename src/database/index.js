@@ -507,6 +507,75 @@ export class DatabaseManager {
     ).run(userId, Date.now());
   }
 
+  // ===== CHEATER FAVORITES =====
+
+  isCheaterFavorite(userId, steamId) {
+    const row = this.prepare(
+      'SELECT 1 FROM cheater_favorites WHERE user_id = ? AND steam_id = ?'
+    ).get(userId, steamId);
+    return !!row;
+  }
+
+  addCheaterFavorite(userId, steamId) {
+    return this.prepare(
+      'INSERT OR IGNORE INTO cheater_favorites (user_id, steam_id, created_at) VALUES (?, ?, ?)'
+    ).run(userId, steamId, Date.now());
+  }
+
+  removeCheaterFavorite(userId, steamId) {
+    this.prepare('DELETE FROM cheater_favorites WHERE user_id = ? AND steam_id = ?').run(userId, steamId);
+    // Каскадно удаляем заметки пользователя к этому профилю
+    this.prepare('DELETE FROM cheater_notes WHERE user_id = ? AND steam_id = ?').run(userId, steamId);
+  }
+
+  toggleCheaterFavorite(userId, steamId) {
+    const exists = this.isCheaterFavorite(userId, steamId);
+    if (exists) {
+      this.removeCheaterFavorite(userId, steamId);
+      return { isFavorite: false, notesDeleted: true };
+    }
+    this.addCheaterFavorite(userId, steamId);
+    return { isFavorite: true, notesDeleted: false };
+  }
+
+  getCheaterFavoriteSteamIds(userId) {
+    return this.prepare('SELECT steam_id FROM cheater_favorites WHERE user_id = ?')
+      .all(userId)
+      .map(r => r.steam_id);
+  }
+
+  getCheaterFavoritesCount(userId, steamId) {
+    const row = this.prepare(
+      'SELECT COUNT(*) as count FROM cheater_notes WHERE user_id = ? AND steam_id = ?'
+    ).get(userId, steamId);
+    return row ? row.count : 0;
+  }
+
+  // ===== CHEATER NOTES =====
+
+  getCheaterNotes(userId, steamId) {
+    return this.prepare(
+      'SELECT id, user_id, steam_id, text, created_at, updated_at FROM cheater_notes WHERE user_id = ? AND steam_id = ? ORDER BY created_at ASC'
+    ).all(userId, steamId);
+  }
+
+  addCheaterNote(userId, steamId, text) {
+    const now = Date.now();
+    return this.prepare(
+      'INSERT INTO cheater_notes (user_id, steam_id, text, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
+    ).run(userId, steamId, text, now, now);
+  }
+
+  updateCheaterNote(noteId, userId, text) {
+    return this.prepare(
+      'UPDATE cheater_notes SET text = ?, updated_at = ? WHERE id = ? AND user_id = ?'
+    ).run(text, Date.now(), noteId, userId);
+  }
+
+  deleteCheaterNote(noteId, userId) {
+    return this.prepare('DELETE FROM cheater_notes WHERE id = ? AND user_id = ?').run(noteId, userId);
+  }
+
   getUserCheaterStats(discordId) {
     const total = this.db.prepare(
       'SELECT COUNT(*) as count FROM cheater_checks WHERE checked_by_discord_id = ?'
