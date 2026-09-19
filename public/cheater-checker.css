@@ -1211,6 +1211,17 @@
   background: rgba(255, 68, 68, 0.15);
 }
 
+.note-delete-confirm:hover {
+  color: #4caf50;
+  background: rgba(76, 175, 80, 0.15);
+}
+
+.note-delete-hint {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+
 /* Поле ввода заметки */
 .note-input-row {
   display: flex;

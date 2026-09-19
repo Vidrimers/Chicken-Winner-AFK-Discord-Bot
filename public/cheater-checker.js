@@ -1517,10 +1517,27 @@ async function saveNoteEdit(noteId, steamId) {
 }
 
 /**
- * Удалить заметку
+ * Удалить заметку — inline подтверждение
  */
-async function deleteNote(noteId, steamId) {
-  if (!confirm('Удалить заметку?')) return;
+function deleteNote(noteId, steamId) {
+  const noteItem = document.querySelector(`.note-text[data-note-id="${noteId}"]`)?.closest('.note-item');
+  if (!noteItem) return;
+
+  const noteActions = noteItem.querySelector('.note-actions');
+  if (!noteActions) return;
+
+  // Показываем inline-подтверждение
+  noteActions.innerHTML = `
+    <span class="note-delete-hint">Удалить?</span>
+    <button class="note-action-btn note-delete-confirm" onclick="confirmDeleteNote(${noteId}, '${steamId}')" title="Да">✓</button>
+    <button class="note-action-btn" onclick="renderNotes('${steamId}')" title="Отмена">✕</button>
+  `;
+}
+
+/**
+ * Подтверждение удаления заметки
+ */
+async function confirmDeleteNote(noteId, steamId) {
 
   try {
     const res = await fetch(`/api/cheater-checker/notes/${noteId}`, { method: 'DELETE' });
