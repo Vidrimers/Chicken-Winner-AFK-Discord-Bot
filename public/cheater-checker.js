@@ -1486,7 +1486,7 @@ function editNote(noteId, steamId) {
   textarea.focus();
   textarea.setSelectionRange(textarea.value.length, textarea.value.length);
   textarea.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveNoteEdit(noteId, steamId);
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveNoteEdit(noteId, steamId); }
     if (e.key === 'Escape') renderNotes(steamId);
   });
 }
@@ -1614,7 +1614,7 @@ function renderNotes(steamId) {
   // Поле ввода для новой заметки
   html += `
     <div class="note-input-row">
-      <textarea class="note-input note-textarea" id="note-input-${steamId}" placeholder="Добавить заметку..." rows="2" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))addNote('${steamId}')"></textarea>
+      <textarea class="note-input note-textarea" id="note-input-${steamId}" placeholder="Добавить заметку..." rows="2" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addNote('${steamId}')}"></textarea>
       <button class="note-save-btn" onclick="addNote('${steamId}')">Сохранить</button>
     </div>
   `;
