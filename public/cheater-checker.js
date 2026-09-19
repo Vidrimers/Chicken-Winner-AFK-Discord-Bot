@@ -1657,7 +1657,8 @@ function showConfirmDialogCustom(message) {
 function initAutoResize(textarea) {
   const resize = () => {
     textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
+    const maxH = parseInt(getComputedStyle(textarea).maxHeight, 10) || 150;
+    textarea.style.height = Math.min(textarea.scrollHeight, maxH) + 'px';
   };
   textarea.addEventListener('input', resize);
   textarea.addEventListener('paste', () => setTimeout(resize, 0));
