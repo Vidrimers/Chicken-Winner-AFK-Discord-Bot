@@ -1454,19 +1454,42 @@ async function addNote(steamId) {
 /**
  * Редактировать заметку
  */
-async function editNote(noteId, steamId) {
-  const noteEl = document.querySelector(`.note-text[data-note-id="${noteId}"]`);
-  if (!noteEl) return;
+function editNote(noteId, steamId) {
+  const noteItem = document.querySelector(`.note-text[data-note-id="${noteId}"]`)?.closest('.note-item');
+  if (!noteItem) return;
 
-  const currentText = noteEl.textContent;
-  const newText = prompt('Редактировать заметку:', currentText);
-  if (newText === null || !newText.trim()) return;
+  const noteTextEl = noteItem.querySelector('.note-text');
+  const currentText = noteTextEl.textContent;
+
+  // Заменяем содержимое note-item на инпут
+  noteItem.innerHTML = `
+    <div class="note-edit-row">
+      <input type="text" class="note-input note-edit-input" value="${escapeHtml(currentText)}">
+      <button class="note-save-btn" onclick="saveNoteEdit(${noteId}, '${steamId}')">Сохранить</button>
+      <button class="note-cancel-btn" onclick="renderNotes('${steamId}')">Отмена</button>
+    </div>
+  `;
+
+  const input = noteItem.querySelector('.note-edit-input');
+  input.focus();
+  input.select();
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveNoteEdit(noteId, steamId);
+    if (e.key === 'Escape') renderNotes(steamId);
+  });
+}
+
+async function saveNoteEdit(noteId, steamId) {
+  const input = document.querySelector('.note-edit-input');
+  if (!input) return;
+  const newText = input.value.trim();
+  if (!newText) return;
 
   try {
     const res = await fetch(`/api/cheater-checker/notes/${noteId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: newText.trim() }),
+      body: JSON.stringify({ text: newText }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -1480,7 +1503,7 @@ async function editNote(noteId, steamId) {
       if (p && p.notes) {
         const note = p.notes.find(n => n.id === noteId);
         if (note) {
-          note.text = newText.trim();
+          note.text = newText;
           note.updated_at = Date.now();
         }
       }
