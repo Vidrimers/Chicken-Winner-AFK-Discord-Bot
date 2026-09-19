@@ -1366,18 +1366,14 @@ async function toggleFavorite(steamId, event) {
       return;
     }
 
-    // Обновляем состояние во всех массивах
-    const updateProfile = (arr) => {
+    // Обновляем в unfiltered (объекты shared по ссылке)
+    [allBannedProfilesUnfiltered, allCleanProfilesUnfiltered].forEach(arr => {
       const p = arr.find(x => x.steam_id === steamId);
       if (p) {
         p.isFavorite = data.isFavorite;
         if (data.notesDeleted) p.notes = [];
       }
-    };
-    updateProfile(allBannedProfilesUnfiltered);
-    updateProfile(allCleanProfilesUnfiltered);
-    updateProfile(allBannedProfiles);
-    updateProfile(allCleanProfiles);
+    });
 
     // Обновляем звёздочку в DOM
     const star = document.querySelector(`.card-fav-btn[data-steam-id="${steamId}"]`);
@@ -1426,19 +1422,15 @@ async function addNote(steamId) {
       return;
     }
 
-    // Обновляем профиль в массивах
-    const updateProfile = (arr) => {
+    // Обновляем профиль в unfiltered (объекты shared по ссылке → filtered тоже обновятся)
+    [allBannedProfilesUnfiltered, allCleanProfilesUnfiltered].forEach(arr => {
       const p = arr.find(x => x.steam_id === steamId);
       if (p) {
         p.notes = p.notes || [];
         p.notes.push({ id: data.noteId, text, created_at: Date.now(), updated_at: Date.now() });
         p.isFavorite = true;
       }
-    };
-    updateProfile(allBannedProfilesUnfiltered);
-    updateProfile(allCleanProfilesUnfiltered);
-    updateProfile(allBannedProfiles);
-    updateProfile(allCleanProfiles);
+    });
 
     // Обновляем звёздочку (могла стать активной из-за авто-добавления)
     const star = document.querySelector(`.card-fav-btn[data-steam-id="${steamId}"]`);
@@ -1482,8 +1474,8 @@ async function editNote(noteId, steamId) {
       return;
     }
 
-    // Обновляем в массивах
-    const updateProfile = (arr) => {
+    // Обновляем в unfiltered (объекты shared по ссылке)
+    [allBannedProfilesUnfiltered, allCleanProfilesUnfiltered].forEach(arr => {
       const p = arr.find(x => x.steam_id === steamId);
       if (p && p.notes) {
         const note = p.notes.find(n => n.id === noteId);
@@ -1492,11 +1484,7 @@ async function editNote(noteId, steamId) {
           note.updated_at = Date.now();
         }
       }
-    };
-    updateProfile(allBannedProfilesUnfiltered);
-    updateProfile(allCleanProfilesUnfiltered);
-    updateProfile(allBannedProfiles);
-    updateProfile(allCleanProfiles);
+    });
 
     renderNotes(steamId);
     showNotification('Заметка обновлена', 'success');
@@ -1519,17 +1507,13 @@ async function deleteNote(noteId, steamId) {
       return;
     }
 
-    // Обновляем в массивах
-    const updateProfile = (arr) => {
+    // Обновляем в unfiltered (объекты shared по ссылке)
+    [allBannedProfilesUnfiltered, allCleanProfilesUnfiltered].forEach(arr => {
       const p = arr.find(x => x.steam_id === steamId);
       if (p && p.notes) {
         p.notes = p.notes.filter(n => n.id !== noteId);
       }
-    };
-    updateProfile(allBannedProfilesUnfiltered);
-    updateProfile(allCleanProfilesUnfiltered);
-    updateProfile(allBannedProfiles);
-    updateProfile(allCleanProfiles);
+    });
 
     // Скрываем карандаш если заметок больше нет
     const profile = [...allBannedProfilesUnfiltered, ...allCleanProfilesUnfiltered]
@@ -1553,7 +1537,7 @@ function renderNotes(steamId) {
   const container = document.getElementById(`notes-${steamId}`);
   if (!container) return;
 
-  const profile = [...allBannedProfilesUnfiltered, ...allCleanProfilesUnfiltered, ...allBannedProfiles, ...allCleanProfiles]
+  const profile = [...allBannedProfilesUnfiltered, ...allCleanProfilesUnfiltered]
     .find(p => p.steam_id === steamId);
   const notes = profile?.notes || [];
 
