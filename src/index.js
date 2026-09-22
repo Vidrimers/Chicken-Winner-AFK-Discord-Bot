@@ -66,6 +66,17 @@ export const banCheckState = {
 };
 
 /**
+ * Проверяет хочет ли админ получать данный тип уведомления
+ */
+function shouldNotifyAdmin(db, type) {
+  const adminId = process.env.ADMIN_USER_ID;
+  if (!adminId) return true; // Если не настроен — всегда шлём
+  if (type === 'nick') return db.getUserCheaterNickNotificationSetting(adminId);
+  if (type === 'ban' || type === 'url') return db.getUserCheaterOwnNotificationSetting(adminId);
+  return true;
+}
+
+/**
  * Собирает уведомления о смене ника для подписчиков "cheaterNickNotifications"
  */
 function collectNickNotifications(db, existing, message) {
@@ -214,7 +225,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             `👁 Добавил: ${escapeTgHtml(existing.checked_by_username || 'Неизвестно')}\n` +
             `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
 
-          notificationQueue.push({ type: 'admin', message: nickMessage });
+          if (shouldNotifyAdmin(db, 'nick')) notificationQueue.push({ type: 'admin', message: nickMessage });
           notificationQueue.push(...collectNickNotifications(db, existing, nickMessage));
 
           // CheatWatcher
@@ -249,7 +260,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             `👁 Добавил: ${escapeTgHtml(existing.checked_by_username || 'Неизвестно')}\n` +
             `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
 
-          notificationQueue.push({ type: 'admin', message: urlMessage });
+          if (shouldNotifyAdmin(db, 'url')) notificationQueue.push({ type: 'admin', message: urlMessage });
           notificationQueue.push(...collectUserNotifications(db, existing, urlMessage));
 
           // CheatWatcher
@@ -295,7 +306,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
               `👁 Добавил: ${escapeTgHtml(existing.checked_by_username || 'Неизвестно')}\n` +
               `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
 
-            notificationQueue.push({ type: 'admin', message: banMessage });
+            if (shouldNotifyAdmin(db, 'ban')) notificationQueue.push({ type: 'admin', message: banMessage });
             notificationQueue.push(...collectUserNotifications(db, existing, banMessage));
 
             // CheatWatcher
