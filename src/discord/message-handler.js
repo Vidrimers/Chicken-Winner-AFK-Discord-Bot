@@ -194,6 +194,39 @@ export class MessageHandler {
         await this.vacHandler.handleVacListCommand(message, count);
         return;
       }
+
+      // Статистика пользователя .1. stats
+      if (content === '.1. stats') {
+        await this.handleStatsCommand(message, message.author.id);
+        return;
+      }
+
+      // Команды ботов .bot <url>
+      if (content.startsWith('.bot https://steamcommunity.com/') || content.startsWith('.bot http://steamcommunity.com/')) {
+        const urls = message.content.match(/https?:\/\/steamcommunity\.com\/\S+/g);
+        if (!urls) {
+          await message.reply('❌ Steam-ссылка не найдена в сообщении.');
+          return;
+        }
+        if (urls.length > 5) {
+          await message.reply('❌ Максимум 5 ссылок за одно сообщение.');
+          return;
+        }
+        if (urls.length === 1) {
+          await this.vacHandler.handleCheckCommand(message, urls[0], 'bot');
+        } else {
+          await this.vacHandler.handleCheckMultipleCommand(message, urls, 'bot');
+        }
+        return;
+      }
+
+      // Список забаненных ботов .bot vac N
+      if (content.startsWith('.bot vac ')) {
+        const parts = content.split(' ');
+        const count = parseInt(parts[parts.length - 1], 10);
+        await this.vacHandler.handleVacListCommand(message, count, 'bot');
+        return;
+      }
     }
 
     // Команда помощи
@@ -220,6 +253,10 @@ export class MessageHandler {
     const afkTime = formatDuration(stats.total_afk_time || 0);
     const streamTime = formatDuration(stats.stream_channel_time || 0);
 
+    const checkerStats = this.db.getUserCombinedStats(userId);
+    const ch = checkerStats.cheater || { totalChecked: 0, bannedFound: 0 };
+    const bt = checkerStats.bot || { totalChecked: 0, bannedFound: 0 };
+
     await message.reply(`
 📊 **Ваша статистика:**
 🎤 Всего сессий: **${stats.total_sessions || 0}**
@@ -236,6 +273,10 @@ export class MessageHandler {
 📡 Включений трансляций: **${stats.total_streams || 0}**
 ⭐ Очки рейтинга: **${stats.rank_points || 0}**
 🏆 Достижений: **${achievements.filter(a => a.achievement_id !== 'best_admin').length}/${Object.keys(ACHIEVEMENTS).filter(id => id !== 'best_admin').length}**
+
+🚨 **Чекер:**
+👤 Читеров добавлено: **${ch.totalChecked}** (забанено: **${ch.bannedFound}**)
+🤖 Ботов добавлено: **${bt.totalChecked}** (забанено: **${bt.bannedFound}**)
 
 👤 **Твой ID:** \`${message.author.id}\`
 🌐 **Подробная статистика:** ${SERVER_CONFIG.SITE_URL}

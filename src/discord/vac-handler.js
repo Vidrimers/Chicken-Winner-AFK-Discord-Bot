@@ -33,22 +33,23 @@ export class VacHandler {
    * @param {string} [footerUsername] — имя проверяющего для footer
    * @returns {EmbedBuilder}
    */
-  buildProfileEmbed(profile, footerUsername) {
+  buildProfileEmbed(profile, footerUsername, type = 'cheater') {
     const hasVacOrGameBan = profile.vacBanned || profile.vac_banned ||
       (profile.numberOfGameBans || profile.number_of_game_bans || 0) > 0;
     const hasCommunityOrTradeBan = profile.communityBanned || profile.community_banned ||
       (profile.economyBan || profile.economy_ban || 'none') !== 'none';
 
+    const typePrefix = type === 'bot' ? '🤖 Бот: ' : '';
     let color, title;
     if (hasVacOrGameBan) {
       color = EMBED_COLORS.BANNED;
-      title = '🚨 БАНЫ НАЙДЕНЫ';
+      title = `${typePrefix}🚨 БАНЫ НАЙДЕНЫ`;
     } else if (hasCommunityOrTradeBan) {
       color = EMBED_COLORS.RESTRICTED;
-      title = '⚠️ Ограничения';
+      title = `${typePrefix}⚠️ Ограничения`;
     } else {
       color = EMBED_COLORS.CLEAN;
-      title = '✅ Чистый профиль';
+      title = `${typePrefix}✅ Чистый профиль`;
     }
 
     // Нормализация полей (поддержка camelCase и snake_case)
@@ -107,7 +108,7 @@ export class VacHandler {
    * Обработка команды .!. <steam_url>
    * Проверяет один профиль, отвечает embed-сообщением, сохраняет в БД
    */
-  async handleCheckCommand(message, url) {
+  async handleCheckCommand(message, url, type = 'cheater') {
     try {
       // Добавляем реакцию "поиск"
       await message.react('🔍');
@@ -149,22 +150,24 @@ export class VacHandler {
         // Берём displayName с сервера из БД (то же имя что на сайте)
         const discordDisplayName = this.db.getUserStats(message.author.id)?.username || message.member?.displayName || message.author.username;
 
+        const typeLabel = type === 'bot' ? 'бота' : 'читера';
+
         // Проверяем, есть ли уже в БД
-        const existing = this.db.getCheaterCheckBySteamId(profile.steamId);
+        const existing = this.db.getCheckBySteamId(profile.steamId);
         if (existing) {
           // Обновляем данные о банах (автор не перезапишется благодаря ON CONFLICT)
-          this.db.upsertCheaterCheck({
+          this.db.upsertCheck({
             ...profile,
             checkedByDiscordId: message.author.id,
             checkedByUsername: discordDisplayName
-          });
+          }, type);
 
-          const embed = this.buildProfileEmbed(profile, existing.checked_by_username);
+          const embed = this.buildProfileEmbed(profile, existing.checked_by_username, type);
           
           // Разные сообщения: сам добавлял или кто-то другой
           const isSameUser = existing.checked_by_discord_id === message.author.id;
           const replyText = isSameUser
-            ? `⚠️ Ты уже добавлял этого читера (${new Date(existing.checked_at).toLocaleDateString('ru-RU')}). Данные о банах обновлены.`
+            ? `⚠️ Ты уже добавлял этого ${typeLabel} (${new Date(existing.checked_at).toLocaleDateString('ru-RU')}). Данные о банах обновлены.`
             : `⚠️ Этот профиль уже добавлен пользователем **${existing.checked_by_username}** (${new Date(existing.checked_at).toLocaleDateString('ru-RU')}). Данные о банах обновлены.`;
 
           await message.reply({
@@ -178,11 +181,11 @@ export class VacHandler {
         }
 
         // Сохраняем в БД
-        this.db.upsertCheaterCheck({
+        this.db.upsertCheck({
           ...profile,
           checkedByDiscordId: message.author.id,
           checkedByUsername: discordDisplayName
-        });
+        }, type);
 
         // Уведомление админу
         if (this.telegram && this.telegram.sendNewCheaterNotification) {
@@ -191,7 +194,7 @@ export class VacHandler {
               personaName: profile.personaName || profile.steamId,
               profileUrl: profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`,
               steamId: profile.steamId,
-            }]);
+            }], type);
           } catch (err) {
             console.error('[VacHandler] Ошибка отправки уведомления:', err.message);
           }
@@ -240,7 +243,7 @@ export class VacHandler {
   /**
    * Обработка команды .1. <url1> <url2> ... (несколько профилей, до 5)
    */
-  async handleCheckMultipleCommand(message, urls) {
+  async handleCheckMultipleCommand(message, urls, type = 'cheater') {
     await message.react('🔍');
 
     const adminSteamId = (process.env.ADMIN_STEAM_ID || '').trim();
@@ -281,23 +284,23 @@ export class VacHandler {
 
         if (results.length > 0) {
           const profile = results[0];
-          const existing = this.db.getCheaterCheckBySteamId(profile.steamId);
+          const existing = this.db.getCheckBySteamId(profile.steamId);
 
           if (existing) {
             // Обновляем данные о банах, автор не перезапишется
-            this.db.upsertCheaterCheck({
+            this.db.upsertCheck({
               ...profile,
               checkedByDiscordId: message.author.id,
               checkedByUsername: discordDisplayName
-            });
+            }, type);
             duplicates.push({ profile, existing });
           } else {
             // Сохраняем новый профиль
-            this.db.upsertCheaterCheck({
+            this.db.upsertCheck({
               ...profile,
               checkedByDiscordId: message.author.id,
               checkedByUsername: discordDisplayName
-            });
+            }, type);
             newProfiles.push(profile);
           }
         }
@@ -316,7 +319,7 @@ export class VacHandler {
           profileUrl: p.profileUrl || `https://steamcommunity.com/profiles/${p.steamId}`,
           steamId: p.steamId,
         }));
-        await this.telegram.sendNewCheaterNotification(discordDisplayName, 'discord', profiles);
+        await this.telegram.sendNewCheaterNotification(discordDisplayName, 'discord', profiles, type);
       } catch (err) {
         console.error('[VacHandler] Ошибка отправки уведомления:', err.message);
       }
@@ -369,7 +372,7 @@ export class VacHandler {
    * Обработка команды .!. vac N
    * Сканирует последние N сообщений в канале, находит Steam-ссылки, проверяет новые
    */
-  async handleVacListCommand(message, count) {
+  async handleVacListCommand(message, count, type = 'cheater') {
     // Валидация count
     if (isNaN(count) || count < 1 || count > 100) {
       await message.reply('❌ Укажите число от 1 до 100. Пример: `.1. vac 10`');
@@ -441,11 +444,11 @@ export class VacHandler {
         // Сохраняем новые результаты в БД
         const discordDisplayName2 = this.db.getUserStats(message.author.id)?.username || message.member?.displayName || message.author.username;
         for (const profile of newResults) {
-          this.db.upsertCheaterCheck({
+          this.db.upsertCheck({
             ...profile,
             checkedByDiscordId: message.author.id,
             checkedByUsername: discordDisplayName2
-          });
+          }, type);
         }
 
         // Уведомление админу о новых профилях
@@ -456,7 +459,7 @@ export class VacHandler {
               profileUrl: p.profileUrl || `https://steamcommunity.com/profiles/${p.steamId}`,
               steamId: p.steamId,
             }));
-            await this.telegram.sendNewCheaterNotification(discordDisplayName2, 'discord', profiles);
+            await this.telegram.sendNewCheaterNotification(discordDisplayName2, 'discord', profiles, type);
           } catch (err) {
             console.error('[VacHandler] Ошибка отправки уведомления:', err.message);
           }
@@ -545,7 +548,7 @@ export class VacHandler {
         },
         {
           name: '📋 Команды',
-          value: '`.1. <steam_url>` — проверить профиль\n`.1. <url1> <url2> ...` — проверить до 5 профилей за раз\n`.1. vac N` — сканировать последние N сообщений в чате и проверить найденные ссылки\n`.1. vac-help` — эта справка'
+          value: '`.1. <steam_url>` — проверить читера\n`.1. <url1> <url2> ...` — проверить до 5 читеров за раз\n`.1. vac N` — сканировать последние N сообщений\n`.1. stats` — ваша статистика\n`.1. vac-help` — эта справка\n\n`.bot <steam_url>` — добавить бота\n`.bot <url1> <url2> ...` — до 5 ботов за раз\n`.bot vac N` — скан ботов'
         },
         {
           name: '🔗 Форматы ссылок',
