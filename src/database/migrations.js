@@ -528,5 +528,103 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: добавить type в cheater_checks (для разделения читеров/ботов)
+  {
+    const columns = db.prepare("PRAGMA table_info(cheater_checks)").all();
+    const hasType = columns.some(c => c.name === 'type');
+    if (!hasType) {
+      db.exec("ALTER TABLE cheater_checks ADD COLUMN type TEXT NOT NULL DEFAULT 'cheater'");
+      db.exec("CREATE INDEX IF NOT EXISTS idx_cheater_checks_type ON cheater_checks(type)");
+      console.log('✅ Колонка type добавлена в cheater_checks');
+    }
+  }
+
+  // Миграция: добавить type в cheater_favorites (PK расширяется)
+  {
+    const columns = db.prepare("PRAGMA table_info(cheater_favorites)").all();
+    const hasType = columns.some(c => c.name === 'type');
+    if (!hasType) {
+      db.exec(`
+        CREATE TABLE cheater_favorites_new (
+          user_id TEXT NOT NULL,
+          steam_id TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'cheater',
+          created_at INTEGER NOT NULL,
+          PRIMARY KEY (user_id, steam_id, type)
+        )
+      `);
+      db.exec(`INSERT INTO cheater_favorites_new (user_id, steam_id, created_at) SELECT user_id, steam_id, created_at FROM cheater_favorites`);
+      db.exec('DROP TABLE cheater_favorites');
+      db.exec('ALTER TABLE cheater_favorites_new RENAME TO cheater_favorites');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cf_user ON cheater_favorites(user_id)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cf_steam ON cheater_favorites(steam_id)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cf_type ON cheater_favorites(type)');
+      console.log('✅ Колонка type добавлена в cheater_favorites');
+    }
+  }
+
+  // Миграция: добавить type в cheater_notes
+  {
+    const columns = db.prepare("PRAGMA table_info(cheater_notes)").all();
+    const hasType = columns.some(c => c.name === 'type');
+    if (!hasType) {
+      db.exec("ALTER TABLE cheater_notes ADD COLUMN type TEXT NOT NULL DEFAULT 'cheater'");
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cn_type ON cheater_notes(type)');
+      console.log('✅ Колонка type добавлена в cheater_notes');
+    }
+  }
+
+  // Миграция: добавить type в cheater_last_view (PK расширяется)
+  {
+    const columns = db.prepare("PRAGMA table_info(cheater_last_view)").all();
+    const hasType = columns.some(c => c.name === 'type');
+    if (!hasType) {
+      db.exec(`
+        CREATE TABLE cheater_last_view_new (
+          user_id TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'cheater',
+          viewed_at INTEGER NOT NULL,
+          PRIMARY KEY (user_id, type)
+        )
+      `);
+      db.exec(`INSERT INTO cheater_last_view_new (user_id, viewed_at) SELECT user_id, viewed_at FROM cheater_last_view`);
+      db.exec('DROP TABLE cheater_last_view');
+      db.exec('ALTER TABLE cheater_last_view_new RENAME TO cheater_last_view');
+      console.log('✅ Колонка type добавлена в cheater_last_view');
+    }
+  }
+
+  // Миграция: добавить type в cheater_name_history
+  {
+    const columns = db.prepare("PRAGMA table_info(cheater_name_history)").all();
+    const hasType = columns.some(c => c.name === 'type');
+    if (!hasType) {
+      db.exec("ALTER TABLE cheater_name_history ADD COLUMN type TEXT NOT NULL DEFAULT 'cheater'");
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cnh_type ON cheater_name_history(type)');
+      console.log('✅ Колонка type добавлена в cheater_name_history');
+    }
+  }
+
+  // Миграция: добавить настройки уведомлений ботов в user_settings
+  {
+    const columns = db.prepare("PRAGMA table_info(user_settings)").all();
+    const colNames = columns.map(c => c.name);
+
+    if (!colNames.includes('bot_own_notifications')) {
+      db.exec('ALTER TABLE user_settings ADD COLUMN bot_own_notifications INTEGER DEFAULT 1');
+      console.log('✅ Добавлена колонка bot_own_notifications в user_settings');
+    }
+
+    if (!colNames.includes('bot_others_notifications')) {
+      db.exec('ALTER TABLE user_settings ADD COLUMN bot_others_notifications INTEGER DEFAULT 0');
+      console.log('✅ Добавлена колонка bot_others_notifications в user_settings');
+    }
+
+    if (!colNames.includes('bot_nick_notifications')) {
+      db.exec('ALTER TABLE user_settings ADD COLUMN bot_nick_notifications INTEGER DEFAULT 0');
+      console.log('✅ Добавлена колонка bot_nick_notifications в user_settings');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }
