@@ -626,5 +626,40 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: таблица announcements (объявления)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='announcements'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE announcements (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          text TEXT NOT NULL,
+          sent_to_telegram INTEGER DEFAULT 0,
+          sent_to_discord INTEGER DEFAULT 0,
+          show_on_site INTEGER DEFAULT 0,
+          created_at INTEGER NOT NULL
+        )
+      `);
+      console.log('✅ Таблица announcements создана');
+    }
+  }
+
+  // Миграция: таблица announcement_dismissals (кто закрыл объявление)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='announcement_dismissals'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE announcement_dismissals (
+          announcement_id INTEGER NOT NULL,
+          user_id TEXT NOT NULL,
+          dismissed_at INTEGER NOT NULL,
+          PRIMARY KEY (announcement_id, user_id)
+        )
+      `);
+      console.log('✅ Таблица announcement_dismissals создана');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

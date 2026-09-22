@@ -340,6 +340,33 @@ export function registerRoutes(
     // Редирект на главную
     res.redirect("/");
   });
+  // ===== ANNOUNCEMENTS (public) =====
+
+  // Получить активное объявление для пользователя
+  app.get('/api/announcements/active', (req, res) => {
+    try {
+      const userId = req.session?.userId || null;
+      if (!userId) {
+        return res.json({ announcement: null });
+      }
+      const announcement = db.getActiveAnnouncement(userId);
+      res.json({ announcement: announcement || null });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  // Закрыть объявление
+  app.post('/api/announcements/:id/dismiss', requireAuth, (req, res) => {
+    try {
+      const { id } = req.params;
+      db.dismissAnnouncement(parseInt(id, 10), req.authenticatedUserId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
   const steamProxyRouter = createSteamProxyRouter();
   app.use("/api/steam", steamProxyRouter);
 

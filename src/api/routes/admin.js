@@ -977,7 +977,120 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
     }
   });
 
+  /**
+   * POST /api/admin/announcements
+   * Создать и отправить объявление
+   */
+  router.post('/announcements', async (req, res) => {
+    try {
+      const { title, text, sendTelegram, sendDiscord, showOnSite } = req.body;
+
+      if (!title || !title.trim()) {
+        return res.status(400).json({ error: 'Заголовок обязателен' });
+      }
+      if (!text || !text.trim()) {
+        return res.status(400).json({ error: 'Текст обязателен' });
+      }
+
+      // Сохраняем в БД
+      const result = db.createAnnouncement(
+        title.trim(), text.trim(),
+        sendTelegram, sendDiscord, showOnSite
+      );
+      const announcementId = result.lastInsertRowid;
+
+      const results = { telegram: 0, discord: false };
+
+      // Отправка в Telegram
+      if (sendTelegram && telegram) {
+        try {
+          // Форматируем markdown → HTML для Telegram
+          let tgText = text.trim();
+          tgText = tgText.replace(/\*([^*]+)\*/g, '<b>$1</b>');
+          tgText = tgText.replace(/_([^_]+)_/g, '<i>$1</i>');
+          tgText = tgText.replace(/`([^`]+)`/g, '<code>$1</code>');
+          tgText = tgText.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+
+          const message = `📢 <b>${escapeTgHtml(title.trim())}</b>\n\n${tgText}\n\n━━━━━━━━━━━━━━━━━━━━`;
+
+          // Отправка админу
+          if (telegram.sendTelegramReport) {
+            await telegram.sendTelegramReport(message);
+          }
+
+          // Отправка всем пользователям с telegram_chat_id
+          const subscribers = db.prepare(
+            'SELECT telegram_chat_id FROM telegram_users WHERE started_bot = 1'
+          ).all();
+
+          for (const sub of subscribers) {
+            try {
+              if (telegram.sendTelegramMessageToUser) {
+                await telegram.sendTelegramMessageToUser(sub.telegram_chat_id, message);
+                results.telegram++;
+              }
+              await new Promise(r => setTimeout(r, 100));
+            } catch (e) {
+              // Игнорируем ошибки отправки отдельным пользователям
+            }
+          }
+        } catch (err) {
+          logError(`Ошибка отправки объявления в Telegram: ${err.message}`);
+        }
+      }
+
+      // Отправка в Discord
+      if (sendDiscord && discordClient) {
+        try {
+          const { EmbedBuilder } = await import('discord.js');
+          const channelId = process.env.VAC_WATCH_CHANNEL_ID;
+          if (channelId) {
+            const channel = discordClient.channels.cache.get(channelId);
+            if (channel) {
+              const embed = new EmbedBuilder()
+                .setColor(0x667eea)
+                .setTitle(`📢 ${title.trim()}`)
+                .setDescription(text.trim())
+                .setTimestamp();
+              await channel.send({ embeds: [embed] });
+              results.discord = true;
+            }
+          }
+        } catch (err) {
+          logError(`Ошибка отправки объявления в Discord: ${err.message}`);
+        }
+      }
+
+      log(`📢 Объявление #${announcementId} отправлено: TG=${results.telegram}, Discord=${results.discord}, Site=${showOnSite}`);
+      res.json({ success: true, id: announcementId, sent: results });
+    } catch (error) {
+      logError(`Ошибка создания объявления: ${error.message}`);
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * GET /api/admin/announcements
+   * Получить историю объявлений
+   */
+  router.get('/announcements', (req, res) => {
+    try {
+      const announcements = db.getAnnouncementsWithDismissCount();
+      res.json({ announcements });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
   return router;
+}
+
+/**
+ * Экранирование HTML для Telegram
+ */
+function escapeTgHtml(text) {
+  if (!text) return '';
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /**

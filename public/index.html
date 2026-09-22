@@ -1274,6 +1274,41 @@
               </div>
 
               <div class="setting-card">
+                <div class="setting-card-icon">🤖</div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">Уведомления о ботах</h3>
+                  <p class="setting-card-description">
+                    Получать в Telegram уведомления об изменении статуса ботов
+                  </p>
+                  <p
+                    id="botNotificationsHint"
+                    class="setting-card-description"
+                    style="
+                      font-size: 12px;
+                      margin-top: 5px;
+                      opacity: 0.8;
+                      color: #ff9800;
+                    "
+                  >
+                    ⚠️ Сначала свяжите аккаунт с Telegram ниже
+                  </p>
+                  <label class="setting-checkbox-label">
+                    <input type="checkbox" id="botOwnNotifications" disabled style="opacity:0.5;cursor:not-allowed;" onchange="autoSaveCheckbox(this, 'botOwnNotifications')">
+                    <span>Мои боты — когда изменится статус того, кого я добавил</span>
+                  </label>
+                  <label class="setting-checkbox-label" style="margin-top:8px;">
+                    <input type="checkbox" id="botOthersNotifications" disabled style="opacity:0.5;cursor:not-allowed;" onchange="autoSaveCheckbox(this, 'botOthersNotifications')">
+                    <span>Чужие боты — когда изменится статус того, кого добавил кто-то другой</span>
+                  </label>
+                  <label class="setting-checkbox-label" style="margin-top:8px;">
+                    <input type="checkbox" id="botNickNotifications" disabled style="opacity:0.5;cursor:not-allowed;" onchange="autoSaveCheckbox(this, 'botNickNotifications')">
+                    <span>Смена ников — когда отслеживаемый бот сменил ник</span>
+                  </label>
+                  <div class="setting-save-indicator" id="botOwnNotifications-indicator"></div>
+                </div>
+              </div>
+
+              <div class="setting-card">
                 <div class="setting-card-icon"><svg class="icon" aria-hidden="true"><use href="#icon-eye"></use></svg></div>
                 <div class="setting-card-content">
                   <h3 class="setting-card-title">Чёрный список в ТГ боте</h3>
@@ -1509,6 +1544,14 @@
                 >
                   <span class="admin-btn-icon"><svg class="icon" aria-hidden="true"><use href="#icon-import"></use></svg></span>
                   <span class="admin-btn-text">Загрузить аватарки</span>
+                </button>
+                <button
+                  id="announcementBtn"
+                  onclick="openAnnouncementModal()"
+                  class="admin-btn"
+                >
+                  <span class="admin-btn-icon">📢</span>
+                  <span class="admin-btn-text">Объявление</span>
                 </button>
                 <button
                   id="bugReportsBtn"
@@ -1784,6 +1827,55 @@
           <div id="blocklistContent" style="max-height:400px;overflow-y:auto;">
             <p style="color:#aaa;text-align:center">Загрузка...</p>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно создания объявления (админ) -->
+    <div class="modal-overlay" id="announcementModal" style="display:none" onclick="if(event.target===this)closeAnnouncementModal()">
+      <div class="modal-box" style="max-width:600px">
+        <div class="modal-box-header">
+          <h2>📢 Создать объявление</h2>
+          <button class="modal-close-btn" onclick="closeAnnouncementModal()">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <label style="display:block;margin-bottom:8px;color:#e0e0e0;font-size:14px;">Заголовок</label>
+          <input type="text" id="announcementTitle" placeholder="Заголовок объявления" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:#e0e0e0;font-size:14px;box-sizing:border-box;margin-bottom:12px;" />
+          <label style="display:block;margin-bottom:8px;color:#e0e0e0;font-size:14px;">Текст</label>
+          <textarea id="announcementText" rows="6" placeholder="Текст объявления... *жирный* _курсив_ `код`" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:#e0e0e0;font-size:14px;resize:vertical;box-sizing:border-box;font-family:inherit;margin-bottom:12px;"></textarea>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e0e0e0;font-size:14px;">
+              <input type="checkbox" id="annSendTelegram" checked> Telegram
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e0e0e0;font-size:14px;">
+              <input type="checkbox" id="annSendDiscord"> Discord
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e0e0e0;font-size:14px;">
+              <input type="checkbox" id="annShowOnSite" checked> Сайт
+            </label>
+          </div>
+          <div id="announcementPreview" style="display:none;margin-bottom:12px;padding:12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);">
+            <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px;">Предпросмотр:</div>
+            <div id="announcementPreviewContent" style="color:#e0e0e0;font-size:14px;"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button onclick="sendAnnouncement()" style="flex:1;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;cursor:pointer;font-size:14px;">Отправить всем</button>
+            <button onclick="sendAnnouncementTest()" style="padding:12px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.05);color:#e0e0e0;cursor:pointer;font-size:14px;">Отправить себе</button>
+          </div>
+          <div id="announcementResult" style="margin-top:10px;font-size:13px;display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Всплывающее объявление для пользователей -->
+    <div class="modal-overlay" id="announcementPopup" style="display:none">
+      <div class="modal-box" style="max-width:500px">
+        <div class="modal-box-header">
+          <h2 id="announcementPopupTitle">📢 Объявление</h2>
+        </div>
+        <div class="modal-box-body">
+          <div id="announcementPopupText" style="color:#e0e0e0;font-size:14px;line-height:1.6;white-space:pre-wrap;"></div>
+          <button onclick="dismissAnnouncement()" style="width:100%;margin-top:16px;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;cursor:pointer;font-size:14px;">ОК</button>
         </div>
       </div>
     </div>

@@ -918,6 +918,45 @@ export class DatabaseManager {
     return { pending: pending.count, done: done.count, errors: errors.count };
   }
 
+  // ===== ANNOUNCEMENTS =====
+
+  createAnnouncement(title, text, sentToTelegram, sentToDiscord, showOnSite) {
+    return this.prepare(
+      'INSERT INTO announcements (title, text, sent_to_telegram, sent_to_discord, show_on_site, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(title, text, sentToTelegram ? 1 : 0, sentToDiscord ? 1 : 0, showOnSite ? 1 : 0, Date.now());
+  }
+
+  getActiveAnnouncement(userId) {
+    // Получить последнее объявление с show_on_site=1, которое пользователь не закрывал
+    return this.prepare(
+      `SELECT a.* FROM announcements a
+       WHERE a.show_on_site = 1
+         AND a.id NOT IN (SELECT announcement_id FROM announcement_dismissals WHERE user_id = ?)
+       ORDER BY a.created_at DESC LIMIT 1`
+    ).get(userId);
+  }
+
+  dismissAnnouncement(announcementId, userId) {
+    return this.prepare(
+      'INSERT OR IGNORE INTO announcement_dismissals (announcement_id, user_id, dismissed_at) VALUES (?, ?, ?)'
+    ).run(announcementId, userId, Date.now());
+  }
+
+  getAnnouncementDismissCount(announcementId) {
+    const row = this.prepare(
+      'SELECT COUNT(*) as count FROM announcement_dismissals WHERE announcement_id = ?'
+    ).get(announcementId);
+    return row ? row.count : 0;
+  }
+
+  getAnnouncementsWithDismissCount() {
+    return this.prepare(
+      `SELECT a.*, 
+        (SELECT COUNT(*) FROM announcement_dismissals WHERE announcement_id = a.id) as dismiss_count
+       FROM announcements a ORDER BY a.created_at DESC LIMIT 20`
+    ).all();
+  }
+
   close() {
     this.db.close();
   }

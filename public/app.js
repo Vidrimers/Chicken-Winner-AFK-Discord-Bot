@@ -1607,6 +1607,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   loadLeaderboard();
+
+  // Проверяем объявления для авторизованных пользователей
+  if (window.currentUserId) {
+    checkAnnouncements();
+  }
 });
 
 // Функция активации секретной темы
@@ -3851,4 +3856,108 @@ async function startCheatWatcherQr() {
   } catch (err) {
     showNotification('Ошибка запуска QR-сессии', 'error');
   }
+}
+
+// ===== ОБЪЯВЛЕНИЯ (ADMIN) =====
+
+function openAnnouncementModal() {
+  document.getElementById('announcementModal').style.display = 'flex';
+  document.getElementById('announcementTitle').value = '';
+  document.getElementById('announcementText').value = '';
+  document.getElementById('announcementResult').style.display = 'none';
+}
+
+function closeAnnouncementModal() {
+  document.getElementById('announcementModal').style.display = 'none';
+}
+
+async function sendAnnouncement() {
+  const title = document.getElementById('announcementTitle').value.trim();
+  const text = document.getElementById('announcementText').value.trim();
+  const sendTelegram = document.getElementById('annSendTelegram').checked;
+  const sendDiscord = document.getElementById('annSendDiscord').checked;
+  const showOnSite = document.getElementById('annShowOnSite').checked;
+
+  if (!title) { showNotification('Введите заголовок', 'error'); return; }
+  if (!text) { showNotification('Введите текст', 'error'); return; }
+  if (!sendTelegram && !sendDiscord && !showOnSite) { showNotification('Выберите хотя бы один канал', 'error'); return; }
+
+  try {
+    const res = await fetch('/api/admin/announcements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, text, sendTelegram, sendDiscord, showOnSite }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showNotification(data.error || 'Ошибка', 'error'); return; }
+
+    const resultEl = document.getElementById('announcementResult');
+    resultEl.style.display = 'block';
+    resultEl.style.color = '#4CAF50';
+    resultEl.textContent = `✅ Отправлено! Telegram: ${data.sent.telegram}, Discord: ${data.sent.discord ? 'да' : 'нет'}, Сайт: ${showOnSite ? 'да' : 'нет'}`;
+    showNotification('Объявление отправлено', 'success');
+  } catch (err) {
+    showNotification('Ошибка отправки', 'error');
+  }
+}
+
+async function sendAnnouncementTest() {
+  const title = document.getElementById('announcementTitle').value.trim();
+  const text = document.getElementById('announcementText').value.trim();
+  if (!title || !text) { showNotification('Введите заголовок и текст', 'error'); return; }
+
+  try {
+    const res = await fetch('/api/admin/announcements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, text, sendTelegram: true, sendDiscord: false, showOnSite: false }),
+    });
+    const data = await res.json();
+    if (!res.ok) { showNotification(data.error || 'Ошибка', 'error'); return; }
+
+    showNotification(`Тест отправлен в Telegram (${data.sent.telegram} шт.)`, 'success');
+  } catch (err) {
+    showNotification('Ошибка отправки', 'error');
+  }
+}
+
+// ===== ВСПЛЫВАЮЩЕЕ ОБЪЯВЛЕНИЕ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ =====
+
+let activeAnnouncementId = null;
+
+async function checkAnnouncements() {
+  try {
+    const res = await fetch('/api/announcements/active');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.announcement) {
+      activeAnnouncementId = data.announcement.id;
+      document.getElementById('announcementPopupTitle').textContent = `📢 ${data.announcement.title}`;
+      // Форматируем текст: *bold* → <b>, _italic_ → <i>
+      let html = escapeHtmlSimple(data.announcement.text);
+      html = html.replace(/\*([^*]+)\*/g, '<b>$1</b>');
+      html = html.replace(/_([^_]+)_/g, '<i>$1</i>');
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+      html = html.replace(/\n/g, '<br>');
+      document.getElementById('announcementPopupText').innerHTML = html;
+      document.getElementById('announcementPopup').style.display = 'flex';
+    }
+  } catch (err) {
+    // Игнорируем
+  }
+}
+
+async function dismissAnnouncement() {
+  if (!activeAnnouncementId) return;
+  try {
+    await fetch(`/api/announcements/${activeAnnouncementId}/dismiss`, { method: 'POST' });
+  } catch (err) { /* ignore */ }
+  document.getElementById('announcementPopup').style.display = 'none';
+  activeAnnouncementId = null;
+}
+
+function escapeHtmlSimple(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
