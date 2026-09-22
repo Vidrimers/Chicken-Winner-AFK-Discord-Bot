@@ -983,7 +983,7 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
    */
   router.post('/announcements', async (req, res) => {
     try {
-      const { title, text, sendTelegram, sendDiscord, showOnSite } = req.body;
+      const { title, text, sendTelegram, sendDiscord, showOnSite, testMode } = req.body;
 
       if (!title || !title.trim()) {
         return res.status(400).json({ error: 'Заголовок обязателен' });
@@ -1013,25 +1013,33 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
 
           const message = `📢 <b>${escapeTgHtml(title.trim())}</b>\n\n${tgText}\n\n━━━━━━━━━━━━━━━━━━━━`;
 
-          // Отправка админу
-          if (telegram.sendTelegramReport) {
-            await telegram.sendTelegramReport(message);
-          }
+          if (testMode) {
+            // Тестовый режим — только админу
+            if (telegram.sendTelegramReport) {
+              await telegram.sendTelegramReport(message);
+              results.telegram = 1;
+            }
+          } else {
+            // Отправка админу
+            if (telegram.sendTelegramReport) {
+              await telegram.sendTelegramReport(message);
+            }
 
-          // Отправка всем пользователям с telegram_chat_id
-          const subscribers = db.prepare(
-            'SELECT telegram_chat_id FROM telegram_users WHERE started_bot = 1'
-          ).all();
+            // Отправка всем пользователям с telegram_chat_id
+            const subscribers = db.prepare(
+              'SELECT telegram_chat_id FROM telegram_users WHERE started_bot = 1'
+            ).all();
 
-          for (const sub of subscribers) {
-            try {
-              if (telegram.sendTelegramMessageToUser) {
-                await telegram.sendTelegramMessageToUser(sub.telegram_chat_id, message);
-                results.telegram++;
+            for (const sub of subscribers) {
+              try {
+                if (telegram.sendTelegramMessageToUser) {
+                  await telegram.sendTelegramMessageToUser(sub.telegram_chat_id, message);
+                  results.telegram++;
+                }
+                await new Promise(r => setTimeout(r, 100));
+              } catch (e) {
+                // Игнорируем ошибки отправки отдельным пользователям
               }
-              await new Promise(r => setTimeout(r, 100));
-            } catch (e) {
-              // Игнорируем ошибки отправки отдельным пользователям
             }
           }
         } catch (err) {
@@ -1061,7 +1069,7 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
         }
       }
 
-      log(`📢 Объявление #${announcementId} отправлено: TG=${results.telegram}, Discord=${results.discord}, Site=${showOnSite}`);
+      log(`📢 Объявление #${announcementId} отправлено${testMode ? ' (тест)' : ''}: TG=${results.telegram}, Discord=${results.discord}, Site=${showOnSite}`);
       res.json({ success: true, id: announcementId, sent: results });
     } catch (error) {
       logError(`Ошибка создания объявления: ${error.message}`);

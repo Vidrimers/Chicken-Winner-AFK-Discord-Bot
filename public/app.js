@@ -3910,12 +3910,12 @@ async function sendAnnouncementTest() {
     const res = await fetch('/api/admin/announcements', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, text, sendTelegram: true, sendDiscord: false, showOnSite: false }),
+      body: JSON.stringify({ title, text, sendTelegram: true, sendDiscord: false, showOnSite: false, testMode: true }),
     });
     const data = await res.json();
     if (!res.ok) { showNotification(data.error || 'Ошибка', 'error'); return; }
 
-    showNotification(`Тест отправлен в Telegram (${data.sent.telegram} шт.)`, 'success');
+    showNotification('Тест отправлен в Telegram', 'success');
   } catch (err) {
     showNotification('Ошибка отправки', 'error');
   }
