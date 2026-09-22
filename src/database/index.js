@@ -494,7 +494,7 @@ export class DatabaseManager {
     return this.prepare('DELETE FROM cheater_notes WHERE id = ? AND user_id = ?').run(noteId, userId);
   }
 
-  getUserStats(discordId, type = 'cheater') {
+  getCheckerStats(discordId, type = 'cheater') {
     const total = this.db.prepare(
       'SELECT COUNT(*) as count FROM cheater_checks WHERE checked_by_discord_id = ? AND type = ?'
     ).get(discordId, type);
@@ -732,7 +732,7 @@ export class DatabaseManager {
   addCheaterNote(userId, steamId, text) { return this.addNote(userId, steamId, text, 'cheater'); }
   updateCheaterNote(noteId, userId, text) { return this.updateNote(noteId, userId, text); }
   deleteCheaterNote(noteId, userId) { return this.deleteNote(noteId, userId); }
-  getUserCheaterStats(discordId) { return this.getUserStats(discordId, 'cheater'); }
+  getUserCheaterStats(discordId) { return this.getCheckerStats(discordId, 'cheater'); }
   addCheaterNameHistory(steamId, personaName) { return this.addNameHistory(steamId, personaName, 'cheater'); }
   getCheaterNameHistory(steamId) { return this.getNameHistory(steamId, 'cheater'); }
   getCheaterNameHistoryCount(steamId) { return this.getNameHistoryCount(steamId, 'cheater'); }
