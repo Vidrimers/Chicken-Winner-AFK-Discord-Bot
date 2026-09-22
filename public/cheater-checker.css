@@ -37,6 +37,56 @@
   transform: translateX(-3px);
 }
 
+.header-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.header-tab {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-tab:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.header-tab.active {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stats-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+}
+
+.stats-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 .header-title {
   display: flex;
   align-items: center;
@@ -1315,4 +1365,58 @@
 
 .note-edit-input {
   flex: 1;
+}
+
+/* ===== СТАТИСТИКА ===== */
+
+.stats-loading {
+  text-align: center;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.stats-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stats-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  color: #e0e0e0;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.stats-value {
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.stats-value.stats-danger {
+  color: #ff6666;
+}
+
+.stats-total {
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.stats-achievements {
+  border-color: rgba(255, 193, 7, 0.3);
+}
+
+.stats-hint {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
 }

@@ -825,6 +825,14 @@ function displayUserSettings(settings) {
   if (cheaterOthersEl) cheaterOthersEl.checked = settings.cheaterOthersNotifications === true;
   if (cheaterNickEl) cheaterNickEl.checked = settings.cheaterNickNotifications === true;
 
+  // Bot notification settings
+  const botOwnEl = document.getElementById("botOwnNotifications");
+  const botOthersEl = document.getElementById("botOthersNotifications");
+  const botNickEl = document.getElementById("botNickNotifications");
+  if (botOwnEl) botOwnEl.checked = settings.botOwnNotifications !== false;
+  if (botOthersEl) botOthersEl.checked = settings.botOthersNotifications === true;
+  if (botNickEl) botNickEl.checked = settings.botNickNotifications === true;
+
   // Price notification settings
   const priceDiscordEl = document.getElementById("priceNotifyDiscord");
   const priceTelegramEl = document.getElementById("priceNotifyTelegram");
@@ -1088,6 +1096,19 @@ async function checkTelegramLinkStatus() {
           cheaterHint.style.color = "#999";
         }
       }
+      // Разблокируем чекбоксы ботов
+      const botOwnEl = document.getElementById("botOwnNotifications");
+      const botOthersEl = document.getElementById("botOthersNotifications");
+      const botNickEl = document.getElementById("botNickNotifications");
+      const botHint = document.getElementById("botNotificationsHint");
+      if (botOwnEl) { botOwnEl.disabled = false; botOwnEl.style.opacity = "1"; botOwnEl.style.cursor = "pointer"; }
+      if (botOthersEl) { botOthersEl.disabled = false; botOthersEl.style.opacity = "1"; botOthersEl.style.cursor = "pointer"; }
+      if (botNickEl) { botNickEl.disabled = false; botNickEl.style.opacity = "1"; botNickEl.style.cursor = "pointer"; }
+      if (botHint) {
+        const anyBotEnabled = (botOwnEl && botOwnEl.checked) || (botOthersEl && botOthersEl.checked) || (botNickEl && botNickEl.checked);
+        botHint.textContent = anyBotEnabled ? "✅ Уведомления будут приходить в Telegram" : "Настройки отключены";
+        botHint.style.color = anyBotEnabled ? "#4CAF50" : "#999";
+      }
     } else {
       statusDiv.style.display = "none";
       btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связать';
@@ -1141,6 +1162,15 @@ async function checkTelegramLinkStatus() {
         cheaterHint.textContent = "⚠️ Сначала свяжите аккаунт с Telegram";
         cheaterHint.style.color = "#ff9800";
       }
+      // Блокируем чекбоксы ботов
+      const botOwnEl = document.getElementById("botOwnNotifications");
+      const botOthersEl = document.getElementById("botOthersNotifications");
+      const botNickEl = document.getElementById("botNickNotifications");
+      const botHint = document.getElementById("botNotificationsHint");
+      if (botOwnEl) { botOwnEl.disabled = true; botOwnEl.checked = false; botOwnEl.style.opacity = "0.5"; botOwnEl.style.cursor = "not-allowed"; }
+      if (botOthersEl) { botOthersEl.disabled = true; botOthersEl.checked = false; botOthersEl.style.opacity = "0.5"; botOthersEl.style.cursor = "not-allowed"; }
+      if (botNickEl) { botNickEl.disabled = true; botNickEl.checked = false; botNickEl.style.opacity = "0.5"; botNickEl.style.cursor = "not-allowed"; }
+      if (botHint) { botHint.textContent = "⚠️ Сначала свяжите аккаунт с Telegram"; botHint.style.color = "#ff9800"; }
     }
   } catch (error) {
     console.error("Ошибка проверки статуса Telegram:", error);

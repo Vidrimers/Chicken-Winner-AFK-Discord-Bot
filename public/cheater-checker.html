@@ -44,8 +44,12 @@
       <!-- Шапка -->
       <header class="checker-header">
         <a href="/" class="back-btn">← Назад</a>
-        <div class="header-title">
-          <h1>Чекер читеров</h1>
+        <div class="header-tabs">
+          <button class="header-tab active" data-view="cheater" onclick="switchView('cheater')">Читеры</button>
+          <button class="header-tab" data-view="bot" onclick="switchView('bot')">Боты</button>
+        </div>
+        <div class="header-actions">
+          <button class="stats-btn" id="statsBtn" title="Статистика">📊</button>
           <button class="info-btn" id="infoBtn" title="Информация">?</button>
         </div>
       </header>
@@ -188,6 +192,19 @@
 <li><a href="https://vacwatch.net/" target="_blank" rel="noopener">vacwatch.net</a> — трекер, позволяет следить за аккаунтами и получать уведомления при появлении бана</li>
 <li><a href="https://sihrep.com/ru" target="_blank" rel="noopener">sihrep.com</a> — специализируется на репутации трейдеров скинами: рейтинг, отзывы, VAC-статус, FACEIT и стоимость аккаунта</li>
           </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модалка статистики -->
+    <div class="modal-overlay" id="statsModal" style="display: none">
+      <div class="modal-box">
+        <div class="modal-box-header">
+          <h2>📊 Статистика</h2>
+          <button class="modal-close-btn" id="statsCloseBtn">&times;</button>
+        </div>
+        <div class="modal-box-body" id="statsContent">
+          <div class="stats-loading">Загрузка...</div>
         </div>
       </div>
     </div>

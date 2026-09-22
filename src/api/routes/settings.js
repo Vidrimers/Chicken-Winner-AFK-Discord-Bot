@@ -24,6 +24,9 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
       cheaterOwnNotifications,
       cheaterOthersNotifications,
       cheaterNickNotifications,
+      botOwnNotifications,
+      botOthersNotifications,
+      botNickNotifications,
       priceNotifyDiscord,
       priceNotifyTelegram,
       settingName, // Имя изменённой настройки
@@ -199,6 +202,33 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
           db.setUserCheaterNickNotificationSetting(userId, cheaterNickNotifications);
           settingsChanged = true;
           changedSettingText = `✏️ Уведомления "Смена ников": ${cheaterNickNotifications ? '✅ включены' : '❌ отключены'}`;
+        }
+      }
+
+      if (botOwnNotifications !== undefined) {
+        const currentBotOwn = db.getUserBotOwnNotificationSetting(userId);
+        if (botOwnNotifications !== currentBotOwn) {
+          db.setUserBotOwnNotificationSetting(userId, botOwnNotifications);
+          settingsChanged = true;
+          changedSettingText = `🤖 Уведомления "Мои боты": ${botOwnNotifications ? '✅ включены' : '❌ отключены'}`;
+        }
+      }
+
+      if (botOthersNotifications !== undefined) {
+        const currentBotOthers = db.getUserBotOthersNotificationSetting(userId);
+        if (botOthersNotifications !== currentBotOthers) {
+          db.setUserBotOthersNotificationSetting(userId, botOthersNotifications);
+          settingsChanged = true;
+          changedSettingText = `🤖 Уведомления "Чужие боты": ${botOthersNotifications ? '✅ включены' : '❌ отключены'}`;
+        }
+      }
+
+      if (botNickNotifications !== undefined) {
+        const currentBotNick = db.getUserBotNickNotificationSetting(userId);
+        if (botNickNotifications !== currentBotNick) {
+          db.setUserBotNickNotificationSetting(userId, botNickNotifications);
+          settingsChanged = true;
+          changedSettingText = `✏️ Уведомления "Смена ников ботов": ${botNickNotifications ? '✅ включены' : '❌ отключены'}`;
         }
       }
 

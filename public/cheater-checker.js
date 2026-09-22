@@ -9,6 +9,7 @@ let currentUserId = null;
 let currentUsername = null;
 let profiles = [];
 let lastViewedAt = null;
+let currentView = 'cheater'; // 'cheater' или 'bot'
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 
@@ -115,9 +116,10 @@ function updateAuthState() {
  */
 async function loadProfiles() {
   try {
+    const typeParam = `&type=${currentView}`;
     const [bannedRes, cleanRes] = await Promise.all([
-      fetch('/api/cheater-checker/profiles?limit=1000&filter=banned'),
-      fetch('/api/cheater-checker/profiles?limit=1000&filter=clean'),
+      fetch(`/api/cheater-checker/profiles?limit=1000&filter=banned${typeParam}`),
+      fetch(`/api/cheater-checker/profiles?limit=1000&filter=clean${typeParam}`),
     ]);
     const bannedData = await bannedRes.json();
     const cleanData = await cleanRes.json();
@@ -139,11 +141,30 @@ async function loadProfiles() {
 
     // Отмечаем что пользователь просмотрел страницу
     if (currentUserId) {
-      fetch('/api/cheater-checker/mark-viewed', { method: 'POST' }).catch(() => {});
+      fetch('/api/cheater-checker/mark-viewed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: currentView }),
+      }).catch(() => {});
     }
   } catch (err) {
     console.error('❌ Ошибка загрузки профилей:', err);
   }
+}
+
+/**
+ * Переключение вкладки Читеры/Боты
+ */
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.header-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.view === view);
+  });
+  currentReportFilter = 'all';
+  document.querySelectorAll('.filter-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === 'all');
+  });
+  loadProfiles();
 }
 
 /**
@@ -690,6 +711,10 @@ function bindEvents() {
   document.getElementById('infoBtn').addEventListener('click', openInfoModal);
   document.getElementById('infoCloseBtn').addEventListener('click', closeInfoModal);
 
+  // Статистика
+  document.getElementById('statsBtn').addEventListener('click', openStatsModal);
+  document.getElementById('statsCloseBtn').addEventListener('click', closeStatsModal);
+
   // Диалог подтверждения
   document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirmDialog);
 
@@ -1112,6 +1137,53 @@ function openInfoModal() {
 
 function closeInfoModal() {
   document.getElementById('infoModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+async function openStatsModal() {
+  document.getElementById('statsModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  const content = document.getElementById('statsContent');
+  content.innerHTML = '<div class="stats-loading">Загрузка...</div>';
+
+  try {
+    const res = await fetch('/api/cheater-checker/stats');
+    if (!res.ok) throw new Error('Ошибка загрузки');
+    const stats = await res.json();
+
+    const ch = stats.cheater || { totalChecked: 0, bannedFound: 0 };
+    const bt = stats.bot || { totalChecked: 0, bannedFound: 0 };
+
+    content.innerHTML = `
+      <div class="stats-section">
+        <h3>🚨 Читеры</h3>
+        <div class="stats-row"><span>Добавлено профилей:</span><span class="stats-value">${ch.totalChecked}</span></div>
+        <div class="stats-row"><span>Получили ограничения:</span><span class="stats-value stats-danger">${ch.bannedFound}</span></div>
+        <div class="stats-row"><span>Процент:</span><span class="stats-value">${ch.totalChecked > 0 ? Math.round(ch.bannedFound / ch.totalChecked * 100) : 0}%</span></div>
+      </div>
+      <div class="stats-section">
+        <h3>🤖 Боты</h3>
+        <div class="stats-row"><span>Добавлено профилей:</span><span class="stats-value">${bt.totalChecked}</span></div>
+        <div class="stats-row"><span>Получили ограничения:</span><span class="stats-value stats-danger">${bt.bannedFound}</span></div>
+        <div class="stats-row"><span>Процент:</span><span class="stats-value">${bt.totalChecked > 0 ? Math.round(bt.bannedFound / bt.totalChecked * 100) : 0}%</span></div>
+      </div>
+      <div class="stats-section stats-total">
+        <h3>📈 Итого</h3>
+        <div class="stats-row"><span>Всего добавлено:</span><span class="stats-value">${ch.totalChecked + bt.totalChecked}</span></div>
+        <div class="stats-row"><span>Всего с ограничениями:</span><span class="stats-value stats-danger">${ch.bannedFound + bt.bannedFound}</span></div>
+      </div>
+      <div class="stats-section stats-achievements">
+        <h3>🏆 Достижения</h3>
+        <p class="stats-hint">Достижения по читерам будут здесь. Достижения по ботам — в будущем.</p>
+      </div>
+    `;
+  } catch (err) {
+    content.innerHTML = '<div class="stats-loading" style="color:#f44336;">Ошибка загрузки статистики</div>';
+  }
+}
+
+function closeStatsModal() {
+  document.getElementById('statsModal').style.display = 'none';
   document.body.style.overflow = '';
 }
 
