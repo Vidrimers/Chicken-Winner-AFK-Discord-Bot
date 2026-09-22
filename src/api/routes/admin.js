@@ -1006,6 +1006,9 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
         try {
           // Форматируем markdown → HTML для Telegram
           let tgText = text.trim();
+          // Сначала экранируем HTML-символы
+          tgText = tgText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          // Потом конвертируем markdown
           tgText = tgText.replace(/\*([^*]+)\*/g, '<b>$1</b>');
           tgText = tgText.replace(/_([^_]+)_/g, '<i>$1</i>');
           tgText = tgText.replace(/`([^`]+)`/g, '<code>$1</code>');
