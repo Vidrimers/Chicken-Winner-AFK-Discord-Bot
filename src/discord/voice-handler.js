@@ -633,7 +633,7 @@ export class VoiceStateHandler {
     if (!sessions.length) return;
 
     const now = Date.now();
-    const GRACE_PERIOD = 60 * 1000; // 1 минута
+    const GRACE_PERIOD = 2 * 60 * 1000; // 2 минуты
 
     log(`📋 Загружено ${sessions.length} активных голосовых сессий из БД`);
 
