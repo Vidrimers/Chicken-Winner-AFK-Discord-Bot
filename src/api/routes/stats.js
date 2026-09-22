@@ -78,6 +78,7 @@ export function createStatsRouter(db, discordClient, telegram, gamesDb) {
         channelNotifications: db.getUserChannelNotificationSetting(userId),
         cheaterOwnNotifications: db.getUserCheaterOwnNotificationSetting(userId),
         cheaterOthersNotifications: db.getUserCheaterOthersNotificationSetting(userId),
+        cheaterNickNotifications: db.getUserCheaterNickNotificationSetting(userId),
       };
 
       // Price notification settings from games.db

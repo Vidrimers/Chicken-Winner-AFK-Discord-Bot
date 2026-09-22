@@ -66,6 +66,18 @@ export const banCheckState = {
 };
 
 /**
+ * Собирает уведомления о смене ника для подписчиков "cheaterNickNotifications"
+ */
+function collectNickNotifications(db, existing, message) {
+  const notifications = [];
+  const subscribers = db.getUsersSubscribedToNickNotifications();
+  for (const subscriber of subscribers) {
+    notifications.push({ type: 'user', chatId: subscriber.telegram_chat_id, message, countAs: 'others' });
+  }
+  return notifications;
+}
+
+/**
  * Собирает уведомления для пользователей (свои + чужие) в массив
  */
 function collectUserNotifications(db, existing, message) {
@@ -203,7 +215,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
 
           notificationQueue.push({ type: 'admin', message: nickMessage });
-          notificationQueue.push(...collectUserNotifications(db, existing, nickMessage));
+          notificationQueue.push(...collectNickNotifications(db, existing, nickMessage));
 
           // CheatWatcher
           const cwNickComment =

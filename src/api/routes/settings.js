@@ -23,6 +23,7 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
       channelNotifications,
       cheaterOwnNotifications,
       cheaterOthersNotifications,
+      cheaterNickNotifications,
       priceNotifyDiscord,
       priceNotifyTelegram,
       settingName, // Имя изменённой настройки
@@ -189,6 +190,15 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
           db.setUserCheaterOthersNotificationSetting(userId, cheaterOthersNotifications);
           settingsChanged = true;
           changedSettingText = `🚨 Уведомления "Чужие читеры": ${cheaterOthersNotifications ? '✅ включены' : '❌ отключены'}`;
+        }
+      }
+
+      if (cheaterNickNotifications !== undefined) {
+        const currentCheaterNick = db.getUserCheaterNickNotificationSetting(userId);
+        if (cheaterNickNotifications !== currentCheaterNick) {
+          db.setUserCheaterNickNotificationSetting(userId, cheaterNickNotifications);
+          settingsChanged = true;
+          changedSettingText = `✏️ Уведомления "Смена ников": ${cheaterNickNotifications ? '✅ включены' : '❌ отключены'}`;
         }
       }
 

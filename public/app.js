@@ -820,8 +820,10 @@ function displayUserSettings(settings) {
 
   const cheaterOwnEl = document.getElementById("cheaterOwnNotifications");
   const cheaterOthersEl = document.getElementById("cheaterOthersNotifications");
+  const cheaterNickEl = document.getElementById("cheaterNickNotifications");
   if (cheaterOwnEl) cheaterOwnEl.checked = settings.cheaterOwnNotifications !== false;
   if (cheaterOthersEl) cheaterOthersEl.checked = settings.cheaterOthersNotifications === true;
+  if (cheaterNickEl) cheaterNickEl.checked = settings.cheaterNickNotifications === true;
 
   // Price notification settings
   const priceDiscordEl = document.getElementById("priceNotifyDiscord");
@@ -1059,6 +1061,7 @@ async function checkTelegramLinkStatus() {
       // Разблокируем чекбоксы уведомлений о читерах
       const cheaterOwnEl = document.getElementById("cheaterOwnNotifications");
       const cheaterOthersEl = document.getElementById("cheaterOthersNotifications");
+      const cheaterNickEl = document.getElementById("cheaterNickNotifications");
       const cheaterHint = document.getElementById("cheaterNotificationsHint");
       if (cheaterOwnEl) {
         cheaterOwnEl.disabled = false;
@@ -1070,8 +1073,13 @@ async function checkTelegramLinkStatus() {
         cheaterOthersEl.style.opacity = "1";
         cheaterOthersEl.style.cursor = "pointer";
       }
+      if (cheaterNickEl) {
+        cheaterNickEl.disabled = false;
+        cheaterNickEl.style.opacity = "1";
+        cheaterNickEl.style.cursor = "pointer";
+      }
       if (cheaterHint) {
-        const anyCheaterEnabled = (cheaterOwnEl && cheaterOwnEl.checked) || (cheaterOthersEl && cheaterOthersEl.checked);
+        const anyCheaterEnabled = (cheaterOwnEl && cheaterOwnEl.checked) || (cheaterOthersEl && cheaterOthersEl.checked) || (cheaterNickEl && cheaterNickEl.checked);
         if (anyCheaterEnabled) {
           cheaterHint.textContent = "✅ Уведомления будут приходить в Telegram";
           cheaterHint.style.color = "#4CAF50";
@@ -1109,6 +1117,7 @@ async function checkTelegramLinkStatus() {
       // Блокируем чекбоксы уведомлений о читерах
       const cheaterOwnEl = document.getElementById("cheaterOwnNotifications");
       const cheaterOthersEl = document.getElementById("cheaterOthersNotifications");
+      const cheaterNickEl = document.getElementById("cheaterNickNotifications");
       const cheaterHint = document.getElementById("cheaterNotificationsHint");
       if (cheaterOwnEl) {
         cheaterOwnEl.disabled = true;
@@ -1121,6 +1130,12 @@ async function checkTelegramLinkStatus() {
         cheaterOthersEl.checked = false;
         cheaterOthersEl.style.opacity = "0.5";
         cheaterOthersEl.style.cursor = "not-allowed";
+      }
+      if (cheaterNickEl) {
+        cheaterNickEl.disabled = true;
+        cheaterNickEl.checked = false;
+        cheaterNickEl.style.opacity = "0.5";
+        cheaterNickEl.style.cursor = "not-allowed";
       }
       if (cheaterHint) {
         cheaterHint.textContent = "⚠️ Сначала свяжите аккаунт с Telegram";
@@ -1452,9 +1467,10 @@ async function autoSaveCheckbox(checkboxEl, settingName) {
     // Обновляем подсказку "Уведомления о читерах" после изменения
     const cheaterOwnEl = document.getElementById("cheaterOwnNotifications");
     const cheaterOthersEl = document.getElementById("cheaterOthersNotifications");
+    const cheaterNickEl = document.getElementById("cheaterNickNotifications");
     const cheaterHint = document.getElementById("cheaterNotificationsHint");
     if (cheaterHint) {
-      const anyEnabled = (cheaterOwnEl && cheaterOwnEl.checked) || (cheaterOthersEl && cheaterOthersEl.checked);
+      const anyEnabled = (cheaterOwnEl && cheaterOwnEl.checked) || (cheaterOthersEl && cheaterOthersEl.checked) || (cheaterNickEl && cheaterNickEl.checked);
       if (anyEnabled) {
         cheaterHint.textContent = "✅ Уведомления будут приходить в Telegram";
         cheaterHint.style.color = "#4CAF50";

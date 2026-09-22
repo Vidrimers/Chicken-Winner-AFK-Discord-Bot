@@ -238,6 +238,19 @@ export function runMigrations(db) {
         }
       }
     }
+
+    if (!usColNames.includes('cheater_nick_notifications')) {
+      try {
+        db.exec('ALTER TABLE user_settings ADD COLUMN cheater_nick_notifications INTEGER DEFAULT 0');
+        console.log('✅ Добавлена колонка cheater_nick_notifications в user_settings');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка cheater_nick_notifications уже существует в user_settings');
+        } else {
+          throw error;
+        }
+      }
+    }
   }
 
   // Создание таблицы login_codes для входа через Telegram-код
