@@ -2081,7 +2081,7 @@ export async function backfillTelegramUsernames() {
 
   try {
     const users = db.prepare(
-      'SELECT telegram_chat_id FROM telegram_users WHERE telegram_username IS NULL OR telegram_username = ""'
+      'SELECT telegram_chat_id FROM telegram_users WHERE telegram_username IS NULL OR telegram_username = \'\''
     ).all();
 
     if (users.length === 0) {
