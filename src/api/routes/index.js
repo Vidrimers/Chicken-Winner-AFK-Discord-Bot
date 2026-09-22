@@ -328,9 +328,12 @@ export function registerRoutes(
 
   // Logout роут
   app.get("/logout", (req, res) => {
-    // Удаляем сессию из Map
-    if (req.sessionId) {
-      sessionManager.sessions.delete(req.sessionId);
+    // Удаляем сессию из SQLite
+    const sessionId = req.headers.cookie?.split('sessionId=')[1]?.split(';')[0];
+    if (sessionId && sessionManager) {
+      try {
+        sessionManager.db.prepare('DELETE FROM sessions WHERE session_id = ?').run(sessionId);
+      } catch (e) { /* ignore */ }
     }
     // Очищаем куки
     res.setHeader('Set-Cookie', 'sessionId=; Path=/; Max-Age=0');
