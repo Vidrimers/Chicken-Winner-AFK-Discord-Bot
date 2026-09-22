@@ -636,10 +636,12 @@ async function sendCheaterSettingsMenu(chatId) {
 
   const own = db.getUserCheaterOwnNotificationSetting(discordId);
   const others = db.getUserCheaterOthersNotificationSetting(discordId);
+  const nick = db.getUserCheaterNickNotificationSetting(discordId);
 
   const buttons = [
     [{ text: `👤 Мои читеры [${own ? '✅' : '❌'}]`, callback_data: 'settings_toggle_cheater_own' }],
     [{ text: `👥 Чужие читеры [${others ? '✅' : '❌'}]`, callback_data: 'settings_toggle_cheater_others' }],
+    [{ text: `✏️ Смена ников [${nick ? '✅' : '❌'}]`, callback_data: 'settings_toggle_cheater_nick' }],
     [{ text: '◀️ Назад', callback_data: 'menu_settings' }]
   ];
 
@@ -1748,6 +1750,16 @@ export function initTelegramBot(
             if (dIdOthers) {
               const cur = db.getUserCheaterOthersNotificationSetting(dIdOthers);
               db.setUserCheaterOthersNotificationSetting(dIdOthers, !cur);
+              await sendCheaterSettingsMenu(chatId);
+            }
+            break;
+          }
+
+          case 'settings_toggle_cheater_nick': {
+            const dIdNick = getLinkedDiscordId(chatId);
+            if (dIdNick) {
+              const cur = db.getUserCheaterNickNotificationSetting(dIdNick);
+              db.setUserCheaterNickNotificationSetting(dIdNick, !cur);
               await sendCheaterSettingsMenu(chatId);
             }
             break;
