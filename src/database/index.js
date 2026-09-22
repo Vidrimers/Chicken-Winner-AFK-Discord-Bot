@@ -264,6 +264,295 @@ export class DatabaseManager {
     ).all();
   }
 
+  // ===== BOT NOTIFICATION SETTINGS =====
+
+  getUserBotOwnNotificationSetting(userId) {
+    const result = this.prepare('SELECT bot_own_notifications FROM user_settings WHERE user_id = ?').get(userId);
+    return result ? Boolean(result.bot_own_notifications) : true;
+  }
+
+  setUserBotOwnNotificationSetting(userId, enabled) {
+    this.prepare('UPDATE user_settings SET bot_own_notifications = ? WHERE user_id = ?')
+      .run(enabled ? 1 : 0, userId);
+  }
+
+  getUserBotOthersNotificationSetting(userId) {
+    const result = this.prepare('SELECT bot_others_notifications FROM user_settings WHERE user_id = ?').get(userId);
+    return result ? Boolean(result.bot_others_notifications) : false;
+  }
+
+  setUserBotOthersNotificationSetting(userId, enabled) {
+    this.prepare('UPDATE user_settings SET bot_others_notifications = ? WHERE user_id = ?')
+      .run(enabled ? 1 : 0, userId);
+  }
+
+  getUserBotNickNotificationSetting(userId) {
+    const result = this.prepare('SELECT bot_nick_notifications FROM user_settings WHERE user_id = ?').get(userId);
+    return result ? Boolean(result.bot_nick_notifications) : false;
+  }
+
+  setUserBotNickNotificationSetting(userId, enabled) {
+    this.prepare('UPDATE user_settings SET bot_nick_notifications = ? WHERE user_id = ?')
+      .run(enabled ? 1 : 0, userId);
+  }
+
+  getUsersSubscribedToOthersBotNotifications() {
+    return this.prepare(
+      `SELECT us.user_id, tu.telegram_chat_id 
+       FROM user_settings us
+       JOIN telegram_users tu ON us.user_id = tu.user_id
+       WHERE us.bot_others_notifications = 1 AND tu.started_bot = 1`
+    ).all();
+  }
+
+  getUsersSubscribedToBotNickNotifications() {
+    return this.prepare(
+      `SELECT us.user_id, tu.telegram_chat_id 
+       FROM user_settings us
+       JOIN telegram_users tu ON us.user_id = tu.user_id
+       WHERE us.bot_nick_notifications = 1 AND tu.started_bot = 1`
+    ).all();
+  }
+
+  // ===== GENERIC CHECK METHODS (cheater/bot) =====
+
+  upsertCheck(profile, type = 'cheater') {
+    return this.prepare(
+      `INSERT INTO cheater_checks 
+       (steam_id, persona_name, avatar_url, profile_url, original_vanity_url, vac_banned, number_of_vac_bans, 
+        number_of_game_bans, days_since_last_ban, community_banned, economy_ban, 
+        checked_by_discord_id, checked_by_username, report_source, reported_by_name, reported_by_url, type, checked_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(steam_id) DO UPDATE SET
+        persona_name = excluded.persona_name,
+        avatar_url = excluded.avatar_url,
+        profile_url = excluded.profile_url,
+        vac_banned = excluded.vac_banned,
+        number_of_vac_bans = excluded.number_of_vac_bans,
+        number_of_game_bans = excluded.number_of_game_bans,
+        days_since_last_ban = excluded.days_since_last_ban,
+        community_banned = excluded.community_banned,
+        economy_ban = excluded.economy_ban,
+        original_vanity_url = COALESCE(excluded.original_vanity_url, cheater_checks.original_vanity_url),
+        report_source = COALESCE(excluded.report_source, cheater_checks.report_source),
+        reported_by_name = COALESCE(excluded.reported_by_name, cheater_checks.reported_by_name),
+        reported_by_url = COALESCE(excluded.reported_by_url, cheater_checks.reported_by_url),
+        type = excluded.type`
+    ).run(
+      profile.steamId,
+      profile.personaName || null,
+      profile.avatarUrl || null,
+      profile.profileUrl,
+      profile.originalVanityUrl || null,
+      profile.vacBanned ? 1 : 0,
+      profile.numberOfVacBans || 0,
+      profile.numberOfGameBans || 0,
+      profile.daysSinceLastBan || 0,
+      profile.communityBanned ? 1 : 0,
+      profile.economyBan || 'none',
+      profile.checkedByDiscordId || null,
+      profile.checkedByUsername || null,
+      profile.reportSource || 'web',
+      profile.reportedByName || null,
+      profile.reportedByUrl || null,
+      type
+    );
+  }
+
+  getChecks({ limit = 50, offset = 0, filter = 'all', type = 'cheater' } = {}) {
+    let sql = `SELECT cc.*, COALESCE(us.username, cc.checked_by_username) as checked_by_username 
+               FROM cheater_checks cc 
+               LEFT JOIN user_stats us ON cc.checked_by_discord_id = us.user_id`;
+    const params = [];
+
+    const conditions = ['cc.type = ?'];
+    params.push(type);
+
+    if (filter === 'banned') {
+      conditions.push('(cc.vac_banned = 1 OR cc.number_of_game_bans > 0 OR cc.community_banned = 1 OR cc.economy_ban != \'none\')');
+    } else if (filter === 'clean') {
+      conditions.push('(cc.vac_banned = 0 AND cc.number_of_game_bans = 0 AND cc.community_banned = 0 AND cc.economy_ban = \'none\')');
+    } else if (filter === 'steam_wall') {
+      conditions.push('cc.report_source = \'steam_wall\'');
+    }
+
+    sql += ' WHERE ' + conditions.join(' AND ');
+    sql += ' ORDER BY COALESCE(cc.updated_at, cc.checked_at) DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    return this.db.prepare(sql).all(...params);
+  }
+
+  getChecksCount(filter = 'all', type = 'cheater') {
+    let sql = 'SELECT COUNT(*) as count FROM cheater_checks WHERE type = ?';
+    const params = [type];
+
+    if (filter === 'banned') {
+      sql += ' AND (vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != \'none\')';
+    } else if (filter === 'clean') {
+      sql += ' AND (vac_banned = 0 AND number_of_game_bans = 0 AND community_banned = 0 AND economy_ban = \'none\')';
+    } else if (filter === 'steam_wall') {
+      sql += ' AND report_source = \'steam_wall\'';
+    }
+
+    const result = this.db.prepare(sql).get(...params);
+    return result.count;
+  }
+
+  getBannedChecks(limit = 10, type = 'cheater') {
+    return this.prepare(
+      `SELECT * FROM cheater_checks 
+       WHERE type = ? AND (vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != 'none')
+       ORDER BY checked_at DESC LIMIT ?`
+    ).all(type, limit);
+  }
+
+  deleteCheck(steamId) {
+    return this.prepare('DELETE FROM cheater_checks WHERE steam_id = ?').run(steamId);
+  }
+
+  getCheckBySteamId(steamId) {
+    return this.prepare(
+      `SELECT cc.*, COALESCE(us.username, cc.checked_by_username) as checked_by_username 
+       FROM cheater_checks cc 
+       LEFT JOIN user_stats us ON cc.checked_by_discord_id = us.user_id 
+       WHERE cc.steam_id = ?`
+    ).get(steamId);
+  }
+
+  markBanUpdated(steamId, reason = null) {
+    return this.prepare(
+      'UPDATE cheater_checks SET updated_at = CURRENT_TIMESTAMP, update_reason = ? WHERE steam_id = ?'
+    ).run(reason, steamId);
+  }
+
+  getLastView(userId, type = 'cheater') {
+    const row = this.prepare('SELECT viewed_at FROM cheater_last_view WHERE user_id = ? AND type = ?').get(userId, type);
+    return row ? row.viewed_at : null;
+  }
+
+  markLastView(userId, type = 'cheater') {
+    return this.prepare(
+      'INSERT OR REPLACE INTO cheater_last_view (user_id, type, viewed_at) VALUES (?, ?, ?)'
+    ).run(userId, type, Date.now());
+  }
+
+  isFavorite(userId, steamId, type = 'cheater') {
+    const row = this.prepare(
+      'SELECT 1 FROM cheater_favorites WHERE user_id = ? AND steam_id = ? AND type = ?'
+    ).get(userId, steamId, type);
+    return !!row;
+  }
+
+  addFavorite(userId, steamId, type = 'cheater') {
+    return this.prepare(
+      'INSERT OR IGNORE INTO cheater_favorites (user_id, steam_id, type, created_at) VALUES (?, ?, ?, ?)'
+    ).run(userId, steamId, type, Date.now());
+  }
+
+  removeFavorite(userId, steamId, type = 'cheater') {
+    this.prepare('DELETE FROM cheater_favorites WHERE user_id = ? AND steam_id = ? AND type = ?').run(userId, steamId, type);
+    this.prepare('DELETE FROM cheater_notes WHERE user_id = ? AND steam_id = ? AND type = ?').run(userId, steamId, type);
+  }
+
+  toggleFavorite(userId, steamId, type = 'cheater') {
+    const exists = this.isFavorite(userId, steamId, type);
+    if (exists) {
+      this.removeFavorite(userId, steamId, type);
+      return { isFavorite: false, notesDeleted: true };
+    }
+    this.addFavorite(userId, steamId, type);
+    return { isFavorite: true, notesDeleted: false };
+  }
+
+  getFavoriteSteamIds(userId, type = 'cheater') {
+    return this.prepare('SELECT steam_id FROM cheater_favorites WHERE user_id = ? AND type = ?')
+      .all(userId, type)
+      .map(r => r.steam_id);
+  }
+
+  getNotes(userId, steamId, type = 'cheater') {
+    return this.prepare(
+      'SELECT id, user_id, steam_id, text, created_at, updated_at FROM cheater_notes WHERE user_id = ? AND steam_id = ? AND type = ? ORDER BY created_at ASC'
+    ).all(userId, steamId, type);
+  }
+
+  addNote(userId, steamId, text, type = 'cheater') {
+    const now = Date.now();
+    return this.prepare(
+      'INSERT INTO cheater_notes (user_id, steam_id, type, text, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(userId, steamId, type, text, now, now);
+  }
+
+  updateNote(noteId, userId, text) {
+    return this.prepare(
+      'UPDATE cheater_notes SET text = ?, updated_at = ? WHERE id = ? AND user_id = ?'
+    ).run(text, Date.now(), noteId, userId);
+  }
+
+  deleteNote(noteId, userId) {
+    return this.prepare('DELETE FROM cheater_notes WHERE id = ? AND user_id = ?').run(noteId, userId);
+  }
+
+  getUserStats(discordId, type = 'cheater') {
+    const total = this.db.prepare(
+      'SELECT COUNT(*) as count FROM cheater_checks WHERE checked_by_discord_id = ? AND type = ?'
+    ).get(discordId, type);
+    const banned = this.db.prepare(
+      `SELECT COUNT(*) as count FROM cheater_checks 
+       WHERE checked_by_discord_id = ? AND type = ?
+       AND (vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != 'none')`
+    ).get(discordId, type);
+    return {
+      totalChecked: total ? total.count : 0,
+      bannedFound: banned ? banned.count : 0
+    };
+  }
+
+  getUserCombinedStats(discordId) {
+    const rows = this.db.prepare(
+      `SELECT type, COUNT(*) as total,
+        SUM(CASE WHEN vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != 'none' THEN 1 ELSE 0 END) as banned
+       FROM cheater_checks
+       WHERE checked_by_discord_id = ?
+       GROUP BY type`
+    ).all(discordId);
+    const result = { cheater: { totalChecked: 0, bannedFound: 0 }, bot: { totalChecked: 0, bannedFound: 0 } };
+    for (const row of rows) {
+      if (result[row.type]) {
+        result[row.type].totalChecked = row.total;
+        result[row.type].bannedFound = row.banned;
+      }
+    }
+    return result;
+  }
+
+  addNameHistory(steamId, personaName, type = 'cheater') {
+    return this.prepare(
+      'INSERT INTO cheater_name_history (steam_id, persona_name, type) VALUES (?, ?, ?)'
+    ).run(steamId, personaName, type);
+  }
+
+  getNameHistory(steamId, type = 'cheater') {
+    return this.prepare(
+      'SELECT * FROM cheater_name_history WHERE steam_id = ? AND type = ? ORDER BY changed_at DESC'
+    ).all(steamId, type);
+  }
+
+  getNameHistoryCount(steamId, type = 'cheater') {
+    const row = this.prepare(
+      'SELECT COUNT(*) as count FROM cheater_name_history WHERE steam_id = ? AND type = ?'
+    ).get(steamId, type);
+    return row ? row.count : 0;
+  }
+
+  getNotesCount(userId, steamId, type = 'cheater') {
+    const row = this.prepare(
+      'SELECT COUNT(*) as count FROM cheater_notes WHERE user_id = ? AND steam_id = ? AND type = ?'
+    ).get(userId, steamId, type);
+    return row ? row.count : 0;
+  }
+
   // ===== USER ACHIEVEMENTS =====
 
   getUserAchievements(userId) {
@@ -423,203 +712,30 @@ export class DatabaseManager {
 
   // ===== CHEATER CHECKS =====
 
-  upsertCheaterCheck(profile) {
-    return this.prepare(
-      `INSERT INTO cheater_checks 
-       (steam_id, persona_name, avatar_url, profile_url, original_vanity_url, vac_banned, number_of_vac_bans, 
-        number_of_game_bans, days_since_last_ban, community_banned, economy_ban, 
-        checked_by_discord_id, checked_by_username, report_source, reported_by_name, reported_by_url, checked_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-       ON CONFLICT(steam_id) DO UPDATE SET
-        persona_name = excluded.persona_name,
-        avatar_url = excluded.avatar_url,
-        profile_url = excluded.profile_url,
-        vac_banned = excluded.vac_banned,
-        number_of_vac_bans = excluded.number_of_vac_bans,
-        number_of_game_bans = excluded.number_of_game_bans,
-        days_since_last_ban = excluded.days_since_last_ban,
-        community_banned = excluded.community_banned,
-        economy_ban = excluded.economy_ban,
-        original_vanity_url = COALESCE(excluded.original_vanity_url, cheater_checks.original_vanity_url),
-        report_source = COALESCE(excluded.report_source, cheater_checks.report_source),
-        reported_by_name = COALESCE(excluded.reported_by_name, cheater_checks.reported_by_name),
-        reported_by_url = COALESCE(excluded.reported_by_url, cheater_checks.reported_by_url)`
-    ).run(
-      profile.steamId,
-      profile.personaName || null,
-      profile.avatarUrl || null,
-      profile.profileUrl,
-      profile.originalVanityUrl || null,
-      profile.vacBanned ? 1 : 0,
-      profile.numberOfVacBans || 0,
-      profile.numberOfGameBans || 0,
-      profile.daysSinceLastBan || 0,
-      profile.communityBanned ? 1 : 0,
-      profile.economyBan || 'none',
-      profile.checkedByDiscordId || null,
-      profile.checkedByUsername || null,
-      profile.reportSource || 'web',
-      profile.reportedByName || null,
-      profile.reportedByUrl || null
-    );
-  }
-
-  getCheaterChecks({ limit = 50, offset = 0, filter = 'all' } = {}) {
-    let sql = `SELECT cc.*, COALESCE(us.username, cc.checked_by_username) as checked_by_username 
-               FROM cheater_checks cc 
-               LEFT JOIN user_stats us ON cc.checked_by_discord_id = us.user_id`;
-    const params = [];
-
-    if (filter === 'banned') {
-      sql += ' WHERE cc.vac_banned = 1 OR cc.number_of_game_bans > 0 OR cc.community_banned = 1 OR cc.economy_ban != \'none\'';
-    } else if (filter === 'clean') {
-      sql += ' WHERE cc.vac_banned = 0 AND cc.number_of_game_bans = 0 AND cc.community_banned = 0 AND cc.economy_ban = \'none\'';
-    } else if (filter === 'steam_wall') {
-      sql += ' WHERE cc.report_source = \'steam_wall\'';
-    }
-
-    sql += ' ORDER BY COALESCE(cc.updated_at, cc.checked_at) DESC LIMIT ? OFFSET ?';
-    params.push(limit, offset);
-
-    return this.db.prepare(sql).all(...params);
-  }
-
-  getCheaterChecksCount(filter = 'all') {
-    let sql = 'SELECT COUNT(*) as count FROM cheater_checks';
-
-    if (filter === 'banned') {
-      sql += ' WHERE vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != \'none\'';
-    } else if (filter === 'clean') {
-      sql += ' WHERE vac_banned = 0 AND number_of_game_bans = 0 AND community_banned = 0 AND economy_ban = \'none\'';
-    } else if (filter === 'steam_wall') {
-      sql += ' WHERE report_source = \'steam_wall\'';
-    }
-
-    const result = this.db.prepare(sql).get();
-    return result.count;
-  }
-
-  getBannedProfiles(limit = 10) {
-    return this.prepare(
-      `SELECT * FROM cheater_checks 
-       WHERE vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != 'none'
-       ORDER BY checked_at DESC LIMIT ?`
-    ).all(limit);
-  }
-
-  deleteCheaterCheck(steamId) {
-    return this.prepare('DELETE FROM cheater_checks WHERE steam_id = ?').run(steamId);
-  }
-
-  getCheaterCheckBySteamId(steamId) {
-    return this.prepare(
-      `SELECT cc.*, COALESCE(us.username, cc.checked_by_username) as checked_by_username 
-       FROM cheater_checks cc 
-       LEFT JOIN user_stats us ON cc.checked_by_discord_id = us.user_id 
-       WHERE cc.steam_id = ?`
-    ).get(steamId);
-  }
-
-  markCheaterBanUpdated(steamId, reason = null) {
-    return this.prepare(
-      'UPDATE cheater_checks SET updated_at = CURRENT_TIMESTAMP, update_reason = ? WHERE steam_id = ?'
-    ).run(reason, steamId);
-  }
-
-  getCheaterLastView(userId) {
-    const row = this.prepare('SELECT viewed_at FROM cheater_last_view WHERE user_id = ?').get(userId);
-    return row ? row.viewed_at : null;
-  }
-
-  markCheaterLastView(userId) {
-    return this.prepare(
-      'INSERT OR REPLACE INTO cheater_last_view (user_id, viewed_at) VALUES (?, ?)'
-    ).run(userId, Date.now());
-  }
-
-  // ===== CHEATER FAVORITES =====
-
-  isCheaterFavorite(userId, steamId) {
-    const row = this.prepare(
-      'SELECT 1 FROM cheater_favorites WHERE user_id = ? AND steam_id = ?'
-    ).get(userId, steamId);
-    return !!row;
-  }
-
-  addCheaterFavorite(userId, steamId) {
-    return this.prepare(
-      'INSERT OR IGNORE INTO cheater_favorites (user_id, steam_id, created_at) VALUES (?, ?, ?)'
-    ).run(userId, steamId, Date.now());
-  }
-
-  removeCheaterFavorite(userId, steamId) {
-    this.prepare('DELETE FROM cheater_favorites WHERE user_id = ? AND steam_id = ?').run(userId, steamId);
-    // Каскадно удаляем заметки пользователя к этому профилю
-    this.prepare('DELETE FROM cheater_notes WHERE user_id = ? AND steam_id = ?').run(userId, steamId);
-  }
-
-  toggleCheaterFavorite(userId, steamId) {
-    const exists = this.isCheaterFavorite(userId, steamId);
-    if (exists) {
-      this.removeCheaterFavorite(userId, steamId);
-      return { isFavorite: false, notesDeleted: true };
-    }
-    this.addCheaterFavorite(userId, steamId);
-    return { isFavorite: true, notesDeleted: false };
-  }
-
-  getCheaterFavoriteSteamIds(userId) {
-    return this.prepare('SELECT steam_id FROM cheater_favorites WHERE user_id = ?')
-      .all(userId)
-      .map(r => r.steam_id);
-  }
-
-  getCheaterFavoritesCount(userId, steamId) {
-    const row = this.prepare(
-      'SELECT COUNT(*) as count FROM cheater_notes WHERE user_id = ? AND steam_id = ?'
-    ).get(userId, steamId);
-    return row ? row.count : 0;
-  }
-
-  // ===== CHEATER NOTES =====
-
-  getCheaterNotes(userId, steamId) {
-    return this.prepare(
-      'SELECT id, user_id, steam_id, text, created_at, updated_at FROM cheater_notes WHERE user_id = ? AND steam_id = ? ORDER BY created_at ASC'
-    ).all(userId, steamId);
-  }
-
-  addCheaterNote(userId, steamId, text) {
-    const now = Date.now();
-    return this.prepare(
-      'INSERT INTO cheater_notes (user_id, steam_id, text, created_at, updated_at) VALUES (?, ?, ?, ?, ?)'
-    ).run(userId, steamId, text, now, now);
-  }
-
-  updateCheaterNote(noteId, userId, text) {
-    return this.prepare(
-      'UPDATE cheater_notes SET text = ?, updated_at = ? WHERE id = ? AND user_id = ?'
-    ).run(text, Date.now(), noteId, userId);
-  }
-
-  deleteCheaterNote(noteId, userId) {
-    return this.prepare('DELETE FROM cheater_notes WHERE id = ? AND user_id = ?').run(noteId, userId);
-  }
-
-  getUserCheaterStats(discordId) {
-    const total = this.db.prepare(
-      'SELECT COUNT(*) as count FROM cheater_checks WHERE checked_by_discord_id = ?'
-    ).get(discordId);
-    const banned = this.db.prepare(
-      `SELECT COUNT(*) as count FROM cheater_checks 
-       WHERE checked_by_discord_id = ? 
-       AND (vac_banned = 1 OR number_of_game_bans > 0 OR community_banned = 1 OR economy_ban != 'none')`
-    ).get(discordId);
-    return {
-      totalChecked: total ? total.count : 0,
-      bannedFound: banned ? banned.count : 0
-    };
-  }
+  // Wrappers for backward compatibility (delegate to generic methods)
+  upsertCheaterCheck(profile) { return this.upsertCheck(profile, 'cheater'); }
+  getCheaterChecks(opts) { return this.getChecks({ ...opts, type: 'cheater' }); }
+  getCheaterChecksCount(filter) { return this.getChecksCount(filter, 'cheater'); }
+  getBannedProfiles(limit) { return this.getBannedChecks(limit, 'cheater'); }
+  deleteCheaterCheck(steamId) { return this.deleteCheck(steamId); }
+  getCheaterCheckBySteamId(steamId) { return this.getCheckBySteamId(steamId); }
+  markCheaterBanUpdated(steamId, reason) { return this.markBanUpdated(steamId, reason); }
+  getCheaterLastView(userId) { return this.getLastView(userId, 'cheater'); }
+  markCheaterLastView(userId) { return this.markLastView(userId, 'cheater'); }
+  isCheaterFavorite(userId, steamId) { return this.isFavorite(userId, steamId, 'cheater'); }
+  addCheaterFavorite(userId, steamId) { return this.addFavorite(userId, steamId, 'cheater'); }
+  removeCheaterFavorite(userId, steamId) { return this.removeFavorite(userId, steamId, 'cheater'); }
+  toggleCheaterFavorite(userId, steamId) { return this.toggleFavorite(userId, steamId, 'cheater'); }
+  getCheaterFavoriteSteamIds(userId) { return this.getFavoriteSteamIds(userId, 'cheater'); }
+  getCheaterFavoritesCount(userId, steamId) { return this.getNotesCount(userId, steamId, 'cheater'); }
+  getCheaterNotes(userId, steamId) { return this.getNotes(userId, steamId, 'cheater'); }
+  addCheaterNote(userId, steamId, text) { return this.addNote(userId, steamId, text, 'cheater'); }
+  updateCheaterNote(noteId, userId, text) { return this.updateNote(noteId, userId, text); }
+  deleteCheaterNote(noteId, userId) { return this.deleteNote(noteId, userId); }
+  getUserCheaterStats(discordId) { return this.getUserStats(discordId, 'cheater'); }
+  addCheaterNameHistory(steamId, personaName) { return this.addNameHistory(steamId, personaName, 'cheater'); }
+  getCheaterNameHistory(steamId) { return this.getNameHistory(steamId, 'cheater'); }
+  getCheaterNameHistoryCount(steamId) { return this.getNameHistoryCount(steamId, 'cheater'); }
 
   // ===== STEAM DATA =====
 
@@ -745,27 +861,6 @@ export class DatabaseManager {
 
   setBanCheckTime(time) {
     this.prepare("INSERT OR REPLACE INTO ban_check_settings (key, value) VALUES ('check_time', ?)").run(time);
-  }
-
-  // ===== CHEATER NAME HISTORY =====
-
-  addCheaterNameHistory(steamId, personaName) {
-    return this.prepare(
-      'INSERT INTO cheater_name_history (steam_id, persona_name) VALUES (?, ?)'
-    ).run(steamId, personaName);
-  }
-
-  getCheaterNameHistory(steamId) {
-    return this.prepare(
-      'SELECT persona_name, changed_at FROM cheater_name_history WHERE steam_id = ? ORDER BY changed_at DESC'
-    ).all(steamId);
-  }
-
-  getCheaterNameHistoryCount(steamId) {
-    const row = this.prepare(
-      'SELECT COUNT(*) as count FROM cheater_name_history WHERE steam_id = ?'
-    ).get(steamId);
-    return row ? row.count : 0;
   }
 
   // ===== CHEAT WATCHER QUEUE =====
