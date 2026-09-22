@@ -89,6 +89,43 @@ function collectNickNotifications(db, existing, message) {
 }
 
 /**
+ * Собирает уведомления для пользователей ботов (own + others)
+ */
+function collectBotNotifications(db, existing, message) {
+  const notifications = [];
+
+  if (existing.checked_by_discord_id) {
+    const ownEnabled = db.getUserBotOwnNotificationSetting(existing.checked_by_discord_id);
+    if (ownEnabled) {
+      const chatId = db.getTelegramChatId(existing.checked_by_discord_id);
+      if (chatId && chatId.toString() !== (process.env.TELEGRAM_CHAT_ID || '')) {
+        notifications.push({ type: 'user', chatId, message, countAs: 'own' });
+      }
+    }
+  }
+
+  const otherSubscribers = db.getUsersSubscribedToOthersBotNotifications();
+  for (const subscriber of otherSubscribers) {
+    if (subscriber.user_id === existing.checked_by_discord_id) continue;
+    notifications.push({ type: 'user', chatId: subscriber.telegram_chat_id, message, countAs: 'others' });
+  }
+
+  return notifications;
+}
+
+/**
+ * Собирает уведомления о смене ника ботов
+ */
+function collectBotNickNotifications(db, existing, message) {
+  const notifications = [];
+  const subscribers = db.getUsersSubscribedToNickNotifications();
+  for (const subscriber of subscribers) {
+    notifications.push({ type: 'user', chatId: subscriber.telegram_chat_id, message, countAs: 'others' });
+  }
+  return notifications;
+}
+
+/**
  * Собирает уведомления для пользователей (свои + чужие) в массив
  */
 function collectUserNotifications(db, existing, message) {
@@ -402,6 +439,128 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
   } finally {
     banCheckState.isChecking = false;
     banCheckState.startedAt = null;
+  }
+}
+
+/**
+ * Запуск проверки банов ботов. Вызывается после runBanCheck.
+ */
+export async function runBotBanCheck(db, sendTelegramReport, sendTelegramMessageToUser) {
+  try {
+    log('🤖 Перепроверка ботов из БД...');
+    const { checkProfiles } = await import('./steam/steamApi.js');
+    const notificationQueue = [];
+
+    const batchSize = 20;
+    const delayMs = 3000;
+    let offset = 0;
+    let totalChecked = 0;
+    let updated = 0;
+    let notified = 0;
+    let notifiedOthers = 0;
+
+    const totalCount = db.getChecksCount('all', 'bot');
+    if (totalCount === 0) {
+      log('🤖 Нет ботов для проверки');
+      return { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, notifiedOthers: 0 };
+    }
+
+    await sendTelegramReport(`🤖 <b>Начата проверка ботов</b>\n📊 Всего профилей: ${totalCount}`);
+
+    while (true) {
+      const batch = db.getChecks({ limit: batchSize, offset, filter: 'all', type: 'bot' });
+      if (batch.length === 0) break;
+
+      const urls = batch.map(p => p.profile_url).filter(Boolean);
+      const { results } = await checkProfiles(urls);
+
+      for (const profile of results) {
+        const existing = db.getCheckBySteamId(profile.steamId);
+        if (!existing) continue;
+
+        const changed =
+          existing.vac_banned !== (profile.vacBanned ? 1 : 0) ||
+          existing.number_of_game_bans !== (profile.numberOfGameBans || 0) ||
+          existing.community_banned !== (profile.communityBanned ? 1 : 0) ||
+          existing.economy_ban !== (profile.economyBan || 'none');
+
+        if (!changed) continue;
+
+        const wasClean = existing.vac_banned === 0 &&
+          existing.number_of_game_bans === 0 &&
+          existing.community_banned === 0 &&
+          existing.economy_ban === 'none';
+
+        db.upsertCheck({
+          ...profile,
+          checkedByDiscordId: existing.checked_by_discord_id,
+          checkedByUsername: existing.checked_by_username
+        }, 'bot');
+        db.markBanUpdated(profile.steamId, 'ban');
+        updated++;
+
+        const banDetails = [];
+        if (profile.vacBanned) banDetails.push(`VAC-бан (${profile.numberOfVacBans || 1})`);
+        if ((profile.numberOfGameBans || 0) > 0) banDetails.push(`Игровой бан (${profile.numberOfGameBans})`);
+        if (profile.communityBanned) banDetails.push('Коммьюнити-бан');
+        if (profile.economyBan && profile.economyBan !== 'none') banDetails.push(`Торговый бан: ${profile.economyBan}`);
+
+        if (banDetails.length === 0) continue;
+
+        const profileName = profile.personaName || profile.steamId;
+        const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
+
+        const ownTitle = wasClean
+          ? '🤖 <b>Бот получил ограничения!</b>'
+          : '🔔 <b>Обновление ограничений бота</b>';
+
+        const banMessage =
+          `${ownTitle}\n\n` +
+          `👤 Игрок: <a href="${profileUrl}">${escapeTgHtml(profileName)}</a>\n` +
+          `🆔 SteamID: ${profile.steamId}\n` +
+          `🚫 Ограничения: ${banDetails.join(', ')}\n` +
+          `👁 Добавил: ${escapeTgHtml(existing.checked_by_username || 'Неизвестно')}\n` +
+          `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
+
+        if (shouldNotifyAdmin(db, 'ban')) {
+          notificationQueue.push({ type: 'admin', message: banMessage });
+        }
+        notificationQueue.push(...collectBotNotifications(db, existing, banMessage));
+      }
+
+      totalChecked += batch.length;
+      offset += batchSize;
+      if (batch.length < batchSize) break;
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+
+    // Отправляем уведомления
+    if (notificationQueue.length > 0) {
+      for (const n of notificationQueue) {
+        try {
+          if (n.type === 'admin') {
+            await sendTelegramReport(n.message);
+          } else {
+            await sendTelegramMessageToUser(n.chatId, n.message);
+            if (n.countAs === 'own') notified++;
+            if (n.countAs === 'others') notifiedOthers++;
+          }
+        } catch (err) {
+          logError(`Ошибка отправки уведомления: ${err.message}`);
+        }
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    const result = { timestamp: Date.now(), totalChecked, updated, notified, notifiedOthers };
+    log(`🤖 Проверка ботов завершена. Проверено: ${totalChecked}, обновлено: ${updated}, уведомлений: ${notified} свои / ${notifiedOthers} чужие`);
+
+    return result;
+  } catch (error) {
+    logError(`Ошибка перепроверки ботов: ${error.message}`);
+    return { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, notifiedOthers: 0, error: error.message };
+  } finally {
+    botCheckState.isChecking = false;
   }
 }
 
@@ -910,6 +1069,14 @@ async function main() {
           const elapsed = Math.round((Date.now() - startTime) / 1000);
           db.saveBanCheckResult('auto', result, elapsed);
         }
+
+        // Проверка ботов после читеров
+        const botResult = await runBotBanCheck(db, sendTelegramReport, sendTelegramMessageToUser);
+        if (botResult) {
+          const botElapsed = Math.round((Date.now() - startTime) / 1000);
+          db.saveBanCheckResult('auto_bot', botResult, botElapsed);
+        }
+
         scheduleNextBanCheck(); // планируем следующую
       }, delay);
 

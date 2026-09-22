@@ -291,10 +291,17 @@ export function registerRoutes(
         return res.json({ skipped: true, message: 'Проверка уже выполняется' });
       }
       const startTime = Date.now();
-      triggerBanCheck().then(result => {
+      triggerBanCheck().then(async (result) => {
         if (result) {
           const elapsed = Math.round((Date.now() - startTime) / 1000);
           db.saveBanCheckResult('manual', result, elapsed);
+        }
+        // Проверка ботов после читеров
+        const { runBotBanCheck } = await import('../../index.js');
+        const botResult = await runBotBanCheck(db, sendTelegramReport, sendTelegramMessageToUser);
+        if (botResult) {
+          const botElapsed = Math.round((Date.now() - startTime) / 1000);
+          db.saveBanCheckResult('manual_bot', botResult, botElapsed);
         }
       }).catch(err => {
         const errorResult = { timestamp: Date.now(), totalChecked: 0, updated: 0, notified: 0, notifiedOthers: 0, error: err.message };
