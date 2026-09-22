@@ -253,11 +253,12 @@ export async function sendNotOnServerAttempt(userId, timestamp) {
  * @param {string} source - источник: 'web', 'discord', 'telegram'
  * @param {Array} profiles - массив профилей [{personaName, profileUrl, steamId}]
  */
-export async function sendNewCheaterNotification(addedByUsername, source, profiles) {
+export async function sendNewCheaterNotification(addedByUsername, source, profiles, type = 'cheater') {
   const sourceEmoji = { web: '🌐', discord: '💬', telegram: '📱' }[source] || '❓';
   const sourceLabel = { web: 'Сайт', discord: 'Discord', telegram: 'Telegram' }[source] || source;
+  const typeLabel = type === 'bot' ? '🤖 <b>Новый бот</b>' : '🕵️ <b>Новый потенциальный читер</b>';
 
-  let message = `🕵️ <b>Новый потенциальный читер</b> ${sourceEmoji} ${sourceLabel}\n`;
+  let message = `${typeLabel} ${sourceEmoji} ${sourceLabel}\n`;
   message += `👤 Добавил: <b>${escapeTgHtml(addedByUsername)}</b>\n\n`;
 
   if (profiles.length === 1) {
@@ -398,6 +399,9 @@ async function sendCheckerMenu(chatId) {
       ],
       [
         { text: '🔎 Проверить читера', callback_data: 'checker_check' }
+      ],
+      [
+        { text: '🤖 Добавить бота', callback_data: 'checker_add_bot' }
       ],
       ...(isAdmin ? [[
         { text: '🔍 CheatWatcher', callback_data: 'cw_qr_start' }
@@ -637,15 +641,22 @@ async function sendCheaterSettingsMenu(chatId) {
   const own = db.getUserCheaterOwnNotificationSetting(discordId);
   const others = db.getUserCheaterOthersNotificationSetting(discordId);
   const nick = db.getUserCheaterNickNotificationSetting(discordId);
+  const botOwn = db.getUserBotOwnNotificationSetting(discordId);
+  const botOthers = db.getUserBotOthersNotificationSetting(discordId);
+  const botNick = db.getUserBotNickNotificationSetting(discordId);
 
   const buttons = [
     [{ text: `👤 Мои читеры [${own ? '✅' : '❌'}]`, callback_data: 'settings_toggle_cheater_own' }],
     [{ text: `👥 Чужие читеры [${others ? '✅' : '❌'}]`, callback_data: 'settings_toggle_cheater_others' }],
     [{ text: `✏️ Смена ников [${nick ? '✅' : '❌'}]`, callback_data: 'settings_toggle_cheater_nick' }],
+    [{ text: '— — — — —', callback_data: 'noop' }],
+    [{ text: `🤖 Мои боты [${botOwn ? '✅' : '❌'}]`, callback_data: 'settings_toggle_bot_own' }],
+    [{ text: `🤖 Чужие боты [${botOthers ? '✅' : '❌'}]`, callback_data: 'settings_toggle_bot_others' }],
+    [{ text: `✏️ Смена ников ботов [${botNick ? '✅' : '❌'}]`, callback_data: 'settings_toggle_bot_nick' }],
     [{ text: '◀️ Назад', callback_data: 'menu_settings' }]
   ];
 
-  await telegramBot.sendMessage(chatId, '<b>🚨 Уведомления о читерах</b>\n\nВыберите опцию:', {
+  await telegramBot.sendMessage(chatId, '<b>🚨 Уведомления</b>\n\nВыберите опцию:', {
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: buttons }
   });
@@ -739,7 +750,7 @@ async function handleOnlineUsers(chatId) {
 }
 
 /**
- * Обработка "Мои добавленные" — показывает профили, добавленные пользователем
+ * Обработка "Мои добавленные" — показывает статистику (читеры + боты)
  */
 async function handleMyAdded(chatId) {
   const discordId = getLinkedDiscordId(chatId);
@@ -749,32 +760,22 @@ async function handleMyAdded(chatId) {
   }
 
   try {
-    const profiles = db.prepare(
-      'SELECT persona_name, vac_banned, number_of_game_bans, checked_at FROM cheater_checks WHERE checked_by_discord_id = ? ORDER BY checked_at DESC LIMIT 20'
-    ).all(discordId);
+    const stats = db.getUserCombinedStats(discordId);
+    const ch = stats.cheater || { totalChecked: 0, bannedFound: 0 };
+    const bt = stats.bot || { totalChecked: 0, bannedFound: 0 };
 
-    if (!profiles || profiles.length === 0) {
-      const backButton = {
-        inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'menu_checker' }]]
-      };
-      await telegramBot.sendMessage(chatId, '📭 Вы ещё не добавляли профили', {
-        reply_markup: backButton
-      });
-      return;
-    }
-
-    let message = '<b>📋 Ваши добавленные профили:</b>\n\n';
-
-    profiles.forEach((p, i) => {
-      const status = (p.vac_banned || p.number_of_game_bans > 0) ? '🔴' : '🟢';
-      const vacText = p.vac_banned ? 'VAC' : '';
-      const gameText = p.number_of_game_bans > 0 ? `Game(${p.number_of_game_bans})` : '';
-      const banInfo = [vacText, gameText].filter(Boolean).join(', ') || 'Чисто';
-      const date = p.checked_at ? new Date(p.checked_at).toLocaleDateString('ru-RU') : '—';
-
-      message += `${i + 1}. ${status} <b>${p.persona_name || 'Unknown'}</b>\n`;
-      message += `   Статус: ${banInfo} | Дата: ${date}\n\n`;
-    });
+    let message = '<b>📊 Ваша статистика:</b>\n\n';
+    message += `🚨 <b>Читеры</b>\n`;
+    message += `   Добавлено: ${ch.totalChecked}\n`;
+    message += `   С ограничениями: ${ch.bannedFound}\n`;
+    message += `   Процент: ${ch.totalChecked > 0 ? Math.round(ch.bannedFound / ch.totalChecked * 100) : 0}%\n\n`;
+    message += `🤖 <b>Боты</b>\n`;
+    message += `   Добавлено: ${bt.totalChecked}\n`;
+    message += `   С ограничениями: ${bt.bannedFound}\n`;
+    message += `   Процент: ${bt.totalChecked > 0 ? Math.round(bt.bannedFound / bt.totalChecked * 100) : 0}%\n\n`;
+    message += `📈 <b>Итого</b>\n`;
+    message += `   Всего добавлено: ${ch.totalChecked + bt.totalChecked}\n`;
+    message += `   Всего с ограничениями: ${ch.bannedFound + bt.bannedFound}`;
 
     const backButton = {
       inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'menu_checker' }]]
@@ -785,7 +786,7 @@ async function handleMyAdded(chatId) {
       reply_markup: backButton
     });
   } catch (error) {
-    console.error('❌ Ошибка получения добавленных профилей:', error);
+    console.error('❌ Ошибка получения статистики:', error);
     await telegramBot.sendMessage(chatId, '❌ Произошла ошибка при получении данных. Попробуйте позже.');
   }
 }
@@ -793,7 +794,7 @@ async function handleMyAdded(chatId) {
 /**
  * Обработка проверки Steam-профиля по URL
  */
-async function handleSteamUrlCheck(chatId, text) {
+async function handleSteamUrlCheck(chatId, text, type = 'cheater') {
   const discordId = getLinkedDiscordId(chatId);
   if (!discordId) {
     await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
@@ -852,15 +853,17 @@ async function handleSteamUrlCheck(chatId, text) {
       return;
     }
 
+    const typeLabel = type === 'bot' ? 'бота' : 'читера';
+
     // Обрабатываем каждый профиль
     for (const profile of results) {
-      const existingProfile = db.getCheaterCheckBySteamId(profile.steamId);
+      const existingProfile = db.getCheckBySteamId(profile.steamId);
       if (existingProfile) {
-        db.upsertCheaterCheck({
+        db.upsertCheck({
           ...profile,
           checkedByDiscordId: discordId,
           checkedByUsername: discordUsername,
-        });
+        }, type);
 
         const isBanned = profile.vacBanned || profile.numberOfGameBans > 0 || profile.communityBanned || (profile.economyBan && profile.economyBan !== 'none');
         const statusEmoji = isBanned ? '🔴' : '🟢';
@@ -869,7 +872,7 @@ async function handleSteamUrlCheck(chatId, text) {
         const isSameUser = existingProfile.checked_by_discord_id === discordId;
         let dupMessage;
         if (isSameUser) {
-          dupMessage = `⚠️ <b>Ты уже добавлял этого читера!</b>\n\n`;
+          dupMessage = `⚠️ <b>Ты уже добавлял этого ${typeLabel}!</b>\n\n`;
           dupMessage += `📅 Дата: ${new Date(existingProfile.checked_at).toLocaleDateString('ru-RU')}\n\n`;
         } else {
           dupMessage = `⚠️ <b>Этот профиль уже добавлен!</b>\n\n`;
@@ -888,11 +891,11 @@ async function handleSteamUrlCheck(chatId, text) {
       }
 
       // Сохраняем в БД
-      db.upsertCheaterCheck({
+      db.upsertCheck({
         ...profile,
         checkedByDiscordId: discordId,
         checkedByUsername: discordUsername,
-      });
+      }, type);
 
       // Уведомление админу
       try {
@@ -900,36 +903,39 @@ async function handleSteamUrlCheck(chatId, text) {
           personaName: profile.personaName || profile.steamId,
           profileUrl: profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`,
           steamId: profile.steamId,
-        }]);
+        }], type);
       } catch (err) {
-        console.error('[TG] Ошибка отправки уведомления о читере:', err.message);
+        console.error('[TG] Ошибка отправки уведомления:', err.message);
       }
 
-      // CheatWatcher: постинг комментария на стене нового читера
-      const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
-      const banDetails = [
-        `• VAC Ban: ${profile.vacBanned ? `Yes (${profile.numberOfVacBans || 1} ban${(profile.numberOfVacBans || 1) !== 1 ? 's' : ''})` : 'No'}`,
-        `• Game Bans: ${profile.numberOfGameBans > 0 ? profile.numberOfGameBans : 'No'}`,
-        `• Days Since Last Ban: ${(profile.vacBanned || profile.numberOfGameBans > 0) ? (profile.daysSinceLastBan || 0) : '—'}`,
-        `• Community Ban: ${profile.communityBanned ? 'Yes' : 'No'}`,
-        `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
-      ].join('\n');
-      const cwComment =
-        `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
-        `Player: ${profile.personaName || 'Unknown'}\n` +
-        `Profile: ${profileUrl}\n` +
-        `SteamID64: ${profile.steamId}\n\n` +
-        `Ban Details:\n${banDetails}\n` +
-        `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-        `Evidence archived for review.\n` +
-        `Added to CheatWatchers Community database and Valve database.`;
-      db.addCheatWatcherComment(profile.steamId, cwComment);
+      // CheatWatcher: только для читеров
+      if (type === 'cheater') {
+        const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
+        const banDetails = [
+          `• VAC Ban: ${profile.vacBanned ? `Yes (${profile.numberOfVacBans || 1} ban${(profile.numberOfVacBans || 1) !== 1 ? 's' : ''})` : 'No'}`,
+          `• Game Bans: ${profile.numberOfGameBans > 0 ? profile.numberOfGameBans : 'No'}`,
+          `• Days Since Last Ban: ${(profile.vacBanned || profile.numberOfGameBans > 0) ? (profile.daysSinceLastBan || 0) : '—'}`,
+          `• Community Ban: ${profile.communityBanned ? 'Yes' : 'No'}`,
+          `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
+        ].join('\n');
+        const cwComment =
+          `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
+          `Player: ${profile.personaName || 'Unknown'}\n` +
+          `Profile: ${profileUrl}\n` +
+          `SteamID64: ${profile.steamId}\n\n` +
+          `Ban Details:\n${banDetails}\n` +
+          `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+          `Evidence archived for review.\n` +
+          `Added to CheatWatchers Community database and Valve database.`;
+        db.addCheatWatcherComment(profile.steamId, cwComment);
+      }
 
       const isBanned = profile.vacBanned || profile.numberOfGameBans > 0 || profile.communityBanned || (profile.economyBan && profile.economyBan !== 'none');
       const statusEmoji = isBanned ? '🔴' : '🟢';
       const statusText = isBanned ? 'ЗАБАНЕН' : 'ЧИСТО';
+      const typePrefix = type === 'bot' ? '🤖 Бот: ' : '';
 
-      let resultMessage = `${statusEmoji} <b>${escapeTgHtml(profile.personaName)}</b> — ${statusText}\n\n`;
+      let resultMessage = `${statusEmoji} ${typePrefix}<b>${escapeTgHtml(profile.personaName)}</b> — ${statusText}\n\n`;
       resultMessage += `🔗 <a href="${profile.profileUrl}">Профиль Steam</a>\n`;
       resultMessage += `🆔 SteamID64: <code>${profile.steamId}</code>\n\n`;
       resultMessage += `<b>Детали:</b>\n`;
@@ -942,7 +948,7 @@ async function handleSteamUrlCheck(chatId, text) {
       const resultButtons = {
         inline_keyboard: [
           [{ text: '📢 Опубликовать в Discord', callback_data: `checker_publish_${profile.steamId}` }],
-          [{ text: '🔎 Проверить ещё', callback_data: 'checker_check' }],
+          [{ text: type === 'bot' ? '🤖 Добавить ещё бота' : '🔎 Проверить ещё', callback_data: type === 'bot' ? 'checker_add_bot' : 'checker_check' }],
           [{ text: '◀️ Назад в меню', callback_data: 'back_to_menu' }]
         ]
       };
@@ -1765,6 +1771,36 @@ export function initTelegramBot(
             break;
           }
 
+          case 'settings_toggle_bot_own': {
+            const dIdBotOwn = getLinkedDiscordId(chatId);
+            if (dIdBotOwn) {
+              const cur = db.getUserBotOwnNotificationSetting(dIdBotOwn);
+              db.setUserBotOwnNotificationSetting(dIdBotOwn, !cur);
+              await sendCheaterSettingsMenu(chatId);
+            }
+            break;
+          }
+
+          case 'settings_toggle_bot_others': {
+            const dIdBotOthers = getLinkedDiscordId(chatId);
+            if (dIdBotOthers) {
+              const cur = db.getUserBotOthersNotificationSetting(dIdBotOthers);
+              db.setUserBotOthersNotificationSetting(dIdBotOthers, !cur);
+              await sendCheaterSettingsMenu(chatId);
+            }
+            break;
+          }
+
+          case 'settings_toggle_bot_nick': {
+            const dIdBotNick = getLinkedDiscordId(chatId);
+            if (dIdBotNick) {
+              const cur = db.getUserBotNickNotificationSetting(dIdBotNick);
+              db.setUserBotNickNotificationSetting(dIdBotNick, !cur);
+              await sendCheaterSettingsMenu(chatId);
+            }
+            break;
+          }
+
           case 'settings_change_timeout':
             await sendTimeoutMenu(chatId);
             break;
@@ -1836,6 +1872,22 @@ export function initTelegramBot(
             };
             await telegramBot.sendMessage(chatId, '🔗 Отправьте ссылку на Steam-профиль для проверки\n\nМожно отправить до 5 ссылок (каждая ссылка с новой строки)\n\nПримеры:\n• https://steamcommunity.com/id/username\n• https://steamcommunity.com/profiles/76561198xxxxxxxxx', {
               reply_markup: cancelButton
+            });
+            break;
+          }
+
+          case 'checker_add_bot': {
+            const discordIdBot = getLinkedDiscordId(chatId);
+            if (!discordIdBot) {
+              await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом. Используйте /link для связывания.');
+              return;
+            }
+            userStates.set(chatId, 'awaiting_bot_url');
+            const cancelBotBtn = {
+              inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'menu_checker' }]]
+            };
+            await telegramBot.sendMessage(chatId, '🤖 Отправьте ссылку на Steam-профиль бота\n\nМожно отправить до 5 ссылок (каждая ссылка с новой строки)\n\nПримеры:\n• https://steamcommunity.com/id/username\n• https://steamcommunity.com/profiles/76561198xxxxxxxxx', {
+              reply_markup: cancelBotBtn
             });
             break;
           }
@@ -1918,6 +1970,15 @@ export function initTelegramBot(
         userStates.delete(chatId);
         if (text) {
           await handleSteamUrlCheck(chatId, text.trim());
+        }
+        return;
+      }
+
+      // Проверяем состояние пользователя (ожидание URL бота)
+      if (userStates.get(chatId) === 'awaiting_bot_url') {
+        userStates.delete(chatId);
+        if (text) {
+          await handleSteamUrlCheck(chatId, text.trim(), 'bot');
         }
         return;
       }
