@@ -77,7 +77,12 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    */
   router.post('/check', checkLimiter, async (req, res) => {
     try {
-      const { urls, checkedByDiscordId, checkedByUsername } = req.body;
+      const { urls, checkedByDiscordId, checkedByUsername, type = 'cheater' } = req.body;
+
+      // Валидация type
+      if (!['cheater', 'bot'].includes(type)) {
+        return res.status(400).json({ error: 'type должен быть cheater или bot' });
+      }
 
       // Валидация
       if (!urls || !Array.isArray(urls) || urls.length === 0) {
@@ -145,11 +150,11 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
 
       // Сохранение только новых результатов в БД
       for (const profile of newProfiles) {
-        db.upsertCheaterCheck({
+        db.upsertCheck({
           ...profile,
           checkedByDiscordId,
           checkedByUsername: checkedByUsername || 'Unknown',
-        });
+        }, type);
 
         // Асинхронно подтягиваем Steam/CS2 статистику в фоне (не блокируем ответ)
         getCachedStats(profile.steamId, db, 'cheater_checks', profile.steamId)
@@ -158,11 +163,11 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
 
       // Обновляем данные о банах для дубликатов (без перезаписи автора)
       for (const profile of duplicates) {
-        db.upsertCheaterCheck({
+        db.upsertCheck({
           ...profile,
           checkedByDiscordId,
           checkedByUsername: checkedByUsername || 'Unknown',
-        });
+        }, type);
       }
 
       // Уведомление админу только о новых профилях
@@ -222,6 +227,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       let limit = parseInt(req.query.limit, 10) || 50;
       let offset = parseInt(req.query.offset, 10) || 0;
       const filter = req.query.filter || 'all';
+      const type = req.query.type || 'cheater';
 
       // Ограничения
       if (limit < 1) limit = 1;
@@ -232,20 +238,25 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
         return res.status(400).json({ error: 'filter должен быть: all, banned, clean или steam_wall' });
       }
 
-      const profiles = db.getCheaterChecks({ limit, offset, filter });
-      const total = db.getCheaterChecksCount(filter);
+      // Валидация type
+      if (!['cheater', 'bot'].includes(type)) {
+        return res.status(400).json({ error: 'type должен быть cheater или bot' });
+      }
+
+      const profiles = db.getChecks({ limit, offset, filter, type });
+      const total = db.getChecksCount(filter, type);
 
       // lastViewedAt и избранное для авторизованных пользователей
       const userId = req.session?.userId || null;
-      const lastViewedAt = userId ? db.getCheaterLastView(userId) : null;
-      const favoriteSteamIds = userId ? db.getCheaterFavoriteSteamIds(userId) : [];
+      const lastViewedAt = userId ? db.getLastView(userId, type) : null;
+      const favoriteSteamIds = userId ? db.getFavoriteSteamIds(userId, type) : [];
 
       // Добавляем количество смен имени, isFavorite и notes к каждому профилю
       const enrichedProfiles = profiles.map(profile => ({
         ...profile,
-        name_history_count: db.getCheaterNameHistoryCount(profile.steam_id),
+        name_history_count: db.getNameHistoryCount(profile.steam_id, type),
         isFavorite: favoriteSteamIds.includes(profile.steam_id),
-        notes: userId ? db.getCheaterNotes(userId, profile.steam_id) : [],
+        notes: userId ? db.getNotes(userId, profile.steam_id, type) : [],
       }));
 
       res.json({ profiles: enrichedProfiles, total, lastViewedAt });
@@ -279,7 +290,8 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    */
   router.post('/mark-viewed', requireAuth, (req, res) => {
     try {
-      db.markCheaterLastView(req.authenticatedUserId);
+      const type = req.body.type || 'cheater';
+      db.markLastView(req.authenticatedUserId, type);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -293,10 +305,11 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   router.post('/favorites/:steamId', requireAuth, (req, res) => {
     try {
       const { steamId } = req.params;
+      const type = req.body.type || 'cheater';
       if (!/^\d{17}$/.test(steamId)) {
         return res.status(400).json({ error: 'Невалидный SteamID64' });
       }
-      const result = db.toggleCheaterFavorite(req.authenticatedUserId, steamId);
+      const result = db.toggleFavorite(req.authenticatedUserId, steamId, type);
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -310,7 +323,8 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   router.get('/notes/:steamId', requireAuth, (req, res) => {
     try {
       const { steamId } = req.params;
-      const notes = db.getCheaterNotes(req.authenticatedUserId, steamId);
+      const type = req.query.type || 'cheater';
+      const notes = db.getNotes(req.authenticatedUserId, steamId, type);
       res.json({ notes });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -324,15 +338,15 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   router.post('/notes/:steamId', requireAuth, (req, res) => {
     try {
       const { steamId } = req.params;
-      const { text } = req.body;
+      const { text, type = 'cheater' } = req.body;
       if (!text || !text.trim()) {
         return res.status(400).json({ error: 'Текст заметки обязателен' });
       }
       // Автоматически добавляем в избранное
-      if (!db.isCheaterFavorite(req.authenticatedUserId, steamId)) {
-        db.addCheaterFavorite(req.authenticatedUserId, steamId);
+      if (!db.isFavorite(req.authenticatedUserId, steamId, type)) {
+        db.addFavorite(req.authenticatedUserId, steamId, type);
       }
-      const result = db.addCheaterNote(req.authenticatedUserId, steamId, text.trim());
+      const result = db.addNote(req.authenticatedUserId, steamId, text.trim(), type);
       res.json({ success: true, noteId: result.lastInsertRowid });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -350,7 +364,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       if (!text || !text.trim()) {
         return res.status(400).json({ error: 'Текст заметки обязателен' });
       }
-      const result = db.updateCheaterNote(noteId, req.authenticatedUserId, text.trim());
+      const result = db.updateNote(noteId, req.authenticatedUserId, text.trim());
       if (result.changes === 0) {
         return res.status(404).json({ error: 'Заметка не найдена' });
       }
@@ -384,8 +398,22 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   router.get('/favorites/notes-count/:steamId', requireAuth, (req, res) => {
     try {
       const { steamId } = req.params;
-      const count = db.getCheaterFavoritesCount(req.authenticatedUserId, steamId);
+      const type = req.query.type || 'cheater';
+      const count = db.getNotesCount(req.authenticatedUserId, steamId, type);
       res.json({ count });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * GET /api/cheater-checker/stats
+   * Получить объединённую статистику пользователя (читеры + боты)
+   */
+  router.get('/stats', requireAuth, (req, res) => {
+    try {
+      const stats = db.getUserCombinedStats(req.authenticatedUserId);
+      res.json(stats);
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
