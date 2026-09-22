@@ -8,6 +8,14 @@ import { STEAM_CONFIG, SERVER_CONFIG } from './src/config.js';
 import { EmbedBuilder } from 'discord.js';
 import { stripRtl } from './src/utils/rtl.js';
 
+/**
+ * Экранирование HTML-спецсимволов для Telegram (parse_mode: HTML)
+ */
+function escapeTgHtml(text) {
+  if (!text) return '';
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // Telegram bot settings
 const TELEGRAM_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || "137981675";
@@ -250,16 +258,16 @@ export async function sendNewCheaterNotification(addedByUsername, source, profil
   const sourceLabel = { web: 'Сайт', discord: 'Discord', telegram: 'Telegram' }[source] || source;
 
   let message = `🕵️ <b>Новый потенциальный читер</b> ${sourceEmoji} ${sourceLabel}\n`;
-  message += `👤 Добавил: <b>${addedByUsername}</b>\n\n`;
+  message += `👤 Добавил: <b>${escapeTgHtml(addedByUsername)}</b>\n\n`;
 
   if (profiles.length === 1) {
     const p = profiles[0];
-    message += `🎮 <a href="${p.profileUrl}">${p.personaName}</a>\n`;
+    message += `🎮 <a href="${p.profileUrl}">${escapeTgHtml(p.personaName)}</a>\n`;
     message += `🆔 <code>${p.steamId}</code>`;
   } else {
     message += `📋 Профилей: ${profiles.length}\n`;
     profiles.forEach((p, i) => {
-      message += `${i + 1}. <a href="${p.profileUrl}">${p.personaName}</a> <code>${p.steamId}</code>\n`;
+      message += `${i + 1}. <a href="${p.profileUrl}">${escapeTgHtml(p.personaName)}</a> <code>${p.steamId}</code>\n`;
     });
   }
 
@@ -863,10 +871,10 @@ async function handleSteamUrlCheck(chatId, text) {
           dupMessage += `📅 Дата: ${new Date(existingProfile.checked_at).toLocaleDateString('ru-RU')}\n\n`;
         } else {
           dupMessage = `⚠️ <b>Этот профиль уже добавлен!</b>\n\n`;
-          dupMessage += `👤 Добавил: <b>${existingProfile.checked_by_username || 'Unknown'}</b>\n`;
+          dupMessage += `👤 Добавил: <b>${escapeTgHtml(existingProfile.checked_by_username || 'Unknown')}</b>\n`;
           dupMessage += `📅 Дата: ${new Date(existingProfile.checked_at).toLocaleDateString('ru-RU')}\n\n`;
         }
-        dupMessage += `${statusEmoji} <b>${profile.personaName}</b> — ${statusText}\n`;
+        dupMessage += `${statusEmoji} <b>${escapeTgHtml(profile.personaName)}</b> — ${statusText}\n`;
         dupMessage += `🔗 <a href="${profile.profileUrl}">Профиль Steam</a>\n`;
         dupMessage += `\nДанные о банах обновлены.`;
 
@@ -919,7 +927,7 @@ async function handleSteamUrlCheck(chatId, text) {
       const statusEmoji = isBanned ? '🔴' : '🟢';
       const statusText = isBanned ? 'ЗАБАНЕН' : 'ЧИСТО';
 
-      let resultMessage = `${statusEmoji} <b>${profile.personaName}</b> — ${statusText}\n\n`;
+      let resultMessage = `${statusEmoji} <b>${escapeTgHtml(profile.personaName)}</b> — ${statusText}\n\n`;
       resultMessage += `🔗 <a href="${profile.profileUrl}">Профиль Steam</a>\n`;
       resultMessage += `🆔 SteamID64: <code>${profile.steamId}</code>\n\n`;
       resultMessage += `<b>Детали:</b>\n`;

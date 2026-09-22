@@ -31,6 +31,14 @@ import {
 dotenv.config();
 
 /**
+ * Экранирование HTML-спецсимволов для Telegram (parse_mode: HTML)
+ */
+function escapeTgHtml(text) {
+  if (!text) return '';
+  return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
  * Форматирует детали банов для CheatWatcher комментария (английский)
  */
 function formatCheatWatcherBanDetails(profile) {
@@ -187,11 +195,11 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
           const nickTitle = '✏️ <b>Смена ника читера</b>';
           const nickMessage =
             `${nickTitle}\n\n` +
-            `👤 Было: ${existing.persona_name}\n` +
-            `👤 Стало: ${profile.personaName}\n` +
-            `🔗 Профиль: <a href="${profileUrl}">${profile.personaName}</a>\n` +
+            `👤 Было: ${escapeTgHtml(existing.persona_name)}\n` +
+            `👤 Стало: ${escapeTgHtml(profile.personaName)}\n` +
+            `🔗 Профиль: <a href="${profileUrl}">${escapeTgHtml(profile.personaName)}</a>\n` +
             `🆔 SteamID: ${profile.steamId}\n` +
-            `👁 Добавил: ${existing.checked_by_username || 'Неизвестно'}\n` +
+            `👁 Добавил: ${escapeTgHtml(existing.checked_by_username || 'Неизвестно')}\n` +
             `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
 
           notificationQueue.push({ type: 'admin', message: nickMessage });
@@ -224,9 +232,9 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             `${urlTitle}\n\n` +
             `🔗 Было: steamcommunity.com/id/${existing.original_vanity_url}\n` +
             `🔗 Стало: ${canonicalUrl} (числовой)\n` +
-            `👤 Игрок: <a href="${canonicalUrl}">${profile.personaName}</a>\n` +
+            `👤 Игрок: <a href="${canonicalUrl}">${escapeTgHtml(profile.personaName)}</a>\n` +
             `🆔 SteamID: ${profile.steamId}\n` +
-            `👁 Добавил: ${existing.checked_by_username || 'Неизвестно'}\n` +
+            `👁 Добавил: ${escapeTgHtml(existing.checked_by_username || 'Неизвестно')}\n` +
             `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
 
           notificationQueue.push({ type: 'admin', message: urlMessage });
@@ -261,7 +269,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
           if (profile.economyBan && profile.economyBan !== 'none') banDetails.push(`Торговый бан: ${profile.economyBan}`);
 
           if (banDetails.length > 0) {
-            const profileName = profile.personaName || profile.steamId;
+            const profileName = escapeTgHtml(profile.personaName || profile.steamId);
 
             const ownTitle = wasClean
               ? '⚠️ <b>Потенциальный читер получил ограничения!</b>'
@@ -272,7 +280,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
               `👤 Игрок: <a href="${profileUrl}">${profileName}</a>\n` +
               `🆔 SteamID: ${profile.steamId}\n` +
               `🚫 Ограничения: ${banDetails.join(', ')}\n` +
-              `👁 Добавил: ${existing.checked_by_username || 'Неизвестно'}\n` +
+              `👁 Добавил: ${escapeTgHtml(existing.checked_by_username || 'Неизвестно')}\n` +
               `📅 Время: ${new Date().toLocaleString('ru-RU')}`;
 
             notificationQueue.push({ type: 'admin', message: banMessage });
