@@ -1196,6 +1196,7 @@ async function openStatsModal() {
       id: a.id,
       name: ACH[a.id]?.name || a.id,
       desc: ACH[a.id]?.description || '',
+      points: ACH[a.id]?.points || 0,
     }));
 
     content.innerHTML = `
@@ -1247,7 +1248,8 @@ function renderStatsAchievements(list, page) {
   const pageItems = list.slice(start, start + STATS_ACH_PER_PAGE);
 
   grid.innerHTML = `<div class="stats-ach-grid">${pageItems.map(a => `
-    <div class="stats-ach-card">
+    <div class="stats-ach-card" title="${a.points} очков">
+      <span class="stats-ach-points">+${a.points}</span>
       <div class="stats-ach-name">${escapeHtml(a.name)}</div>
       <div class="stats-ach-desc">${escapeHtml(a.desc)}</div>
     </div>
