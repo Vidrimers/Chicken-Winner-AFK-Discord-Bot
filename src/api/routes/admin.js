@@ -1028,12 +1028,15 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
               await telegram.sendTelegramReport(message);
             }
 
-            // Отправка всем пользователям с telegram_chat_id
+            // Отправка всем пользователям с telegram_chat_id (кроме админа)
+            const adminChatId = (process.env.TELEGRAM_CHAT_ID || '').toString();
             const subscribers = db.prepare(
               'SELECT telegram_chat_id FROM telegram_users WHERE started_bot = 1'
             ).all();
 
             for (const sub of subscribers) {
+              // Пропускаем админа — он уже получил через sendTelegramReport
+              if (sub.telegram_chat_id.toString() === adminChatId) continue;
               try {
                 if (telegram.sendTelegramMessageToUser) {
                   await telegram.sendTelegramMessageToUser(sub.telegram_chat_id, message);
