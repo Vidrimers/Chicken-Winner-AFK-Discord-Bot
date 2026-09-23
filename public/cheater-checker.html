@@ -61,6 +61,9 @@
 
       <!-- Секция ввода -->
       <section class="input-section" id="inputSection">
+        <button class="search-toggle-btn" id="searchToggleBtn" title="Поиск" aria-label="Поиск" onclick="toggleSearch()">
+          <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+        </button>
         <button class="mass-check-btn" id="massCheckBtn">Массовая проверка</button>
         <div class="input-clear-wrapper">
           <input
@@ -80,8 +83,8 @@
         <span>Проверка профиля...</span>
       </div>
 
-      <!-- Поиск -->
-      <div class="search-section" style="margin-bottom:15px;">
+      <!-- Поиск (скрыт по умолчанию) -->
+      <div class="search-section" id="searchSection">
         <div class="input-clear-wrapper" style="min-width:0;">
           <input type="text" class="steam-input" id="profileSearchInput" placeholder="Поиск по нику или SteamID..." style="width:100%;" oninput="filterProfileCards(this.value)">
           <button class="input-clear-btn" id="profileSearchClearBtn" title="Очистить" aria-label="Очистить поиск">×</button>

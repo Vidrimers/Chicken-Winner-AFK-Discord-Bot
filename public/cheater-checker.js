@@ -164,6 +164,14 @@ function switchView(view) {
   document.querySelectorAll('.filter-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.filter === 'all');
   });
+  // Закрываем поиск при смене вкладки
+  const searchSection = document.getElementById('searchSection');
+  const searchToggleBtn = document.getElementById('searchToggleBtn');
+  if (searchSection && searchSection.classList.contains('open')) {
+    searchSection.classList.remove('open');
+    searchToggleBtn.classList.remove('active');
+    document.getElementById('profileSearchInput').value = '';
+  }
   loadProfiles();
 }
 
@@ -325,6 +333,30 @@ function updateFavoritesCount() {
                 allCleanProfilesUnfiltered.filter(p => p.isFavorite).length;
   const el = document.getElementById('favoritesCount');
   if (el) el.textContent = count > 0 ? `(${count})` : '';
+}
+
+/**
+ * Переключение строки поиска
+ */
+function toggleSearch() {
+  const section = document.getElementById('searchSection');
+  const btn = document.getElementById('searchToggleBtn');
+  const input = document.getElementById('profileSearchInput');
+
+  const isOpen = section.classList.contains('open');
+
+  if (isOpen) {
+    // Закрываем: очищаем запрос и сбрасываем фильтр
+    section.classList.remove('open');
+    btn.classList.remove('active');
+    input.value = '';
+    filterProfileCards('');
+  } else {
+    // Открываем с автофокусом
+    section.classList.add('open');
+    btn.classList.add('active');
+    setTimeout(() => input.focus(), 350);
+  }
 }
 
 /**
