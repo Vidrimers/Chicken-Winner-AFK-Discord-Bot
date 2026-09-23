@@ -1833,7 +1833,7 @@
 
     <!-- Модальное окно создания объявления (админ) -->
     <div class="modal-overlay" id="announcementModal" style="display:none" onclick="if(event.target===this)closeAnnouncementModal()">
-      <div class="modal-box" style="max-width:600px">
+      <div class="modal-box" style="max-width:900px">
         <div class="modal-box-header">
           <h2>📢 Создать объявление</h2>
           <button class="modal-close-btn" onclick="closeAnnouncementModal()">&times;</button>
@@ -1841,9 +1841,43 @@
         <div class="modal-box-body">
           <label style="display:block;margin-bottom:8px;color:#e0e0e0;font-size:14px;">Заголовок</label>
           <input type="text" id="announcementTitle" placeholder="Заголовок объявления" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:#e0e0e0;font-size:14px;box-sizing:border-box;margin-bottom:12px;" />
-          <label style="display:block;margin-bottom:8px;color:#e0e0e0;font-size:14px;">Текст</label>
-          <textarea id="announcementText" rows="6" placeholder="Текст объявления... *жирный* _курсив_ `код`" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:#e0e0e0;font-size:14px;resize:vertical;box-sizing:border-box;font-family:inherit;margin-bottom:12px;"></textarea>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+
+          <div class="ann-split">
+            <!-- Левая колонка: toolbar + textarea -->
+            <div class="ann-editor">
+              <div class="ann-toolbar">
+                <button type="button" class="ann-tool-btn" onclick="annFormat('bold')" title="Жирный"><b>B</b></button>
+                <button type="button" class="ann-tool-btn" onclick="annFormat('italic')" title="Курсив"><i>I</i></button>
+                <button type="button" class="ann-tool-btn" onclick="annFormat('underline')" title="Подчёркнутый"><u>U</u></button>
+                <button type="button" class="ann-tool-btn" onclick="annFormat('strike')" title="Зачёркнутый"><s>S</s></button>
+                <button type="button" class="ann-tool-btn" onclick="annFormat('code')" title="Код" style="font-family:monospace;">&lt;/&gt;</button>
+                <button type="button" class="ann-tool-btn" onclick="annFormat('spoiler')" title="Спойлер">||</button>
+                <span class="ann-toolbar-sep"></span>
+                <button type="button" class="ann-tool-btn" onclick="annFormat('bullet')" title="Список">•</button>
+                <button type="button" class="ann-tool-btn" onclick="annFormat('quote')" title="Цитата">❝</button>
+                <button type="button" class="ann-tool-btn" onclick="annFormat('divider')" title="Разделитель">—</button>
+                <span class="ann-toolbar-sep"></span>
+                <button type="button" class="ann-tool-btn ann-emoji" onclick="annEmoji('🎉')">🎉</button>
+                <button type="button" class="ann-tool-btn ann-emoji" onclick="annEmoji('✨')">✨</button>
+                <button type="button" class="ann-tool-btn ann-emoji" onclick="annEmoji('🚀')">🚀</button>
+                <button type="button" class="ann-tool-btn ann-emoji" onclick="annEmoji('🔥')">🔥</button>
+                <button type="button" class="ann-tool-btn ann-emoji" onclick="annEmoji('💡')">💡</button>
+                <button type="button" class="ann-tool-btn ann-emoji" onclick="annEmoji('✅')">✅</button>
+                <button type="button" class="ann-tool-btn ann-emoji" onclick="annEmoji('⚠️')">⚠️</button>
+              </div>
+              <textarea id="announcementText" rows="8" placeholder="Текст объявления... *жирный* _курсив_ `код`" style="width:100%;padding:10px;border-radius:0 0 8px 8px;border:1px solid rgba(255,255,255,0.2);border-top:none;background:rgba(255,255,255,0.05);color:#e0e0e0;font-size:14px;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>
+              <div class="ann-counter"><span id="annCharCount">0</span> / 4096</div>
+            </div>
+            <!-- Правая колонка: preview -->
+            <div class="ann-preview">
+              <div class="ann-preview-header">Предпросмотр (Telegram)</div>
+              <div class="ann-preview-bubble">
+                <div id="announcementPreviewContent" style="color:#e0e0e0;font-size:13px;line-height:1.5;word-wrap:break-word;">Начните писать текст...</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;margin-bottom:8px;">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e0e0e0;font-size:14px;">
               <input type="checkbox" id="annSendTelegram" checked> Telegram
             </label>
@@ -1853,10 +1887,6 @@
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e0e0e0;font-size:14px;">
               <input type="checkbox" id="annShowOnSite" checked> Сайт
             </label>
-          </div>
-          <div id="announcementPreview" style="display:none;margin-bottom:12px;padding:12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);">
-            <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px;">Предпросмотр:</div>
-            <div id="announcementPreviewContent" style="color:#e0e0e0;font-size:14px;"></div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button onclick="sendAnnouncement()" style="flex:1;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;cursor:pointer;font-size:14px;">Отправить всем</button>

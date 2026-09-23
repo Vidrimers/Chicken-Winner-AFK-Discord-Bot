@@ -3865,10 +3865,103 @@ function openAnnouncementModal() {
   document.getElementById('announcementTitle').value = '';
   document.getElementById('announcementText').value = '';
   document.getElementById('announcementResult').style.display = 'none';
+  document.getElementById('announcementPreviewContent').innerHTML = 'Начните писать текст...';
+  updateAnnCounter();
+  // Live preview
+  const textarea = document.getElementById('announcementText');
+  const titleInput = document.getElementById('announcementTitle');
+  textarea.oninput = updateAnnPreview;
+  titleInput.oninput = updateAnnPreview;
 }
 
 function closeAnnouncementModal() {
   document.getElementById('announcementModal').style.display = 'none';
+}
+
+function updateAnnPreview() {
+  const title = document.getElementById('announcementTitle').value.trim();
+  const text = document.getElementById('announcementText').value;
+  const preview = document.getElementById('announcementPreviewContent');
+
+  if (!title && !text.trim()) {
+    preview.innerHTML = 'Начните писать текст...';
+    return;
+  }
+
+  let html = '';
+  if (title) {
+    html += `<div style="font-weight:bold;font-size:15px;margin-bottom:8px;">📢 ${escapeHtmlSimple(title)}</div>`;
+  }
+  if (text.trim()) {
+    let formatted = escapeHtmlSimple(text);
+    // Markdown → HTML
+    formatted = formatted.replace(/\*([^*]+)\*/g, '<b>$1</b>');
+    formatted = formatted.replace(/_([^_]+)_/g, '<i>$1</i>');
+    formatted = formatted.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:1px 4px;border-radius:3px;">$1</code>');
+    formatted = formatted.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+    formatted = formatted.replace(/\n/g, '<br>');
+    html += formatted;
+  }
+  html += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.1);font-size:11px;color:rgba(255,255,255,0.3);">━━━━━━━━━━━━━━━━━━━━</div>';
+  preview.innerHTML = html;
+  updateAnnCounter();
+}
+
+function updateAnnCounter() {
+  const text = document.getElementById('announcementText').value;
+  const title = document.getElementById('announcementTitle').value;
+  const count = text.length + title.length;
+  const el = document.getElementById('annCharCount');
+  el.textContent = count;
+  el.className = count > 4096 ? 'over' : count > 3500 ? 'warn' : '';
+}
+
+function annFormat(type) {
+  const textarea = document.getElementById('announcementText');
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selected = textarea.value.substring(start, end);
+
+  const wrappers = {
+    bold: ['*', '*'],
+    italic: ['_', '_'],
+    underline: ['__', '__'],
+    strike: ['~~', '~~'],
+    code: ['`', '`'],
+    spoiler: ['||', '||'],
+  };
+
+  if (wrappers[type]) {
+    const [pre, post] = wrappers[type];
+    const replacement = selected ? `${pre}${selected}${post}` : `${pre}текст${post}`;
+    textarea.setRangeText(replacement, start, end, 'select');
+    textarea.focus();
+    if (!selected) {
+      textarea.selectionStart = start + pre.length;
+      textarea.selectionEnd = start + pre.length + 5;
+    }
+  } else if (type === 'bullet') {
+    const lineStart = textarea.value.lastIndexOf('\n', start - 1) + 1;
+    textarea.setRangeText('• ', lineStart, lineStart, 'end');
+    textarea.focus();
+  } else if (type === 'quote') {
+    const lineStart = textarea.value.lastIndexOf('\n', start - 1) + 1;
+    textarea.setRangeText('> ', lineStart, lineStart, 'end');
+    textarea.focus();
+  } else if (type === 'divider') {
+    textarea.setRangeText('\n━━━━━━━━━━━━━━━━━━━━\n', start, end, 'end');
+    textarea.focus();
+  }
+
+  updateAnnPreview();
+}
+
+function annEmoji(emoji) {
+  const textarea = document.getElementById('announcementText');
+  const pos = textarea.selectionStart;
+  textarea.setRangeText(emoji, pos, pos, 'end');
+  textarea.focus();
+  updateAnnPreview();
 }
 
 async function sendAnnouncement() {

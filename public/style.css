@@ -1828,3 +1828,106 @@ body[data-theme="die-my-darling"] .faceit-block {
   background: rgba(244, 67, 54, 0.2);
   color: #f44336;
 }
+
+/* ===== ANNOUNCEMENT EDITOR ===== */
+
+.ann-split {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ann-editor {
+  flex: 1;
+  min-width: 0;
+}
+
+.ann-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+}
+
+.ann-tool-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+  min-width: 28px;
+  text-align: center;
+}
+
+.ann-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.ann-emoji {
+  font-size: 15px;
+}
+
+.ann-toolbar-sep {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 2px 4px;
+}
+
+.ann-counter {
+  text-align: right;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 4px;
+}
+
+.ann-counter .warn {
+  color: #ff9800;
+}
+
+.ann-counter .over {
+  color: #f44336;
+}
+
+.ann-preview {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ann-preview-header {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+}
+
+.ann-preview-bubble {
+  flex: 1;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0 0 8px 8px;
+  overflow-y: auto;
+  max-height: 250px;
+}
+
+@media (max-width: 768px) {
+  .ann-split {
+    flex-direction: column;
+  }
+  .ann-preview {
+    display: none;
+  }
+}
