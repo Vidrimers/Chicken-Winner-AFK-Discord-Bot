@@ -342,6 +342,7 @@ function toggleSearch() {
   const section = document.getElementById('searchSection');
   const btn = document.getElementById('searchToggleBtn');
   const input = document.getElementById('profileSearchInput');
+  const clearBtn = document.getElementById('profileSearchClearBtn');
 
   const isOpen = section.classList.contains('open');
 
@@ -350,11 +351,13 @@ function toggleSearch() {
     section.classList.remove('open');
     btn.classList.remove('active');
     input.value = '';
+    toggleClearBtn(input, clearBtn);
     filterProfileCards('');
   } else {
     // Открываем с автофокусом
     section.classList.add('open');
     btn.classList.add('active');
+    toggleClearBtn(input, clearBtn);
     setTimeout(() => input.focus(), 350);
   }
 }
@@ -1423,6 +1426,9 @@ function initClearableInput(inputId, clearBtnId, onClear) {
     if (onClear) onClear('');
     input.focus();
   });
+
+  // Проверяем начальное состояние
+  toggleClearBtn(input, clearBtn);
 }
 
 /**
