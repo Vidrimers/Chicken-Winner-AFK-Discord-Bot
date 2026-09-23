@@ -1189,6 +1189,15 @@ async function openStatsModal() {
     const ch = stats.cheater || { totalChecked: 0, bannedFound: 0 };
     const bt = stats.bot || { totalChecked: 0, bannedFound: 0 };
 
+    // Подготавливаем достижения
+    const achievements = stats.achievements || [];
+    const ACH = (typeof ACHIEVEMENTS !== 'undefined') ? ACHIEVEMENTS : {};
+    const achList = achievements.map(a => ({
+      id: a.id,
+      name: ACH[a.id]?.name || a.id,
+      desc: ACH[a.id]?.description || '',
+    }));
+
     content.innerHTML = `
       <div class="stats-section">
         <h3>🚨 Читеры</h3>
@@ -1208,13 +1217,53 @@ async function openStatsModal() {
         <div class="stats-row"><span>Всего с ограничениями:</span><span class="stats-value stats-danger">${ch.bannedFound + bt.bannedFound}</span></div>
       </div>
       <div class="stats-section stats-achievements">
-        <h3>🏆 Достижения</h3>
-        <p class="stats-hint">Достижения по читерам будут здесь. Достижения по ботам — в будущем.</p>
+        <h3>🏆 Достижения по читерам</h3>
+        <div id="statsAchGrid"></div>
+        <div id="statsAchPagination" class="stats-ach-pagination"></div>
       </div>
     `;
+
+    renderStatsAchievements(achList, 0);
   } catch (err) {
     content.innerHTML = '<div class="stats-loading" style="color:#f44336;">Ошибка загрузки статистики</div>';
   }
+}
+
+const STATS_ACH_PER_PAGE = 6;
+
+function renderStatsAchievements(list, page) {
+  const grid = document.getElementById('statsAchGrid');
+  const pag = document.getElementById('statsAchPagination');
+  if (!grid) return;
+
+  if (!list.length) {
+    grid.innerHTML = '<p class="stats-hint">Достижений пока нет</p>';
+    if (pag) pag.innerHTML = '';
+    return;
+  }
+
+  const totalPages = Math.ceil(list.length / STATS_ACH_PER_PAGE);
+  const start = page * STATS_ACH_PER_PAGE;
+  const pageItems = list.slice(start, start + STATS_ACH_PER_PAGE);
+
+  grid.innerHTML = `<div class="stats-ach-grid">${pageItems.map(a => `
+    <div class="stats-ach-card">
+      <div class="stats-ach-name">${escapeHtml(a.name)}</div>
+      <div class="stats-ach-desc">${escapeHtml(a.desc)}</div>
+    </div>
+  `).join('')}</div>`;
+
+  if (totalPages > 1) {
+    let pagHtml = '';
+    pagHtml += `<button class="stats-ach-arrow" ${page === 0 ? 'disabled' : ''} onclick="renderStatsAchievements(window._statsAchList, ${page - 1})">←</button>`;
+    pagHtml += `<span class="stats-ach-page">${page + 1} / ${totalPages}</span>`;
+    pagHtml += `<button class="stats-ach-arrow" ${page >= totalPages - 1 ? 'disabled' : ''} onclick="renderStatsAchievements(window._statsAchList, ${page + 1})">→</button>`;
+    pag.innerHTML = pagHtml;
+  } else {
+    pag.innerHTML = '';
+  }
+
+  window._statsAchList = list;
 }
 
 function closeStatsModal() {

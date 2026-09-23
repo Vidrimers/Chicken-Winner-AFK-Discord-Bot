@@ -412,8 +412,16 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    */
   router.get('/stats', requireAuth, (req, res) => {
     try {
-      const stats = db.getUserCombinedStats(req.authenticatedUserId);
-      res.json(stats);
+      const userId = req.authenticatedUserId;
+      const stats = db.getUserCombinedStats(userId);
+
+      // Получаем разблокированные достижения, фильтруем только читерские
+      const allAchievements = db.getUserAchievements(userId);
+      const cheaterAchievements = allAchievements
+        .filter(a => a.achievement_id && (a.achievement_id.startsWith('checker_') || a.achievement_id.startsWith('cheater_found_')))
+        .map(a => ({ id: a.achievement_id, unlocked_at: a.unlocked_at }));
+
+      res.json({ ...stats, achievements: cheaterAchievements });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
