@@ -410,15 +410,10 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
     const minutes = Math.floor(elapsed / 60);
     const seconds = elapsed % 60;
     const timeStr = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
-    const totalNotified = notified + notifiedOthers;
-    const notifLine = totalNotified > 0
-      ? `📨 Уведомлений: ${totalNotified} (свои: ${notified} / чужие: ${notifiedOthers})\n`
-      : '';
     await sendTelegramReport(
       `✅ <b>Проверка читеров завершена</b>\n\n` +
       `📊 Проверено: ${totalChecked}\n` +
       `🔄 Обновлено: ${updated}\n` +
-      notifLine +
       `⏱ Время: ${timeStr}`
     );
 
@@ -559,15 +554,10 @@ export async function runBotBanCheck(db, sendTelegramReport, sendTelegramMessage
     const result = { timestamp: Date.now(), totalChecked, updated, notified, notifiedOthers };
     log(`🤖 Проверка ботов завершена. Проверено: ${totalChecked}, обновлено: ${updated}, уведомлений: ${notified} свои / ${notifiedOthers} чужие`);
 
-    const totalNotifiedBot = notified + notifiedOthers;
-    const notifLineBot = totalNotifiedBot > 0
-      ? `📨 Уведомлений: ${totalNotifiedBot} (свои: ${notified} / чужие: ${notifiedOthers})\n`
-      : '';
     await sendTelegramReport(
       `✅ <b>Проверка ботов завершена</b>\n\n` +
       `📊 Проверено: ${totalChecked}\n` +
       `🔄 Обновлено: ${updated}\n` +
-      notifLineBot +
       `⏱ Время: ${timeStr}`
     );
 
