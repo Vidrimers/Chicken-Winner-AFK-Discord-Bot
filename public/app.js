@@ -4071,7 +4071,14 @@ let backfillPollTimer = null;
 
 function openBackfillModal() {
   document.getElementById('backfillModal').style.display = 'flex';
+  document.getElementById('backfillHelp').style.display = 'none';
   updateBackfillStatus();
+
+  // Кнопка справки
+  document.getElementById('backfillInfoBtn').onclick = () => {
+    const help = document.getElementById('backfillHelp');
+    help.style.display = help.style.display === 'none' ? 'block' : 'none';
+  };
 }
 
 function closeBackfillModal() {

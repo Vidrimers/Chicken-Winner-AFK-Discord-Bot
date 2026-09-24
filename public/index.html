@@ -1910,12 +1910,24 @@
       <div class="modal-box" style="max-width:450px">
         <div class="modal-box-header">
           <h2>🔄 Заполнение steam_cache</h2>
+          <button class="info-btn" id="backfillInfoBtn" title="Справка" style="margin-left:auto;margin-right:8px;">?</button>
           <button class="modal-close-btn" onclick="closeBackfillModal()">&times;</button>
         </div>
         <div class="modal-box-body">
           <p style="color:#aaa;margin-bottom:15px;font-size:14px;">Заполняет CS2/FACEIT статистику для профилей без кэша. Работает в фоне, можно закрыть окно.</p>
           <div id="backfillStatus" style="margin-bottom:15px;"></div>
           <button id="backfillStartBtn" onclick="startBackfill()" style="width:100%;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;cursor:pointer;font-size:14px;">Запустить</button>
+          <div id="backfillHelp" style="display:none;margin-top:15px;padding:12px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);color:#c0c0c0;font-size:13px;line-height:1.6;">
+            <b style="color:#e0e0e0;">Что такое steam_cache?</b><br><br>
+            Это сохранённая статистика Steam (CS2) и FACEIT для каждого профиля. Она используется для:<br>
+            • <b>Секция CS2</b> — часы, матчи, K/D, HS%, винрейт<br>
+            • <b>Секция FACEIT</b> — уровень, ELO, матчи, винрейт<br>
+            • <b>Бейдж "Подозрительно"</b> — анализ сигналов (молодой аккаунт, мало часов при высоком K/D, бан FACEIT)<br><br>
+            <b style="color:#e0e0e0;">Как работает?</b><br><br>
+            При добавлении читера/бота кэш заполняется автоматически. Кэш обновляется раз в час при повторном обращении. Если профиль добавлен через Discord/Telegram и кэша нет — эта кнопка заполнит все недостающие записи.<br><br>
+            <b style="color:#e0e0e0;">Почему не все сразу?</b><br><br>
+            Steam API имеет лимиты на запросы. Обработка идёт по 5 профилей за раз с паузой 1.5 секунды между волнами, чтобы не получить бан по API.
+          </div>
         </div>
       </div>
     </div>
