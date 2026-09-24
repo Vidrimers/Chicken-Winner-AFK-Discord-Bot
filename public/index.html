@@ -1554,6 +1554,14 @@
                   <span class="admin-btn-text">Объявление</span>
                 </button>
                 <button
+                  id="backfillSteamCacheBtn"
+                  onclick="openBackfillModal()"
+                  class="admin-btn"
+                >
+                  <span class="admin-btn-icon">🔄</span>
+                  <span class="admin-btn-text">Заполнить steam_cache</span>
+                </button>
+                <button
                   id="bugReportsBtn"
                   onclick="openBugReportsModal()"
                   class="admin-btn"
@@ -1893,6 +1901,21 @@
             <button onclick="sendAnnouncementTest()" style="padding:12px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.05);color:#e0e0e0;cursor:pointer;font-size:14px;">Отправить себе</button>
           </div>
           <div id="announcementResult" style="margin-top:10px;font-size:13px;display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модалка бэкфилла steam_cache (админ) -->
+    <div class="modal-overlay" id="backfillModal" style="display:none" onclick="if(event.target===this)closeBackfillModal()">
+      <div class="modal-box" style="max-width:450px">
+        <div class="modal-box-header">
+          <h2>🔄 Заполнение steam_cache</h2>
+          <button class="modal-close-btn" onclick="closeBackfillModal()">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <p style="color:#aaa;margin-bottom:15px;font-size:14px;">Заполняет CS2/FACEIT статистику для профилей без кэша. Работает в фоне, можно закрыть окно.</p>
+          <div id="backfillStatus" style="margin-bottom:15px;"></div>
+          <button id="backfillStartBtn" onclick="startBackfill()" style="width:100%;padding:12px;border:none;border-radius:8px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-weight:600;cursor:pointer;font-size:14px;">Запустить</button>
         </div>
       </div>
     </div>

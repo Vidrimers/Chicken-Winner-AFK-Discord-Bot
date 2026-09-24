@@ -766,6 +766,12 @@ export class DatabaseManager {
     return result ?? null;
   }
 
+  getProfilesWithoutSteamCache() {
+    return this.prepare(
+      'SELECT steam_id FROM cheater_checks WHERE steam_cache IS NULL OR steam_cache = \'\''
+    ).all();
+  }
+
   // ===== BUG REPORTS =====
 
   createBugReport(userId, username, bugText) {

@@ -3,6 +3,7 @@ import { log, error as logError } from '../../utils/logger.js';
 import { formatTime } from '../../utils/time.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { stripRtl } from '../../utils/rtl.js';
+import { getCachedStats } from '../../steam/statsCache.js';
 
 /**
  * Роуты для админ-панели
@@ -1094,6 +1095,73 @@ export function createAdminRouter(db, discordClient, telegram, notificationServi
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
+  });
+
+  // ===== BACKFILL STEAM CACHE =====
+
+  let backfillState = { running: false, total: 0, processed: 0, filled: 0, skipped: 0, errors: 0, startedAt: null };
+
+  router.post('/backfill-steam-cache', (req, res) => {
+    if (backfillState.running) {
+      return res.json({ started: false, message: 'Уже выполняется' });
+    }
+
+    const profiles = db.getProfilesWithoutSteamCache();
+    backfillState = { running: true, total: profiles.length, processed: 0, filled: 0, skipped: 0, errors: 0, startedAt: Date.now() };
+
+    if (profiles.length === 0) {
+      backfillState.running = false;
+      return res.json({ started: true, total: 0, message: 'Все профили уже имеют кэш' });
+    }
+
+    log(`🔄 Запуск бэкфилла steam_cache: ${profiles.length} профилей`);
+
+    // Запускаем в фоне
+    (async () => {
+      const BATCH = 5;
+      for (let i = 0; i < profiles.length; i += BATCH) {
+        const batch = profiles.slice(i, i + BATCH);
+        await Promise.allSettled(batch.map(async (p) => {
+          try {
+            await getCachedStats(p.steam_id, db, 'cheater_checks', p.steam_id);
+            backfillState.filled++;
+          } catch (err) {
+            backfillState.errors++;
+          }
+        }));
+        backfillState.processed += batch.length;
+        if (i + BATCH < profiles.length) {
+          await new Promise(r => setTimeout(r, 1500));
+        }
+      }
+
+      backfillState.running = false;
+      const elapsed = Math.round((Date.now() - backfillState.startedAt) / 1000);
+      const min = Math.floor(elapsed / 60);
+      const sec = elapsed % 60;
+      const timeStr = min > 0 ? `${min} мин ${sec} сек` : `${sec} сек`;
+
+      log(`✅ Бэкфилл steam_cache завершён: ${backfillState.filled} заполнено, ${backfillState.errors} ошибок`);
+
+      // Отчёт в Telegram
+      if (telegram && telegram.sendTelegramReport) {
+        try {
+          await telegram.sendTelegramReport(
+            `✅ <b>Заполнение steam_cache завершено</b>\n\n` +
+            `📊 Обработано: ${backfillState.processed}\n` +
+            `✅ Заполнено: ${backfillState.filled}\n` +
+            `❌ Ошибок: ${backfillState.errors}\n` +
+            `⏱ Время: ${timeStr}`
+          );
+        } catch (e) { /* ignore */ }
+      }
+    })();
+
+    res.json({ started: true, total: profiles.length });
+  });
+
+  router.get('/backfill-steam-cache/status', (req, res) => {
+    res.json(backfillState);
   });
 
   return router;

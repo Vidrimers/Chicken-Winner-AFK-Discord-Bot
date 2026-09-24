@@ -4064,3 +4064,72 @@ function escapeHtmlSimple(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+// ===== BACKFILL STEAM CACHE (ADMIN) =====
+
+let backfillPollTimer = null;
+
+function openBackfillModal() {
+  document.getElementById('backfillModal').style.display = 'flex';
+  updateBackfillStatus();
+}
+
+function closeBackfillModal() {
+  document.getElementById('backfillModal').style.display = 'none';
+  if (backfillPollTimer) { clearInterval(backfillPollTimer); backfillPollTimer = null; }
+}
+
+async function updateBackfillStatus() {
+  try {
+    const res = await fetch('/api/admin/backfill-steam-cache/status');
+    const data = await res.json();
+    const el = document.getElementById('backfillStatus');
+    const btn = document.getElementById('backfillStartBtn');
+
+    if (data.running) {
+      btn.disabled = true;
+      btn.textContent = 'Выполняется...';
+      el.innerHTML = `
+        <div style="background:rgba(102,126,234,0.1);border:1px solid rgba(102,126,234,0.3);border-radius:8px;padding:12px;font-size:14px;color:#e0e0e0;">
+          <div>Обработано: <b>${data.processed}</b> / ${data.total}</div>
+          <div>✅ Заполнено: <b>${data.filled}</b></div>
+          <div>❌ Ошибок: <b>${data.errors}</b></div>
+        </div>
+      `;
+      if (!backfillPollTimer) backfillPollTimer = setInterval(updateBackfillStatus, 2000);
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Запустить';
+      if (backfillPollTimer) { clearInterval(backfillPollTimer); backfillPollTimer = null; }
+      if (data.total > 0 && data.processed > 0) {
+        el.innerHTML = `
+          <div style="background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.3);border-radius:8px;padding:12px;font-size:14px;color:#e0e0e0;">
+            <div>✅ Завершено!</div>
+            <div>Обработано: <b>${data.processed}</b></div>
+            <div>Заполнено: <b>${data.filled}</b></div>
+            <div>Ошибок: <b>${data.errors}</b></div>
+          </div>
+        `;
+      } else {
+        el.innerHTML = '<div style="color:#aaa;font-size:14px;">Нажмите "Запустить" для начала</div>';
+      }
+    }
+  } catch (err) {
+    document.getElementById('backfillStatus').innerHTML = '<div style="color:#f44336;font-size:13px;">Ошибка загрузки статуса</div>';
+  }
+}
+
+async function startBackfill() {
+  try {
+    const res = await fetch('/api/admin/backfill-steam-cache', { method: 'POST' });
+    const data = await res.json();
+    if (data.started) {
+      showNotification(`Запущено: ${data.total} профилей`, 'success');
+      updateBackfillStatus();
+    } else {
+      showNotification(data.message || 'Уже выполняется', 'error');
+    }
+  } catch (err) {
+    showNotification('Ошибка запуска', 'error');
+  }
+}
