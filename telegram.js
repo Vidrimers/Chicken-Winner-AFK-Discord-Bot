@@ -4,6 +4,7 @@ dotenv.config();
 import fs from 'fs';
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session';
 import { checkProfiles } from './src/steam/steamApi.js';
+import { getCachedStats } from './src/steam/statsCache.js';
 import { STEAM_CONFIG, SERVER_CONFIG } from './src/config.js';
 import { EmbedBuilder } from 'discord.js';
 import { stripRtl } from './src/utils/rtl.js';
@@ -865,6 +866,10 @@ async function handleSteamUrlCheck(chatId, text, type = 'cheater') {
           checkedByUsername: discordUsername,
         }, type);
 
+        // Кэшируем CS2/FACEIT статистику в фоне
+        getCachedStats(profile.steamId, db, 'cheater_checks', profile.steamId)
+          .catch(err => console.error('[TG] Ошибка кэширования Steam stats:', err.message));
+
         const isBanned = profile.vacBanned || profile.numberOfGameBans > 0 || profile.communityBanned || (profile.economyBan && profile.economyBan !== 'none');
         const statusEmoji = isBanned ? '🔴' : '🟢';
         const statusText = isBanned ? 'ЗАБАНЕН' : 'ЧИСТО';
@@ -896,6 +901,10 @@ async function handleSteamUrlCheck(chatId, text, type = 'cheater') {
         checkedByDiscordId: discordId,
         checkedByUsername: discordUsername,
       }, type);
+
+      // Кэшируем CS2/FACEIT статистику в фоне
+      getCachedStats(profile.steamId, db, 'cheater_checks', profile.steamId)
+        .catch(err => console.error('[TG] Ошибка кэширования Steam stats:', err.message));
 
       // Уведомление админу
       try {

@@ -3,6 +3,7 @@ import { validateConfig, SERVER_CONFIG } from './config.js';
 import { success, log, error as logError } from './utils/logger.js';
 import { DatabaseManager } from './database/index.js';
 import { GamesDatabase } from './database/games-db.js';
+import { getCachedStats } from './steam/statsCache.js';
 import { PriceNotificationService } from './services/price-notification.js';
 import { AchievementSystem } from './achievements/index.js';
 import { AchievementNotificationService } from './achievements/notifications.js';
@@ -238,6 +239,13 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
           });
         }
         db.markCheaterBanUpdated(profile.steamId, updateReasons.join(','));
+
+        // Бэкфилл steam_cache если отсутствует
+        if (!existing.steam_cache) {
+          getCachedStats(profile.steamId, db, 'cheater_checks', profile.steamId)
+            .catch(() => {});
+        }
+
         updated++;
 
         const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
@@ -496,6 +504,13 @@ export async function runBotBanCheck(db, sendTelegramReport, sendTelegramMessage
           checkedByUsername: existing.checked_by_username
         }, 'bot');
         db.markBanUpdated(profile.steamId, 'ban');
+
+        // Бэкфилл steam_cache если отсутствует
+        if (!existing.steam_cache) {
+          getCachedStats(profile.steamId, db, 'cheater_checks', profile.steamId)
+            .catch(() => {});
+        }
+
         updated++;
 
         const banDetails = [];

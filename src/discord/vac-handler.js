@@ -1,5 +1,6 @@
 import { EmbedBuilder } from 'discord.js';
 import { checkProfiles } from '../steam/steamApi.js';
+import { getCachedStats } from '../steam/statsCache.js';
 import { STEAM_CONFIG, SERVER_CONFIG } from '../config.js';
 
 // Цветовая схема
@@ -162,6 +163,10 @@ export class VacHandler {
             checkedByUsername: discordDisplayName
           }, type);
 
+          // Кэшируем CS2/FACEIT статистику в фоне
+          getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
+            .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
+
           const embed = this.buildProfileEmbed(profile, existing.checked_by_username, type);
           
           // Разные сообщения: сам добавлял или кто-то другой
@@ -186,6 +191,10 @@ export class VacHandler {
           checkedByDiscordId: message.author.id,
           checkedByUsername: discordDisplayName
         }, type);
+
+        // Кэшируем CS2/FACEIT статистику в фоне
+        getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
+          .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
 
         // Уведомление админу
         if (this.telegram && this.telegram.sendNewCheaterNotification) {
@@ -293,6 +302,11 @@ export class VacHandler {
               checkedByDiscordId: message.author.id,
               checkedByUsername: discordDisplayName
             }, type);
+
+            // Кэшируем CS2/FACEIT статистику в фоне
+            getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
+              .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
+
             duplicates.push({ profile, existing });
           } else {
             // Сохраняем новый профиль
@@ -301,6 +315,11 @@ export class VacHandler {
               checkedByDiscordId: message.author.id,
               checkedByUsername: discordDisplayName
             }, type);
+
+            // Кэшируем CS2/FACEIT статистику в фоне
+            getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
+              .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
+
             newProfiles.push(profile);
           }
         }
@@ -449,6 +468,10 @@ export class VacHandler {
             checkedByDiscordId: message.author.id,
             checkedByUsername: discordDisplayName2
           }, type);
+
+          // Кэшируем CS2/FACEIT статистику в фоне
+          getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
+            .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
         }
 
         // Уведомление админу о новых профилях
