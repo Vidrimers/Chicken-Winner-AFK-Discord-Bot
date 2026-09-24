@@ -567,6 +567,10 @@ export async function runBotBanCheck(db, sendTelegramReport, sendTelegramMessage
     }
 
     const result = { timestamp: Date.now(), totalChecked, updated, notified, notifiedOthers };
+    const elapsed = Math.round((Date.now() - botCheckState.startedAt) / 1000);
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    const timeStr = minutes > 0 ? `${minutes} мин ${seconds} сек` : `${seconds} сек`;
     log(`🤖 Проверка ботов завершена. Проверено: ${totalChecked}, обновлено: ${updated}, уведомлений: ${notified} свои / ${notifiedOthers} чужие`);
 
     await sendTelegramReport(
