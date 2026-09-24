@@ -272,7 +272,7 @@ async function loadUserDataAuto(userId) {
       // Игнорируем ошибки отправки статистики посещений
     }
 
-    displayUserStats(data.stats, data.cheaterStats);
+    displayUserStats(data.stats, data.cheaterStats, data.botStats);
     displayUserAchievements(data.achievements);
     displayUserSettings(data.settings);
     // Предзаполняем поле Steam ID если уже привязан
@@ -504,7 +504,7 @@ async function _doLogin(userId) {
       // Игнорируем ошибки отправки статистики посещений
     }
 
-    displayUserStats(data.stats, data.cheaterStats);
+    displayUserStats(data.stats, data.cheaterStats, data.botStats);
     displayUserAchievements(data.achievements);
     displayUserSettings(data.settings);
     // Предзаполняем поле Steam ID если уже привязан
@@ -587,7 +587,7 @@ async function _doLogin(userId) {
 
 // Продолжение в следующем файле из-за ограничения размера
 
-function displayUserStats(stats, cheaterStats) {
+function displayUserStats(stats, cheaterStats, botStats) {
   const statsGrid = document.getElementById("statsGrid");
   const voiceHours = Math.floor((stats.total_voice_time || 0) / 3600);
   const voiceMinutes = Math.floor(((stats.total_voice_time || 0) % 3600) / 60);
@@ -600,6 +600,8 @@ function displayUserStats(stats, cheaterStats) {
 
   const cheaterProfilesChecked = cheaterStats ? cheaterStats.totalChecked || 0 : 0;
   const cheaterBannedFound = cheaterStats ? cheaterStats.bannedFound || 0 : 0;
+  const botProfilesChecked = botStats ? botStats.totalChecked || 0 : 0;
+  const botBannedFound = botStats ? botStats.bannedFound || 0 : 0;
 
   let longestSessionDate = "";
   if (stats.longest_session_date) {
@@ -672,6 +674,14 @@ function displayUserStats(stats, cheaterStats) {
         <div class="stat-card">
             <div class="stat-number">${cheaterBannedFound}</div>
             <div class="stat-label">Выявлено читеров</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${botProfilesChecked}</div>
+            <div class="stat-label">Проверено ботов</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">${botBannedFound}</div>
+            <div class="stat-label">Выявлено ботов</div>
         </div>
     `;
 }

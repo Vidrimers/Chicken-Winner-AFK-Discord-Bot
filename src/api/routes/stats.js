@@ -91,13 +91,14 @@ export function createStatsRouter(db, discordClient, telegram, gamesDb) {
         settings.priceNotifyTelegram = priceSettings.notify_telegram === 1;
       }
 
-      const cheaterStats = db.getUserCheaterStats(userId);
+      const combinedStats = db.getUserCombinedStats(userId);
 
       res.json({
         stats: stats || {},
         achievements,
         settings,
-        cheaterStats,
+        cheaterStats: combinedStats.cheater,
+        botStats: combinedStats.bot,
       });
     } catch (error) {
       logError(`Ошибка в API /api/stats: ${error.message}`);

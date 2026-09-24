@@ -391,6 +391,14 @@ function displayUserModal(
                                 <div class="stat-value">${data.cheaterStats ? data.cheaterStats.bannedFound : 0}</div>
                                 <div class="stat-label">Выявлено читеров</div>
                             </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${data.botStats ? data.botStats.totalChecked : 0}</div>
+                                <div class="stat-label">Проверено ботов</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${data.botStats ? data.botStats.bannedFound : 0}</div>
+                                <div class="stat-label">Выявлено ботов</div>
+                            </div>
                         </div>
                     </div>
                 </div>
