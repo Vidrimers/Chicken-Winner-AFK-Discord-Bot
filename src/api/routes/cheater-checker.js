@@ -418,7 +418,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       // Получаем разблокированные достижения, фильтруем только читерские
       const allAchievements = db.getUserAchievements(userId);
       const cheaterAchievements = allAchievements
-        .filter(a => a.achievement_id && (a.achievement_id.startsWith('checker_') || a.achievement_id.startsWith('cheater_found_')))
+        .filter(a => a.achievement_id && (a.achievement_id.startsWith('checker_') || a.achievement_id.startsWith('cheater_found_') || a.achievement_id.startsWith('bot_check_') || a.achievement_id.startsWith('bot_found_')))
         .map(a => ({ id: a.achievement_id, unlocked_at: a.unlocked_at }));
 
       res.json({ ...stats, achievements: cheaterAchievements });

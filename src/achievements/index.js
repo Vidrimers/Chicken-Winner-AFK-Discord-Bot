@@ -58,9 +58,11 @@ export class AchievementSystem {
     }
 
     // Подгружаем статистику cheater-checker и мержим в stats
-    const cheaterStats = this.db.getUserCheaterStats(userId);
-    stats.totalChecked = cheaterStats.totalChecked || 0;
-    stats.bannedFound = cheaterStats.bannedFound || 0;
+    const combinedStats = this.db.getUserCombinedStats(userId);
+    stats.totalChecked = combinedStats.cheater.totalChecked || 0;
+    stats.bannedFound = combinedStats.cheater.bannedFound || 0;
+    stats.botTotalChecked = combinedStats.bot.totalChecked || 0;
+    stats.botBannedFound = combinedStats.bot.bannedFound || 0;
 
     for (const [id, achievement] of Object.entries(this.definitions)) {
       // Пропускаем специальные достижения

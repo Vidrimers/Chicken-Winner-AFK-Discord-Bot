@@ -1192,12 +1192,18 @@ async function openStatsModal() {
     // Подготавливаем достижения
     const achievements = stats.achievements || [];
     const ACH = (typeof ACHIEVEMENTS !== 'undefined') ? ACHIEVEMENTS : {};
-    const achList = achievements.map(a => ({
-      id: a.id,
-      name: ACH[a.id]?.name || a.id,
-      desc: ACH[a.id]?.description || '',
-      points: ACH[a.id]?.points || 0,
-    }));
+    const cheaterAch = [];
+    const botAch = [];
+    achievements.forEach(a => {
+      const item = {
+        id: a.id,
+        name: ACH[a.id]?.name || a.id,
+        desc: ACH[a.id]?.description || '',
+        points: ACH[a.id]?.points || 0,
+      };
+      if (a.id.startsWith('bot_')) botAch.push(item);
+      else cheaterAch.push(item);
+    });
 
     content.innerHTML = `
       <div class="stats-section">
@@ -1222,9 +1228,15 @@ async function openStatsModal() {
         <div id="statsAchGrid"></div>
         <div id="statsAchPagination" class="stats-ach-pagination"></div>
       </div>
+      <div class="stats-section stats-achievements">
+        <h3>🗑️ Достижения по ботам</h3>
+        <div id="statsBotAchGrid"></div>
+        <div id="statsBotAchPagination" class="stats-ach-pagination"></div>
+      </div>
     `;
 
-    renderStatsAchievements(achList, 0);
+    renderStatsAchievements(cheaterAch, 0, 'statsAchGrid', 'statsAchPagination');
+    renderStatsAchievements(botAch, 0, 'statsBotAchGrid', 'statsBotAchPagination');
   } catch (err) {
     content.innerHTML = '<div class="stats-loading" style="color:#f44336;">Ошибка загрузки статистики</div>';
   }
@@ -1232,9 +1244,9 @@ async function openStatsModal() {
 
 const STATS_ACH_PER_PAGE = 6;
 
-function renderStatsAchievements(list, page) {
-  const grid = document.getElementById('statsAchGrid');
-  const pag = document.getElementById('statsAchPagination');
+function renderStatsAchievements(list, page, gridId, pagId) {
+  const grid = document.getElementById(gridId);
+  const pag = document.getElementById(pagId);
   if (!grid) return;
 
   if (!list.length) {
@@ -1257,15 +1269,15 @@ function renderStatsAchievements(list, page) {
 
   if (totalPages > 1) {
     let pagHtml = '';
-    pagHtml += `<button class="stats-ach-arrow" ${page === 0 ? 'disabled' : ''} onclick="renderStatsAchievements(window._statsAchList, ${page - 1})">←</button>`;
+    pagHtml += `<button class="stats-ach-arrow" ${page === 0 ? 'disabled' : ''} onclick="renderStatsAchievements(window._statsAchList_${gridId}, ${page - 1}, '${gridId}', '${pagId}')">←</button>`;
     pagHtml += `<span class="stats-ach-page">${page + 1} / ${totalPages}</span>`;
-    pagHtml += `<button class="stats-ach-arrow" ${page >= totalPages - 1 ? 'disabled' : ''} onclick="renderStatsAchievements(window._statsAchList, ${page + 1})">→</button>`;
+    pagHtml += `<button class="stats-ach-arrow" ${page >= totalPages - 1 ? 'disabled' : ''} onclick="renderStatsAchievements(window._statsAchList_${gridId}, ${page + 1}, '${gridId}', '${pagId}')">→</button>`;
     pag.innerHTML = pagHtml;
   } else {
     pag.innerHTML = '';
   }
 
-  window._statsAchList = list;
+  window['_statsAchList_' + gridId] = list;
 }
 
 function closeStatsModal() {

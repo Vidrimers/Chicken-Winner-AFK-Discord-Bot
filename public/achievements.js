@@ -55,7 +55,28 @@ const REGULAR_ACHIEVEMENTS = {
     cheater_found_300: { name: '🚨 Истребитель шнырей', description: 'Выявил 300 читеров', points: 600 },
     cheater_found_500: { name: '🚨 Valve мне должны', description: 'Выявил 500 читеров', points: 800 },
     cheater_found_700: { name: '🚨 У меня нет жизни, но есть статистика', description: 'Выявил 700 читеров', points: 900 },
-    cheater_found_1000: { name: '🚨 VAC на ножках', description: 'Выявил 1000 читеров', points: 1000 }
+    cheater_found_1000: { name: '🚨 VAC на ножках', description: 'Выявил 1000 читеров', points: 1000 },
+    // Bot Checker — проверенные боты
+    bot_check_first: { name: '🔍 Заглянул под капот', description: 'Проверил первого бота', points: 5 },
+    bot_check_beginner: { name: '🔍 Ревизия железа', description: 'Проверил 10 ботов', points: 10 },
+    bot_check_active: { name: '🔍 Беседа с тостером', description: 'Проверил 25 ботов', points: 25 },
+    bot_check_veteran: { name: '🔍 Считаю транзисторы', description: 'Проверил 50 ботов', points: 50 },
+    bot_check_master: { name: '🔍 Спорю с микроволновкой', description: 'Проверил 100 ботов', points: 100 },
+    bot_check_300: { name: '🔍 Психотерапевт для роботов', description: 'Проверил 300 ботов', points: 200 },
+    bot_check_500: { name: '🔍 Философ с мультиваркой', description: 'Проверил 500 ботов', points: 350 },
+    bot_check_700: { name: '🔍 Собеседник пылесоса', description: 'Проверил 700 ботов', points: 500 },
+    bot_check_1000: { name: '🔍 Дрессировщик холодильников', description: 'Проверил 1000 ботов', points: 750 },
+    // Bot Checker — выявленные боты
+    bot_found_first: { name: '🗑️ Поймал за проводами', description: 'Выявил первого бота', points: 15 },
+    bot_found_5: { name: '🗑️ Выключатель питания', description: 'Выявил 5 ботов', points: 25 },
+    bot_found_10: { name: '🗑️ Контролёр розеток', description: 'Выявил 10 ботов', points: 50 },
+    bot_found_25: { name: '🗑️ Сборщик металлолома', description: 'Выявил 25 ботов', points: 150 },
+    bot_found_50: { name: '🗑️ Мясорубка для ИИ', description: 'Выявил 50 ботов', points: 300 },
+    bot_found_100: { name: '🗑️ Санитар серверной', description: 'Выявил 100 ботов', points: 450 },
+    bot_found_300: { name: '🗑️ Истребитель бездушных', description: 'Выявил 300 ботов', points: 600 },
+    bot_found_500: { name: '🗑️ Палач машинного смысла', description: 'Выявил 500 ботов', points: 800 },
+    bot_found_700: { name: '🗑️ Апокалипсис роботов', description: 'Выявил 700 ботов', points: 900 },
+    bot_found_1000: { name: '🗑️ Судный день для ИИ', description: 'Выявил 1000 ботов', points: 1000 }
 };
 
 const SPECIAL_ACHIEVEMENTS = {
