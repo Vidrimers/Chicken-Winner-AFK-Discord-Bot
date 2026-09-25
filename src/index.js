@@ -453,6 +453,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
  * Запуск проверки банов ботов. Вызывается после runBanCheck.
  */
 export async function runBotBanCheck(db, sendTelegramReport, sendTelegramMessageToUser) {
+  const botCheckState = { isChecking: true, startedAt: Date.now() };
   try {
     log('🤖 Перепроверка ботов из БД...');
     const { checkProfiles } = await import('./steam/steamApi.js');
