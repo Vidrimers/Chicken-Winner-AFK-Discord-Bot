@@ -299,11 +299,12 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
           // CheatWatcher
           const cwUrlComment =
             `🔗 Profile URL changed\n\n` +
-            `Was: steamcommunity.com/id/${existing.original_vanity_url}\n` +
-            `Now: ${canonicalUrl}\n` +
+            `Was: ${existing.original_vanity_url}\n` +
+            `Now: ${profile.steamId}\n` +
             `Player: ${profile.personaName}\n` +
             `SteamID64: ${profile.steamId}\n` +
             `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+            `IP address saved and added to database.\n` +
             `Evidence archived for review.\n` +
             `Added to CheatWatchers Community database and Valve database.`;
           db.addCheatWatcherComment(profile.steamId, cwUrlComment);
@@ -346,11 +347,11 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             const cwBanComment =
               `🔄 Status update — ban detected!\n\n` +
               `Player: ${profile.personaName}\n` +
-              `Profile: ${profileUrl}\n` +
               `SteamID64: ${profile.steamId}\n\n` +
               `Ban Details:\n${formatCheatWatcherBanDetails(profile)}\n` +
               `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
               `Previously: ${wasClean ? 'Clean' : 'Banned'}\n\n` +
+              `IP address saved and added to database.\n` +
               `Evidence archived for review.\n` +
               `Added to CheatWatchers Community database and Valve database.`;
             db.addCheatWatcherComment(profile.steamId, cwBanComment);

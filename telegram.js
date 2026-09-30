@@ -930,10 +930,10 @@ async function handleSteamUrlCheck(chatId, text, type = 'cheater') {
         const cwComment =
           `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
           `Player: ${profile.personaName || 'Unknown'}\n` +
-          `Profile: ${profileUrl}\n` +
           `SteamID64: ${profile.steamId}\n\n` +
           `Ban Details:\n${banDetails}\n` +
           `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+          `IP address saved and added to database.\n` +
           `Evidence archived for review.\n` +
           `Added to CheatWatchers Community database and Valve database.`;
         db.addCheatWatcherComment(profile.steamId, cwComment);

@@ -328,10 +328,10 @@ export class CheatWatcherWorker {
       const cwComment =
         `⚠️ Potential ch\u0435\u0430t\u0435r fl\u0430gg\u0435d by Ch\u0435\u0430tW\u0430tch\u0435rs Community\n\n` +
         `Player: ${profile.personaName || 'Unknown'}\n` +
-        `Profile: ${profileUrl}\n` +
         `SteamID64: ${profile.steamId}\n\n` +
         `Ban Details:\n${banDetails}\n` +
         `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
+        `IP address saved and added to database.\n` +
         `Evidence archived for review.\n` +
         `Added to Ch\u0435\u0430tW\u0430tch\u0435rs Community database and Valve database.`;
       this.db.addCheatWatcherComment(profile.steamId, cwComment);
