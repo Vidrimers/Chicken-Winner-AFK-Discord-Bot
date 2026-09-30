@@ -297,10 +297,12 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
           notificationQueue.push(...collectUserNotifications(db, existing, urlMessage));
 
           // CheatWatcher
+          const vanityMatch = profile.profileUrl?.match(/steamcommunity\.com\/id\/([^/?]+)/);
+          const nowVanity = vanityMatch ? vanityMatch[1] : profile.steamId;
           const cwUrlComment =
             `🔗 Profile URL changed\n\n` +
             `Was: ${existing.original_vanity_url}\n` +
-            `Now: ${profile.steamId}\n` +
+            `Now: ${nowVanity}\n` +
             `Player: ${profile.personaName}\n` +
             `SteamID64: ${profile.steamId}\n` +
             `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
