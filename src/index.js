@@ -272,18 +272,6 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
 
           if (shouldNotifyAdmin(db, 'nick')) notificationQueue.push({ type: 'admin', message: nickMessage });
           notificationQueue.push(...collectNickNotifications(db, existing, nickMessage));
-
-          // CheatWatcher
-          const cwNickComment =
-            `✏️ Nickname changed\n\n` +
-            `Was: ${existing.persona_name}\n` +
-            `Now: ${profile.personaName}\n` +
-            `Profile: ${profileUrl}\n` +
-            `SteamID64: ${profile.steamId}\n` +
-            `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-            `Evidence archived for review.\n` +
-            `Added to CheatWatchers Community database and Valve database.`;
-          db.addCheatWatcherComment(profile.steamId, cwNickComment);
         }
 
         // === Смена vanity URL ===
