@@ -291,7 +291,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    */
   router.post('/mark-viewed', requireAuth, (req, res) => {
     try {
-      const type = req.body.type || 'cheater';
+      const type = req.body?.type || 'cheater';
       db.markLastView(req.authenticatedUserId, type);
       res.json({ success: true });
     } catch (error) {
@@ -306,7 +306,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   router.post('/favorites/:steamId', requireAuth, (req, res) => {
     try {
       const { steamId } = req.params;
-      const type = req.body.type || 'cheater';
+      const type = req.body?.type || 'cheater';
       if (!/^\d{17}$/.test(steamId)) {
         return res.status(400).json({ error: 'Невалидный SteamID64' });
       }
@@ -340,7 +340,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   router.post('/notes/:steamId', requireAuth, (req, res) => {
     try {
       const { steamId } = req.params;
-      const { text, type = 'cheater' } = req.body;
+      const { text, type = 'cheater' } = req.body || {};
       if (!text || !text.trim()) {
         return res.status(400).json({ error: 'Текст заметки обязателен' });
       }
@@ -362,7 +362,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   router.put('/notes/:noteId', requireAuth, (req, res) => {
     try {
       const { noteId } = req.params;
-      const { text } = req.body;
+      const { text } = req.body || {};
       if (!text || !text.trim()) {
         return res.status(400).json({ error: 'Текст заметки обязателен' });
       }
