@@ -57,7 +57,7 @@ export class SessionManager {
     
     res.setHeader(
       'Set-Cookie',
-      `sessionId=${sessionId}; Path=/; Max-Age=${30 * 86400}; SameSite=Strict; HttpOnly`
+      `sessionId=${sessionId}; Path=/; Max-Age=${30 * 86400}; SameSite=Lax; HttpOnly`
     );
     return sessionId;
   }
