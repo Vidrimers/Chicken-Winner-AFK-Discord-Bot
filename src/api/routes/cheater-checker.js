@@ -4,6 +4,7 @@ import { getCachedStats } from '../../steam/statsCache.js';
 import { USER_IDS, STEAM_CONFIG } from '../../config.js';
 import { EmbedBuilder } from 'discord.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { error as logError } from '../../utils/logger.js';
 
 /**
  * Форматирует детали банов для CheatWatcher комментария (английский)
@@ -312,6 +313,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       const result = db.toggleFavorite(req.authenticatedUserId, steamId, type);
       res.json(result);
     } catch (error) {
+      logError(`Ошибка toggleFavorite: ${error.message}`);
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
   });
