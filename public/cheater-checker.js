@@ -634,7 +634,7 @@ function createProfileCard(profile, isBanned) {
       </div>
       <div class="card-actions">
         <a href="${profileUrl}" target="_blank" rel="noopener" class="card-action-btn profile-link-btn"><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Профиль</a>
-        <button class="card-action-btn friends-btn" data-steam-id="${steamId}" onclick="openFriendsModal('${steamId}', event)" title="Друзья читера">
+        <button class="card-action-btn friends-btn" data-steam-id="${steamId}" onclick="openFriendsModal('${steamId}', event)" title="Друзья читера" style="display:none">
           <svg class="icon" aria-hidden="true"><use href="#icon-users"></use></svg> Друзья<span class="friends-count" data-count-for="${steamId}"></span>
         </button>
         <button class="card-action-btn friends-refresh-btn" data-steam-id="${steamId}" onclick="refreshFriends('${steamId}', event)" title="Обновить список друзей">
