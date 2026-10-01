@@ -160,6 +160,17 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
         // Асинхронно подтягиваем Steam/CS2 статистику в фоне (не блокируем ответ)
         getCachedStats(profile.steamId, db, 'cheater_checks', profile.steamId)
           .catch(err => console.error('[CheaterChecker] Ошибка кэширования Steam stats:', err.message));
+
+        // Асинхронно парсим друзей в фоне (только для читеров)
+        if (type === 'cheater') {
+          import('../../steam/steamApi.js').then(({ getFriendsWithDetails }) =>
+            getFriendsWithDetails(profile.steamId).then(friends => {
+              for (const f of friends) {
+                db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
+              }
+            })
+          ).catch(() => {});
+        }
       }
 
       // Обновляем данные о банах для дубликатов (без перезаписи автора)
@@ -425,6 +436,49 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
 
       res.json({ ...stats, achievements: cheaterAchievements });
     } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * GET /api/cheater-checker/friends/:steamId
+   * Получить список друзей читера
+   */
+  router.get('/friends/:steamId', (req, res) => {
+    try {
+      const { steamId } = req.params;
+      const friends = db.getFriendsByCheaterId(steamId);
+      res.json({ friends, count: friends.length });
+    } catch (error) {
+      logError(`Ошибка getFriends: ${error.message}`);
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * POST /api/cheater-checker/friends/:steamId/refresh
+   * Парсинг списка друзей через Steam API
+   */
+  router.post('/friends/:steamId/refresh', requireAuth, async (req, res) => {
+    try {
+      const { steamId } = req.params;
+      const { getFriendsWithDetails } = await import('../../steam/steamApi.js');
+      const friends = await getFriendsWithDetails(steamId);
+
+      if (friends.length === 0) {
+        // Список пуст или приватный — не удаляем существующие
+        const existing = db.getFriendsByCheaterId(steamId);
+        return res.json({ friends: existing, count: existing.length, refreshed: false, message: 'Список друзей пуст или приватный' });
+      }
+
+      for (const f of friends) {
+        db.upsertFriend(steamId, f.steamId, f.customUrl, f.personaName);
+      }
+
+      const updated = db.getFriendsByCheaterId(steamId);
+      res.json({ friends: updated, count: updated.length, refreshed: true });
+    } catch (error) {
+      logError(`Ошибка refreshFriends: ${error.message}`);
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
   });

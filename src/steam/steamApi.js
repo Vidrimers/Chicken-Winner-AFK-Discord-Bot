@@ -96,6 +96,74 @@ export async function getPlayerSummaries(steamIds) {
 }
 
 /**
+ * Получить список друзей SteamID64
+ * @param {string} steamId — SteamID64
+ * @returns {Promise<Array<{steamId: string, customUrl: string|null, personaName: string|null}>>}
+ */
+export async function getFriendList(steamId) {
+  const url = `${STEAM_API_BASE}/ISteamUser/GetFriendList/v1/?key=${STEAM_CONFIG.STEAM_API_KEY}&steamid=${steamId}&relationship=friend`;
+  const response = await fetchWithRetry(url);
+  const data = await response.json();
+  const friends = data.friendslist?.friends || [];
+  return friends.map(f => ({ steamId: f.steamid, customUrl: null, personaName: null }));
+}
+
+/**
+ * Получить custom URL и personaName для списка SteamID64 (батчами по 100)
+ * @param {Array<{steamId: string}>} friends
+ * @returns {Promise<Array<{steamId: string, customUrl: string|null, personaName: string|null}>>}
+ */
+export async function enrichFriends(friends) {
+  const result = [];
+  for (let i = 0; i < friends.length; i += BATCH_SIZE) {
+    const batch = friends.slice(i, i + BATCH_SIZE);
+    const ids = batch.map(f => f.steamId);
+    try {
+      const summaries = await getPlayerSummaries(ids);
+      const summaryMap = new Map(summaries.map(s => [s.steamid, s]));
+      for (const friend of batch) {
+        const s = summaryMap.get(friend.steamId);
+        // Определяем кастомный URL: если personaname совпадает с профилем, значит vanity
+        // На самом деле Steam API не отдаёт vanity напрямую — проверяем через profileurl
+        const customUrl = s?.profileurl ? extractVanityFromUrl(s.profileurl) : null;
+        result.push({
+          steamId: friend.steamId,
+          customUrl,
+          personaName: s?.personaname || null,
+        });
+      }
+    } catch {
+      for (const friend of batch) {
+        result.push({ ...friend });
+      }
+    }
+    if (i + BATCH_SIZE < friends.length) await delay(DELAY_BETWEEN_REQUESTS);
+  }
+  return result;
+}
+
+/**
+ * Извлечь vanity URL из profileurl Steam
+ * @param {string} profileUrl
+ * @returns {string|null}
+ */
+function extractVanityFromUrl(profileUrl) {
+  const match = profileUrl.match(/steamcommunity\.com\/id\/([^/?]+)/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Получить и обогатить полный список друзей
+ * @param {string} steamId — SteamID64
+ * @returns {Promise<Array<{steamId: string, customUrl: string|null, personaName: string|null}>>}
+ */
+export async function getFriendsWithDetails(steamId) {
+  const friends = await getFriendList(steamId);
+  if (friends.length === 0) return [];
+  return enrichFriends(friends);
+}
+
+/**
  * Полная проверка массива URL: парсинг → resolve → bans + summaries → merge
  * @param {string[]} urls
  * @returns {Promise<{ results: Object[], errors: string[] }>}

@@ -1554,3 +1554,118 @@
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.5);
 }
+
+/* ===== ДРУЗЬЯ ЧИТЕРА ===== */
+
+.friends-btn {
+  background: rgba(102, 126, 234, 0.15);
+  color: #a0b0ff;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+}
+
+.friends-btn:hover {
+  background: rgba(102, 126, 234, 0.3);
+}
+
+.friends-refresh-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 6px 10px;
+  min-width: auto;
+}
+
+.friends-refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.friends-count {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.friends-loading {
+  text-align: center;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+}
+
+.friend-item {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.friend-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e0e0e0;
+  margin-bottom: 4px;
+}
+
+.friend-links {
+  font-size: 0.8rem;
+}
+
+.friend-link {
+  color: #6ea8fe;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.friend-link:hover {
+  color: #93c5fd;
+}
+
+.friend-also {
+  margin-top: 3px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.friend-also-link {
+  font-size: 0.75rem;
+}
+
+.friends-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.friends-arrow {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e0e0e0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.friends-arrow:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.4);
+}
+
+.friends-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.friends-page-num {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}

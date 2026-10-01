@@ -229,6 +229,20 @@
       </div>
     </div>
 
+    <!-- Модалка друзей читера -->
+    <div class="modal-overlay" id="friendsModal" style="display:none">
+      <div class="modal-box" style="max-width:550px">
+        <div class="modal-box-header">
+          <h2>👥 Друзья читера</h2>
+          <button class="modal-close-btn" onclick="closeFriendsModal()">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <div id="friendsList"></div>
+          <div id="friendsPagination" class="friends-pagination"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Уведомление -->
     <div class="notification" id="notification" style="display: none">
       <span id="notificationText"></span>

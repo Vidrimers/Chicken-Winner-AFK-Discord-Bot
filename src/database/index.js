@@ -924,6 +924,33 @@ export class DatabaseManager {
     return { pending: pending.count, done: done.count, errors: errors.count };
   }
 
+  // ===== CHEATER FRIENDS =====
+
+  getFriendsByCheaterId(cheaterSteamId) {
+    return this.prepare(
+      'SELECT * FROM cheater_friends WHERE cheater_steam_id = ? ORDER BY friend_persona_name ASC'
+    ).all(cheaterSteamId);
+  }
+
+  getFriendsCount(cheaterSteamId) {
+    const row = this.prepare(
+      'SELECT COUNT(*) as count FROM cheater_friends WHERE cheater_steam_id = ?'
+    ).get(cheaterSteamId);
+    return row ? row.count : 0;
+  }
+
+  upsertFriend(cheaterSteamId, friendSteamId, friendCustomUrl, friendPersonaName) {
+    return this.prepare(
+      `INSERT INTO cheater_friends (cheater_steam_id, friend_steam_id, friend_custom_url, friend_persona_name, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(cheater_steam_id, friend_steam_id) DO UPDATE SET
+        friend_custom_url = excluded.friend_custom_url,
+        friend_persona_name = excluded.friend_persona_name,
+        updated_at = excluded.updated_at`
+    ).run(cheaterSteamId, friendSteamId, friendCustomUrl, friendPersonaName, Date.now(), Date.now());
+  }
+  }
+
   // ===== ANNOUNCEMENTS =====
 
   createAnnouncement(title, text, sentToTelegram, sentToDiscord, showOnSite) {

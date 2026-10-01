@@ -661,5 +661,26 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: таблица cheater_friends (список друзей читеров)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cheater_friends'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE cheater_friends (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          cheater_steam_id TEXT NOT NULL,
+          friend_steam_id TEXT NOT NULL,
+          friend_custom_url TEXT,
+          friend_persona_name TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          UNIQUE(cheater_steam_id, friend_steam_id)
+        )
+      `);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cf_cheater ON cheater_friends(cheater_steam_id)');
+      console.log('✅ Таблица cheater_friends создана');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

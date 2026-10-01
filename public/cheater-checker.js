@@ -240,6 +240,7 @@ function renderBannedPage() {
   
   renderPagination('banned', allBannedProfiles.length, bannedPage);
   bindCardEvents();
+  loadFriendsCounts();
 }
 
 function renderCleanPage() {
@@ -254,6 +255,7 @@ function renderCleanPage() {
   
   renderPagination('clean', allCleanProfiles.length, cleanPage);
   bindCardEvents();
+  loadFriendsCounts();
 }
 
 function renderExternalPage() {
@@ -632,6 +634,12 @@ function createProfileCard(profile, isBanned) {
       </div>
       <div class="card-actions">
         <a href="${profileUrl}" target="_blank" rel="noopener" class="card-action-btn profile-link-btn"><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Профиль</a>
+        <button class="card-action-btn friends-btn" data-steam-id="${steamId}" onclick="openFriendsModal('${steamId}', event)" title="Друзья читера">
+          <svg class="icon" aria-hidden="true"><use href="#icon-users"></use></svg> Друзья<span class="friends-count" data-count-for="${steamId}"></span>
+        </button>
+        <button class="card-action-btn friends-refresh-btn" data-steam-id="${steamId}" onclick="refreshFriends('${steamId}', event)" title="Обновить список друзей">
+          <svg class="icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+        </button>
         ${publishBtn}
       </div>
     </div>
@@ -1847,4 +1855,122 @@ function initAutoResize(textarea) {
   textarea.addEventListener('input', resize);
   textarea.addEventListener('paste', () => setTimeout(resize, 0));
   resize();
+}
+
+// ===== ДРУЗЬЯ ЧИТЕРА =====
+
+const FRIENDS_PER_PAGE = 15;
+let _friendsList = [];
+let _friendsPage = 1;
+let _friendsSteamId = '';
+
+async function openFriendsModal(steamId, event) {
+  if (event) event.stopPropagation();
+  _friendsSteamId = steamId;
+  _friendsPage = 1;
+  document.getElementById('friendsModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('friendsList').innerHTML = '<div class="friends-loading">Загрузка...</div>';
+  document.getElementById('friendsPagination').innerHTML = '';
+
+  try {
+    const res = await fetch(`/api/cheater-checker/friends/${steamId}`);
+    const data = await res.json();
+    _friendsList = data.friends || [];
+    renderFriendsPage();
+  } catch (err) {
+    document.getElementById('friendsList').innerHTML = '<div class="friends-loading" style="color:#f44336;">Ошибка загрузки</div>';
+  }
+}
+
+function closeFriendsModal() {
+  document.getElementById('friendsModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function renderFriendsPage() {
+  const list = document.getElementById('friendsList');
+  const pag = document.getElementById('friendsPagination');
+
+  if (!_friendsList.length) {
+    list.innerHTML = '<div class="friends-loading">Друзья не найдены или список приватный</div>';
+    pag.innerHTML = '';
+    return;
+  }
+
+  const totalPages = Math.ceil(_friendsList.length / FRIENDS_PER_PAGE);
+  const start = (_friendsPage - 1) * FRIENDS_PER_PAGE;
+  const pageItems = _friendsList.slice(start, start + FRIENDS_PER_PAGE);
+
+  list.innerHTML = pageItems.map(f => {
+    const realUrl = `https://steamcommunity.com/profiles/${f.friend_steam_id}`;
+    const name = escapeHtml(f.friend_persona_name || f.friend_steam_id);
+    const customUrl = f.friend_custom_url;
+    let links = `<a href="${realUrl}" target="_blank" rel="noopener" class="friend-link">${realUrl}</a>`;
+    if (customUrl) {
+      const customFull = `https://steamcommunity.com/id/${customUrl}`;
+      links = `<a href="${customFull}" target="_blank" rel="noopener" class="friend-link">${customFull}</a>\n<div class="friend-also">также: <a href="${realUrl}" target="_blank" rel="noopener" class="friend-link friend-also-link">${realUrl}</a></div>`;
+    }
+    return `<div class="friend-item"><div class="friend-name">${name}</div><div class="friend-links">${links}</div></div>`;
+  }).join('');
+
+  if (totalPages > 1) {
+    let pagHtml = '';
+    pagHtml += `<button class="friends-arrow" ${_friendsPage === 1 ? 'disabled' : ''} onclick="goFriendsPage(${_friendsPage - 1})">←</button>`;
+    pagHtml += `<span class="friends-page-num">${_friendsPage} / ${totalPages}</span>`;
+    pagHtml += `<button class="friends-arrow" ${_friendsPage >= totalPages ? 'disabled' : ''} onclick="goFriendsPage(${_friendsPage + 1})">→</button>`;
+    pag.innerHTML = pagHtml;
+  } else {
+    pag.innerHTML = '';
+  }
+}
+
+function goFriendsPage(page) {
+  _friendsPage = page;
+  renderFriendsPage();
+}
+
+async function refreshFriends(steamId, event) {
+  if (event) event.stopPropagation();
+  const btn = document.querySelector(`.friends-refresh-btn[data-steam-id="${steamId}"]`);
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+
+  try {
+    const res = await fetch(`/api/cheater-checker/friends/${steamId}/refresh`, { method: 'POST' });
+    const data = await res.json();
+    if (data.refreshed) {
+      showNotification(`Обновлено: ${data.count} друзей`, 'success');
+    } else {
+      showNotification(data.message || 'Список не обновлён', 'error');
+    }
+    // Обновляем счётчик
+    const countEl = document.querySelector(`.friends-count[data-count-for="${steamId}"]`);
+    if (countEl) countEl.textContent = data.count > 0 ? ` (${data.count})` : '';
+    // Если модалка открыта — перерисовываем
+    if (document.getElementById('friendsModal').style.display !== 'none' && _friendsSteamId === steamId) {
+      _friendsList = data.friends || [];
+      _friendsPage = 1;
+      renderFriendsPage();
+    }
+  } catch (err) {
+    showNotification('Ошибка обновления', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+}
+
+/**
+ * Загружает количество друзей для карточек после рендера
+ */
+async function loadFriendsCounts() {
+  const countEls = document.querySelectorAll('.friends-count');
+  for (const el of countEls) {
+    const steamId = el.dataset.countFor;
+    if (!steamId) continue;
+    try {
+      const res = await fetch(`/api/cheater-checker/friends/${steamId}`);
+      const data = await res.json();
+      el.textContent = data.count > 0 ? ` (${data.count})` : '';
+    } catch { /* ignore */ }
+  }
 }
