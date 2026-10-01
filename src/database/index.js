@@ -949,7 +949,6 @@ export class DatabaseManager {
         updated_at = excluded.updated_at`
     ).run(cheaterSteamId, friendSteamId, friendCustomUrl, friendPersonaName, Date.now(), Date.now());
   }
-  }
 
   // ===== ANNOUNCEMENTS =====
 
