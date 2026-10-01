@@ -1,6 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 import { checkProfiles } from '../steam/steamApi.js';
 import { getCachedStats } from '../steam/statsCache.js';
+import { getFriendsWithDetails } from '../steam/steamApi.js';
 import { STEAM_CONFIG, SERVER_CONFIG } from '../config.js';
 
 // Цветовая схема
@@ -167,6 +168,15 @@ export class VacHandler {
           getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
             .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
 
+          // Парсим друзей в фоне
+          if (type === 'cheater') {
+            getFriendsWithDetails(profile.steamId).then(friends => {
+              for (const f of friends) {
+                this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
+              }
+            }).catch(() => {});
+          }
+
           const embed = this.buildProfileEmbed(profile, existing.checked_by_username, type);
           
           // Разные сообщения: сам добавлял или кто-то другой
@@ -195,6 +205,15 @@ export class VacHandler {
         // Кэшируем CS2/FACEIT статистику в фоне
         getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
           .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
+
+        // Парсим друзей в фоне
+        if (type === 'cheater') {
+          getFriendsWithDetails(profile.steamId).then(friends => {
+            for (const f of friends) {
+              this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
+            }
+          }).catch(() => {});
+        }
 
         // Уведомление админу
         if (this.telegram && this.telegram.sendNewCheaterNotification) {
@@ -307,6 +326,15 @@ export class VacHandler {
             getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
               .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
 
+            // Парсим друзей в фоне
+            if (type === 'cheater') {
+              getFriendsWithDetails(profile.steamId).then(friends => {
+                for (const f of friends) {
+                  this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
+                }
+              }).catch(() => {});
+            }
+
             duplicates.push({ profile, existing });
           } else {
             // Сохраняем новый профиль
@@ -319,6 +347,15 @@ export class VacHandler {
             // Кэшируем CS2/FACEIT статистику в фоне
             getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
               .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
+
+            // Парсим друзей в фоне
+            if (type === 'cheater') {
+              getFriendsWithDetails(profile.steamId).then(friends => {
+                for (const f of friends) {
+                  this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
+                }
+              }).catch(() => {});
+            }
 
             newProfiles.push(profile);
           }
@@ -472,6 +509,15 @@ export class VacHandler {
           // Кэшируем CS2/FACEIT статистику в фоне
           getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
             .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
+
+          // Парсим друзей в фоне
+          if (type === 'cheater') {
+            getFriendsWithDetails(profile.steamId).then(friends => {
+              for (const f of friends) {
+                this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
+              }
+            }).catch(() => {});
+          }
         }
 
         // Уведомление админу о новых профилях

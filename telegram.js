@@ -5,6 +5,7 @@ import fs from 'fs';
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session';
 import { checkProfiles } from './src/steam/steamApi.js';
 import { getCachedStats } from './src/steam/statsCache.js';
+import { getFriendsWithDetails } from './src/steam/steamApi.js';
 import { STEAM_CONFIG, SERVER_CONFIG } from './src/config.js';
 import { EmbedBuilder } from 'discord.js';
 import { stripRtl } from './src/utils/rtl.js';
@@ -870,6 +871,15 @@ async function handleSteamUrlCheck(chatId, text, type = 'cheater') {
         getCachedStats(profile.steamId, db, 'cheater_checks', profile.steamId)
           .catch(err => console.error('[TG] Ошибка кэширования Steam stats:', err.message));
 
+        // Парсим друзей в фоне
+        if (type === 'cheater') {
+          getFriendsWithDetails(profile.steamId).then(friends => {
+            for (const f of friends) {
+              db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
+            }
+          }).catch(() => {});
+        }
+
         const isBanned = profile.vacBanned || profile.numberOfGameBans > 0 || profile.communityBanned || (profile.economyBan && profile.economyBan !== 'none');
         const statusEmoji = isBanned ? '🔴' : '🟢';
         const statusText = isBanned ? 'ЗАБАНЕН' : 'ЧИСТО';
@@ -905,6 +915,15 @@ async function handleSteamUrlCheck(chatId, text, type = 'cheater') {
       // Кэшируем CS2/FACEIT статистику в фоне
       getCachedStats(profile.steamId, db, 'cheater_checks', profile.steamId)
         .catch(err => console.error('[TG] Ошибка кэширования Steam stats:', err.message));
+
+      // Парсим друзей в фоне
+      if (type === 'cheater') {
+        getFriendsWithDetails(profile.steamId).then(friends => {
+          for (const f of friends) {
+            db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
+          }
+        }).catch(() => {});
+      }
 
       // Уведомление админу
       try {
