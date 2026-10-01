@@ -1945,7 +1945,16 @@ async function refreshFriends(steamId, event) {
     }
     // Обновляем счётчик
     const countEl = document.querySelector(`.friends-count[data-count-for="${steamId}"]`);
-    if (countEl) countEl.textContent = data.count > 0 ? ` (${data.count})` : '';
+    const friendsBtn = document.querySelector(`.friends-btn[data-steam-id="${steamId}"]`);
+    if (countEl) {
+      if (data.count > 0) {
+        countEl.textContent = ` (${data.count})`;
+        if (friendsBtn) friendsBtn.style.display = '';
+      } else {
+        countEl.textContent = '';
+        if (friendsBtn) friendsBtn.style.display = 'none';
+      }
+    }
     // Если модалка открыта — перерисовываем
     if (document.getElementById('friendsModal').style.display !== 'none' && _friendsSteamId === steamId) {
       _friendsList = data.friends || [];
@@ -1970,7 +1979,14 @@ async function loadFriendsCounts() {
     try {
       const res = await fetch(`/api/cheater-checker/friends/${steamId}`);
       const data = await res.json();
-      el.textContent = data.count > 0 ? ` (${data.count})` : '';
+      const btn = el.closest('.friends-btn');
+      if (data.count > 0) {
+        el.textContent = ` (${data.count})`;
+        if (btn) btn.style.display = '';
+      } else {
+        el.textContent = '';
+        if (btn) btn.style.display = 'none';
+      }
     } catch { /* ignore */ }
   }
 }
