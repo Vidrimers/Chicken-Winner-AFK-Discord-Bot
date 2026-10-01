@@ -138,6 +138,7 @@ async function loadProfiles() {
     renderCleanPage();
     updateCounters();
     updateFavoritesCount();
+    updateFilterCounts();
 
     // Отмечаем что пользователь просмотрел страницу
     if (currentUserId) {
@@ -333,6 +334,16 @@ function updateFavoritesCount() {
                 allCleanProfilesUnfiltered.filter(p => p.isFavorite).length;
   const el = document.getElementById('favoritesCount');
   if (el) el.textContent = count > 0 ? `(${count})` : '';
+}
+
+function updateFilterCounts() {
+  const all = allBannedProfilesUnfiltered.length + allCleanProfilesUnfiltered.length;
+  const steamWall = allBannedProfilesUnfiltered.filter(p => (p.report_source || 'web') === 'steam_wall').length +
+                    allCleanProfilesUnfiltered.filter(p => (p.report_source || 'web') === 'steam_wall').length;
+  const allEl = document.getElementById('allCount');
+  const swEl = document.getElementById('steamWallCount');
+  if (allEl) allEl.textContent = all > 0 ? `(${all})` : '';
+  if (swEl) swEl.textContent = steamWall > 0 ? `(${steamWall})` : '';
 }
 
 /**
@@ -1581,6 +1592,7 @@ async function toggleFavorite(steamId, event) {
 
     // Обновляем счётчик избранного
     updateFavoritesCount();
+    updateFilterCounts();
 
     // Если сейчас вкладка "Избранное" — обновляем отфильтрованные массивы и перерисовываем
     if (currentReportFilter === 'favorites') {

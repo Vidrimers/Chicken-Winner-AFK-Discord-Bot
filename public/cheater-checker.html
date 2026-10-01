@@ -95,8 +95,8 @@
       <!-- Выбор количества на страницу -->
       <div class="page-size-section">
         <div class="filter-tabs" style="display:flex;gap:6px;margin-bottom:8px;">
-          <button class="filter-tab active" data-filter="all" onclick="setReportFilter('all')">Все</button>
-          <button class="filter-tab" data-filter="steam_wall" onclick="setReportFilter('steam_wall')">📡 Внешние репорты</button>
+          <button class="filter-tab active" data-filter="all" onclick="setReportFilter('all')">Все <span id="allCount" class="filter-tab-count"></span></button>
+          <button class="filter-tab" data-filter="steam_wall" onclick="setReportFilter('steam_wall')">📡 Внешние репорты <span id="steamWallCount" class="filter-tab-count"></span></button>
           <button class="filter-tab" data-filter="favorites" onclick="setReportFilter('favorites')">⭐ Избранное <span id="favoritesCount" class="filter-tab-count"></span></button>
         </div>
         <label for="pageSizeSelect">На странице:</label>
