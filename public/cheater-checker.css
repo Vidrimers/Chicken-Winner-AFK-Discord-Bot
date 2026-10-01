@@ -1666,6 +1666,40 @@
   cursor: default;
 }
 
+.friends-search-toggle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.friends-search-toggle:hover {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.5);
+  color: white;
+}
+
+.friends-search-toggle.active {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.6);
+  color: white;
+}
+
+.friends-search-toggle .icon {
+  width: 14px;
+  height: 14px;
+}
+
 .friends-search-section {
   overflow: hidden;
   max-height: 0;
@@ -1678,6 +1712,11 @@
   max-height: 60px;
   opacity: 1;
   padding: 8px 15px;
+}
+
+.friends-search-section .steam-input {
+  min-width: 100%;
+  width: 100%;
 }
 
 .friends-page-num {
