@@ -102,10 +102,18 @@ export async function getPlayerSummaries(steamIds) {
  */
 export async function getFriendList(steamId) {
   const url = `${STEAM_API_BASE}/ISteamUser/GetFriendList/v1/?key=${STEAM_CONFIG.STEAM_API_KEY}&steamid=${steamId}&relationship=friend`;
-  const response = await fetchWithRetry(url);
-  const data = await response.json();
-  const friends = data.friendslist?.friends || [];
-  return friends.map(f => ({ steamId: f.steamid, customUrl: null, personaName: null }));
+  try {
+    const response = await fetch(url);
+    // 401/403 = приватный список друзей — это не ошибка
+    if (response.status === 401 || response.status === 403) return [];
+    if (!response.ok) throw new Error(`Steam API error: ${response.status}`);
+    const data = await response.json();
+    const friends = data.friendslist?.friends || [];
+    return friends.map(f => ({ steamId: f.steamid, customUrl: null, personaName: null }));
+  } catch (err) {
+    if (err.message.includes('Steam API error')) throw err;
+    return []; // Сетевая ошибка — возвращаем пусто
+  }
 }
 
 /**
