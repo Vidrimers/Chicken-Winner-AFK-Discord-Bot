@@ -448,7 +448,12 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
     try {
       const { steamId } = req.params;
       const friends = db.getFriendsByCheaterId(steamId);
-      res.json({ friends, count: friends.length });
+      // Проверяем какие друзья уже в списке читеров
+      const enriched = friends.map(f => ({
+        ...f,
+        isCheater: !!db.getCheckBySteamId(f.friend_steam_id),
+      }));
+      res.json({ friends: enriched, count: enriched.length });
     } catch (error) {
       logError(`Ошибка getFriends: ${error.message}`);
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });

@@ -1911,7 +1911,10 @@ function renderFriendsPage() {
       const customFull = `https://steamcommunity.com/id/${customUrl}`;
       links = `<a href="${realUrl}" target="_blank" rel="noopener" class="friend-link">${realUrl}</a>\n<div class="friend-also">также: <a href="${customFull}" target="_blank" rel="noopener" class="friend-link friend-also-link">${customFull}</a></div>`;
     }
-    return `<div class="friend-item"><div class="friend-name">${name}</div><div class="friend-links">${links}</div></div>`;
+    const btnClass = f.isCheater ? 'friend-add-btn friend-add-done' : 'friend-add-btn';
+    const btnTitle = f.isCheater ? 'Уже в списке' : 'Добавить в читеры';
+    const btnIcon = f.isCheater ? '✓' : '+';
+    return `<div class="friend-item"><div class="friend-name">${name}</div><div class="friend-links">${links}</div><button class="${btnClass}" title="${btnTitle}" data-steam-id="${f.friend_steam_id}" onclick="addFriendAsCheater('${f.friend_steam_id}', this, event)">${btnIcon}</button></div>`;
   }).join('');
 
   if (totalPages > 1) {
@@ -1928,6 +1931,45 @@ function renderFriendsPage() {
 function goFriendsPage(page) {
   _friendsPage = page;
   renderFriendsPage();
+}
+
+async function addFriendAsCheater(steamId, btn, event) {
+  if (event) event.stopPropagation();
+  if (btn.classList.contains('friend-add-done')) return;
+
+  const url = `https://steamcommunity.com/profiles/${steamId}`;
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    const res = await fetch('/api/cheater-checker/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        urls: [url],
+        checkedByDiscordId: currentUserId,
+        checkedByUsername: currentUsername || currentUserId,
+        type: 'cheater',
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      btn.classList.add('friend-add-done');
+      btn.textContent = '✓';
+      btn.title = 'Уже в списке';
+      showNotification('Добавлено в читеры', 'success');
+      // Обновляем список профилей
+      loadProfiles();
+    } else {
+      btn.disabled = false;
+      btn.textContent = '+';
+      showNotification(data.error || 'Ошибка добавления', 'error');
+    }
+  } catch {
+    btn.disabled = false;
+    btn.textContent = '+';
+    showNotification('Ошибка соединения', 'error');
+  }
 }
 
 async function refreshFriends(steamId, event) {
