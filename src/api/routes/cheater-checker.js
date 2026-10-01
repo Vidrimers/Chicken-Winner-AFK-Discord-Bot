@@ -267,6 +267,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       const enrichedProfiles = profiles.map(profile => ({
         ...profile,
         name_history_count: db.getNameHistoryCount(profile.steam_id, type),
+        friends_count: db.getFriendsCount(profile.steam_id),
         isFavorite: favoriteSteamIds.includes(profile.steam_id),
         notes: userId ? db.getNotes(userId, profile.steam_id, type) : [],
       }));

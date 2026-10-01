@@ -240,7 +240,6 @@ function renderBannedPage() {
   
   renderPagination('banned', allBannedProfiles.length, bannedPage);
   bindCardEvents();
-  loadFriendsCounts();
 }
 
 function renderCleanPage() {
@@ -255,7 +254,6 @@ function renderCleanPage() {
   
   renderPagination('clean', allCleanProfiles.length, cleanPage);
   bindCardEvents();
-  loadFriendsCounts();
 }
 
 function renderExternalPage() {
@@ -634,8 +632,8 @@ function createProfileCard(profile, isBanned) {
       </div>
       <div class="card-actions">
         <a href="${profileUrl}" target="_blank" rel="noopener" class="card-action-btn profile-link-btn"><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Профиль</a>
-        <button class="card-action-btn friends-btn" data-steam-id="${steamId}" onclick="openFriendsModal('${steamId}', event)" title="Друзья читера" style="display:none">
-          <svg class="icon" aria-hidden="true"><use href="#icon-users"></use></svg> Друзья<span class="friends-count" data-count-for="${steamId}"></span>
+        <button class="card-action-btn friends-btn" data-steam-id="${steamId}" onclick="openFriendsModal('${steamId}', event)" title="Друзья читера" style="display:${(profile.friends_count || 0) > 0 ? '' : 'none'}">
+          <svg class="icon" aria-hidden="true"><use href="#icon-users"></use></svg> Друзья<span class="friends-count" data-count-for="${steamId}">${(profile.friends_count || 0) > 0 ? ` (${profile.friends_count})` : ''}</span>
         </button>
         <button class="card-action-btn friends-refresh-btn" data-steam-id="${steamId}" onclick="refreshFriends('${steamId}', event)" title="Обновить список друзей">
           <svg class="icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>
