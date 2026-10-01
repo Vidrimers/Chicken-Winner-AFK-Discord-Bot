@@ -470,10 +470,20 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
     try {
       const { steamId } = req.params;
       const { getFriendsWithDetails } = await import('../../steam/steamApi.js');
-      const friends = await getFriendsWithDetails(steamId);
+      let friends = [];
+      let steamError = false;
+      try {
+        friends = await getFriendsWithDetails(steamId);
+      } catch (e) {
+        steamError = true;
+        logError(`Steam API error при обновлении друзей ${steamId}: ${e.message}`);
+      }
+
+      if (steamError) {
+        return res.status(502).json({ error: 'Steam API временно недоступен. Попробуй позже.' });
+      }
 
       if (friends.length === 0) {
-        // Список пуст или приватный — не удаляем существующие
         const existing = db.getFriendsByCheaterId(steamId);
         db.markFriendsRefreshed(steamId);
         return res.json({ friends: existing, count: existing.length, refreshed: false, message: existing.length > 0 ? 'Друзья были, но читер закрыл доступ. Существующий список сохранён.' : 'Список приватный или пуст. Попробуй позже.' });

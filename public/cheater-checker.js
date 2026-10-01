@@ -2050,11 +2050,11 @@ async function refreshFriends(steamId, event) {
     const data = await res.json();
     if (data.refreshed) {
       showNotification(`Обновлено: ${data.count} друзей`, 'success');
+      // Обновляем tooltip только при успехе
+      if (btn) btn.title = `Обновлено: ${new Date().toLocaleString('ru-RU')}`;
     } else {
       showNotification(data.message || 'Список не обновлён', 'error');
     }
-    // Обновляем tooltip с временем
-    if (btn) btn.title = `Обновлено: ${new Date().toLocaleString('ru-RU')}`;
     // Обновляем счётчик
     const countEl = document.querySelector(`.friends-count[data-count-for="${steamId}"]`);
     const friendsBtn = document.querySelector(`.friends-btn[data-steam-id="${steamId}"]`);
