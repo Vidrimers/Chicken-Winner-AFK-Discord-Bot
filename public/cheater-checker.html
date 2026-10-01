@@ -238,7 +238,10 @@
           <button class="modal-close-btn" onclick="closeFriendsModal()">&times;</button>
         </div>
         <div class="friends-search-section" id="friendsSearchSection">
-          <input type="text" class="steam-input" id="friendsSearchInput" placeholder="Поиск друга..." oninput="filterFriends(this.value)">
+          <div class="input-clear-wrapper" style="min-width:0;">
+            <input type="text" class="steam-input" id="friendsSearchInput" placeholder="Поиск друга..." style="width:100%;" oninput="filterFriends(this.value)">
+            <button class="input-clear-btn" id="friendsSearchClearBtn" title="Очистить" aria-label="Очистить поиск">×</button>
+          </div>
         </div>
         <div class="modal-box-body">
           <div id="friendsList"></div>

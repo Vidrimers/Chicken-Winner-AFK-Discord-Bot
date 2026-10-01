@@ -786,6 +786,7 @@ function bindEvents() {
   // Инпуты с крестиком и авто-очисткой
   initClearableInput('steamUrlInput', 'steamUrlClearBtn');
   initClearableInput('profileSearchInput', 'profileSearchClearBtn', (val) => filterProfileCards(val));
+  initClearableInput('friendsSearchInput', 'friendsSearchClearBtn', (val) => filterFriends(val));
 
   // Селектор количества на страницу
   const pageSizeSelect = document.getElementById('pageSizeSelect');
@@ -1879,10 +1880,20 @@ async function openFriendsModal(steamId, event) {
   if (event) event.stopPropagation();
   _friendsSteamId = steamId;
   _friendsPage = 1;
+  _friendsFilter = '';
   document.getElementById('friendsModal').style.display = 'flex';
   document.body.style.overflow = 'hidden';
   document.getElementById('friendsList').innerHTML = '<div class="friends-loading">Загрузка...</div>';
   document.getElementById('friendsPagination').innerHTML = '';
+
+  // Сбрасываем поиск
+  const searchSection = document.getElementById('friendsSearchSection');
+  const searchBtn = document.getElementById('friendsSearchToggleBtn');
+  const searchInput = document.getElementById('friendsSearchInput');
+  const searchClearBtn = document.getElementById('friendsSearchClearBtn');
+  if (searchSection) searchSection.classList.remove('open');
+  if (searchBtn) searchBtn.classList.remove('active');
+  if (searchInput) { searchInput.value = ''; toggleClearBtn(searchInput, searchClearBtn); }
 
   try {
     const res = await fetch(`/api/cheater-checker/friends/${steamId}`);
@@ -1910,18 +1921,21 @@ function toggleFriendsSearch() {
   const section = document.getElementById('friendsSearchSection');
   const btn = document.getElementById('friendsSearchToggleBtn');
   const input = document.getElementById('friendsSearchInput');
+  const clearBtn = document.getElementById('friendsSearchClearBtn');
   const isOpen = section.classList.contains('open');
 
   if (isOpen) {
     section.classList.remove('open');
     btn.classList.remove('active');
     input.value = '';
+    toggleClearBtn(input, clearBtn);
     _friendsFilter = '';
     _friendsPage = 1;
     renderFriendsPage();
   } else {
     section.classList.add('open');
     btn.classList.add('active');
+    toggleClearBtn(input, clearBtn);
     setTimeout(() => input.focus(), 350);
   }
 }
