@@ -1666,6 +1666,20 @@
   cursor: default;
 }
 
+.friends-search-section {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  padding: 0 15px;
+  transition: max-height 0.35s ease, opacity 0.35s ease, padding 0.35s ease;
+}
+
+.friends-search-section.open {
+  max-height: 60px;
+  opacity: 1;
+  padding: 8px 15px;
+}
+
 .friends-page-num {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.5);

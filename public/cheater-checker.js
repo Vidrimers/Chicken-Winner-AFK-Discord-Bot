@@ -1873,6 +1873,7 @@ const FRIENDS_PER_PAGE = 7;
 let _friendsList = [];
 let _friendsPage = 1;
 let _friendsSteamId = '';
+let _friendsFilter = '';
 
 async function openFriendsModal(steamId, event) {
   if (event) event.stopPropagation();
@@ -1896,21 +1897,64 @@ async function openFriendsModal(steamId, event) {
 function closeFriendsModal() {
   document.getElementById('friendsModal').style.display = 'none';
   document.body.style.overflow = '';
+  // Сбрасываем поиск
+  const searchSection = document.getElementById('friendsSearchSection');
+  const searchBtn = document.getElementById('friendsSearchToggleBtn');
+  const searchInput = document.getElementById('friendsSearchInput');
+  if (searchSection) searchSection.classList.remove('open');
+  if (searchBtn) searchBtn.classList.remove('active');
+  if (searchInput) searchInput.value = '';
+}
+
+function toggleFriendsSearch() {
+  const section = document.getElementById('friendsSearchSection');
+  const btn = document.getElementById('friendsSearchToggleBtn');
+  const input = document.getElementById('friendsSearchInput');
+  const isOpen = section.classList.contains('open');
+
+  if (isOpen) {
+    section.classList.remove('open');
+    btn.classList.remove('active');
+    input.value = '';
+    _friendsFilter = '';
+    _friendsPage = 1;
+    renderFriendsPage();
+  } else {
+    section.classList.add('open');
+    btn.classList.add('active');
+    setTimeout(() => input.focus(), 350);
+  }
+}
+
+function filterFriends(query) {
+  _friendsFilter = query.toLowerCase().trim();
+  _friendsPage = 1;
+  renderFriendsPage();
 }
 
 function renderFriendsPage() {
   const list = document.getElementById('friendsList');
   const pag = document.getElementById('friendsPagination');
 
-  if (!_friendsList.length) {
-    list.innerHTML = '<div class="friends-loading">Друзья не найдены или список приватный</div>';
+  // Фильтрация
+  let filtered = _friendsList;
+  if (_friendsFilter) {
+    filtered = _friendsList.filter(f =>
+      (f.friend_persona_name || '').toLowerCase().includes(_friendsFilter) ||
+      f.friend_steam_id.includes(_friendsFilter) ||
+      (f.friend_custom_url || '').toLowerCase().includes(_friendsFilter)
+    );
+  }
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="friends-loading">${_friendsFilter ? 'Ничего не найдено' : 'Друзья не найдены или список приватный'}</div>`;
     pag.innerHTML = '';
     return;
   }
 
-  const totalPages = Math.ceil(_friendsList.length / FRIENDS_PER_PAGE);
+  const totalPages = Math.ceil(filtered.length / FRIENDS_PER_PAGE);
   const start = (_friendsPage - 1) * FRIENDS_PER_PAGE;
-  const pageItems = _friendsList.slice(start, start + FRIENDS_PER_PAGE);
+  const pageItems = filtered.slice(start, start + FRIENDS_PER_PAGE);
 
   list.innerHTML = pageItems.map(f => {
     const realUrl = `https://steamcommunity.com/profiles/${f.friend_steam_id}`;
