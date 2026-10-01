@@ -268,6 +268,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
         ...profile,
         name_history_count: db.getNameHistoryCount(profile.steam_id, type),
         friends_count: db.getFriendsCount(profile.steam_id),
+        friends_last_refreshed_at: profile.friends_last_refreshed_at || null,
         isFavorite: favoriteSteamIds.includes(profile.steam_id),
         notes: userId ? db.getNotes(userId, profile.steam_id, type) : [],
       }));
@@ -474,12 +475,14 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       if (friends.length === 0) {
         // Список пуст или приватный — не удаляем существующие
         const existing = db.getFriendsByCheaterId(steamId);
-        return res.json({ friends: existing, count: existing.length, refreshed: false, message: 'Список друзей пуст или приватный' });
+        db.markFriendsRefreshed(steamId);
+        return res.json({ friends: existing, count: existing.length, refreshed: false, message: existing.length > 0 ? 'Друзья были, но читер закрыл доступ. Существующий список сохранён.' : 'Список приватный или пуст. Попробуй позже.' });
       }
 
       for (const f of friends) {
         db.upsertFriend(steamId, f.steamId, f.customUrl, f.personaName);
       }
+      db.markFriendsRefreshed(steamId);
 
       const updated = db.getFriendsByCheaterId(steamId);
       res.json({ friends: updated, count: updated.length, refreshed: true });

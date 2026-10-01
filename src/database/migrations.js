@@ -682,5 +682,15 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: добавить friends_last_refreshed_at в cheater_checks
+  {
+    const columns = db.prepare("PRAGMA table_info(cheater_checks)").all();
+    const hasCol = columns.some(c => c.name === 'friends_last_refreshed_at');
+    if (!hasCol) {
+      db.exec("ALTER TABLE cheater_checks ADD COLUMN friends_last_refreshed_at INTEGER");
+      console.log('✅ Колонка friends_last_refreshed_at добавлена в cheater_checks');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

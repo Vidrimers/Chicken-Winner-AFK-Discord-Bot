@@ -646,7 +646,7 @@ function createProfileCard(profile, isBanned) {
         <button class="card-action-btn friends-btn" data-steam-id="${steamId}" onclick="openFriendsModal('${steamId}', event)" title="Друзья читера" style="display:${(profile.friends_count || 0) > 0 ? '' : 'none'}">
           <svg class="icon" aria-hidden="true"><use href="#icon-users"></use></svg> Друзья<span class="friends-count" data-count-for="${steamId}">${(profile.friends_count || 0) > 0 ? ` (${profile.friends_count})` : ''}</span>
         </button>
-        <button class="card-action-btn friends-refresh-btn" data-steam-id="${steamId}" onclick="refreshFriends('${steamId}', event)" title="Обновить список друзей">
+        <button class="card-action-btn friends-refresh-btn" data-steam-id="${steamId}" onclick="refreshFriends('${steamId}', event)" title="${profile.friends_last_refreshed_at ? 'Обновлено: ' + new Date(profile.friends_last_refreshed_at).toLocaleString('ru-RU') : 'Обновить список друзей'}">
           <svg class="icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>
         </button>
         ${publishBtn}
@@ -2053,6 +2053,8 @@ async function refreshFriends(steamId, event) {
     } else {
       showNotification(data.message || 'Список не обновлён', 'error');
     }
+    // Обновляем tooltip с временем
+    if (btn) btn.title = `Обновлено: ${new Date().toLocaleString('ru-RU')}`;
     // Обновляем счётчик
     const countEl = document.querySelector(`.friends-count[data-count-for="${steamId}"]`);
     const friendsBtn = document.querySelector(`.friends-btn[data-steam-id="${steamId}"]`);

@@ -950,6 +950,12 @@ export class DatabaseManager {
     ).run(cheaterSteamId, friendSteamId, friendCustomUrl, friendPersonaName, Date.now(), Date.now());
   }
 
+  markFriendsRefreshed(cheaterSteamId) {
+    return this.prepare(
+      'UPDATE cheater_checks SET friends_last_refreshed_at = ? WHERE steam_id = ?'
+    ).run(Date.now(), cheaterSteamId);
+  }
+
   // ===== ANNOUNCEMENTS =====
 
   createAnnouncement(title, text, sentToTelegram, sentToDiscord, showOnSite) {
