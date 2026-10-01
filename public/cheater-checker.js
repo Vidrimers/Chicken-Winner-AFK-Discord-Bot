@@ -1859,7 +1859,7 @@ function initAutoResize(textarea) {
 
 // ===== ДРУЗЬЯ ЧИТЕРА =====
 
-const FRIENDS_PER_PAGE = 10;
+const FRIENDS_PER_PAGE = 7;
 let _friendsList = [];
 let _friendsPage = 1;
 let _friendsSteamId = '';
