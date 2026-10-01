@@ -1909,7 +1909,7 @@ function renderFriendsPage() {
     let links = `<a href="${realUrl}" target="_blank" rel="noopener" class="friend-link">${realUrl}</a>`;
     if (customUrl) {
       const customFull = `https://steamcommunity.com/id/${customUrl}`;
-      links = `<a href="${customFull}" target="_blank" rel="noopener" class="friend-link">${customFull}</a>\n<div class="friend-also">также: <a href="${realUrl}" target="_blank" rel="noopener" class="friend-link friend-also-link">${realUrl}</a></div>`;
+      links = `<a href="${realUrl}" target="_blank" rel="noopener" class="friend-link">${realUrl}</a>\n<div class="friend-also">также: <a href="${customFull}" target="_blank" rel="noopener" class="friend-link friend-also-link">${customFull}</a></div>`;
     }
     return `<div class="friend-item"><div class="friend-name">${name}</div><div class="friend-links">${links}</div></div>`;
   }).join('');
