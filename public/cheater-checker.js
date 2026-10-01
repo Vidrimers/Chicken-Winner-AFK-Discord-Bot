@@ -1653,7 +1653,7 @@ function editNote(noteId, steamId) {
   if (!noteItem) return;
 
   const noteTextEl = noteItem.querySelector('.note-text');
-  const currentText = noteTextEl.textContent;
+  const currentText = noteTextEl.innerText;
 
   // Заменяем содержимое note-item на textarea
   noteItem.innerHTML = `
