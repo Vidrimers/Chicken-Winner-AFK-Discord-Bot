@@ -1511,7 +1511,7 @@ function toggleClearBtn(input, clearBtn) {
  * Конвертирует URL в тексте в кликабельные ссылки
  */
 function linkifyUrls(text) {
-  const escaped = escapeHtml(text).replace(/\n/g, '<br>');
+  const escaped = escapeHtml(text);
   const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`[\]]+)/g;
   return escaped.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener" class="note-link">$1</a>');
 }

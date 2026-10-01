@@ -1261,6 +1261,7 @@
   color: #d0d0d0;
   word-break: break-word;
   line-height: 1.4;
+  white-space: pre-wrap;
 }
 
 .note-link {
