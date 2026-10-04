@@ -33,7 +33,11 @@ export class CheatWatcherWorker {
 
     this.client.on('webSession', (sessionID, cookies) => {
       this.community.setCookies(cookies);
-      success('[CheatWatcher] Web session established');
+      // Логируем cookies для диагностики
+      const cookieNames = cookies.map(c => c.split('=')[0]).join(', ');
+      log(`[CheatWatcher] Web session established. Cookies: ${cookieNames}`);
+      this._cookies = cookies;
+      this._sessionId = sessionID;
       this.running = true;
       this._processQueue();
       this._startWallPolling();
@@ -343,33 +347,62 @@ export class CheatWatcherWorker {
 
   // ===== POST COMMENT =====
 
-  _postComment(targetSteamId, message) {
-    return new Promise((resolve, reject) => {
-      if (!this.running || !this.client.steamID) {
-        return reject(new Error('Not logged in'));
+  async _postComment(targetSteamId, message) {
+    if (!this.running || !this.client.steamID) {
+      throw new Error('Not logged in');
+    }
+
+    // Заменяем https:// и буквы в триггерных словах чтобы Steam spam filter не скрыл комментарий
+    let sanitizedMessage = message.replace(/https:\/\//g, '');
+    sanitizedMessage = sanitizedMessage
+      .replace(/cheater/gi, (m) => m.replace(/e/g, '\u0435').replace(/a/g, '\u0430'))
+      .replace(/CheatWatchers/gi, (m) => m.replace(/e/g, '\u0435').replace(/a/g, '\u0430'))
+      .replace(/cheat/gi, (m) => m.replace(/e/g, '\u0435').replace(/a/g, '\u0430'));
+
+    const mySteamId = this.client.steamID.getSteamID64();
+    const cookieString = (this._cookies || []).join('; ');
+    const referer = `https://steamcommunity.com/profiles/${mySteamId}/`;
+
+    const formBody = new URLSearchParams({
+      comment: sanitizedMessage,
+      count: '1',
+      sessionid: this._sessionId || '',
+    }).toString();
+
+    const response = await fetch(
+      `https://steamcommunity.com/comment/Profile/post/${mySteamId}/-1`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'Cookie': cookieString,
+          'Referer': referer,
+          'Origin': 'https://steamcommunity.com',
+          'X-Requested-With': 'XMLHttpRequest',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        },
+        body: formBody,
       }
+    );
 
-      // Заменяем https:// и буквы в триггерных словах чтобы Steam spam filter не скрыл комментарий
-      let sanitizedMessage = message.replace(/https:\/\//g, '');
-      sanitizedMessage = sanitizedMessage
-        .replace(/cheater/gi, (m) => m.replace(/e/g, '\u0435').replace(/a/g, '\u0430'))
-        .replace(/CheatWatchers/gi, (m) => m.replace(/e/g, '\u0435').replace(/a/g, '\u0430'))
-        .replace(/cheat/gi, (m) => m.replace(/e/g, '\u0435').replace(/a/g, '\u0430'));
+    const data = await response.json().catch(() => null);
 
-      this.community.postUserComment(
-        { steamid: targetSteamId },
-        sanitizedMessage,
-        (err, result) => {
-          if (err) {
-            logError(`[CheatWatcher] postUserComment error: ${err.message}`);
-            reject(err);
-          } else {
-            log(`[CheatWatcher] postUserComment success: ${JSON.stringify(result)}`);
-            resolve();
-          }
-        }
-      );
-    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${JSON.stringify(data)}`);
+    }
+
+    if (data && data.success) {
+      log(`[CheatWatcher] postUserComment success`);
+      return;
+    }
+
+    if (data && data.error) {
+      logError(`[CheatWatcher] postUserComment error: ${data.error} (body: ${JSON.stringify(data)})`);
+      throw new Error(data.error);
+    }
+
+    logError(`[CheatWatcher] postUserComment unknown response: ${JSON.stringify(data)}`);
+    throw new Error('Unknown error');
   }
 }
 
