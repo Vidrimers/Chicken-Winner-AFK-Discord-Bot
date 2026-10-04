@@ -400,6 +400,41 @@ export function registerRoutes(
       });
     });
 
+    // Очередь комментариев
+    app.get('/api/admin/cheat-watcher/queue', requireAuth, requireAdmin, (req, res) => {
+      const limit = parseInt(req.query.limit) || 50;
+      const offset = parseInt(req.query.offset) || 0;
+      const items = db.getCheatWatcherQueue(limit, offset);
+      const total = db.getCheatWatcherQueueTotal();
+      res.json({ items, total });
+    });
+
+    // Retry одного комментария
+    app.post('/api/admin/cheat-watcher/queue/:id/retry', requireAuth, requireAdmin, (req, res) => {
+      const result = db.retryCheatWatcherComment(parseInt(req.params.id));
+      if (result.changes > 0) {
+        res.json({ success: true });
+      } else {
+        res.status(400).json({ error: 'Запись не найдена или уже не в статусе error' });
+      }
+    });
+
+    // Retry всех ошибочных
+    app.post('/api/admin/cheat-watcher/queue/retry-all', requireAuth, requireAdmin, (req, res) => {
+      const result = db.retryAllCheatWatcherErrors();
+      res.json({ success: true, retried: result.changes });
+    });
+
+    // Удаление ошибочного комментария
+    app.delete('/api/admin/cheat-watcher/queue/:id', requireAuth, requireAdmin, (req, res) => {
+      const result = db.deleteCheatWatcherComment(parseInt(req.params.id));
+      if (result.changes > 0) {
+        res.json({ success: true });
+      } else {
+        res.status(400).json({ error: 'Запись не найдена или не в статусе error' });
+      }
+    });
+
     // QR-логин для CheatWatcher
     app.post('/api/admin/cheat-watcher/qr/start', requireAuth, requireAdmin, async (req, res) => {
       try {

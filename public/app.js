@@ -3758,7 +3758,9 @@ let cwPollInterval = null;
 function openCheatWatcherModal() {
   document.getElementById('cheatWatcherModal').style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  cwQueuePage = 0;
   refreshCheatWatcherStatus();
+  loadCwQueue();
   cwPollInterval = setInterval(refreshCheatWatcherStatus, 5000);
 }
 
@@ -3800,6 +3802,129 @@ async function refreshCheatWatcherStatus() {
       document.getElementById('cwQueueErrors').textContent = data.queue.errors;
     }
   } catch {}
+}
+
+// ===== CHEAT WATCHER QUEUE =====
+
+let cwQueuePage = 0;
+const CW_QUEUE_PAGE_SIZE = 20;
+
+async function loadCwQueue() {
+  try {
+    const res = await fetch(`/api/admin/cheat-watcher/queue?limit=${CW_QUEUE_PAGE_SIZE}&offset=${cwQueuePage * CW_QUEUE_PAGE_SIZE}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderCwQueue(data.items || [], data.total || 0);
+  } catch {}
+}
+
+function renderCwQueue(items, total) {
+  const list = document.getElementById('cwQueueList');
+  const pagination = document.getElementById('cwQueuePagination');
+  const retryAllBtn = document.getElementById('cwRetryAllBtn');
+  if (!list) return;
+
+  // Показываем кнопку Retry all если есть ошибки
+  const hasErrors = items.some(i => i.status === 'error');
+  if (retryAllBtn) retryAllBtn.style.display = hasErrors ? 'inline' : 'none';
+
+  if (items.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:20px;opacity:0.4;font-size:13px;">Очередь пуста</div>';
+    pagination.innerHTML = '';
+    return;
+  }
+
+  list.innerHTML = items.map(item => {
+    const statusBadge = item.status === 'done'
+      ? '<span style="padding:2px 8px;border-radius:8px;background:rgba(76,175,80,0.15);color:#81c784;font-size:10px;font-weight:600;">done</span>'
+      : item.status === 'error'
+        ? '<span style="padding:2px 8px;border-radius:8px;background:rgba(244,67,54,0.15);color:#ef5350;font-size:10px;font-weight:600;">error</span>'
+        : '<span style="padding:2px 8px;border-radius:8px;background:rgba(255,152,0,0.15);color:#ffb74d;font-size:10px;font-weight:600;">pending</span>';
+
+    const truncated = item.comment_text && item.comment_text.length > 100
+      ? item.comment_text.substring(0, 100) + '...'
+      : (item.comment_text || '');
+
+    const errorText = item.error_message
+      ? `<div style="font-size:10px;color:#ef5350;margin-top:4px;opacity:0.7;">${escapeHtml(item.error_message.substring(0, 120))}</div>`
+      : '';
+
+    const actions = item.status === 'error'
+      ? `<div style="display:flex;gap:4px;margin-top:6px;">
+           <button onclick="retryCwItem(${item.id})" style="padding:3px 8px;border-radius:4px;border:none;background:rgba(255,152,0,0.15);color:#ffb74d;font-size:10px;cursor:pointer;">🔄 Retry</button>
+           <button onclick="deleteCwItem(${item.id})" style="padding:3px 8px;border-radius:4px;border:none;background:rgba(244,67,54,0.15);color:#ef5350;font-size:10px;cursor:pointer;">🗑 Delete</button>
+         </div>`
+      : '';
+
+    return `<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px 12px;margin-bottom:6px;cursor:pointer;" onclick="this.querySelector('.cw-full-text').style.display = this.querySelector('.cw-full-text').style.display === 'none' ? 'block' : 'none'">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:11px;opacity:0.6;">#${item.id} · ${item.steam_id}</div>
+        ${statusBadge}
+      </div>
+      <div class="cw-truncated" style="font-size:12px;color:#ccc;margin-top:4px;">${escapeHtml(truncated)}</div>
+      <div class="cw-full-text" style="display:none;font-size:12px;color:#ccc;margin-top:4px;white-space:pre-wrap;">${escapeHtml(item.comment_text || '')}</div>
+      ${errorText}
+      ${actions}
+    </div>`;
+  }).join('');
+
+  // Пагинация
+  const totalPages = Math.ceil(total / CW_QUEUE_PAGE_SIZE);
+  if (totalPages > 1) {
+    pagination.innerHTML =
+      `<button ${cwQueuePage === 0 ? 'disabled' : ''} onclick="cwQueuePage--; loadCwQueue();" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:11px;cursor:pointer;margin-right:6px;">←</button>` +
+      `<span style="font-size:11px;opacity:0.5;">${cwQueuePage + 1} / ${totalPages}</span>` +
+      `<button ${cwQueuePage >= totalPages - 1 ? 'disabled' : ''} onclick="cwQueuePage++; loadCwQueue();" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:11px;cursor:pointer;margin-left:6px;">→</button>`;
+  } else {
+    pagination.innerHTML = '';
+  }
+}
+
+async function retryCwItem(id) {
+  try {
+    const res = await fetch(`/api/admin/cheat-watcher/queue/${id}/retry`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showNotification('Запись возвращена в очередь', 'success');
+      loadCwQueue();
+      refreshCheatWatcherStatus();
+    } else {
+      showNotification(data.error || 'Ошибка', 'error');
+    }
+  } catch {
+    showNotification('Ошибка соединения', 'error');
+  }
+}
+
+async function retryAllCwErrors() {
+  try {
+    const res = await fetch('/api/admin/cheat-watcher/queue/retry-all', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showNotification(`${data.retried} записей возвращено в очередь`, 'success');
+      loadCwQueue();
+      refreshCheatWatcherStatus();
+    }
+  } catch {
+    showNotification('Ошибка соединения', 'error');
+  }
+}
+
+async function deleteCwItem(id) {
+  if (!confirm('Удалить запись из очереди?')) return;
+  try {
+    const res = await fetch(`/api/admin/cheat-watcher/queue/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      showNotification('Запись удалена', 'success');
+      loadCwQueue();
+      refreshCheatWatcherStatus();
+    } else {
+      showNotification(data.error || 'Ошибка', 'error');
+    }
+  } catch {
+    showNotification('Ошибка соединения', 'error');
+  }
 }
 
 async function startCheatWatcherQr() {

@@ -895,6 +895,35 @@ export class DatabaseManager {
     ).run(errorMessage, id);
   }
 
+  getCheatWatcherQueue(limit = 50, offset = 0) {
+    return this.prepare(
+      `SELECT * FROM cheat_watcher_queue ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    ).all(limit, offset);
+  }
+
+  getCheatWatcherQueueTotal() {
+    const row = this.prepare('SELECT COUNT(*) as count FROM cheat_watcher_queue').get();
+    return row ? row.count : 0;
+  }
+
+  retryCheatWatcherComment(id) {
+    return this.prepare(
+      "UPDATE cheat_watcher_queue SET status = 'pending', error_message = NULL WHERE id = ? AND status = 'error'"
+    ).run(id);
+  }
+
+  retryAllCheatWatcherErrors() {
+    return this.prepare(
+      "UPDATE cheat_watcher_queue SET status = 'pending', error_message = NULL WHERE status = 'error'"
+    ).run();
+  }
+
+  deleteCheatWatcherComment(id) {
+    return this.prepare(
+      "DELETE FROM cheat_watcher_queue WHERE id = ? AND status = 'error'"
+    ).run(id);
+  }
+
   // ===== STEAM WALL REPORTS (rate limiting) =====
 
   addSteamWallReport(reporterSteamId, targetSteamId) {

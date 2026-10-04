@@ -1712,6 +1712,19 @@
             </div>
           </div>
 
+          <!-- Очередь комментариев -->
+          <div style="margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <h3 style="margin:0;font-size:14px;opacity:0.8;">📋 Очередь комментариев</h3>
+              <div style="display:flex;gap:6px;">
+                <button onclick="retryAllCwErrors()" id="cwRetryAllBtn" style="padding:4px 10px;border-radius:6px;border:none;background:rgba(255,152,0,0.2);color:#ffb74d;font-size:11px;cursor:pointer;display:none;">🔄 Retry all errors</button>
+                <button onclick="loadCwQueue()" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.5);font-size:11px;cursor:pointer;">↻ Refresh</button>
+              </div>
+            </div>
+            <div id="cwQueueList" style="max-height:300px;overflow-y:auto;"></div>
+            <div id="cwQueuePagination" style="text-align:center;margin-top:8px;"></div>
+          </div>
+
           <div id="cwQrSection" style="display:none;margin-bottom:16px;text-align:center;">
             <div style="font-size:13px;opacity:0.8;margin-bottom:12px;">Scan QR with Steam mobile app</div>
             <div id="cwQrContainer" style="background:#fff;padding:16px;border-radius:8px;display:inline-block;"></div>
