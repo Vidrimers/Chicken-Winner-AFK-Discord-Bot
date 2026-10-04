@@ -513,8 +513,22 @@ function createProfileCard(profile, isBanned) {
   // Определяем источник и имя проверяющего
   const reportSource = profile.report_source || 'web';
   const isExternal = reportSource === 'steam_wall';
+
+  // Для внешних репортов: проверяем читаемость имени, ссылка всегда через /profiles/steamId
+  const reporterSteamId = (profile.reported_by_url || '').match(/profiles\/(\d{17})/)?.[1] || '';
+  const reporterProfileUrl = reporterSteamId ? `https://steamcommunity.com/profiles/${reporterSteamId}` : '#';
+
+  function isReadableName(name) {
+    if (!name || typeof name !== 'string') return false;
+    const cleaned = name.replace(/[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufdd0-\ufdef\ufffe\ufffe\uFEFF\u0000-\u001f]/g, '');
+    if (cleaned.trim().length === 0) return false;
+    // Если после очистки от спецсимволов осталось меньше 2 читаемых символов
+    const readable = cleaned.match(/[\p{L}\p{N}]/gu);
+    return readable && readable.length >= 2;
+  }
+
   const checkerName = isExternal
-    ? `<a href="${escapeHtml(profile.reported_by_url || '#')}" target="_blank" style="color:#81c784;text-decoration:none;">${escapeHtml(profile.reported_by_name || 'External')}</a>`
+    ? `<a href="${escapeHtml(reporterProfileUrl)}" target="_blank" style="color:#81c784;text-decoration:none;">${escapeHtml(isReadableName(profile.reported_by_name) ? profile.reported_by_name : reporterSteamId || 'External')}</a>`
     : escapeHtml(profile.checked_by_username || 'Unknown');
   const sourceBadge = isExternal
     ? `<span class="source-badge source-badge--external">📡 Steam Wall</span>`
