@@ -1185,6 +1185,12 @@ async function confirmDelete() {
         setTimeout(() => card.remove(), 300);
       }
 
+      // Удаляем из массивов
+      allBannedProfiles = allBannedProfiles.filter(p => p.steam_id !== pendingDeleteSteamId);
+      allCleanProfiles = allCleanProfiles.filter(p => p.steam_id !== pendingDeleteSteamId);
+      allBannedProfilesUnfiltered = allBannedProfilesUnfiltered.filter(p => p.steam_id !== pendingDeleteSteamId);
+      allCleanProfilesUnfiltered = allCleanProfilesUnfiltered.filter(p => p.steam_id !== pendingDeleteSteamId);
+
       // Обновляем счётчики
       updateCounters();
       updateFavoritesCount();
