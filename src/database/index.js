@@ -408,6 +408,11 @@ export class DatabaseManager {
   }
 
   deleteCheck(steamId) {
+    // Каскадное удаление всех связанных записей
+    this.prepare('DELETE FROM cheater_friends WHERE cheater_steam_id = ?').run(steamId);
+    this.prepare('DELETE FROM cheater_notes WHERE steam_id = ?').run(steamId);
+    this.prepare('DELETE FROM cheater_favorites WHERE steam_id = ?').run(steamId);
+    this.prepare('DELETE FROM cheater_name_history WHERE steam_id = ?').run(steamId);
     return this.prepare('DELETE FROM cheater_checks WHERE steam_id = ?').run(steamId);
   }
 

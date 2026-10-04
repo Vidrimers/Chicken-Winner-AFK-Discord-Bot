@@ -505,20 +505,82 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
 
   /**
    * DELETE /api/cheater-checker/profiles/:steamId
-   * Удаление записи (только admin)
+   * Каскадное удаление профиля (только admin). Возвращает данные для undo.
    */
   router.delete('/profiles/:steamId', requireAuth, requireAdmin, (req, res) => {
     try {
       const { steamId } = req.params;
 
-      // Валидация steamId (17 цифр)
       if (!/^\d{17}$/.test(steamId)) {
         return res.status(400).json({ error: 'Невалидный SteamID64' });
       }
 
-      db.deleteCheaterCheck(steamId);
+      // Сохраняем данные для undo
+      const profile = db.getCheckBySteamId(steamId);
+      const friends = db.getFriendsByCheaterId(steamId);
+      const notes = db.prepare('SELECT * FROM cheater_notes WHERE steam_id = ?').all(steamId);
+      const favorites = db.prepare('SELECT * FROM cheater_favorites WHERE steam_id = ?').all(steamId);
+      const nameHistory = db.prepare('SELECT * FROM cheater_name_history WHERE steam_id = ?').all(steamId);
+
+      db.deleteCheck(steamId);
+
+      res.json({
+        success: true,
+        undoData: { profile, friends, notes, favorites, nameHistory },
+      });
+    } catch (error) {
+      logError(`Ошибка deleteCheck: ${error.message}`);
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * POST /api/cheater-checker/profiles/:steamId/undo-delete
+   * Восстановление удалённого профиля (только admin)
+   */
+  router.post('/profiles/:steamId/undo-delete', requireAuth, requireAdmin, (req, res) => {
+    try {
+      const { undoData } = req.body;
+      if (!undoData || !undoData.profile) {
+        return res.status(400).json({ error: 'Нет данных для восстановления' });
+      }
+
+      const p = undoData.profile;
+      db.upsertCheck({
+        steamId: p.steam_id,
+        personaName: p.persona_name,
+        avatarUrl: p.avatar_url,
+        profileUrl: p.profile_url,
+        originalVanityUrl: p.original_vanity_url,
+        vacBanned: p.vac_banned,
+        numberOfVacBans: p.number_of_vac_bans,
+        numberOfGameBans: p.number_of_game_bans,
+        daysSinceLastBan: p.days_since_last_ban,
+        communityBanned: p.community_banned,
+        economyBan: p.economy_ban,
+        checkedByDiscordId: p.checked_by_discord_id,
+        checkedByUsername: p.checked_by_username,
+        reportSource: p.report_source,
+        reportedByName: p.reported_by_name,
+        reportedByUrl: p.reported_by_url,
+      }, p.type || 'cheater');
+
+      for (const f of (undoData.friends || [])) {
+        db.upsertFriend(p.steam_id, f.friend_steam_id, f.friend_custom_url, f.friend_persona_name);
+      }
+      for (const n of (undoData.notes || [])) {
+        db.addNote(n.user_id, p.steam_id, n.text, n.type || 'cheater');
+      }
+      for (const fav of (undoData.favorites || [])) {
+        db.addFavorite(fav.user_id, p.steam_id, fav.type || 'cheater');
+      }
+      for (const h of (undoData.nameHistory || [])) {
+        db.addNameHistory(p.steam_id, h.persona_name, h.type || 'cheater');
+      }
+
       res.json({ success: true });
     } catch (error) {
+      logError(`Ошибка undoDelete: ${error.message}`);
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
   });

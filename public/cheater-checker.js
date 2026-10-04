@@ -1184,7 +1184,16 @@ async function confirmDelete() {
         card.style.animation = 'fadeOut 0.3s ease';
         setTimeout(() => card.remove(), 300);
       }
-      showNotification('✅ Запись удалена', 'success');
+
+      // Обновляем счётчики
+      updateCounters();
+      updateFavoritesCount();
+      updateFilterCounts();
+
+      // Undo-уведомление
+      const steamId = pendingDeleteSteamId;
+      const undoData = data.undoData;
+      showUndoNotification(`Удалено: ${escapeHtml(undoData?.profile?.persona_name || steamId)}`, () => undoDelete(steamId, undoData));
     } else {
       showNotification(data.error || 'Ошибка удаления', 'error');
     }
@@ -1194,6 +1203,49 @@ async function confirmDelete() {
   } finally {
     closeConfirmDialog();
   }
+}
+
+async function undoDelete(steamId, undoData) {
+  try {
+    const res = await fetch(`/api/cheater-checker/profiles/${steamId}/undo-delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ undoData }),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showNotification('Восстановлено', 'success');
+      loadProfiles();
+    } else {
+      showNotification(data.error || 'Ошибка восстановления', 'error');
+    }
+  } catch {
+    showNotification('Ошибка соединения', 'error');
+  }
+}
+
+function showUndoNotification(text, onUndo) {
+  const notification = document.getElementById('notification');
+  const notificationText = document.getElementById('notificationText');
+  if (!notification || !notificationText) return;
+
+  notificationText.innerHTML = `${text} <button class="undo-btn" id="undoActionBtn">Отменить</button>`;
+  notification.className = 'notification info';
+  notification.style.display = 'block';
+
+  requestAnimationFrame(() => notification.classList.add('show'));
+
+  const undoBtn = document.getElementById('undoActionBtn');
+  if (undoBtn) undoBtn.onclick = () => {
+    notification.classList.remove('show');
+    setTimeout(() => { notification.style.display = 'none'; }, 400);
+    onUndo();
+  };
+
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => { notification.style.display = 'none'; }, 400);
+  }, 5000);
 }
 
 // ===== МОДАЛКИ =====

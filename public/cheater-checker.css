@@ -409,6 +409,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.profile-card:hover .card-delete-btn {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .card-delete-btn:hover {
@@ -1728,6 +1735,23 @@
 .friends-page-num {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.5);
+}
+
+.undo-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 2px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 8px;
+  transition: all 0.2s;
+}
+
+.undo-btn:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .friend-add-btn {
