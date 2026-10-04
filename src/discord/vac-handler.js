@@ -169,7 +169,7 @@ export class VacHandler {
             .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
 
           // Парсим друзей в фоне
-          if (type === 'cheater') {
+          {
             getFriendsWithDetails(profile.steamId).then(friends => {
               for (const f of friends) {
                 this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
@@ -207,7 +207,7 @@ export class VacHandler {
           .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
 
         // Парсим друзей в фоне
-        if (type === 'cheater') {
+        {
           getFriendsWithDetails(profile.steamId).then(friends => {
             for (const f of friends) {
               this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
@@ -327,7 +327,7 @@ export class VacHandler {
               .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
 
             // Парсим друзей в фоне
-            if (type === 'cheater') {
+            {
               getFriendsWithDetails(profile.steamId).then(friends => {
                 for (const f of friends) {
                   this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
@@ -349,7 +349,7 @@ export class VacHandler {
               .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
 
             // Парсим друзей в фоне
-            if (type === 'cheater') {
+            {
               getFriendsWithDetails(profile.steamId).then(friends => {
                 for (const f of friends) {
                   this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
@@ -511,7 +511,7 @@ export class VacHandler {
             .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
 
           // Парсим друзей в фоне
-          if (type === 'cheater') {
+          {
             getFriendsWithDetails(profile.steamId).then(friends => {
               for (const f of friends) {
                 this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);

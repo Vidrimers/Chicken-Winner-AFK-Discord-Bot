@@ -872,7 +872,7 @@ async function handleSteamUrlCheck(chatId, text, type = 'cheater') {
           .catch(err => console.error('[TG] Ошибка кэширования Steam stats:', err.message));
 
         // Парсим друзей в фоне
-        if (type === 'cheater') {
+        {
           getFriendsWithDetails(profile.steamId).then(friends => {
             for (const f of friends) {
               db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
@@ -917,7 +917,7 @@ async function handleSteamUrlCheck(chatId, text, type = 'cheater') {
         .catch(err => console.error('[TG] Ошибка кэширования Steam stats:', err.message));
 
       // Парсим друзей в фоне
-      if (type === 'cheater') {
+      {
         getFriendsWithDetails(profile.steamId).then(friends => {
           for (const f of friends) {
             db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);

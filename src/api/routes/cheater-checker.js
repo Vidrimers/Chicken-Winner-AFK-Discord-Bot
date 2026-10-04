@@ -161,8 +161,8 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
         getCachedStats(profile.steamId, db, 'cheater_checks', profile.steamId)
           .catch(err => console.error('[CheaterChecker] Ошибка кэширования Steam stats:', err.message));
 
-        // Асинхронно парсим друзей в фоне (только для читеров)
-        if (type === 'cheater') {
+        // Асинхронно парсим друзей в фоне
+        {
           import('../../steam/steamApi.js').then(({ getFriendsWithDetails }) =>
             getFriendsWithDetails(profile.steamId).then(friends => {
               for (const f of friends) {
