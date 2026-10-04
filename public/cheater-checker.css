@@ -399,14 +399,14 @@
 .card-delete-btn {
   position: absolute;
   top: 5px;
-  right: 5px;
-  width: 28px;
-  height: 28px;
+  right: 15px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   border: none;
   background: rgba(255, 68, 68, 0.2);
   color: #ff4444;
-  font-size: 14px;
+  font-size: 9px;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
