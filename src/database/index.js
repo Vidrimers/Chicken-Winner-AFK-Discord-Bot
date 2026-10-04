@@ -932,6 +932,20 @@ export class DatabaseManager {
     ).run(reporterSteamId, targetSteamId);
   }
 
+  getUniqueReportCount(targetSteamId) {
+    const row = this.prepare(
+      'SELECT COUNT(DISTINCT reporter_steam_id) as count FROM steam_wall_reports WHERE target_steam_id = ?'
+    ).get(targetSteamId);
+    return row ? row.count : 0;
+  }
+
+  hasReportedTarget(reporterSteamId, targetSteamId) {
+    const row = this.prepare(
+      'SELECT COUNT(*) as count FROM steam_wall_reports WHERE reporter_steam_id = ? AND target_steam_id = ?'
+    ).get(reporterSteamId, targetSteamId);
+    return row ? row.count > 0 : false;
+  }
+
   getSteamWallReportCount(reporterSteamId, windowMs = 30 * 60 * 1000) {
     const since = new Date(Date.now() - windowMs).toISOString();
     const row = this.prepare(

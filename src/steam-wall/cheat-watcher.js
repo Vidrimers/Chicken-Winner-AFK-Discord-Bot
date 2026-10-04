@@ -280,8 +280,27 @@ export class CheatWatcherWorker {
       // Проверяем дубликат
       const existing = this.db.getCheaterCheckBySteamId(profile.steamId);
       if (existing) {
+        // Проверяем не репортил ли этот же пользователь уже этого читера
+        const alreadyReported = this.db.hasReportedTarget(reporterId, profile.steamId);
+
+        if (!alreadyReported) {
+          // Записываем репорт и отвечаем на стене
+          this.db.addSteamWallReport(reporterId, profile.steamId);
+
+          const dupReply =
+            `⚠️ This profile is already in database.\n` +
+            `Player: ${profile.personaName || 'Unknown'}\n` +
+            `SteamID64: ${profile.steamId}`;
+
+          try {
+            await this._postComment(this.client.steamID.getSteamID64(), dupReply);
+          } catch (err) {
+            logError(`[CheatWatcher] Failed to reply duplicate on wall: ${err.message}`);
+          }
+        }
+
         log(`[CheatWatcher] Duplicate: ${profile.steamId} already in DB`);
-        return; // Дубликат — молча пропускаем
+        return;
       }
 
       // Сохраняем в БД

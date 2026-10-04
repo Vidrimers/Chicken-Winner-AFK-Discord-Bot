@@ -1078,6 +1078,12 @@
   color: #ce93d8;
 }
 
+.source-badge--reports {
+  background: rgba(255, 152, 0, 0.15);
+  border: 1px solid rgba(255, 152, 0, 0.4);
+  color: #ffb74d;
+}
+
 .filter-tab {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);

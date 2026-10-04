@@ -530,8 +530,9 @@ function createProfileCard(profile, isBanned) {
   const checkerName = isExternal
     ? `<a href="${escapeHtml(reporterProfileUrl)}" target="_blank" style="color:#81c784;text-decoration:none;">${escapeHtml(isReadableName(profile.reported_by_name) ? profile.reported_by_name : reporterSteamId || 'External')}</a>`
     : escapeHtml(profile.checked_by_username || 'Unknown');
+  const reportCount = profile.report_count || 0;
   const sourceBadge = isExternal
-    ? `<span class="source-badge source-badge--external">📡 Steam Wall</span>`
+    ? `<span class="source-badge source-badge--external">📡 Steam Wall</span>${reportCount > 1 ? ` <span class="source-badge source-badge--reports">📊 ${reportCount} репорт${reportCount === 2 ? 'а' : reportCount < 5 ? 'а' : 'ов'}</span>` : ''}`
     : '';
 
   // Кнопка удаления (только для админа)
