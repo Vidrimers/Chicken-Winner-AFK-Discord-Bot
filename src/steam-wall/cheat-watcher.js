@@ -310,19 +310,7 @@ export class CheatWatcherWorker {
 
       log(`[CheatWatcher] Profile added via -rep: ${profile.personaName} (${profile.steamId}) by ${reporterName}`);
 
-      // Ответ на стене
       const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
-      const replyText =
-        `✅ Profile added to database.\n` +
-        `Player: ${profile.personaName || 'Unknown'}\n` +
-        `SteamID64: ${profile.steamId}\n` +
-        `Reported by: ${reporterName}`;
-
-      try {
-        await this._postComment(this.client.steamID.getSteamID64(), replyText);
-      } catch (err) {
-        logError(`[CheatWatcher] Failed to reply on wall: ${err.message}`);
-      }
 
       // Уведомление админу в Telegram
       if (this.telegramReport) {
