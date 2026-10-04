@@ -397,6 +397,9 @@
 
 /* Кнопка удаления (admin) */
 .card-delete-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -411,6 +414,7 @@
   justify-content: center;
   opacity: 0;
   pointer-events: none;
+  z-index: 10;
 }
 
 .profile-card:hover .card-delete-btn {
