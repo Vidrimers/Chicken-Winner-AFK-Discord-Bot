@@ -1,6 +1,8 @@
 import SteamUser from 'steam-user';
 import SteamCommunity from 'steamcommunity';
 import { checkProfiles } from '../steam/steamApi.js';
+import { getFriendsWithDetails } from '../steam/steamApi.js';
+import { getCachedStats } from '../steam/statsCache.js';
 import { parseSteamUrl } from '../steam/urlParser.js';
 import { error as logError, log, success } from '../utils/logger.js';
 
@@ -291,6 +293,17 @@ export class CheatWatcherWorker {
         reportedByName: reporterName,
         reportedByUrl: reporterUrl,
       });
+
+      // Кэшируем CS2/FACEIT статистику в фоне
+      getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
+        .catch(err => console.error('[CheatWatcher] Ошибка кэширования Steam stats:', err.message));
+
+      // Парсим друзей в фоне
+      getFriendsWithDetails(profile.steamId).then(friends => {
+        for (const f of friends) {
+          this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
+        }
+      }).catch(() => {});
 
       // Записываем репорт для rate limiting
       this.db.addSteamWallReport(reporterId, profile.steamId);
