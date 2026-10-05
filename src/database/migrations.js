@@ -736,6 +736,39 @@ export function runMigrations(db) {
       db.exec("ALTER TABLE cheater_links ADD COLUMN group_id TEXT");
       console.log('✅ Колонка group_id добавлена в cheater_links');
     }
+    // Заполняем group_id для существующих связей (NULL → компонента связности)
+    const nullCount = db.prepare("SELECT COUNT(*) as c FROM cheater_links WHERE group_id IS NULL").get().c;
+    if (nullCount > 0) {
+      const allLinks = db.prepare("SELECT id, steam_id_a, steam_id_b FROM cheater_links WHERE group_id IS NULL").all();
+      // Строим граф по всем связям
+      const adj = {};
+      allLinks.forEach(l => {
+        if (!adj[l.steam_id_a]) adj[l.steam_id_a] = new Set();
+        if (!adj[l.steam_id_b]) adj[l.steam_id_b] = new Set();
+        adj[l.steam_id_a].add(l.steam_id_b);
+        adj[l.steam_id_b].add(l.steam_id_a);
+      });
+      const visited = new Set();
+      for (const node of Object.keys(adj)) {
+        if (visited.has(node)) continue;
+        const component = [];
+        const stack = [node];
+        while (stack.length) {
+          const cur = stack.pop();
+          if (visited.has(cur)) continue;
+          visited.add(cur);
+          component.push(cur);
+          for (const n of (adj[cur] || [])) {
+            if (!visited.has(n)) stack.push(n);
+          }
+        }
+        const gid = 'g_' + [...component].sort()[0];
+        for (const id of component) {
+          db.prepare("UPDATE cheater_links SET group_id = ? WHERE (steam_id_a = ? OR steam_id_b = ?) AND group_id IS NULL").run(gid, id, id);
+        }
+      }
+      console.log(`✅ group_id заполнен для ${nullCount} связей`);
+    }
   }
 
   console.log('✅ Миграции завершены');

@@ -664,7 +664,7 @@ function createProfileCard(profile, isBanned) {
           ${deleteBtn}
         </div>
       </div>
-      <div class="card-details" id="details-${steamId}">
+      <div class="card-details">
         ${signalsHtml}
         <div class="detail-row">
           <span class="detail-label">VAC-бан</span>
