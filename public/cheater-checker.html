@@ -50,6 +50,7 @@
           <button class="header-tab" data-view="bot" onclick="switchView('bot')">Боты</button>
         </div>
         <div class="header-actions">
+          <button class="move-btn" id="moveBtn" title="Переместить профили" style="display:none"><svg class="icon" aria-hidden="true"><use href="#icon-move"></use></svg></button>
           <button class="stats-btn" id="statsBtn" title="Статистика">📊</button>
           <button class="info-btn" id="infoBtn" title="Информация">?</button>
         </div>
@@ -241,6 +242,28 @@
           <div class="confirm-buttons">
             <button class="confirm-delete-btn" id="typeConflictMoveBtn">Переместить</button>
             <button class="confirm-cancel-btn" id="typeConflictCancelBtn">Отмена</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модалка массового перемещения профилей -->
+    <div class="modal-overlay" id="moveProfilesModal" style="display: none">
+      <div class="modal-box" style="max-width:520px">
+        <div class="modal-box-header">
+          <h2><svg class="icon" aria-hidden="true"><use href="#icon-move"></use></svg> Перемещение профилей</h2>
+          <button class="modal-close-btn" onclick="closeMoveProfilesModal()">&times;</button>
+        </div>
+        <div class="modal-box-body">
+          <div class="header-tabs" id="moveModalTabs" style="margin-bottom:12px">
+            <button class="header-tab active" data-move-tab="cheater" onclick="switchMoveModalTab('cheater')">Читеры</button>
+            <button class="header-tab" data-move-tab="bot" onclick="switchMoveModalTab('bot')">Боты</button>
+          </div>
+          <div id="moveProfilesList" style="max-height:320px;overflow-y:auto"></div>
+          <div id="moveProfilesPagination" class="stats-ach-pagination"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;gap:10px">
+            <span id="moveSelectedCount" style="font-size:13px;opacity:0.7">Выбрано: 0</span>
+            <button class="confirm-delete-btn" id="moveConfirmBtn" onclick="confirmMoveProfiles()">Переместить</button>
           </div>
         </div>
       </div>

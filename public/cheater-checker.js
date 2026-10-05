@@ -789,6 +789,15 @@ function bindEvents() {
   document.getElementById('typeConflictMoveBtn').addEventListener('click', confirmTypeConflictMove);
   document.getElementById('typeConflictCancelBtn').addEventListener('click', closeTypeConflictModal);
 
+  // Кнопка перемещения профилей (только админ)
+  if (currentUserId && CONFIG.ADMIN_USER_ID && String(currentUserId) === String(CONFIG.ADMIN_USER_ID)) {
+    const moveBtn = document.getElementById('moveBtn');
+    if (moveBtn) {
+      moveBtn.style.display = 'flex';
+      moveBtn.addEventListener('click', openMoveProfilesModal);
+    }
+  }
+
   // Закрытие модалок по клику на overlay
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
@@ -1142,6 +1151,155 @@ async function confirmTypeConflictMove() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           steamId: c.steamId,
+          targetType,
+          movedByDiscordId: currentUserId,
+          movedByUsername: currentUsername,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) moved++;
+      else failed++;
+    } catch {
+      failed++;
+    }
+  }
+
+  showLoading(false);
+  if (moved > 0) {
+    showNotification(`Перемещено профилей: ${moved}${failed > 0 ? `, ошибок: ${failed}` : ''}`, 'success');
+    loadProfiles();
+  } else {
+    showNotification('Не удалось переместить профили', 'error');
+  }
+}
+
+// ===== МАССОВОЕ ПЕРЕМЕЩЕНИЕ ПРОФИЛЕЙ =====
+
+const MOVE_PER_PAGE = 10;
+let _moveModalTab = 'cheater';
+let _moveSelected = new Set();
+let _moveProfilesCache = {};
+
+function openMoveProfilesModal() {
+  _moveModalTab = 'cheater';
+  _moveSelected.clear();
+  _moveProfilesCache = {};
+  document.getElementById('moveProfilesModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  updateMoveModalTabs();
+  loadMoveProfilesList();
+}
+
+function closeMoveProfilesModal() {
+  document.getElementById('moveProfilesModal').style.display = 'none';
+  document.body.style.overflow = '';
+  _moveSelected.clear();
+  _moveProfilesCache = {};
+}
+
+function switchMoveModalTab(tab) {
+  _moveModalTab = tab;
+  _moveSelected.clear();
+  updateMoveModalTabs();
+  loadMoveProfilesList();
+}
+
+function updateMoveModalTabs() {
+  document.querySelectorAll('#moveModalTabs .header-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.moveTab === _moveModalTab);
+  });
+  const btn = document.getElementById('moveConfirmBtn');
+  btn.textContent = _moveModalTab === 'cheater' ? 'Переместить в Боты' : 'Переместить в Читеры';
+}
+
+async function loadMoveProfilesList() {
+  const container = document.getElementById('moveProfilesList');
+  const pag = document.getElementById('moveProfilesPagination');
+  container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:20px 0">Загрузка...</p>';
+  pag.innerHTML = '';
+
+  if (_moveProfilesCache[_moveModalTab]) {
+    renderMoveProfilesList(0);
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/cheater-checker/profiles?limit=1000&offset=0&type=${_moveModalTab}`);
+    const data = await res.json();
+    _moveProfilesCache[_moveModalTab] = data.profiles || data.results || data || [];
+    renderMoveProfilesList(0);
+  } catch {
+    container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:20px 0">Ошибка загрузки</p>';
+  }
+}
+
+function renderMoveProfilesList(page) {
+  const list = _moveProfilesCache[_moveModalTab] || [];
+  const container = document.getElementById('moveProfilesList');
+  const pag = document.getElementById('moveProfilesPagination');
+
+  if (!list.length) {
+    container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:20px 0">Профилей нет</p>';
+    pag.innerHTML = '';
+    updateMoveSelectedCount();
+    return;
+  }
+
+  const totalPages = Math.ceil(list.length / MOVE_PER_PAGE);
+  const start = page * MOVE_PER_PAGE;
+  const pageItems = list.slice(start, start + MOVE_PER_PAGE);
+
+  container.innerHTML = pageItems.map(p => `
+    <label class="move-profile-item">
+      <input type="checkbox" ${_moveSelected.has(p.steam_id) ? 'checked' : ''} onchange="toggleMoveSelect('${p.steam_id}', this.checked)">
+      <div class="move-profile-info">
+        <div class="move-profile-name">${escapeHtmlSimple(p.persona_name || p.steam_id)}</div>
+        <div class="move-profile-meta">${escapeHtmlSimple(p.checked_by_username || 'Unknown')} • ${new Date(p.checked_at).toLocaleDateString('ru-RU')}</div>
+      </div>
+    </label>
+  `).join('');
+
+  if (totalPages > 1) {
+    let pagHtml = '';
+    pagHtml += `<button class="stats-ach-arrow" ${page === 0 ? 'disabled' : ''} onclick="renderMoveProfilesList(${page - 1})">←</button>`;
+    pagHtml += `<span class="stats-ach-page">${page + 1} / ${totalPages}</span>`;
+    pagHtml += `<button class="stats-ach-arrow" ${page >= totalPages - 1 ? 'disabled' : ''} onclick="renderMoveProfilesList(${page + 1})">→</button>`;
+    pag.innerHTML = pagHtml;
+  } else {
+    pag.innerHTML = '';
+  }
+
+  updateMoveSelectedCount();
+}
+
+function toggleMoveSelect(steamId, checked) {
+  if (checked) _moveSelected.add(steamId);
+  else _moveSelected.delete(steamId);
+  updateMoveSelectedCount();
+}
+
+function updateMoveSelectedCount() {
+  document.getElementById('moveSelectedCount').textContent = `Выбрано: ${_moveSelected.size}`;
+}
+
+async function confirmMoveProfiles() {
+  if (_moveSelected.size === 0) {
+    showNotification('Выберите хотя бы один профиль', 'warning');
+    return;
+  }
+
+  const targetType = _moveModalTab === 'cheater' ? 'bot' : 'cheater';
+  closeMoveProfilesModal();
+  showLoading(true);
+
+  let moved = 0, failed = 0;
+  for (const steamId of _moveSelected) {
+    try {
+      const res = await fetch('/api/cheater-checker/move-type', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          steamId,
           targetType,
           movedByDiscordId: currentUserId,
           movedByUsername: currentUsername,
