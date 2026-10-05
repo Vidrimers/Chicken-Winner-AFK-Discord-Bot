@@ -1201,6 +1201,14 @@ async function confirmTypeConflictMove() {
 
 // ===== СВЯЗИ МЕЖДУ АККАУНТАМИ =====
 
+function pluralAccounts(n) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'аккаунт';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'аккаунта';
+  return 'аккаунтов';
+}
+
 const LINKS_PER_PAGE = 10;
 let _linksSteamId = null;        // steamId карточки, для которой открыта модалка
 let _linksSearchQuery = '';
@@ -1457,9 +1465,21 @@ async function renderLinksGroups() {
         return createProfileCard(p, isBanned);
       }).join('');
 
+      // Находим связи внутри группы для отображения кто создал
+      const groupSet = new Set(group);
+      const groupLinks = links.filter(l => groupSet.has(l.steam_id_a) && groupSet.has(l.steam_id_b));
+      const linkInfos = groupLinks.map(l => {
+        const creator = l.created_by || 'Unknown';
+        const date = l.created_at ? new Date(l.created_at * 1000).toLocaleDateString('ru-RU') : '';
+        return `${escapeHtml(creator)}${date ? ' • ' + date : ''}`;
+      });
+
       return `
         <div class="link-group">
-          <div class="link-group-header">🔗 Группа ${idx + 1} — ${group.length} аккаунт(ов)</div>
+          <div class="link-group-header">
+            🔗 Группа ${idx + 1} — ${group.length} ${pluralAccounts(group.length)}
+            ${linkInfos.length ? `<div class="link-group-meta">Связи создал: ${linkInfos.join(' | ')}</div>` : ''}
+          </div>
           <div class="link-group-cards">${cards}</div>
         </div>
       `;
@@ -1498,6 +1518,7 @@ async function renderCardLinks(steamId) {
   try {
     const res = await fetch(`/api/cheater-checker/links/${steamId}`);
     const data = await res.json();
+    const links = data.links || [];
     const linkedIds = data.linkedIds || [];
 
     if (!linkedIds.length) {
@@ -1505,31 +1526,32 @@ async function renderCardLinks(steamId) {
       return;
     }
 
-    // Получаем имена связанных профилей
-    const names = [];
-    for (const id of linkedIds) {
-      try {
-        const pr = await fetch(`/api/cheater-checker/profiles?limit=1&type=all&search=${id}`);
-        // Просто используем id, если не удалось получить имя
-        names.push(id);
-      } catch {
-        names.push(id);
-      }
-    }
-
-    // Пробуем получить имена из кэша профилей
-    let displayNames = linkedIds.map(id => {
+    // Получаем имена из кэша профилей
+    const items = linkedIds.map(id => {
       const p = (_linksProfilesCache || []).find(x => x.steam_id === id);
-      return p ? (p.persona_name || id) : id;
+      // Находим связь для этой пары
+      const link = links.find(l =>
+        (l.steam_id_a === steamId && l.steam_id_b === id) ||
+        (l.steam_id_b === steamId && l.steam_id_a === id)
+      );
+      return {
+        steamId: id,
+        name: p ? (p.persona_name || id) : id,
+        profileUrl: p?.profile_url || `https://steamcommunity.com/profiles/${id}`,
+        createdBy: link?.created_by || null,
+        createdAt: link?.created_at || null,
+      };
     });
 
     container.innerHTML = `
       <div class="card-links-section-title">🔗 Связанные аккаунты</div>
       <div class="card-links-list">
-        ${displayNames.map((name, i) => `
+        ${items.map(item => `
           <div class="card-links-item">
-            <svg class="icon" style="width:14px;height:14px"><use href="#icon-link"></use></svg>
-            ${escapeHtml(name)}
+            <svg class="icon" style="width:14px;height:14px;flex-shrink:0"><use href="#icon-link"></use></svg>
+            <a href="${escapeHtml(item.profileUrl)}" target="_blank" rel="noopener" class="card-links-name">${escapeHtml(item.name)}</a>
+            ${item.createdBy ? `<span class="card-links-meta">создал: ${escapeHtml(item.createdBy)}</span>` : ''}
+            ${item.createdAt ? `<span class="card-links-meta">${new Date(item.createdAt * 1000).toLocaleDateString('ru-RU')}</span>` : ''}
           </div>
         `).join('')}
       </div>

@@ -1731,6 +1731,8 @@
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 2;
 }
 
 .card-links-section-title {
@@ -1752,6 +1754,32 @@
   gap: 8px;
   font-size: 13px;
   color: #a0b0ff;
+  flex-wrap: wrap;
+}
+
+.card-links-name {
+  color: #a0b0ff;
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.card-links-name:hover {
+  text-decoration: underline;
+  color: #c0c8ff;
+}
+
+.card-links-meta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.link-group-meta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 4px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 /* ===== ДРУЗЬЯ ЧИТЕРА ===== */
