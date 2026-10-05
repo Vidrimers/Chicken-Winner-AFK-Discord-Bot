@@ -897,13 +897,11 @@ function bindCardDelegation() {
   if (window._cardDelegationBound) return;
   window._cardDelegationBound = true;
 
-  // Делегирование через closest — но с защитой от двойного срабатывания
   document.addEventListener('click', (e) => {
-    // Ищем карточку — но только одну, и только если клик реально внутри неё
     const card = e.target.closest('.profile-card');
     if (!card || !card.contains(e.target)) return;
 
-    // Кнопки внутри карточки — обрабатываем отдельно
+    // Кнопки внутри карточки
     if (e.target.closest('a, button, input, .notes-section, .card-links-section')) {
       const publishBtn = e.target.closest('.discord-publish-btn');
       if (publishBtn) {
@@ -924,25 +922,29 @@ function bindCardDelegation() {
 
     e.stopImmediatePropagation();
     e.stopPropagation();
+
+    // Жёстко управляем: закрываем ВСЕ, открываем одну
     const steamId = card.dataset.steamId;
+    const allDetails = document.querySelectorAll('.card-details');
+    const allNames = document.querySelectorAll('.card-name');
+    allDetails.forEach(d => d.classList.remove('visible'));
+    allNames.forEach(n => n.classList.remove('expanded'));
+
     const details = card.querySelector('.card-details');
     const nameEl = card.querySelector('.card-name');
     if (details) {
-      const isVisible = details.classList.contains('visible');
-      // Закрываем все остальные открытые карточки
-      document.querySelectorAll('.card-details.visible').forEach(d => {
-        d.classList.remove('visible');
-        const n = d.closest('.profile-card')?.querySelector('.card-name');
-        if (n) n.classList.remove('expanded');
-      });
-      if (!isVisible) {
-        details.classList.add('visible');
-        if (nameEl) nameEl.classList.add('expanded');
-        renderNotes(steamId, card);
+      details.classList.add('visible');
+      if (nameEl) nameEl.classList.add('expanded');
+      renderNotes(steamId, card);
+      // card-links-section не нужен в табе «Связи» (группы и так показывают связи)
+      if (!card.closest('#linksGroupsContainer')) {
         renderCardLinks(steamId, card);
+      } else {
+        const linksSection = card.querySelector('.card-links-section');
+        if (linksSection) linksSection.style.display = 'none';
       }
     }
-  }, true); // capture phase — перехватываем раньше всех
+  }, true);
 }
 
 // ===== ОДИНОЧНАЯ ПРОВЕРКА =====
@@ -1484,6 +1486,7 @@ async function renderLinksGroups() {
     const allProfiles = [...(cheaterData.profiles || []), ...(botData.profiles || [])];
     const profileMap = {};
     allProfiles.forEach(p => { profileMap[p.steam_id] = p; });
+    _linksProfilesCache = allProfiles; // заполняем кэш для renderCardLinks
 
     const links = linksData.links || [];
     if (!links.length) {
