@@ -167,6 +167,9 @@ function switchView(view) {
   document.querySelectorAll('.filter-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.filter === 'all');
   });
+  // Сбрасываем видимость: обычные колонки показываем, группы связей скрываем
+  document.getElementById('resultsGrid').style.display = '';
+  document.getElementById('linksGroupsContainer').style.display = 'none';
   // Закрываем поиск при смене вкладки
   const searchSection = document.getElementById('searchSection');
   const searchToggleBtn = document.getElementById('searchToggleBtn');
@@ -867,8 +870,8 @@ function bindCardEvents() {
  * Делегирование событий для карточек (вызывается один раз в bindEvents)
  */
 function bindCardDelegation() {
-  // Делегируем клики на оба контейнера колонок
-  ['bannedCards', 'cleanCards'].forEach(containerId => {
+  // Делегируем клики на контейнеры колонок и группы связей
+  ['bannedCards', 'cleanCards', 'linksGroupsContainer'].forEach(containerId => {
     const container = document.getElementById(containerId);
     if (!container) return;
     
@@ -888,7 +891,7 @@ function bindCardDelegation() {
       }
 
       // Клик по ссылке/кнопке/инпуту или в секции заметок — не раскрываем карточку
-      if (e.target.closest('a, button, input, .notes-section')) return;
+      if (e.target.closest('a, button, input, .notes-section, .card-links-section')) return;
 
       // Клик по карточке → раскрытие деталей
       const card = e.target.closest('.profile-card');
@@ -1239,6 +1242,9 @@ function toggleLinksSearch() {
     _linksSearchQuery = '';
     renderLinksProfilesList(0);
   } else {
+    // Закрываем info, если открыт
+    document.getElementById('linksInfoSection').classList.remove('open');
+    document.getElementById('linksInfoToggleBtn').classList.remove('active');
     section.classList.add('open');
     btn.classList.add('active');
     toggleClearBtn(input, clearBtn);
@@ -1254,6 +1260,17 @@ function toggleLinksInfo() {
     section.classList.remove('open');
     btn.classList.remove('active');
   } else {
+    // Закрываем поиск, если открыт
+    const searchSection = document.getElementById('linksSearchSection');
+    const searchBtn = document.getElementById('linksSearchToggleBtn');
+    searchSection.classList.remove('open');
+    searchBtn.classList.remove('active');
+    const input = document.getElementById('linksSearchInput');
+    input.value = '';
+    toggleClearBtn(input, document.getElementById('linksSearchClearBtn'));
+    _linksSearchQuery = '';
+    renderLinksProfilesList(0);
+
     section.classList.add('open');
     btn.classList.add('active');
   }
@@ -1356,8 +1373,9 @@ async function toggleLink(steamId1, steamId2, isChecked) {
       });
       if (_linksCache[steamId1]) _linksCache[steamId1].delete(steamId2);
     }
-    // Обновляем кнопку на карточке
+    // Обновляем кнопки на обоих аккаунтах
     updateLinksButtonState(steamId1);
+    updateLinksButtonState(steamId2);
   } catch (err) {
     console.error('Ошибка связи:', err);
     showNotification('Ошибка при обновлении связи', 'error');
@@ -1429,31 +1447,26 @@ async function renderLinksGroups() {
       groups.push(group);
     }
 
-    // Сортируем группы по размеру (большие сверху)
     groups.sort((a, b) => b.length - a.length);
 
     container.innerHTML = groups.map((group, idx) => {
-      const members = group.map(id => {
+      const cards = group.map(id => {
         const p = profileMap[id];
-        return `
-          <div class="link-group-member">
-            ${p?.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="">` : '<div style="width:32px;height:32px;border-radius:6px;background:rgba(255,255,255,0.1)"></div>'}
-            <div class="link-group-member-info">
-              <div class="link-group-member-name">${escapeHtml(p?.persona_name || id)}</div>
-              <div class="link-group-member-type">${p?.type === 'bot' ? '🤖 Бот' : '🔴 Читер'} • ${escapeHtml(p?.checked_by_username || 'Unknown')}</div>
-            </div>
-            <a href="${p?.profile_url || '#'}" target="_blank" rel="noopener" class="card-action-btn" style="font-size:11px;padding:4px 8px">Профиль</a>
-          </div>
-        `;
+        if (!p) return '';
+        const isBanned = (p.vac_banned || p.number_of_game_bans > 0 || p.community_banned || (p.economy_ban && p.economy_ban !== 'none'));
+        return createProfileCard(p, isBanned);
       }).join('');
 
       return `
         <div class="link-group">
           <div class="link-group-header">🔗 Группа ${idx + 1} — ${group.length} аккаунт(ов)</div>
-          <div class="link-group-members">${members}</div>
+          <div class="link-group-cards">${cards}</div>
         </div>
       `;
     }).join('');
+
+    bindCardEvents();
+    updateAllLinksButtons();
   } catch {
     container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:40px 0">Ошибка загрузки</p>';
   }

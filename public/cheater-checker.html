@@ -285,14 +285,29 @@
         <div class="modal-box-header">
           <button class="friends-search-toggle" id="linksSearchToggleBtn" title="Поиск" onclick="toggleLinksSearch()"><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg></button>
           <h2><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связи аккаунтов</h2>
-          <button class="friends-search-toggle" id="linksInfoToggleBtn" title="О связях" onclick="toggleLinksInfo()" style="margin-right:0;margin-left:auto"><svg class="icon" aria-hidden="true"><use href="#icon-question"></use></svg></button>
+          <button class="friends-search-toggle links-info-toggle" id="linksInfoToggleBtn" title="О связях" onclick="toggleLinksInfo()"><svg class="icon" aria-hidden="true"><use href="#icon-question"></use></svg></button>
           <button class="modal-close-btn" onclick="closeLinksModal()">&times;</button>
         </div>
-        <div class="friends-search-section" id="linksInfoSection" style="padding:0 15px">
-          <div style="background:rgba(102,126,234,0.1);border:1px solid rgba(102,126,234,0.25);border-radius:10px;padding:12px 14px;margin:8px 0;font-size:13px;line-height:1.5;color:rgba(255,255,255,0.75)">
-            <b style="color:#a0b0ff">Связи</b> — это пометка о том, что несколько аккаунтов принадлежат одному человеку.<br>
-            Например, у читера есть второй аккаунт в друзьях — отметьте оба чекбоксами, чтобы объединить их в одну группу.<br>
-            Связи видят все пользователи и работают между читерами и ботами.
+        <div class="links-info-section" id="linksInfoSection">
+          <div style="background:rgba(102,126,234,0.1);border:1px solid rgba(102,126,234,0.25);border-radius:10px;padding:14px 16px;margin:8px 0;font-size:13px;line-height:1.6;color:rgba(255,255,255,0.75)">
+            <b style="color:#a0b0ff;font-size:14px">🔗 Что такое связи?</b><br>
+            Связи — это пометка о том, что несколько Steam-аккаунтов принадлежат одному человеку. Например, у читера есть второй аккаунт (смурф), или один игрок использует несколько ботов.<br><br>
+
+            <b style="color:#a0b0ff;font-size:14px">⚙️ Как создать связь?</b><br>
+            1. Нажмите кнопку <b>«Связи»</b> на карточке профиля.<br>
+            2. В модалке отметьте чекбоксами аккаунты, которые принадлежат тому же человеку.<br>
+            3. Связь создаётся <b>мгновенно</b> — достаточно поставить галочку. Снимите галочку, чтобы разорвать связь.<br><br>
+
+            <b style="color:#a0b0ff;font-size:14px">👀 Где смотреть связи?</b><br>
+            • <b>Таб «🔗 Связи»</b> в фильтрах — показывает все группы связанных аккаунтов.<br>
+            • <b>Кнопка «Связи»</b> на карточке — розовая, если у аккаунта есть связи.<br>
+            • <b>Раскрытая карточка</b> — внизу секция «Связанные аккаунты».<br><br>
+
+            <b style="color:#a0b0ff;font-size:14px">📌 Важно</b><br>
+            • Связи работают <b>между читерами и ботами</b> — не важно, в каких разделах аккаунты.<br>
+            • Связи <b>не разрушаются</b> при перемещении профиля между разделами.<br>
+            • Создавать и просматривать связи могут <b>все пользователи</b>.<br>
+            • Если группа из 3+ аккаунтов — все они объединяются в одну группу автоматически.
           </div>
         </div>
         <div class="friends-search-section" id="linksSearchSection">

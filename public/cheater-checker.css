@@ -1675,6 +1675,18 @@
   margin-bottom: 10px;
 }
 
+.link-group-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .link-group-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
 .link-group-members {
   display: flex;
   flex-direction: column;
@@ -1904,6 +1916,25 @@
 .friends-search-section .steam-input {
   min-width: 100%;
   width: 100%;
+}
+
+.links-info-section {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  padding: 0 15px;
+  transition: max-height 0.35s ease, opacity 0.35s ease, padding 0.35s ease;
+}
+
+.links-info-section.open {
+  max-height: 300px;
+  opacity: 1;
+  padding: 0 15px;
+}
+
+.links-info-toggle {
+  margin-right: 5px;
+  margin-left: auto;
 }
 
 .friends-page-num {
