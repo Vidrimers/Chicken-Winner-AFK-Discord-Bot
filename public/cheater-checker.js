@@ -1373,7 +1373,7 @@ function renderLinksProfilesList(page) {
 
   const linkedSet = _linksCache[_linksSteamId] || new Set();
   const container = document.getElementById('linksProfilesList');
-  const pag = document.getElementById('linksPagination');
+  const pag = document.getElementById('linksModalPagination');
 
   if (!list.length) {
     container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:20px 0">Профилей нет</p>';
