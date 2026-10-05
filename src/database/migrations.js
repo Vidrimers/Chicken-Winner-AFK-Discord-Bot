@@ -712,5 +712,21 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: таблица link_groups (имена групп связей)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='link_groups'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE link_groups (
+          group_key TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          renamed_by TEXT,
+          renamed_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+        )
+      `);
+      console.log('✅ Таблица link_groups создана');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

@@ -1782,6 +1782,29 @@
   letter-spacing: 0;
 }
 
+.link-group-name {
+  cursor: pointer;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+  transition: color 0.2s;
+}
+
+.link-group-name:hover {
+  color: #a0b0ff;
+  border-bottom-color: #a0b0ff;
+}
+
+.link-group-name-input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #667eea;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: inherit;
+  font-weight: 600;
+  padding: 2px 8px;
+  outline: none;
+  width: 200px;
+}
+
 /* ===== ДРУЗЬЯ ЧИТЕРА ===== */
 
 .friends-btn {

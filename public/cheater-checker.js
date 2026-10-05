@@ -1224,6 +1224,7 @@ let _linksCache = {};            // steamId → [linkedSteamIds]
 let _linksGroupsData = [];       // вычисленные группы для пагинации
 let linksPage = 1;
 let _linksCountMap = {};         // steamId → количество связей (кэш для has-links)
+let _linksGroupNames = {};       // groupKey → { name, renamed_by, renamed_at }
 
 async function openLinksModal(steamId, event) {
   if (event) { event.preventDefault(); event.stopPropagation(); }
@@ -1478,6 +1479,7 @@ async function renderLinksGroups() {
     groups.sort((a, b) => b.length - a.length);
     _linksGroupsData = groups.map(g => ({ group: g, links, profileMap }));
 
+    await loadGroupNames();
     renderLinksGroupsPage();
   } catch {
     container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:40px 0">Ошибка загрузки</p>';
@@ -1497,6 +1499,8 @@ function renderLinksGroupsPage() {
   container.innerHTML = pageGroups.map((entry, i) => {
     const { group, links, profileMap } = entry;
     const idx = start + i;
+    const groupKey = [...group].sort()[0]; // стабильный ключ — минимальный steam_id
+
     const cards = group.map(id => {
       const p = profileMap[id];
       if (!p) return '';
@@ -1504,7 +1508,14 @@ function renderLinksGroupsPage() {
       return createProfileCard(p, isBanned);
     }).join('');
 
-    // Находим связи внутри группы для отображения кто создал (дедупликация по имени)
+    // Имя группы
+    const groupInfo = _linksGroupNames[groupKey];
+    const displayName = groupInfo?.name || `Группа ${idx + 1}`;
+    const renamedMeta = groupInfo?.renamed_by
+      ? `<div class="link-group-meta">Переименовал: ${escapeHtml(groupInfo.renamed_by)}${groupInfo.renamed_at ? ' • ' + new Date(groupInfo.renamed_at * 1000).toLocaleDateString('ru-RU') : ''}</div>`
+      : '';
+
+    // Связи создал (дедупликация по имени)
     const groupSet = new Set(group);
     const groupLinks = links.filter(l => groupSet.has(l.steam_id_a) && groupSet.has(l.steam_id_b));
     const creatorSet = new Set();
@@ -1522,7 +1533,8 @@ function renderLinksGroupsPage() {
     return `
       <div class="link-group">
         <div class="link-group-header">
-          🔗 Группа ${idx + 1} — ${group.length} ${pluralAccounts(group.length)}
+          <span class="link-group-name" onclick="startRenameGroup('${groupKey}', this)" title="Нажмите для переименования">🔗 ${escapeHtml(displayName)}</span> — ${group.length} ${pluralAccounts(group.length)}
+          ${renamedMeta}
           ${linkInfos.length ? `<div class="link-group-meta">Связи создал: ${linkInfos.join(' | ')}</div>` : ''}
         </div>
         <div class="link-group-cards">${cards}</div>
@@ -1532,6 +1544,52 @@ function renderLinksGroupsPage() {
 
   renderPagination('links', groups.length, linksPage);
   updateAllLinksButtons();
+}
+
+function startRenameGroup(groupKey, el) {
+  const current = el.textContent.replace('🔗 ', '').trim();
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.className = 'link-group-name-input';
+  input.maxLength = 64;
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+
+  const finish = async (save) => {
+    const newName = input.value.trim();
+    if (save && newName && newName !== current) {
+      try {
+        await fetch('/api/cheater-checker/links/group-name', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ groupKey, name: newName, renamedBy: currentUsername || currentUserId }),
+        });
+        _linksGroupNames[groupKey] = { name: newName, renamed_by: currentUsername || currentUserId, renamed_at: Math.floor(Date.now() / 1000) };
+      } catch {
+        showNotification('Ошибка при переименовании', 'error');
+      }
+    }
+    renderLinksGroupsPage();
+  };
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') finish(true);
+    if (e.key === 'Escape') finish(false);
+  });
+  input.addEventListener('blur', () => finish(true));
+}
+
+async function loadGroupNames() {
+  try {
+    const res = await fetch('/api/cheater-checker/links/group-names');
+    const data = await res.json();
+    _linksGroupNames = {};
+    (data.names || []).forEach(n => {
+      _linksGroupNames[n.group_key] = { name: n.name, renamed_by: n.renamed_by, renamed_at: n.renamed_at };
+    });
+  } catch {}
 }
 
 function goToLinksPage(page) {

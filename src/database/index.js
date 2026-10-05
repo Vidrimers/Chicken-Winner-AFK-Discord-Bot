@@ -407,6 +407,23 @@ export class DatabaseManager {
     return this.prepare('DELETE FROM cheater_links WHERE steam_id_a = ? OR steam_id_b = ?').run(steamId, steamId);
   }
 
+  // ===== ИМЕНА ГРУПП СВЯЗЕЙ =====
+
+  getGroupName(groupKey) {
+    return this.prepare('SELECT * FROM link_groups WHERE group_key = ?').get(groupKey);
+  }
+
+  getAllGroupNames() {
+    return this.prepare('SELECT * FROM link_groups').all();
+  }
+
+  setGroupName(groupKey, name, renamedBy = null) {
+    return this.prepare(
+      `INSERT INTO link_groups (group_key, name, renamed_by, renamed_at) VALUES (?, ?, ?, strftime('%s','now'))
+       ON CONFLICT(group_key) DO UPDATE SET name = excluded.name, renamed_by = excluded.renamed_by, renamed_at = excluded.renamed_at`
+    ).run(groupKey, name, renamedBy);
+  }
+
   getChecks({ limit = 50, offset = 0, filter = 'all', type = 'cheater' } = {}) {
     let sql = `SELECT cc.*, COALESCE(us.username, cc.checked_by_username) as checked_by_username 
                FROM cheater_checks cc 

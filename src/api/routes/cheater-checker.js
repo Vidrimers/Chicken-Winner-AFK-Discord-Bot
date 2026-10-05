@@ -348,6 +348,36 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   });
 
   /**
+   * GET /api/cheater-checker/links/group-names
+   * Получение имён групп связей
+   */
+  router.get('/links/group-names', (req, res) => {
+    try {
+      const names = db.getAllGroupNames();
+      res.json({ names });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * PUT /api/cheater-checker/links/group-name
+   * Переименование группы связей
+   */
+  router.put('/links/group-name', (req, res) => {
+    try {
+      const { groupKey, name, renamedBy } = req.body;
+      if (!groupKey || !name) {
+        return res.status(400).json({ error: 'groupKey и name обязательны' });
+      }
+      db.setGroupName(groupKey, name.trim(), renamedBy || null);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
    * GET /api/cheater-checker/profiles
    * Получение сохранённых профилей с пагинацией и фильтром
    */
