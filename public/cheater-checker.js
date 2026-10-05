@@ -1480,38 +1480,27 @@ async function renderLinksGroups() {
       return;
     }
 
-    // Строим граф и находим компоненты связности
-    const adj = {};
+    // Группируем по group_id (стабильный ID из БД)
+    const groupMap = {};
     links.forEach(l => {
-      if (!adj[l.steam_id_a]) adj[l.steam_id_a] = new Set();
-      if (!adj[l.steam_id_b]) adj[l.steam_id_b] = new Set();
-      adj[l.steam_id_a].add(l.steam_id_b);
-      adj[l.steam_id_b].add(l.steam_id_a);
+      const gid = l.group_id || ('fallback_' + l.steam_id_a);
+      if (!groupMap[gid]) groupMap[gid] = { members: new Set(), links: [] };
+      groupMap[gid].members.add(l.steam_id_a);
+      groupMap[gid].members.add(l.steam_id_b);
+      groupMap[gid].links.push(l);
     });
 
-    const visited = new Set();
-    const groups = [];
-    for (const node of Object.keys(adj)) {
-      if (visited.has(node)) continue;
-      const group = [];
-      const stack = [node];
-      while (stack.length) {
-        const cur = stack.pop();
-        if (visited.has(cur)) continue;
-        visited.add(cur);
-        group.push(cur);
-        for (const neighbor of (adj[cur] || [])) {
-          if (!visited.has(neighbor)) stack.push(neighbor);
-        }
-      }
-      groups.push(group);
-    }
+    const groups = Object.entries(groupMap).map(([gid, data]) => ({
+      groupId: gid,
+      group: [...data.members],
+      links: data.links,
+      profileMap,
+    }));
 
-    groups.sort((a, b) => b.length - a.length);
-    _linksGroupsData = groups.map(g => ({ group: g, links, profileMap }));
+    groups.sort((a, b) => b.group.length - a.group.length);
+    _linksGroupsData = groups;
 
     await loadGroupNames();
-    await migrateGroupNames();
     renderLinksGroupsPage();
   } catch {
     container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:40px 0">Ошибка загрузки</p>';
@@ -1529,9 +1518,8 @@ function renderLinksGroupsPage() {
   const pageGroups = groups.slice(start, start + PAGE_SIZE);
 
   container.innerHTML = pageGroups.map((entry, i) => {
-    const { group, links, profileMap } = entry;
+    const { group, links, profileMap, groupId } = entry;
     const idx = start + i;
-    const groupKey = [...group].sort()[0]; // стабильный ключ — минимальный steam_id
 
     const cards = group.map(id => {
       const p = profileMap[id];
@@ -1541,7 +1529,7 @@ function renderLinksGroupsPage() {
     }).join('');
 
     // Имя группы
-    const groupInfo = _linksGroupNames[groupKey];
+    const groupInfo = _linksGroupNames[groupId];
     const displayName = groupInfo?.name || `Группа ${idx + 1}`;
     const renamedMeta = groupInfo?.renamed_by
       ? `<div class="link-group-meta">Переименовал: ${escapeHtml(groupInfo.renamed_by)}${groupInfo.renamed_at ? ' • ' + new Date(groupInfo.renamed_at * 1000).toLocaleDateString('ru-RU') : ''}</div>`
@@ -1565,7 +1553,7 @@ function renderLinksGroupsPage() {
     return `
       <div class="link-group">
         <div class="link-group-header">
-          <span class="link-group-name" onclick="startRenameGroup('${groupKey}', this)" title="Нажмите для переименования">🔗 ${escapeHtml(displayName)}</span> — ${group.length} ${pluralAccounts(group.length)}
+          <span class="link-group-name" onclick="startRenameGroup('${groupId}', this)" title="Нажмите для переименования">🔗 ${escapeHtml(displayName)}</span> — ${group.length} ${pluralAccounts(group.length)}
           ${renamedMeta}
           ${linkInfos.length ? `<div class="link-group-meta">Связи создал: ${linkInfos.join(' | ')}</div>` : ''}
         </div>
@@ -1625,31 +1613,6 @@ async function loadGroupNames() {
       _linksGroupNames[n.group_key] = { name: n.name, renamed_by: n.renamed_by, renamed_at: n.renamed_at };
     });
   } catch {}
-}
-
-// Миграция имени группы: если group_key сменился (добавился аккаунт с меньшим steam_id),
-// переносим имя со старого ключа на новый
-async function migrateGroupNames() {
-  for (const entry of _linksGroupsData) {
-    const { group } = entry;
-    const groupKey = [...group].sort()[0];
-    if (_linksGroupNames[groupKey]) continue; // имя уже есть
-
-    // Ищем имя среди участников группы
-    for (const member of group) {
-      if (_linksGroupNames[member]) {
-        _linksGroupNames[groupKey] = _linksGroupNames[member];
-        try {
-          await fetch('/api/cheater-checker/links/group-name', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ groupKey, name: _linksGroupNames[member].name, renamedBy: _linksGroupNames[member].renamed_by }),
-          });
-        } catch {}
-        break;
-      }
-    }
-  }
 }
 
 function goToLinksPage(page) {

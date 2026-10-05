@@ -384,15 +384,67 @@ export class DatabaseManager {
   addLink(steamId1, steamId2, createdBy = null) {
     const a = steamId1 < steamId2 ? steamId1 : steamId2;
     const b = steamId1 < steamId2 ? steamId2 : steamId1;
+
+    // Определяем group_id: если у обоих уже есть — мержим, если у одного — используем его, если нет — новый
+    const rowA = this.prepare('SELECT group_id FROM cheater_links WHERE steam_id_a = ? OR steam_id_b = ? LIMIT 1').get(steamId1, steamId1);
+    const rowB = this.prepare('SELECT group_id FROM cheater_links WHERE steam_id_a = ? OR steam_id_b = ? LIMIT 1').get(steamId2, steamId2);
+    const gidA = rowA?.group_id || null;
+    const gidB = rowB?.group_id || null;
+
+    let groupId;
+    if (gidA && gidB && gidA !== gidB) {
+      // Мержим группы: используем меньший ID, переносим все ссылки с большего
+      groupId = gidA < gidB ? gidA : gidB;
+      const oldGid = gidA < gidB ? gidB : gidA;
+      this.prepare('UPDATE cheater_links SET group_id = ? WHERE group_id = ?').run(groupId, oldGid);
+      // Переносим имя группы если есть
+      const oldName = this.prepare('SELECT * FROM link_groups WHERE group_key = ?').get(oldGid);
+      if (oldName) {
+        const newName = this.prepare('SELECT * FROM link_groups WHERE group_key = ?').get(groupId);
+        if (!newName) {
+          this.prepare('INSERT OR REPLACE INTO link_groups (group_key, name, renamed_by, renamed_at) VALUES (?, ?, ?, ?)').run(groupId, oldName.name, oldName.renamed_by, oldName.renamed_at);
+        }
+        this.prepare('DELETE FROM link_groups WHERE group_key = ?').run(oldGid);
+      }
+    } else {
+      groupId = gidA || gidB || ('g_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+    }
+
     return this.prepare(
-      'INSERT OR IGNORE INTO cheater_links (steam_id_a, steam_id_b, created_by, created_at) VALUES (?, ?, ?, strftime(\'%s\',\'now\'))'
-    ).run(a, b, createdBy);
+      'INSERT OR IGNORE INTO cheater_links (steam_id_a, steam_id_b, created_by, created_at, group_id) VALUES (?, ?, ?, strftime(\'%s\',\'now\'), ?)'
+    ).run(a, b, createdBy, groupId);
   }
 
   removeLink(steamId1, steamId2) {
     const a = steamId1 < steamId2 ? steamId1 : steamId2;
     const b = steamId1 < steamId2 ? steamId2 : steamId1;
-    return this.prepare('DELETE FROM cheater_links WHERE steam_id_a = ? AND steam_id_b = ?').run(a, b);
+    this.prepare('DELETE FROM cheater_links WHERE steam_id_a = ? AND steam_id_b = ?').run(a, b);
+    // Пересчитываем group_id для обоих компонент (группа могла разделиться)
+    this._recalcGroupIds(steamId1);
+    this._recalcGroupIds(steamId2);
+  }
+
+  _recalcGroupIds(startId) {
+    // BFS от startId — находим все достижимые узлы и переназначаем group_id
+    const visited = new Set();
+    const stack = [startId];
+    while (stack.length) {
+      const cur = stack.pop();
+      if (visited.has(cur)) continue;
+      visited.add(cur);
+      const rows = this.prepare('SELECT steam_id_a, steam_id_b FROM cheater_links WHERE steam_id_a = ? OR steam_id_b = ?').all(cur, cur);
+      for (const r of rows) {
+        const neighbor = r.steam_id_a === cur ? r.steam_id_b : r.steam_id_a;
+        if (!visited.has(neighbor)) stack.push(neighbor);
+      }
+    }
+    if (visited.size <= 1) return; // одиночный узел — нечего пересчитывать
+
+    // Новый стабильный group_id для этой компоненты — min steam_id
+    const newGid = 'g_' + [...visited].sort()[0];
+    for (const id of visited) {
+      this.prepare('UPDATE cheater_links SET group_id = ? WHERE steam_id_a = ? OR steam_id_b = ?').run(newGid, id, id);
+    }
   }
 
   getAllLinks() {

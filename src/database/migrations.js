@@ -728,5 +728,15 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: group_id в cheater_links (стабильный ID группы)
+  {
+    const columns = db.prepare("PRAGMA table_info(cheater_links)").all();
+    const hasCol = columns.some(c => c.name === 'group_id');
+    if (!hasCol) {
+      db.exec("ALTER TABLE cheater_links ADD COLUMN group_id TEXT");
+      console.log('✅ Колонка group_id добавлена в cheater_links');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }
