@@ -1122,7 +1122,7 @@ function showTypeConflictModal(conflicts, targetType) {
   }
 
   list.innerHTML = conflicts.map(c =>
-    `<div>• ${escapeHtmlSimple(c.personaName || c.steamId)} (добавил: ${escapeHtmlSimple(c.alreadyAddedBy || 'Unknown')})</div>`
+    `<div>• ${escapeHtml(c.personaName || c.steamId)} (добавил: ${escapeHtml(c.alreadyAddedBy || 'Unknown')})</div>`
   ).join('');
 
   modal.style.display = 'flex';
@@ -1253,8 +1253,8 @@ function renderMoveProfilesList(page) {
     <label class="move-profile-item">
       <input type="checkbox" ${_moveSelected.has(p.steam_id) ? 'checked' : ''} onchange="toggleMoveSelect('${p.steam_id}', this.checked)">
       <div class="move-profile-info">
-        <div class="move-profile-name">${escapeHtmlSimple(p.persona_name || p.steam_id)}</div>
-        <div class="move-profile-meta">${escapeHtmlSimple(p.checked_by_username || 'Unknown')} • ${new Date(p.checked_at).toLocaleDateString('ru-RU')}</div>
+        <div class="move-profile-name">${escapeHtml(p.persona_name || p.steam_id)}</div>
+        <div class="move-profile-meta">${escapeHtml(p.checked_by_username || 'Unknown')} • ${new Date(p.checked_at).toLocaleDateString('ru-RU')}</div>
       </div>
     </label>
   `).join('');
