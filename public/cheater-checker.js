@@ -1480,6 +1480,7 @@ async function renderLinksGroups() {
     _linksGroupsData = groups.map(g => ({ group: g, links, profileMap }));
 
     await loadGroupNames();
+    await migrateGroupNames();
     renderLinksGroupsPage();
   } catch {
     container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:40px 0">Ошибка загрузки</p>';
@@ -1590,6 +1591,31 @@ async function loadGroupNames() {
       _linksGroupNames[n.group_key] = { name: n.name, renamed_by: n.renamed_by, renamed_at: n.renamed_at };
     });
   } catch {}
+}
+
+// Миграция имени группы: если group_key сменился (добавился аккаунт с меньшим steam_id),
+// переносим имя со старого ключа на новый
+async function migrateGroupNames() {
+  for (const entry of _linksGroupsData) {
+    const { group } = entry;
+    const groupKey = [...group].sort()[0];
+    if (_linksGroupNames[groupKey]) continue; // имя уже есть
+
+    // Ищем имя среди участников группы
+    for (const member of group) {
+      if (_linksGroupNames[member]) {
+        _linksGroupNames[groupKey] = _linksGroupNames[member];
+        try {
+          await fetch('/api/cheater-checker/links/group-name', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ groupKey, name: _linksGroupNames[member].name, renamedBy: _linksGroupNames[member].renamed_by }),
+          });
+        } catch {}
+        break;
+      }
+    }
+  }
 }
 
 function goToLinksPage(page) {
