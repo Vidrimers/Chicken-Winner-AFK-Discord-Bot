@@ -692,8 +692,8 @@ function createProfileCard(profile, isBanned) {
         </div>
         ${cs2Html}
         ${faceitHtml}
-        <div class="notes-section" id="notes-${steamId}"></div>
-        <div class="card-links-section" id="card-links-${steamId}" style="display:none"></div>
+        <div class="notes-section"></div>
+        <div class="card-links-section" style="display:none"></div>
       </div>
       <div class="card-actions">
         <a href="${profileUrl}" target="_blank" rel="noopener" class="card-action-btn profile-link-btn"><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Профиль</a>
@@ -897,42 +897,52 @@ function bindCardDelegation() {
   if (window._cardDelegationBound) return;
   window._cardDelegationBound = true;
 
+  // Делегирование через closest — но с защитой от двойного срабатывания
   document.addEventListener('click', (e) => {
+    // Ищем карточку — но только одну, и только если клик реально внутри неё
     const card = e.target.closest('.profile-card');
-    if (!card) return;
+    if (!card || !card.contains(e.target)) return;
 
-    // Клик по кнопке "Дискорд"
-    const publishBtn = e.target.closest('.discord-publish-btn');
-    if (publishBtn) {
-      e.stopImmediatePropagation();
-      publishToDiscord(publishBtn.dataset.steamId);
+    // Кнопки внутри карточки — обрабатываем отдельно
+    if (e.target.closest('a, button, input, .notes-section, .card-links-section')) {
+      const publishBtn = e.target.closest('.discord-publish-btn');
+      if (publishBtn) {
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+        publishToDiscord(publishBtn.dataset.steamId);
+        return;
+      }
+      const deleteBtn = e.target.closest('.card-delete-btn');
+      if (deleteBtn) {
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+        showConfirmDialog(deleteBtn.dataset.steamId, deleteBtn.dataset.name);
+        return;
+      }
       return;
     }
-
-    // Клик по кнопке удаления (admin)
-    const deleteBtn = e.target.closest('.card-delete-btn');
-    if (deleteBtn) {
-      e.stopImmediatePropagation();
-      showConfirmDialog(deleteBtn.dataset.steamId, deleteBtn.dataset.name);
-      return;
-    }
-
-    // Клик по ссылке/кнопке/инпуту или в секции заметок — не раскрываем карточку
-    if (e.target.closest('a, button, input, .notes-section, .card-links-section')) return;
 
     e.stopImmediatePropagation();
+    e.stopPropagation();
     const steamId = card.dataset.steamId;
     const details = card.querySelector('.card-details');
     const nameEl = card.querySelector('.card-name');
     if (details) {
-      details.classList.toggle('visible');
-      if (nameEl) nameEl.classList.toggle('expanded');
-      if (details.classList.contains('visible')) {
-        renderNotes(steamId);
-        renderCardLinks(steamId);
+      const isVisible = details.classList.contains('visible');
+      // Закрываем все остальные открытые карточки
+      document.querySelectorAll('.card-details.visible').forEach(d => {
+        d.classList.remove('visible');
+        const n = d.closest('.profile-card')?.querySelector('.card-name');
+        if (n) n.classList.remove('expanded');
+      });
+      if (!isVisible) {
+        details.classList.add('visible');
+        if (nameEl) nameEl.classList.add('expanded');
+        renderNotes(steamId, card);
+        renderCardLinks(steamId, card);
       }
     }
-  });
+  }, true); // capture phase — перехватываем раньше всех
 }
 
 // ===== ОДИНОЧНАЯ ПРОВЕРКА =====
@@ -1642,8 +1652,8 @@ async function updateAllLinksButtons() {
 }
 
 // Секция связей в раскрытой карточке
-async function renderCardLinks(steamId) {
-  const container = document.getElementById(`card-links-${steamId}`);
+async function renderCardLinks(steamId, cardEl) {
+  const container = cardEl ? cardEl.querySelector('.card-links-section') : document.querySelector(`.profile-card[data-steam-id="${steamId}"] .card-links-section`);
   if (!container) return;
 
   try {
@@ -2697,8 +2707,8 @@ async function confirmDeleteNote(noteId, steamId) {
 /**
  * Рендерит заметки в контейнере карточки
  */
-function renderNotes(steamId) {
-  const container = document.getElementById(`notes-${steamId}`);
+function renderNotes(steamId, cardEl) {
+  const container = cardEl ? cardEl.querySelector('.notes-section') : document.querySelector(`.profile-card[data-steam-id="${steamId}"] .notes-section`);
   if (!container) return;
 
   const profile = [...allBannedProfilesUnfiltered, ...allCleanProfilesUnfiltered]
