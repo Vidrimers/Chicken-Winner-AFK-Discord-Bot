@@ -171,6 +171,7 @@ function switchView(view) {
   document.getElementById('resultsGrid').style.display = '';
   document.getElementById('linksGroupsContainer').style.display = 'none';
   document.getElementById('linksPagination').innerHTML = '';
+  document.getElementById('filterNotice').style.display = 'none';
   // Закрываем поиск при смене вкладки
   const searchSection = document.getElementById('searchSection');
   const searchToggleBtn = document.getElementById('searchToggleBtn');
@@ -213,6 +214,18 @@ function setReportFilter(filter) {
   document.querySelectorAll('.filter-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.filter === filter);
   });
+
+  // Плашка-пояснение фильтров
+  const notice = document.getElementById('filterNotice');
+  if (filter === 'favorites') {
+    notice.textContent = '⭐ Избранное видите только вы';
+    notice.style.display = 'block';
+  } else if (filter === 'links') {
+    notice.textContent = '🔗 Связи видят все пользователи';
+    notice.style.display = 'block';
+  } else {
+    notice.style.display = 'none';
+  }
 
   // Таб «Связи» — показываем группы, скрываем обычные колонки
   const resultsGrid = document.getElementById('resultsGrid');
