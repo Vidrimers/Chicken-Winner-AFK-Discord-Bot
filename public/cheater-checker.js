@@ -870,46 +870,42 @@ function bindCardEvents() {
  * Делегирование событий для карточек (вызывается один раз в bindEvents)
  */
 function bindCardDelegation() {
-  // Делегируем клики на контейнеры колонок и группы связей
-  ['bannedCards', 'cleanCards', 'linksGroupsContainer'].forEach(containerId => {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    
-    container.addEventListener('click', (e) => {
-      // Клик по кнопке "Дискорд"
-      const publishBtn = e.target.closest('.discord-publish-btn');
-      if (publishBtn) {
-        publishToDiscord(publishBtn.dataset.steamId);
-        return;
-      }
+  // Делегируем клики на document — работает для всех контейнеров, включая динамические
+  document.addEventListener('click', (e) => {
+    // Только клики внутри карточек профилей
+    const card = e.target.closest('.profile-card');
+    if (!card) return;
 
-      // Клик по кнопке удаления (admin)
-      const deleteBtn = e.target.closest('.card-delete-btn');
-      if (deleteBtn) {
-        showConfirmDialog(deleteBtn.dataset.steamId, deleteBtn.dataset.name);
-        return;
-      }
+    // Клик по кнопке "Дискорд"
+    const publishBtn = e.target.closest('.discord-publish-btn');
+    if (publishBtn) {
+      publishToDiscord(publishBtn.dataset.steamId);
+      return;
+    }
 
-      // Клик по ссылке/кнопке/инпуту или в секции заметок — не раскрываем карточку
-      if (e.target.closest('a, button, input, .notes-section, .card-links-section')) return;
+    // Клик по кнопке удаления (admin)
+    const deleteBtn = e.target.closest('.card-delete-btn');
+    if (deleteBtn) {
+      showConfirmDialog(deleteBtn.dataset.steamId, deleteBtn.dataset.name);
+      return;
+    }
 
-      // Клик по карточке → раскрытие деталей
-      const card = e.target.closest('.profile-card');
-      if (card) {
-        const steamId = card.dataset.steamId;
-        const details = document.getElementById(`details-${steamId}`);
-        const nameEl = card.querySelector('.card-name');
-        if (details) {
-          details.classList.toggle('visible');
-          if (nameEl) nameEl.classList.toggle('expanded');
-          // Рендерим заметки и связи при раскрытии
-          if (details.classList.contains('visible')) {
-            renderNotes(steamId);
-            renderCardLinks(steamId);
-          }
-        }
+    // Клик по ссылке/кнопке/инпуту или в секции заметок — не раскрываем карточку
+    if (e.target.closest('a, button, input, .notes-section, .card-links-section')) return;
+
+    // Клик по карточке → раскрытие деталей
+    const steamId = card.dataset.steamId;
+    const details = document.getElementById(`details-${steamId}`);
+    const nameEl = card.querySelector('.card-name');
+    if (details) {
+      details.classList.toggle('visible');
+      if (nameEl) nameEl.classList.toggle('expanded');
+      // Рендерим заметки и связи при раскрытии
+      if (details.classList.contains('visible')) {
+        renderNotes(steamId);
+        renderCardLinks(steamId);
       }
-    });
+    }
   });
 }
 
@@ -1370,7 +1366,7 @@ async function toggleLink(steamId1, steamId2, isChecked) {
       await fetch('/api/cheater-checker/links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ steamId1, steamId2, createdBy: currentUserId }),
+        body: JSON.stringify({ steamId1, steamId2, createdBy: currentUsername || currentUserId }),
       });
       if (_linksCache[steamId1]) _linksCache[steamId1].add(steamId2);
     } else {
@@ -1469,7 +1465,7 @@ async function renderLinksGroups() {
       const groupSet = new Set(group);
       const groupLinks = links.filter(l => groupSet.has(l.steam_id_a) && groupSet.has(l.steam_id_b));
       const linkInfos = groupLinks.map(l => {
-        const creator = l.created_by || 'Unknown';
+        const creator = l.created_by_name || l.created_by || 'Unknown';
         const date = l.created_at ? new Date(l.created_at * 1000).toLocaleDateString('ru-RU') : '';
         return `${escapeHtml(creator)}${date ? ' • ' + date : ''}`;
       });
@@ -1538,7 +1534,7 @@ async function renderCardLinks(steamId) {
         steamId: id,
         name: p ? (p.persona_name || id) : id,
         profileUrl: p?.profile_url || `https://steamcommunity.com/profiles/${id}`,
-        createdBy: link?.created_by || null,
+        createdBy: link?.created_by_name || link?.created_by || null,
         createdAt: link?.created_at || null,
       };
     });

@@ -369,7 +369,10 @@ export class DatabaseManager {
 
   getLinksForSteamId(steamId) {
     return this.prepare(
-      `SELECT * FROM cheater_links WHERE steam_id_a = ? OR steam_id_b = ?`
+      `SELECT cl.*, COALESCE(us.username, cl.created_by) as created_by_name
+       FROM cheater_links cl
+       LEFT JOIN user_stats us ON cl.created_by = us.user_id
+       WHERE cl.steam_id_a = ? OR cl.steam_id_b = ?`
     ).all(steamId, steamId);
   }
 
@@ -393,7 +396,11 @@ export class DatabaseManager {
   }
 
   getAllLinks() {
-    return this.prepare('SELECT * FROM cheater_links').all();
+    return this.prepare(
+      `SELECT cl.*, COALESCE(us.username, cl.created_by) as created_by_name
+       FROM cheater_links cl
+       LEFT JOIN user_stats us ON cl.created_by = us.user_id`
+    ).all();
   }
 
   deleteLinksForSteamId(steamId) {
