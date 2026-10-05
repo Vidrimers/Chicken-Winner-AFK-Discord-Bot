@@ -170,6 +170,7 @@ function switchView(view) {
   // Сбрасываем видимость: обычные колонки показываем, группы связей скрываем
   document.getElementById('resultsGrid').style.display = '';
   document.getElementById('linksGroupsContainer').style.display = 'none';
+  document.getElementById('linksPagination').innerHTML = '';
   // Закрываем поиск при смене вкладки
   const searchSection = document.getElementById('searchSection');
   const searchToggleBtn = document.getElementById('searchToggleBtn');
@@ -219,11 +220,13 @@ function setReportFilter(filter) {
   if (filter === 'links') {
     resultsGrid.style.display = 'none';
     linksContainer.style.display = 'block';
+    linksPage = 1;
     renderLinksGroups();
     return;
   } else {
     resultsGrid.style.display = '';
     linksContainer.style.display = 'none';
+    document.getElementById('linksPagination').innerHTML = '';
   }
 
   applyReportFilter();
@@ -337,6 +340,9 @@ function goToPage(type, page) {
   if (type === 'banned') {
     bannedPage = page;
     renderBannedPage();
+  } else if (type === 'links') {
+    linksPage = page;
+    renderLinksGroupsPage();
   } else {
     cleanPage = page;
     renderCleanPage();
@@ -852,6 +858,11 @@ function bindEvents() {
       cleanPage = 1;
       renderBannedPage();
       renderCleanPage();
+      // Если активен таб «Связи» — перерисовываем группы с новым размером
+      if (currentReportFilter === 'links') {
+        linksPage = 1;
+        renderLinksGroupsPage();
+      }
     });
   }
 }
@@ -1210,6 +1221,8 @@ let _linksSteamId = null;        // steamId карточки, для котор�
 let _linksSearchQuery = '';
 let _linksProfilesCache = null;  // все профили (читеры + боты)
 let _linksCache = {};            // steamId → [linkedSteamIds]
+let _linksGroupsData = [];       // вычисленные группы для пагинации
+let linksPage = 1;
 
 async function openLinksModal(steamId, event) {
   if (event) { event.preventDefault(); event.stopPropagation(); }
@@ -1426,6 +1439,7 @@ async function renderLinksGroups() {
     const links = linksData.links || [];
     if (!links.length) {
       container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:40px 0">Связей пока нет</p>';
+      document.getElementById('linksPagination').innerHTML = '';
       return;
     }
 
@@ -1457,46 +1471,67 @@ async function renderLinksGroups() {
     }
 
     groups.sort((a, b) => b.length - a.length);
+    _linksGroupsData = groups.map(g => ({ group: g, links, profileMap }));
 
-    container.innerHTML = groups.map((group, idx) => {
-      const cards = group.map(id => {
-        const p = profileMap[id];
-        if (!p) return '';
-        const isBanned = (p.vac_banned || p.number_of_game_bans > 0 || p.community_banned || (p.economy_ban && p.economy_ban !== 'none'));
-        return createProfileCard(p, isBanned);
-      }).join('');
-
-      // Находим связи внутри группы для отображения кто создал (дедупликация по имени)
-      const groupSet = new Set(group);
-      const groupLinks = links.filter(l => groupSet.has(l.steam_id_a) && groupSet.has(l.steam_id_b));
-      const creatorSet = new Set();
-      const linkInfos = [];
-      groupLinks.forEach(l => {
-        const creator = l.created_by_name || l.created_by || 'Unknown';
-        const date = l.created_at ? new Date(l.created_at * 1000).toLocaleDateString('ru-RU') : '';
-        const key = creator + '|' + date;
-        if (!creatorSet.has(key)) {
-          creatorSet.add(key);
-          linkInfos.push(`${escapeHtml(creator)}${date ? ' • ' + date : ''}`);
-        }
-      });
-
-      return `
-        <div class="link-group">
-          <div class="link-group-header">
-            🔗 Группа ${idx + 1} — ${group.length} ${pluralAccounts(group.length)}
-            ${linkInfos.length ? `<div class="link-group-meta">Связи создал: ${linkInfos.join(' | ')}</div>` : ''}
-          </div>
-          <div class="link-group-cards">${cards}</div>
-        </div>
-      `;
-    }).join('');
-
-    bindCardEvents();
-    updateAllLinksButtons();
+    renderLinksGroupsPage();
   } catch {
     container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:40px 0">Ошибка загрузки</p>';
   }
+}
+
+function renderLinksGroupsPage() {
+  const container = document.getElementById('linksGroupsContainer');
+  const groups = _linksGroupsData;
+
+  const totalPages = Math.ceil(groups.length / PAGE_SIZE);
+  if (linksPage > totalPages) linksPage = totalPages || 1;
+
+  const start = (linksPage - 1) * PAGE_SIZE;
+  const pageGroups = groups.slice(start, start + PAGE_SIZE);
+
+  container.innerHTML = pageGroups.map((entry, i) => {
+    const { group, links, profileMap } = entry;
+    const idx = start + i;
+    const cards = group.map(id => {
+      const p = profileMap[id];
+      if (!p) return '';
+      const isBanned = (p.vac_banned || p.number_of_game_bans > 0 || p.community_banned || (p.economy_ban && p.economy_ban !== 'none'));
+      return createProfileCard(p, isBanned);
+    }).join('');
+
+    // Находим связи внутри группы для отображения кто создал (дедупликация по имени)
+    const groupSet = new Set(group);
+    const groupLinks = links.filter(l => groupSet.has(l.steam_id_a) && groupSet.has(l.steam_id_b));
+    const creatorSet = new Set();
+    const linkInfos = [];
+    groupLinks.forEach(l => {
+      const creator = l.created_by_name || l.created_by || 'Unknown';
+      const date = l.created_at ? new Date(l.created_at * 1000).toLocaleDateString('ru-RU') : '';
+      const key = creator + '|' + date;
+      if (!creatorSet.has(key)) {
+        creatorSet.add(key);
+        linkInfos.push(`${escapeHtml(creator)}${date ? ' • ' + date : ''}`);
+      }
+    });
+
+    return `
+      <div class="link-group">
+        <div class="link-group-header">
+          🔗 Группа ${idx + 1} — ${group.length} ${pluralAccounts(group.length)}
+          ${linkInfos.length ? `<div class="link-group-meta">Связи создал: ${linkInfos.join(' | ')}</div>` : ''}
+        </div>
+        <div class="link-group-cards">${cards}</div>
+      </div>
+    `;
+  }).join('');
+
+  renderPagination('links', groups.length, linksPage);
+  updateAllLinksButtons();
+}
+
+function goToLinksPage(page) {
+  linksPage = page;
+  renderLinksGroupsPage();
 }
 
 // Обновление кнопок «Связи» на всех карточках после загрузки профилей
