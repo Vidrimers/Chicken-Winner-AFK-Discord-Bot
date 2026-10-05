@@ -895,7 +895,7 @@ function bindCardDelegation() {
 
     // Клик по карточке → раскрытие деталей
     const steamId = card.dataset.steamId;
-    const details = document.getElementById(`details-${steamId}`);
+    const details = card.querySelector('.card-details');
     const nameEl = card.querySelector('.card-name');
     if (details) {
       details.classList.toggle('visible');
@@ -1380,6 +1380,11 @@ async function toggleLink(steamId1, steamId2, isChecked) {
     // Обновляем кнопки на обоих аккаунтах
     updateLinksButtonState(steamId1);
     updateLinksButtonState(steamId2);
+
+    // Если активен таб «Связи» — перерисовываем группы
+    if (currentReportFilter === 'links') {
+      renderLinksGroups();
+    }
   } catch (err) {
     console.error('Ошибка связи:', err);
     showNotification('Ошибка при обновлении связи', 'error');
@@ -1461,13 +1466,19 @@ async function renderLinksGroups() {
         return createProfileCard(p, isBanned);
       }).join('');
 
-      // Находим связи внутри группы для отображения кто создал
+      // Находим связи внутри группы для отображения кто создал (дедупликация по имени)
       const groupSet = new Set(group);
       const groupLinks = links.filter(l => groupSet.has(l.steam_id_a) && groupSet.has(l.steam_id_b));
-      const linkInfos = groupLinks.map(l => {
+      const creatorSet = new Set();
+      const linkInfos = [];
+      groupLinks.forEach(l => {
         const creator = l.created_by_name || l.created_by || 'Unknown';
         const date = l.created_at ? new Date(l.created_at * 1000).toLocaleDateString('ru-RU') : '';
-        return `${escapeHtml(creator)}${date ? ' • ' + date : ''}`;
+        const key = creator + '|' + date;
+        if (!creatorSet.has(key)) {
+          creatorSet.add(key);
+          linkInfos.push(`${escapeHtml(creator)}${date ? ' • ' + date : ''}`);
+        }
       });
 
       return `
@@ -2332,11 +2343,10 @@ async function toggleFavorite(steamId, event) {
       }
     });
 
-    // Обновляем звёздочку в DOM
-    const star = document.querySelector(`.card-fav-btn[data-steam-id="${steamId}"]`);
-    if (star) {
+    // Обновляем звёздочку в DOM (все копии — в основной сетке и в группах связей)
+    document.querySelectorAll(`.card-fav-btn[data-steam-id="${steamId}"]`).forEach(star => {
       star.classList.toggle('active', data.isFavorite);
-    }
+    });
 
     // Скрываем карандаш если заметки удалены
     if (data.notesDeleted) {
@@ -2404,8 +2414,7 @@ async function addNote(steamId) {
     });
 
     // Обновляем звёздочку (могла стать активной из-за авто-добавления)
-    const star = document.querySelector(`.card-fav-btn[data-steam-id="${steamId}"]`);
-    if (star) star.classList.add('active');
+    document.querySelectorAll(`.card-fav-btn[data-steam-id="${steamId}"]`).forEach(star => star.classList.add('active'));
 
     // Показываем карандаш
     const pencil = document.querySelector(`.card-pencil[data-steam-id="${steamId}"]`);
