@@ -861,6 +861,37 @@ async function handleSteamUrlCheck(chatId, text, type = 'cheater') {
     for (const profile of results) {
       const existingProfile = db.getCheckBySteamId(profile.steamId);
       if (existingProfile) {
+        const existingType = existingProfile.type || 'cheater';
+
+        // Конфликт типов — профиль есть как другой тип
+        if (existingType !== type) {
+          const isBanned = profile.vacBanned || profile.numberOfGameBans > 0 || profile.communityBanned || (profile.economyBan && profile.economyBan !== 'none');
+          const statusEmoji = isBanned ? '🔴' : '🟢';
+          const statusText = isBanned ? 'ЗАБАНЕН' : 'ЧИСТО';
+          const sourceLabel = existingType === 'cheater' ? 'читер' : 'бот';
+          const targetLabel = type === 'bot' ? 'боты' : 'читеры';
+
+          let msg = `⚠️ <b>Профиль уже в базе как ${sourceLabel}!</b>\n\n`;
+          msg += `${statusEmoji} <b>${escapeTgHtml(profile.personaName)}</b> — ${statusText}\n`;
+          msg += `🔗 <a href="${profile.profileUrl}">Профиль Steam</a>\n`;
+          msg += `👤 Добавил: <b>${escapeTgHtml(existingProfile.checked_by_username || 'Unknown')}</b>\n`;
+          msg += `📅 Дата: ${new Date(existingProfile.checked_at).toLocaleDateString('ru-RU')}\n\n`;
+          msg += `Переместить в «${targetLabel}»?`;
+
+          await telegramBot.sendMessage(chatId, msg, {
+            parse_mode: 'HTML',
+            disable_web_page_preview: true,
+            reply_markup: {
+              inline_keyboard: [[
+                { text: `✅ Переместить в ${targetLabel}`, callback_data: `move_type:${profile.steamId}:${type}` },
+                { text: '❌ Отмена', callback_data: 'move_type_cancel' }
+              ]]
+            }
+          });
+          continue;
+        }
+
+        // Тот же тип — дубликат
         db.upsertCheck({
           ...profile,
           checkedByDiscordId: discordId,
@@ -1677,8 +1708,51 @@ export function initTelegramBot(
 
       console.log(`🔘 Callback query: ${data} от chat_id: ${chatId}`);
 
+      // Динамический callback: перемещение типа профиля
+      if (data.startsWith('move_type:') && data !== 'move_type_cancel') {
+        const parts = data.split(':');
+        const steamId = parts[1];
+        const targetType = parts[2];
+        try {
+          const existing = db.getCheckBySteamId(steamId);
+          if (!existing) {
+            await telegramBot.editMessageText('❌ Профиль не найден в БД.', {
+              chat_id: chatId, message_id: query.message.message_id,
+            });
+            return;
+          }
+          const oldType = existing.type || 'cheater';
+          if (oldType === targetType) {
+            await telegramBot.editMessageText('Профиль уже в этом разделе.', {
+              chat_id: chatId, message_id: query.message.message_id,
+            });
+            return;
+          }
+          db.moveCheckType(steamId, targetType);
+          const targetLabel = targetType === 'cheater' ? 'Читеры' : 'Боты';
+          await telegramBot.editMessageText(
+            `✅ Профиль «${escapeTgHtml(existing.persona_name || steamId)}» перемещён в «${targetLabel}».`,
+            { chat_id: chatId, message_id: query.message.message_id, parse_mode: 'HTML' }
+          );
+        } catch (err) {
+          console.error('[TG] Ошибка перемещения типа:', err.message);
+          await telegramBot.editMessageText('❌ Ошибка при перемещении.', {
+            chat_id: chatId, message_id: query.message.message_id,
+          });
+        }
+        return;
+      }
+
       try {
         switch (data) {
+          case 'move_type_cancel': {
+            await telegramBot.editMessageText('❌ Перемещение отменено.', {
+              chat_id: chatId,
+              message_id: query.message.message_id,
+            });
+            break;
+          }
+
           case 'menu_voice':
             await handleVoiceActivity(chatId);
             break;

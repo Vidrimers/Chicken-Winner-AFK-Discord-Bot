@@ -229,6 +229,23 @@
       </div>
     </div>
 
+    <!-- Модалка перемещения профиля при конфликте типов -->
+    <div class="modal-overlay" id="typeConflictModal" style="display: none">
+      <div class="modal-box confirm-box">
+        <div class="modal-box-header confirm-header">
+          <h2><svg class="icon" aria-hidden="true"><use href="#icon-warning"></use></svg> Профиль уже в базе</h2>
+        </div>
+        <div class="modal-box-body confirm-body">
+          <p id="typeConflictText">Профиль уже добавлен как читер. Переместить в боты?</p>
+          <div id="typeConflictList" style="max-height:150px;overflow-y:auto;margin:10px 0;font-size:13px;"></div>
+          <div class="confirm-buttons">
+            <button class="confirm-delete-btn" id="typeConflictMoveBtn">Переместить</button>
+            <button class="confirm-cancel-btn" id="typeConflictCancelBtn">Отмена</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Модалка друзей читера -->
     <div class="modal-overlay" id="friendsModal" style="display:none">
       <div class="modal-box" style="max-width:550px">

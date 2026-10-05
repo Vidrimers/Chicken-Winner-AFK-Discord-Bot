@@ -157,6 +157,58 @@ export class VacHandler {
         // Проверяем, есть ли уже в БД
         const existing = this.db.getCheckBySteamId(profile.steamId);
         if (existing) {
+          const existingType = existing.type || 'cheater';
+
+          // Конфликт типов — профиль есть как другой тип
+          if (existingType !== type) {
+            const sourceLabel = existingType === 'cheater' ? 'читер' : 'бот';
+            const targetLabel = type === 'bot' ? 'боты' : 'читеры';
+            const embed = this.buildProfileEmbed(profile, existing.checked_by_username, type);
+
+            const conflictMsg = await message.reply({
+              content: `⚠️ Этот профиль уже добавлен как **${sourceLabel}** (${new Date(existing.checked_at).toLocaleDateString('ru-RU')}).\nПереместить в **${targetLabel}**?\n\n✅ — Переместить\n❌ — Отмена`,
+              embeds: [embed]
+            });
+
+            await conflictMsg.react('✅');
+            await conflictMsg.react('❌');
+
+            const filter = (reaction, user) => {
+              return ['✅', '❌'].includes(reaction.emoji.name) && user.id === message.author.id;
+            };
+
+            const collector = conflictMsg.createReactionCollector({ filter, time: 30000, max: 1 });
+
+            collector.on('collect', async (reaction) => {
+              if (reaction.emoji.name === '✅') {
+                this.db.moveCheckType(profile.steamId, type);
+                await conflictMsg.edit({
+                  content: `✅ Профиль «${profile.personaName || profile.steamId}» перемещён в «${targetLabel}».`,
+                  embeds: []
+                });
+              } else {
+                await conflictMsg.edit({
+                  content: `❌ Перемещение отменено.`,
+                  embeds: []
+                });
+              }
+            });
+
+            collector.on('end', async (collected) => {
+              if (collected.size === 0) {
+                await conflictMsg.edit({
+                  content: `⏱️ Время истекло. Перемещение отменено.`,
+                  embeds: []
+                }).catch(() => {});
+              }
+            });
+
+            await message.reactions.cache.get('🔍')?.remove();
+            await message.react('⚠️');
+            return;
+          }
+
+          // Тот же тип — дубликат
           // Обновляем данные о банах (автор не перезапишется благодаря ON CONFLICT)
           this.db.upsertCheck({
             ...profile,
@@ -299,6 +351,7 @@ export class VacHandler {
     const discordDisplayName = this.db.getUserStats(message.author.id)?.username || message.member?.displayName || message.author.username;
     const newProfiles = [];
     const duplicates = [];
+    const typeConflicts = [];
     const errors = [];
 
     for (const url of urls) {
@@ -315,27 +368,32 @@ export class VacHandler {
           const existing = this.db.getCheckBySteamId(profile.steamId);
 
           if (existing) {
-            // Обновляем данные о банах, автор не перезапишется
-            this.db.upsertCheck({
-              ...profile,
-              checkedByDiscordId: message.author.id,
-              checkedByUsername: discordDisplayName
-            }, type);
+            const existingType = existing.type || 'cheater';
 
-            // Кэшируем CS2/FACEIT статистику в фоне
-            getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
-              .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
+            if (existingType !== type) {
+              // Конфликт типов — не обновляем, копим для вопроса
+              typeConflicts.push({ profile, existing, existingType });
+            } else {
+              // Тот же тип — обновляем данные о банах
+              this.db.upsertCheck({
+                ...profile,
+                checkedByDiscordId: message.author.id,
+                checkedByUsername: discordDisplayName
+              }, type);
 
-            // Парсим друзей в фоне
-            {
-              getFriendsWithDetails(profile.steamId).then(friends => {
-                for (const f of friends) {
-                  this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
-                }
-              }).catch(() => {});
+              getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
+                .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
+
+              {
+                getFriendsWithDetails(profile.steamId).then(friends => {
+                  for (const f of friends) {
+                    this.db.upsertFriend(profile.steamId, f.steamId, f.customUrl, f.personaName);
+                  }
+                }).catch(() => {});
+              }
+
+              duplicates.push({ profile, existing });
             }
-
-            duplicates.push({ profile, existing });
           } else {
             // Сохраняем новый профиль
             this.db.upsertCheck({
@@ -344,11 +402,9 @@ export class VacHandler {
               checkedByUsername: discordDisplayName
             }, type);
 
-            // Кэшируем CS2/FACEIT статистику в фоне
             getCachedStats(profile.steamId, this.db, 'cheater_checks', profile.steamId)
               .catch(err => console.error('[Discord] Ошибка кэширования Steam stats:', err.message));
 
-            // Парсим друзей в фоне
             {
               getFriendsWithDetails(profile.steamId).then(friends => {
                 for (const f of friends) {
@@ -419,8 +475,47 @@ export class VacHandler {
     let summary = `✅ Проверено: ${urls.length} ссылок`;
     if (newProfiles.length > 0) summary += ` | Новых: ${newProfiles.length}`;
     if (duplicates.length > 0) summary += ` | Уже в базе: ${duplicates.length}`;
+    if (typeConflicts.length > 0) summary += ` | Конфликт типов: ${typeConflicts.length}`;
     if (errors.length > 0) summary += `\n⚠️ Ошибки: ${errors.join('; ')}`;
     await message.channel.send(summary);
+
+    // Конфликт типов — спрашиваем после обработки
+    if (typeConflicts.length > 0) {
+      const targetLabel = type === 'bot' ? 'боты' : 'читеры';
+      const names = typeConflicts.map(c => c.profile.personaName || c.profile.steamId).join(', ');
+      const conflictMsg = await message.channel.send(
+        `⚠️ **Найдены профили с другим типом:**\n${names}\n\nПереместить в **${targetLabel}**?\n\n✅ — Переместить все\n❌ — Отмена`
+      );
+
+      await conflictMsg.react('✅');
+      await conflictMsg.react('❌');
+
+      const filter = (reaction, user) => {
+        return ['✅', '❌'].includes(reaction.emoji.name) && user.id === message.author.id;
+      };
+
+      const collector = conflictMsg.createReactionCollector({ filter, time: 30000, max: 1 });
+
+      collector.on('collect', async (reaction) => {
+        if (reaction.emoji.name === '✅') {
+          for (const c of typeConflicts) {
+            this.db.moveCheckType(c.profile.steamId, type);
+          }
+          await conflictMsg.edit({
+            content: `✅ Перемещено профилей: ${typeConflicts.length} в «${targetLabel}».`,
+          });
+        } else {
+          await conflictMsg.edit({ content: `❌ Перемещение отменено.` });
+        }
+      });
+
+      collector.on('end', async (collected) => {
+        if (collected.size === 0) {
+          await conflictMsg.edit({ content: `⏱️ Время истекло. Перемещение отменено.` }).catch(() => {});
+        }
+      });
+    }
+
     await message.react('✅');
   }
 

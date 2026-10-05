@@ -785,6 +785,10 @@ function bindEvents() {
   // Диалог подтверждения
   document.getElementById('confirmCancelBtn').addEventListener('click', closeConfirmDialog);
 
+  // Модалка конфликта типов
+  document.getElementById('typeConflictMoveBtn').addEventListener('click', confirmTypeConflictMove);
+  document.getElementById('typeConflictCancelBtn').addEventListener('click', closeTypeConflictModal);
+
   // Закрытие модалок по клику на overlay
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
@@ -904,6 +908,7 @@ async function handleSingleCheck() {
         urls: [url],
         checkedByDiscordId: currentUserId,
         checkedByUsername: currentUsername && currentUsername !== 'Web User' ? currentUsername : (currentUserId || 'Unknown'),
+        type: currentView,
       }),
     });
 
@@ -914,9 +919,11 @@ async function handleSingleCheck() {
       return;
     }
 
-    // Добавляем только новые результаты (исключаем дубликаты)
+    // Добавляем только новые результаты (исключаем дубликаты и конфликты типов)
     const duplicateSteamIds = (data.duplicates || []).map(d => d.steamId);
-    const newResults = (data.results || []).filter(r => !duplicateSteamIds.includes(r.steamId));
+    const conflictSteamIds = (data.typeConflicts || []).map(d => d.steamId);
+    const excludedIds = [...duplicateSteamIds, ...conflictSteamIds];
+    const newResults = (data.results || []).filter(r => !excludedIds.includes(r.steamId));
 
     if (newResults.length > 0) {
       addResultCards(newResults);
@@ -941,6 +948,11 @@ async function handleSingleCheck() {
       if (newResults.length === 0) input.value = '';
     } else if (newResults.length > 0) {
       showNotification('Проверка завершена', 'success');
+    }
+
+    // Конфликт типов — показываем модалку перемещения
+    if (data.typeConflicts && data.typeConflicts.length > 0) {
+      showTypeConflictModal(data.typeConflicts, data.typeConflicts[0].targetType);
     }
 
     // Показываем ошибки
@@ -1024,6 +1036,7 @@ async function handleMassCheck() {
         urls,
         checkedByDiscordId: currentUserId,
         checkedByUsername: currentUsername && currentUsername !== 'Web User' ? currentUsername : (currentUserId || 'Unknown'),
+        type: currentView,
       }),
     });
 
@@ -1034,9 +1047,11 @@ async function handleMassCheck() {
       return;
     }
 
-    // Добавляем только новые результаты (исключаем дубликаты)
+    // Добавляем только новые результаты (исключаем дубликаты и конфликты типов)
     const duplicateSteamIds = (data.duplicates || []).map(d => d.steamId);
-    const newResults = (data.results || []).filter(r => !duplicateSteamIds.includes(r.steamId));
+    const conflictSteamIds = (data.typeConflicts || []).map(d => d.steamId);
+    const excludedIds = [...duplicateSteamIds, ...conflictSteamIds];
+    const newResults = (data.results || []).filter(r => !excludedIds.includes(r.steamId));
 
     if (newResults.length > 0) {
       addResultCards(newResults);
@@ -1061,6 +1076,11 @@ async function handleMassCheck() {
       showNotification(`Проверено профилей: ${newResults.length}`, 'success');
     }
 
+    // Конфликт типов — показываем модалку перемещения
+    if (data.typeConflicts && data.typeConflicts.length > 0) {
+      showTypeConflictModal(data.typeConflicts, data.typeConflicts[0].targetType);
+    }
+
     if (data.errors && data.errors.length > 0) {
       showNotification(`Ошибки: ${data.errors.join('; ')}`, 'error');
     }
@@ -1069,6 +1089,78 @@ async function handleMassCheck() {
     showNotification('Ошибка соединения с сервером', 'error');
   } finally {
     showLoading(false);
+  }
+}
+
+// ===== КОНФЛИКТ ТИПОВ (перемещение читер ↔ бот) =====
+
+let _pendingTypeConflicts = [];
+
+function showTypeConflictModal(conflicts, targetType) {
+  _pendingTypeConflicts = conflicts;
+  const modal = document.getElementById('typeConflictModal');
+  const text = document.getElementById('typeConflictText');
+  const list = document.getElementById('typeConflictList');
+
+  const targetLabel = targetType === 'bot' ? 'боты' : 'читеры';
+  const sourceLabel = targetType === 'bot' ? 'читер' : 'бот';
+
+  if (conflicts.length === 1) {
+    const c = conflicts[0];
+    text.textContent = `Профиль «${c.personaName || c.steamId}» уже добавлен как ${sourceLabel}. Переместить в ${targetLabel}?`;
+  } else {
+    text.textContent = `Найдено ${conflicts.length} профилей, уже добавленных как ${sourceLabel === 'читер' ? 'читеры' : 'боты'}. Переместить в ${targetLabel}?`;
+  }
+
+  list.innerHTML = conflicts.map(c =>
+    `<div>• ${escapeHtmlSimple(c.personaName || c.steamId)} (добавил: ${escapeHtmlSimple(c.alreadyAddedBy || 'Unknown')})</div>`
+  ).join('');
+
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeTypeConflictModal() {
+  document.getElementById('typeConflictModal').style.display = 'none';
+  document.body.style.overflow = '';
+  _pendingTypeConflicts = [];
+}
+
+async function confirmTypeConflictMove() {
+  const conflicts = _pendingTypeConflicts;
+  if (!conflicts.length) return closeTypeConflictModal();
+
+  const targetType = conflicts[0].targetType;
+  closeTypeConflictModal();
+  showLoading(true);
+
+  let moved = 0, failed = 0;
+  for (const c of conflicts) {
+    try {
+      const res = await fetch('/api/cheater-checker/move-type', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          steamId: c.steamId,
+          targetType,
+          movedByDiscordId: currentUserId,
+          movedByUsername: currentUsername,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) moved++;
+      else failed++;
+    } catch {
+      failed++;
+    }
+  }
+
+  showLoading(false);
+  if (moved > 0) {
+    showNotification(`Перемещено профилей: ${moved}${failed > 0 ? `, ошибок: ${failed}` : ''}`, 'success');
+    loadProfiles();
+  } else {
+    showNotification('Не удалось переместить профили', 'error');
   }
 }
 

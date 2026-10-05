@@ -134,16 +134,30 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       // Проверяем какие профили уже есть в БД
       const duplicates = [];
       const newProfiles = [];
+      const typeConflicts = [];
 
       for (const profile of results) {
         const existing = db.getCheaterCheckBySteamId(profile.steamId);
         if (existing) {
-          duplicates.push({
-            ...profile,
-            alreadyAddedBy: existing.checked_by_username || 'Unknown',
-            alreadyAddedByDiscordId: existing.checked_by_discord_id || null,
-            alreadyAddedAt: existing.checked_at,
-          });
+          const existingType = existing.type || 'cheater';
+          if (existingType !== type) {
+            // Конфликт типов — профиль есть как другой тип
+            typeConflicts.push({
+              ...profile,
+              existingType,
+              targetType: type,
+              alreadyAddedBy: existing.checked_by_username || 'Unknown',
+              alreadyAddedAt: existing.checked_at,
+            });
+          } else {
+            // Тот же тип — просто дубликат
+            duplicates.push({
+              ...profile,
+              alreadyAddedBy: existing.checked_by_username || 'Unknown',
+              alreadyAddedByDiscordId: existing.checked_by_discord_id || null,
+              alreadyAddedAt: existing.checked_at,
+            });
+          }
         } else {
           newProfiles.push(profile);
         }
@@ -224,7 +238,45 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
         }
       }
 
-      res.json({ results, errors, duplicates });
+      res.json({ results, errors, duplicates, typeConflicts });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * POST /api/cheater-checker/move-type
+   * Перемещение профиля в другой раздел (читер ↔ бот) по подтверждению пользователя
+   */
+  router.post('/move-type', checkLimiter, async (req, res) => {
+    try {
+      const { steamId, targetType, movedByDiscordId, movedByUsername } = req.body;
+
+      if (!steamId || !targetType) {
+        return res.status(400).json({ error: 'steamId и targetType обязательны' });
+      }
+      if (!['cheater', 'bot'].includes(targetType)) {
+        return res.status(400).json({ error: 'targetType должен быть cheater или bot' });
+      }
+
+      const existing = db.getCheaterCheckBySteamId(steamId);
+      if (!existing) {
+        return res.status(404).json({ error: 'Профиль не найден в БД' });
+      }
+
+      const oldType = existing.type || 'cheater';
+      if (oldType === targetType) {
+        return res.json({ success: true, message: 'Профиль уже в этом разделе', oldType, targetType });
+      }
+
+      db.moveCheckType(steamId, targetType);
+
+      res.json({
+        success: true,
+        message: `Профиль перемещён из «${oldType === 'cheater' ? 'Читеры' : 'Боты'}» в «${targetType === 'cheater' ? 'Читеры' : 'Боты'}»`,
+        oldType,
+        targetType,
+      });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }

@@ -336,8 +336,7 @@ export class DatabaseManager {
         original_vanity_url = COALESCE(excluded.original_vanity_url, cheater_checks.original_vanity_url),
         report_source = COALESCE(excluded.report_source, cheater_checks.report_source),
         reported_by_name = COALESCE(excluded.reported_by_name, cheater_checks.reported_by_name),
-        reported_by_url = COALESCE(excluded.reported_by_url, cheater_checks.reported_by_url),
-        type = excluded.type`
+        reported_by_url = COALESCE(excluded.reported_by_url, cheater_checks.reported_by_url)`
     ).run(
       profile.steamId,
       profile.personaName || null,
@@ -357,6 +356,10 @@ export class DatabaseManager {
       profile.reportedByUrl || null,
       type
     );
+  }
+
+  moveCheckType(steamId, newType) {
+    return this.prepare('UPDATE cheater_checks SET type = ? WHERE steam_id = ?').run(newType, steamId);
   }
 
   getChecks({ limit = 50, offset = 0, filter = 'all', type = 'cheater' } = {}) {
