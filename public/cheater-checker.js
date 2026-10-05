@@ -690,7 +690,7 @@ function createProfileCard(profile, isBanned) {
         <button class="card-action-btn friends-refresh-btn" data-steam-id="${steamId}" onclick="refreshFriends('${steamId}', event)" title="${profile.friends_last_refreshed_at ? 'Обновлено: ' + new Date(profile.friends_last_refreshed_at).toLocaleString('ru-RU') : 'Обновить список друзей'}">
           <svg class="icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>
         </button>
-        <button class="card-action-btn links-btn" data-steam-id="${steamId}" onclick="openLinksModal('${steamId}', event)" title="Связи между аккаунтами">
+        <button class="card-action-btn links-btn${(_linksCountMap[steamId] || 0) > 0 ? ' has-links' : ''}" data-steam-id="${steamId}" onclick="openLinksModal('${steamId}', event)" title="Связи между аккаунтами">
           <svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связи
         </button>
         ${publishBtn}
@@ -1223,6 +1223,7 @@ let _linksProfilesCache = null;  // все профили (читеры + бот
 let _linksCache = {};            // steamId → [linkedSteamIds]
 let _linksGroupsData = [];       // вычисленные группы для пагинации
 let linksPage = 1;
+let _linksCountMap = {};         // steamId → количество связей (кэш для has-links)
 
 async function openLinksModal(steamId, event) {
   if (event) { event.preventDefault(); event.stopPropagation(); }
@@ -1382,6 +1383,8 @@ async function toggleLink(steamId1, steamId2, isChecked) {
         body: JSON.stringify({ steamId1, steamId2, createdBy: currentUsername || currentUserId }),
       });
       if (_linksCache[steamId1]) _linksCache[steamId1].add(steamId2);
+      _linksCountMap[steamId1] = (_linksCountMap[steamId1] || 0) + 1;
+      _linksCountMap[steamId2] = (_linksCountMap[steamId2] || 0) + 1;
     } else {
       await fetch('/api/cheater-checker/links', {
         method: 'DELETE',
@@ -1389,6 +1392,8 @@ async function toggleLink(steamId1, steamId2, isChecked) {
         body: JSON.stringify({ steamId1, steamId2 }),
       });
       if (_linksCache[steamId1]) _linksCache[steamId1].delete(steamId2);
+      _linksCountMap[steamId1] = Math.max(0, (_linksCountMap[steamId1] || 1) - 1);
+      _linksCountMap[steamId2] = Math.max(0, (_linksCountMap[steamId2] || 1) - 1);
     }
     // Обновляем кнопки на обоих аккаунтах
     updateLinksButtonState(steamId1);
@@ -1545,6 +1550,7 @@ async function updateAllLinksButtons() {
       countMap[l.steam_id_a] = (countMap[l.steam_id_a] || 0) + 1;
       countMap[l.steam_id_b] = (countMap[l.steam_id_b] || 0) + 1;
     });
+    _linksCountMap = countMap;
     document.querySelectorAll('.links-btn[data-steam-id]').forEach(btn => {
       const sid = btn.dataset.steamId;
       btn.classList.toggle('has-links', (countMap[sid] || 0) > 0);
