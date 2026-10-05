@@ -1220,6 +1220,7 @@ const LINKS_PER_PAGE = 10;
 let _linksSteamId = null;        // steamId карточки, для которой открыта модалка
 let _linksSearchQuery = '';
 let _linksProfilesCache = null;  // все профили (читеры + боты)
+let _linksModalTab = 'all';      // фильтр таба: all / cheater / bot
 let _linksCache = {};            // steamId → [linkedSteamIds]
 let _linksGroupsData = [];       // вычисленные группы для пагинации
 let linksPage = 1;
@@ -1230,8 +1231,12 @@ async function openLinksModal(steamId, event) {
   if (event) { event.preventDefault(); event.stopPropagation(); }
   _linksSteamId = steamId;
   _linksSearchQuery = '';
+  _linksModalTab = 'all';
   document.getElementById('linksModal').style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  document.querySelectorAll('#linksModalTabs .header-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.linksTab === 'all');
+  });
   document.getElementById('linksSearchSection').classList.remove('open');
   document.getElementById('linksSearchToggleBtn').classList.remove('active');
   document.getElementById('linksInfoSection').classList.remove('open');
@@ -1329,8 +1334,21 @@ async function loadLinksProfiles() {
   }
 }
 
+function switchLinksModalTab(tab) {
+  _linksModalTab = tab;
+  document.querySelectorAll('#linksModalTabs .header-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.linksTab === tab);
+  });
+  renderLinksProfilesList(0);
+}
+
 function renderLinksProfilesList(page) {
   let list = (_linksProfilesCache || []).filter(p => p.steam_id !== _linksSteamId);
+
+  // Фильтр по табу
+  if (_linksModalTab !== 'all') {
+    list = list.filter(p => p.type === _linksModalTab);
+  }
 
   if (_linksSearchQuery) {
     const q = _linksSearchQuery;
