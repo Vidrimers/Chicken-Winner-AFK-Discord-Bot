@@ -283,6 +283,71 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   });
 
   /**
+   * GET /api/cheater-checker/links/:steamId
+   * Получение связей для профиля
+   */
+  router.get('/links/:steamId', (req, res) => {
+    try {
+      const { steamId } = req.params;
+      const links = db.getLinksForSteamId(steamId);
+      const linkedIds = db.getLinkedSteamIds(steamId);
+      res.json({ links, linkedIds });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * GET /api/cheater-checker/links
+   * Получение всех связей (для таба «Связи»)
+   */
+  router.get('/links', (req, res) => {
+    try {
+      const links = db.getAllLinks();
+      res.json({ links });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * POST /api/cheater-checker/links
+   * Создание связи между двумя профилями
+   */
+  router.post('/links', (req, res) => {
+    try {
+      const { steamId1, steamId2, createdBy } = req.body;
+      if (!steamId1 || !steamId2) {
+        return res.status(400).json({ error: 'steamId1 и steamId2 обязательны' });
+      }
+      if (steamId1 === steamId2) {
+        return res.status(400).json({ error: 'Нельзя связать профиль с самим собой' });
+      }
+      db.addLink(steamId1, steamId2, createdBy || null);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * DELETE /api/cheater-checker/links
+   * Удаление связи между двумя профилями
+   */
+  router.delete('/links', (req, res) => {
+    try {
+      const { steamId1, steamId2 } = req.body;
+      if (!steamId1 || !steamId2) {
+        return res.status(400).json({ error: 'steamId1 и steamId2 обязательны' });
+      }
+      db.removeLink(steamId1, steamId2);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
    * GET /api/cheater-checker/profiles
    * Получение сохранённых профилей с пагинацией и фильтром
    */

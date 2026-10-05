@@ -99,6 +99,7 @@
           <button class="filter-tab active" data-filter="all" onclick="setReportFilter('all')">Все <span id="allCount" class="filter-tab-count"></span></button>
           <button class="filter-tab" data-filter="steam_wall" onclick="setReportFilter('steam_wall')">📡 Внешние репорты <span id="steamWallCount" class="filter-tab-count"></span></button>
           <button class="filter-tab" data-filter="favorites" onclick="setReportFilter('favorites')">⭐ Избранное <span id="favoritesCount" class="filter-tab-count"></span></button>
+          <button class="filter-tab" data-filter="links" onclick="setReportFilter('links')">🔗 Связи</button>
         </div>
         <label for="pageSizeSelect">На странице:</label>
         <select id="pageSizeSelect" class="page-size-select">
@@ -112,7 +113,7 @@
 
       <!-- Результаты в двух колонках -->
       <section class="results-section">
-        <div class="results-grid">
+        <div class="results-grid" id="resultsGrid">
           <!-- Колонка забаненных -->
           <div class="results-column banned-column">
             <h2 class="column-title banned-title">🔴 С ограничениями <span id="bannedCount" style="opacity:0.7;font-size:0.8em;">(0)</span></h2>
@@ -126,6 +127,8 @@
             <div class="pagination" id="cleanPagination"></div>
           </div>
         </div>
+        <!-- Группы связей (таб «Связи») -->
+        <div id="linksGroupsContainer" style="display:none"></div>
       </section>
     </div>
 
@@ -251,24 +254,20 @@
     <div class="modal-overlay" id="moveProfilesModal" style="display: none">
       <div class="modal-box" style="max-width:520px">
         <div class="modal-box-header">
+          <button class="friends-search-toggle" id="moveSearchToggleBtn" title="Поиск" onclick="toggleMoveSearch()"><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg></button>
           <h2><svg class="icon" aria-hidden="true"><use href="#icon-move"></use></svg> Перемещение профилей</h2>
           <button class="modal-close-btn" onclick="closeMoveProfilesModal()">&times;</button>
+        </div>
+        <div class="friends-search-section" id="moveSearchSection">
+          <div class="input-clear-wrapper" style="min-width:0;">
+            <input type="text" class="steam-input" id="moveSearchInput" placeholder="Поиск по нику или SteamID..." style="width:100%;" oninput="filterMoveProfiles(this.value)">
+            <button class="input-clear-btn" id="moveSearchClearBtn" title="Очистить" aria-label="Очистить поиск">×</button>
+          </div>
         </div>
         <div class="modal-box-body">
           <div class="header-tabs" id="moveModalTabs" style="margin-bottom:12px">
             <button class="header-tab active" data-move-tab="cheater" onclick="switchMoveModalTab('cheater')">Читеры</button>
             <button class="header-tab" data-move-tab="bot" onclick="switchMoveModalTab('bot')">Боты</button>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-            <button class="friends-search-toggle" id="moveSearchToggleBtn" title="Поиск" aria-label="Поиск" onclick="toggleMoveSearch()">
-              <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
-            </button>
-            <div class="friends-search-section" id="moveSearchSection" style="flex:1">
-              <div class="input-clear-wrapper" style="min-width:0;">
-                <input type="text" class="steam-input" id="moveSearchInput" placeholder="Поиск по нику или SteamID..." style="width:100%;" oninput="filterMoveProfiles(this.value)">
-                <button class="input-clear-btn" id="moveSearchClearBtn" title="Очистить" aria-label="Очистить поиск">×</button>
-              </div>
-            </div>
           </div>
           <div id="moveProfilesList" style="max-height:550px;overflow-y:auto"></div>
           <div id="moveProfilesPagination" class="stats-ach-pagination"></div>
@@ -276,6 +275,27 @@
             <span id="moveSelectedCount" style="font-size:13px;opacity:0.7">Выбрано: 0</span>
             <button class="confirm-delete-btn" id="moveConfirmBtn" onclick="confirmMoveProfiles()">Переместить</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модалка связей между аккаунтами -->
+    <div class="modal-overlay" id="linksModal" style="display:none">
+      <div class="modal-box" style="max-width:550px">
+        <div class="modal-box-header">
+          <button class="friends-search-toggle" id="linksSearchToggleBtn" title="Поиск" onclick="toggleLinksSearch()"><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg></button>
+          <h2><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связи аккаунтов</h2>
+          <button class="modal-close-btn" onclick="closeLinksModal()">&times;</button>
+        </div>
+        <div class="friends-search-section" id="linksSearchSection">
+          <div class="input-clear-wrapper" style="min-width:0;">
+            <input type="text" class="steam-input" id="linksSearchInput" placeholder="Поиск по нику или SteamID..." style="width:100%;" oninput="filterLinksProfiles(this.value)">
+            <button class="input-clear-btn" id="linksSearchClearBtn" title="Очистить" aria-label="Очистить поиск">×</button>
+          </div>
+        </div>
+        <div class="modal-box-body">
+          <div id="linksProfilesList" style="max-height:550px;overflow-y:auto"></div>
+          <div id="linksPagination" class="stats-ach-pagination"></div>
         </div>
       </div>
     </div>

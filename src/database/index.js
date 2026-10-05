@@ -365,6 +365,41 @@ export class DatabaseManager {
     this.prepare('UPDATE cheater_name_history SET type = ? WHERE steam_id = ?').run(newType, steamId);
   }
 
+  // ===== СВЯЗИ МЕЖДУ АККАУНТАМИ =====
+
+  getLinksForSteamId(steamId) {
+    return this.prepare(
+      `SELECT * FROM cheater_links WHERE steam_id_a = ? OR steam_id_b = ?`
+    ).all(steamId, steamId);
+  }
+
+  getLinkedSteamIds(steamId) {
+    const rows = this.getLinksForSteamId(steamId);
+    return rows.map(r => r.steam_id_a === steamId ? r.steam_id_b : r.steam_id_a);
+  }
+
+  addLink(steamId1, steamId2, createdBy = null) {
+    const a = steamId1 < steamId2 ? steamId1 : steamId2;
+    const b = steamId1 < steamId2 ? steamId2 : steamId1;
+    return this.prepare(
+      'INSERT OR IGNORE INTO cheater_links (steam_id_a, steam_id_b, created_by, created_at) VALUES (?, ?, ?, strftime(\'%s\',\'now\'))'
+    ).run(a, b, createdBy);
+  }
+
+  removeLink(steamId1, steamId2) {
+    const a = steamId1 < steamId2 ? steamId1 : steamId2;
+    const b = steamId1 < steamId2 ? steamId2 : steamId1;
+    return this.prepare('DELETE FROM cheater_links WHERE steam_id_a = ? AND steam_id_b = ?').run(a, b);
+  }
+
+  getAllLinks() {
+    return this.prepare('SELECT * FROM cheater_links').all();
+  }
+
+  deleteLinksForSteamId(steamId) {
+    return this.prepare('DELETE FROM cheater_links WHERE steam_id_a = ? OR steam_id_b = ?').run(steamId, steamId);
+  }
+
   getChecks({ limit = 50, offset = 0, filter = 'all', type = 'cheater' } = {}) {
     let sql = `SELECT cc.*, COALESCE(us.username, cc.checked_by_username) as checked_by_username 
                FROM cheater_checks cc 
@@ -419,6 +454,7 @@ export class DatabaseManager {
     this.prepare('DELETE FROM cheater_notes WHERE steam_id = ?').run(steamId);
     this.prepare('DELETE FROM cheater_favorites WHERE steam_id = ?').run(steamId);
     this.prepare('DELETE FROM cheater_name_history WHERE steam_id = ?').run(steamId);
+    this.prepare('DELETE FROM cheater_links WHERE steam_id_a = ? OR steam_id_b = ?').run(steamId, steamId);
     return this.prepare('DELETE FROM cheater_checks WHERE steam_id = ?').run(steamId);
   }
 

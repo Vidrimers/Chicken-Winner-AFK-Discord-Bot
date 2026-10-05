@@ -1634,6 +1634,114 @@
   margin-top: 2px;
 }
 
+/* ===== СВЯЗИ МЕЖДУ АККАУНТАМИ ===== */
+
+.links-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.links-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.links-btn.has-links {
+  background: rgba(236, 72, 153, 0.2);
+  color: #f472b6;
+  border-color: rgba(236, 72, 153, 0.4);
+}
+
+.links-btn.has-links:hover {
+  background: rgba(236, 72, 153, 0.35);
+  color: #fff;
+}
+
+.link-group {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.link-group-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.link-group-members {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.link-group-member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.link-group-member img {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+
+.link-group-member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.link-group-member-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-group-member-type {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.card-links-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.card-links-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 8px;
+}
+
+.card-links-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-links-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #a0b0ff;
+}
+
 /* ===== ДРУЗЬЯ ЧИТЕРА ===== */
 
 .friends-btn {

@@ -692,5 +692,25 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: таблица cheater_links (связи между аккаунтами читеров/ботов)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cheater_links'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE cheater_links (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          steam_id_a TEXT NOT NULL,
+          steam_id_b TEXT NOT NULL,
+          created_by TEXT,
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+          UNIQUE(steam_id_a, steam_id_b)
+        )
+      `);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cl_a ON cheater_links(steam_id_a)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_cl_b ON cheater_links(steam_id_b)');
+      console.log('✅ Таблица cheater_links создана');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Загружаем сохранённые профили
   await loadProfiles();
+  updateAllLinksButtons();
 
   // Привязываем обработчики
   bindEvents();
@@ -139,6 +140,7 @@ async function loadProfiles() {
     updateCounters();
     updateFavoritesCount();
     updateFilterCounts();
+    updateAllLinksButtons();
 
     // Отмечаем что пользователь просмотрел страницу
     if (currentUserId) {
@@ -207,6 +209,20 @@ function setReportFilter(filter) {
   document.querySelectorAll('.filter-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.filter === filter);
   });
+
+  // Таб «Связи» — показываем группы, скрываем обычные колонки
+  const resultsGrid = document.getElementById('resultsGrid');
+  const linksContainer = document.getElementById('linksGroupsContainer');
+  if (filter === 'links') {
+    resultsGrid.style.display = 'none';
+    linksContainer.style.display = 'block';
+    renderLinksGroups();
+    return;
+  } else {
+    resultsGrid.style.display = '';
+    linksContainer.style.display = 'none';
+  }
+
   applyReportFilter();
   bannedPage = 1;
   cleanPage = 1;
@@ -655,6 +671,7 @@ function createProfileCard(profile, isBanned) {
         ${cs2Html}
         ${faceitHtml}
         <div class="notes-section" id="notes-${steamId}"></div>
+        <div class="card-links-section" id="card-links-${steamId}" style="display:none"></div>
       </div>
       <div class="card-actions">
         <a href="${profileUrl}" target="_blank" rel="noopener" class="card-action-btn profile-link-btn"><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Профиль</a>
@@ -663,6 +680,9 @@ function createProfileCard(profile, isBanned) {
         </button>
         <button class="card-action-btn friends-refresh-btn" data-steam-id="${steamId}" onclick="refreshFriends('${steamId}', event)" title="${profile.friends_last_refreshed_at ? 'Обновлено: ' + new Date(profile.friends_last_refreshed_at).toLocaleString('ru-RU') : 'Обновить список друзей'}">
           <svg class="icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+        </button>
+        <button class="card-action-btn links-btn" data-steam-id="${steamId}" onclick="openLinksModal('${steamId}', event)" title="Связи между аккаунтами">
+          <svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связи
         </button>
         ${publishBtn}
       </div>
@@ -815,6 +835,7 @@ function bindEvents() {
   initClearableInput('steamUrlInput', 'steamUrlClearBtn');
   initClearableInput('profileSearchInput', 'profileSearchClearBtn', (val) => filterProfileCards(val));
   initClearableInput('moveSearchInput', 'moveSearchClearBtn', (val) => filterMoveProfiles(val));
+  initClearableInput('linksSearchInput', 'linksSearchClearBtn', (val) => filterLinksProfiles(val));
   initClearableInput('friendsSearchInput', 'friendsSearchClearBtn', (val) => filterFriends(val));
 
   // Селектор количества на страницу
@@ -878,9 +899,10 @@ function bindCardDelegation() {
         if (details) {
           details.classList.toggle('visible');
           if (nameEl) nameEl.classList.toggle('expanded');
-          // Рендерим заметки при раскрытии
+          // Рендерим заметки и связи при раскрытии
           if (details.classList.contains('visible')) {
             renderNotes(steamId);
+            renderCardLinks(steamId);
           }
         }
       }
@@ -1171,6 +1193,322 @@ async function confirmTypeConflictMove() {
     loadProfiles();
   } else {
     showNotification('Не удалось переместить профили', 'error');
+  }
+}
+
+// ===== СВЯЗИ МЕЖДУ АККАУНТАМИ =====
+
+const LINKS_PER_PAGE = 10;
+let _linksSteamId = null;        // steamId карточки, для которой открыта модалка
+let _linksSearchQuery = '';
+let _linksProfilesCache = null;  // все профили (читеры + боты)
+let _linksCache = {};            // steamId → [linkedSteamIds]
+
+async function openLinksModal(steamId, event) {
+  if (event) { event.preventDefault(); event.stopPropagation(); }
+  _linksSteamId = steamId;
+  _linksSearchQuery = '';
+  document.getElementById('linksModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('linksSearchSection').classList.remove('open');
+  document.getElementById('linksSearchToggleBtn').classList.remove('active');
+  document.getElementById('linksSearchInput').value = '';
+  toggleClearBtn(document.getElementById('linksSearchInput'), document.getElementById('linksSearchClearBtn'));
+  await loadLinksProfiles();
+}
+
+function closeLinksModal() {
+  document.getElementById('linksModal').style.display = 'none';
+  document.body.style.overflow = '';
+  _linksSteamId = null;
+}
+
+function toggleLinksSearch() {
+  const section = document.getElementById('linksSearchSection');
+  const btn = document.getElementById('linksSearchToggleBtn');
+  const input = document.getElementById('linksSearchInput');
+  const clearBtn = document.getElementById('linksSearchClearBtn');
+  const isOpen = section.classList.contains('open');
+  if (isOpen) {
+    section.classList.remove('open');
+    btn.classList.remove('active');
+    input.value = '';
+    toggleClearBtn(input, clearBtn);
+    _linksSearchQuery = '';
+    renderLinksProfilesList(0);
+  } else {
+    section.classList.add('open');
+    btn.classList.add('active');
+    toggleClearBtn(input, clearBtn);
+    setTimeout(() => input.focus(), 350);
+  }
+}
+
+function filterLinksProfiles(query) {
+  _linksSearchQuery = query.toLowerCase().trim();
+  toggleClearBtn(document.getElementById('linksSearchInput'), document.getElementById('linksSearchClearBtn'));
+  renderLinksProfilesList(0);
+}
+
+async function loadLinksProfiles() {
+  const container = document.getElementById('linksProfilesList');
+  container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:20px 0">Загрузка...</p>';
+
+  try {
+    if (!_linksProfilesCache) {
+      const [cheaterRes, botRes] = await Promise.all([
+        fetch('/api/cheater-checker/profiles?limit=2000&type=cheater'),
+        fetch('/api/cheater-checker/profiles?limit=2000&type=bot'),
+      ]);
+      const cheaterData = await cheaterRes.json();
+      const botData = await botRes.json();
+      _linksProfilesCache = [...(cheaterData.profiles || []), ...(botData.profiles || [])];
+    }
+
+    // Загружаем связи для текущего профиля
+    if (_linksSteamId && !_linksCache[_linksSteamId]) {
+      const res = await fetch(`/api/cheater-checker/links/${_linksSteamId}`);
+      const data = await res.json();
+      _linksCache[_linksSteamId] = new Set(data.linkedIds || []);
+    }
+
+    renderLinksProfilesList(0);
+  } catch {
+    container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:20px 0">Ошибка загрузки</p>';
+  }
+}
+
+function renderLinksProfilesList(page) {
+  let list = (_linksProfilesCache || []).filter(p => p.steam_id !== _linksSteamId);
+
+  if (_linksSearchQuery) {
+    const q = _linksSearchQuery;
+    list = list.filter(p =>
+      (p.persona_name || '').toLowerCase().includes(q) ||
+      (p.steam_id || '').includes(q)
+    );
+  }
+
+  const linkedSet = _linksCache[_linksSteamId] || new Set();
+  const container = document.getElementById('linksProfilesList');
+  const pag = document.getElementById('linksPagination');
+
+  if (!list.length) {
+    container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:20px 0">Профилей нет</p>';
+    pag.innerHTML = '';
+    return;
+  }
+
+  const totalPages = Math.ceil(list.length / LINKS_PER_PAGE);
+  const start = page * LINKS_PER_PAGE;
+  const pageItems = list.slice(start, start + LINKS_PER_PAGE);
+
+  container.innerHTML = pageItems.map(p => `
+    <label class="move-profile-item">
+      <input type="checkbox" ${linkedSet.has(p.steam_id) ? 'checked' : ''} onchange="toggleLink('${_linksSteamId}', '${p.steam_id}', this.checked)">
+      <div class="move-profile-info">
+        <div class="move-profile-name">${escapeHtml(p.persona_name || p.steam_id)}</div>
+        <div class="move-profile-meta">${p.type === 'bot' ? '🤖 Бот' : '🔴 Читер'} • ${escapeHtml(p.checked_by_username || 'Unknown')}</div>
+      </div>
+    </label>
+  `).join('');
+
+  if (totalPages > 1) {
+    let pagHtml = '';
+    pagHtml += `<button class="stats-ach-arrow" ${page === 0 ? 'disabled' : ''} onclick="renderLinksProfilesList(${page - 1})">←</button>`;
+    pagHtml += `<span class="stats-ach-page">${page + 1} / ${totalPages}</span>`;
+    pagHtml += `<button class="stats-ach-arrow" ${page >= totalPages - 1 ? 'disabled' : ''} onclick="renderLinksProfilesList(${page + 1})">→</button>`;
+    pag.innerHTML = pagHtml;
+  } else {
+    pag.innerHTML = '';
+  }
+}
+
+async function toggleLink(steamId1, steamId2, isChecked) {
+  try {
+    if (isChecked) {
+      await fetch('/api/cheater-checker/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ steamId1, steamId2, createdBy: currentUserId }),
+      });
+      if (_linksCache[steamId1]) _linksCache[steamId1].add(steamId2);
+    } else {
+      await fetch('/api/cheater-checker/links', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ steamId1, steamId2 }),
+      });
+      if (_linksCache[steamId1]) _linksCache[steamId1].delete(steamId2);
+    }
+    // Обновляем кнопку на карточке
+    updateLinksButtonState(steamId1);
+  } catch (err) {
+    console.error('Ошибка связи:', err);
+    showNotification('Ошибка при обновлении связи', 'error');
+  }
+}
+
+async function updateLinksButtonState(steamId) {
+  try {
+    const res = await fetch(`/api/cheater-checker/links/${steamId}`);
+    const data = await res.json();
+    const count = (data.linkedIds || []).length;
+    _linksCache[steamId] = new Set(data.linkedIds || []);
+    const btn = document.querySelector(`.links-btn[data-steam-id="${steamId}"]`);
+    if (btn) {
+      btn.classList.toggle('has-links', count > 0);
+    }
+  } catch {}
+}
+
+// Таб «Связи» — группы-блоки
+async function renderLinksGroups() {
+  const container = document.getElementById('linksGroupsContainer');
+  container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:40px 0">Загрузка связей...</p>';
+
+  try {
+    const [linksRes, cheaterRes, botRes] = await Promise.all([
+      fetch('/api/cheater-checker/links'),
+      fetch('/api/cheater-checker/profiles?limit=2000&type=cheater'),
+      fetch('/api/cheater-checker/profiles?limit=2000&type=bot'),
+    ]);
+    const linksData = await linksRes.json();
+    const cheaterData = await cheaterRes.json();
+    const botData = await botRes.json();
+
+    const allProfiles = [...(cheaterData.profiles || []), ...(botData.profiles || [])];
+    const profileMap = {};
+    allProfiles.forEach(p => { profileMap[p.steam_id] = p; });
+
+    const links = linksData.links || [];
+    if (!links.length) {
+      container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:40px 0">Связей пока нет</p>';
+      return;
+    }
+
+    // Строим граф и находим компоненты связности
+    const adj = {};
+    links.forEach(l => {
+      if (!adj[l.steam_id_a]) adj[l.steam_id_a] = new Set();
+      if (!adj[l.steam_id_b]) adj[l.steam_id_b] = new Set();
+      adj[l.steam_id_a].add(l.steam_id_b);
+      adj[l.steam_id_b].add(l.steam_id_a);
+    });
+
+    const visited = new Set();
+    const groups = [];
+    for (const node of Object.keys(adj)) {
+      if (visited.has(node)) continue;
+      const group = [];
+      const stack = [node];
+      while (stack.length) {
+        const cur = stack.pop();
+        if (visited.has(cur)) continue;
+        visited.add(cur);
+        group.push(cur);
+        for (const neighbor of (adj[cur] || [])) {
+          if (!visited.has(neighbor)) stack.push(neighbor);
+        }
+      }
+      groups.push(group);
+    }
+
+    // Сортируем группы по размеру (большие сверху)
+    groups.sort((a, b) => b.length - a.length);
+
+    container.innerHTML = groups.map((group, idx) => {
+      const members = group.map(id => {
+        const p = profileMap[id];
+        return `
+          <div class="link-group-member">
+            ${p?.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="">` : '<div style="width:32px;height:32px;border-radius:6px;background:rgba(255,255,255,0.1)"></div>'}
+            <div class="link-group-member-info">
+              <div class="link-group-member-name">${escapeHtml(p?.persona_name || id)}</div>
+              <div class="link-group-member-type">${p?.type === 'bot' ? '🤖 Бот' : '🔴 Читер'} • ${escapeHtml(p?.checked_by_username || 'Unknown')}</div>
+            </div>
+            <a href="${p?.profile_url || '#'}" target="_blank" rel="noopener" class="card-action-btn" style="font-size:11px;padding:4px 8px">Профиль</a>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="link-group">
+          <div class="link-group-header">🔗 Группа ${idx + 1} — ${group.length} аккаунт(ов)</div>
+          <div class="link-group-members">${members}</div>
+        </div>
+      `;
+    }).join('');
+  } catch {
+    container.innerHTML = '<p style="text-align:center;opacity:0.5;font-size:13px;padding:40px 0">Ошибка загрузки</p>';
+  }
+}
+
+// Обновление кнопок «Связи» на всех карточках после загрузки профилей
+async function updateAllLinksButtons() {
+  try {
+    const res = await fetch('/api/cheater-checker/links');
+    const data = await res.json();
+    const links = data.links || [];
+    const countMap = {};
+    links.forEach(l => {
+      countMap[l.steam_id_a] = (countMap[l.steam_id_a] || 0) + 1;
+      countMap[l.steam_id_b] = (countMap[l.steam_id_b] || 0) + 1;
+    });
+    document.querySelectorAll('.links-btn[data-steam-id]').forEach(btn => {
+      const sid = btn.dataset.steamId;
+      btn.classList.toggle('has-links', (countMap[sid] || 0) > 0);
+    });
+  } catch {}
+}
+
+// Секция связей в раскрытой карточке
+async function renderCardLinks(steamId) {
+  const container = document.getElementById(`card-links-${steamId}`);
+  if (!container) return;
+
+  try {
+    const res = await fetch(`/api/cheater-checker/links/${steamId}`);
+    const data = await res.json();
+    const linkedIds = data.linkedIds || [];
+
+    if (!linkedIds.length) {
+      container.style.display = 'none';
+      return;
+    }
+
+    // Получаем имена связанных профилей
+    const names = [];
+    for (const id of linkedIds) {
+      try {
+        const pr = await fetch(`/api/cheater-checker/profiles?limit=1&type=all&search=${id}`);
+        // Просто используем id, если не удалось получить имя
+        names.push(id);
+      } catch {
+        names.push(id);
+      }
+    }
+
+    // Пробуем получить имена из кэша профилей
+    let displayNames = linkedIds.map(id => {
+      const p = (_linksProfilesCache || []).find(x => x.steam_id === id);
+      return p ? (p.persona_name || id) : id;
+    });
+
+    container.innerHTML = `
+      <div class="card-links-section-title">🔗 Связанные аккаунты</div>
+      <div class="card-links-list">
+        ${displayNames.map((name, i) => `
+          <div class="card-links-item">
+            <svg class="icon" style="width:14px;height:14px"><use href="#icon-link"></use></svg>
+            ${escapeHtml(name)}
+          </div>
+        `).join('')}
+      </div>
+    `;
+    container.style.display = 'block';
+  } catch {
+    container.style.display = 'none';
   }
 }
 
