@@ -359,7 +359,10 @@ export class DatabaseManager {
   }
 
   moveCheckType(steamId, newType) {
-    return this.prepare('UPDATE cheater_checks SET type = ? WHERE steam_id = ?').run(newType, steamId);
+    this.prepare('UPDATE cheater_checks SET type = ? WHERE steam_id = ?').run(newType, steamId);
+    this.prepare('UPDATE cheater_favorites SET type = ? WHERE steam_id = ?').run(newType, steamId);
+    this.prepare('UPDATE cheater_notes SET type = ? WHERE steam_id = ?').run(newType, steamId);
+    this.prepare('UPDATE cheater_name_history SET type = ? WHERE steam_id = ?').run(newType, steamId);
   }
 
   getChecks({ limit = 50, offset = 0, filter = 'all', type = 'cheater' } = {}) {
