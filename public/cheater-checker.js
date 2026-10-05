@@ -894,15 +894,17 @@ function bindCardEvents() {
  * Делегирование событий для карточек (вызывается один раз в bindEvents)
  */
 function bindCardDelegation() {
-  // Делегируем клики на document — работает для всех контейнеров, включая динамические
+  if (window._cardDelegationBound) return;
+  window._cardDelegationBound = true;
+
   document.addEventListener('click', (e) => {
-    // Только клики внутри карточек профилей
     const card = e.target.closest('.profile-card');
     if (!card) return;
 
     // Клик по кнопке "Дискорд"
     const publishBtn = e.target.closest('.discord-publish-btn');
     if (publishBtn) {
+      e.stopImmediatePropagation();
       publishToDiscord(publishBtn.dataset.steamId);
       return;
     }
@@ -910,6 +912,7 @@ function bindCardDelegation() {
     // Клик по кнопке удаления (admin)
     const deleteBtn = e.target.closest('.card-delete-btn');
     if (deleteBtn) {
+      e.stopImmediatePropagation();
       showConfirmDialog(deleteBtn.dataset.steamId, deleteBtn.dataset.name);
       return;
     }
@@ -917,14 +920,13 @@ function bindCardDelegation() {
     // Клик по ссылке/кнопке/инпуту или в секции заметок — не раскрываем карточку
     if (e.target.closest('a, button, input, .notes-section, .card-links-section')) return;
 
-    // Клик по карточке → раскрытие деталей
+    e.stopImmediatePropagation();
     const steamId = card.dataset.steamId;
     const details = card.querySelector('.card-details');
     const nameEl = card.querySelector('.card-name');
     if (details) {
       details.classList.toggle('visible');
       if (nameEl) nameEl.classList.toggle('expanded');
-      // Рендерим заметки и связи при раскрытии
       if (details.classList.contains('visible')) {
         renderNotes(steamId);
         renderCardLinks(steamId);
@@ -1645,42 +1647,59 @@ async function renderCardLinks(steamId) {
   if (!container) return;
 
   try {
-    const res = await fetch(`/api/cheater-checker/links/${steamId}`);
+    // Получаем ВСЕ связи и находим всю группу (не только прямых)
+    const res = await fetch('/api/cheater-checker/links');
     const data = await res.json();
-    const links = data.links || [];
-    const linkedIds = data.linkedIds || [];
+    const allLinks = data.links || [];
+
+    // BFS от steamId — находим всю компоненту связности
+    const adj = {};
+    allLinks.forEach(l => {
+      if (!adj[l.steam_id_a]) adj[l.steam_id_a] = [];
+      if (!adj[l.steam_id_b]) adj[l.steam_id_b] = [];
+      adj[l.steam_id_a].push(l.steam_id_b);
+      adj[l.steam_id_b].push(l.steam_id_a);
+    });
+
+    const visited = new Set([steamId]);
+    const stack = [steamId];
+    const groupMembers = [];
+    while (stack.length) {
+      const cur = stack.pop();
+      groupMembers.push(cur);
+      for (const n of (adj[cur] || [])) {
+        if (!visited.has(n)) {
+          visited.add(n);
+          stack.push(n);
+        }
+      }
+    }
+
+    // Убираем сам профиль
+    const linkedIds = groupMembers.filter(id => id !== steamId);
 
     if (!linkedIds.length) {
       container.style.display = 'none';
       return;
     }
 
-    // Получаем имена из кэша профилей
+    // Имена из кэша
     const items = linkedIds.map(id => {
       const p = (_linksProfilesCache || []).find(x => x.steam_id === id);
-      // Находим связь для этой пары
-      const link = links.find(l =>
-        (l.steam_id_a === steamId && l.steam_id_b === id) ||
-        (l.steam_id_b === steamId && l.steam_id_a === id)
-      );
       return {
         steamId: id,
         name: p ? (p.persona_name || id) : id,
         profileUrl: p?.profile_url || `https://steamcommunity.com/profiles/${id}`,
-        createdBy: link?.created_by_name || link?.created_by || null,
-        createdAt: link?.created_at || null,
       };
     });
 
     container.innerHTML = `
-      <div class="card-links-section-title">🔗 Связанные аккаунты</div>
+      <div class="card-links-section-title">🔗 Связанные аккаунты (${items.length})</div>
       <div class="card-links-list">
         ${items.map(item => `
           <div class="card-links-item">
             <svg class="icon" style="width:14px;height:14px;flex-shrink:0"><use href="#icon-link"></use></svg>
             <a href="${escapeHtml(item.profileUrl)}" target="_blank" rel="noopener" class="card-links-name">${escapeHtml(item.name)}</a>
-            ${item.createdBy ? `<span class="card-links-meta">создал: ${escapeHtml(item.createdBy)}</span>` : ''}
-            ${item.createdAt ? `<span class="card-links-meta">${new Date(item.createdAt * 1000).toLocaleDateString('ru-RU')}</span>` : ''}
           </div>
         `).join('')}
       </div>
