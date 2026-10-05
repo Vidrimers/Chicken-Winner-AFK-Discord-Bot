@@ -1212,6 +1212,8 @@ async function openLinksModal(steamId, event) {
   document.body.style.overflow = 'hidden';
   document.getElementById('linksSearchSection').classList.remove('open');
   document.getElementById('linksSearchToggleBtn').classList.remove('active');
+  document.getElementById('linksInfoSection').classList.remove('open');
+  document.getElementById('linksInfoToggleBtn').classList.remove('active');
   document.getElementById('linksSearchInput').value = '';
   toggleClearBtn(document.getElementById('linksSearchInput'), document.getElementById('linksSearchClearBtn'));
   await loadLinksProfiles();
@@ -1241,6 +1243,19 @@ function toggleLinksSearch() {
     btn.classList.add('active');
     toggleClearBtn(input, clearBtn);
     setTimeout(() => input.focus(), 350);
+  }
+}
+
+function toggleLinksInfo() {
+  const section = document.getElementById('linksInfoSection');
+  const btn = document.getElementById('linksInfoToggleBtn');
+  const isOpen = section.classList.contains('open');
+  if (isOpen) {
+    section.classList.remove('open');
+    btn.classList.remove('active');
+  } else {
+    section.classList.add('open');
+    btn.classList.add('active');
   }
 }
 

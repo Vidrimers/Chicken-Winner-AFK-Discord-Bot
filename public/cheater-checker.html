@@ -285,7 +285,15 @@
         <div class="modal-box-header">
           <button class="friends-search-toggle" id="linksSearchToggleBtn" title="Поиск" onclick="toggleLinksSearch()"><svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg></button>
           <h2><svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связи аккаунтов</h2>
+          <button class="friends-search-toggle" id="linksInfoToggleBtn" title="О связях" onclick="toggleLinksInfo()" style="margin-right:0;margin-left:auto"><svg class="icon" aria-hidden="true"><use href="#icon-question"></use></svg></button>
           <button class="modal-close-btn" onclick="closeLinksModal()">&times;</button>
+        </div>
+        <div class="friends-search-section" id="linksInfoSection" style="padding:0 15px">
+          <div style="background:rgba(102,126,234,0.1);border:1px solid rgba(102,126,234,0.25);border-radius:10px;padding:12px 14px;margin:8px 0;font-size:13px;line-height:1.5;color:rgba(255,255,255,0.75)">
+            <b style="color:#a0b0ff">Связи</b> — это пометка о том, что несколько аккаунтов принадлежат одному человеку.<br>
+            Например, у читера есть второй аккаунт в друзьях — отметьте оба чекбоксами, чтобы объединить их в одну группу.<br>
+            Связи видят все пользователи и работают между читерами и ботами.
+          </div>
         </div>
         <div class="friends-search-section" id="linksSearchSection">
           <div class="input-clear-wrapper" style="min-width:0;">
