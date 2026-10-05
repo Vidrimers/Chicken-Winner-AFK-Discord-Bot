@@ -814,6 +814,7 @@ function bindEvents() {
   // Инпуты с крестиком и авто-очисткой
   initClearableInput('steamUrlInput', 'steamUrlClearBtn');
   initClearableInput('profileSearchInput', 'profileSearchClearBtn', (val) => filterProfileCards(val));
+  initClearableInput('moveSearchInput', 'moveSearchClearBtn', (val) => filterMoveProfiles(val));
   initClearableInput('friendsSearchInput', 'friendsSearchClearBtn', (val) => filterFriends(val));
 
   // Селектор количества на страницу
@@ -1179,13 +1180,19 @@ const MOVE_PER_PAGE = 10;
 let _moveModalTab = 'cheater';
 let _moveSelected = new Set();
 let _moveProfilesCache = {};
+let _moveSearchQuery = '';
 
 function openMoveProfilesModal() {
   _moveModalTab = 'cheater';
   _moveSelected.clear();
   _moveProfilesCache = {};
+  _moveSearchQuery = '';
   document.getElementById('moveProfilesModal').style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  document.getElementById('moveSearchSection').classList.remove('open');
+  document.getElementById('moveSearchToggleBtn').classList.remove('active');
+  document.getElementById('moveSearchInput').value = '';
+  toggleClearBtn(document.getElementById('moveSearchInput'), document.getElementById('moveSearchClearBtn'));
   updateMoveModalTabs();
   loadMoveProfilesList();
 }
@@ -1195,11 +1202,44 @@ function closeMoveProfilesModal() {
   document.body.style.overflow = '';
   _moveSelected.clear();
   _moveProfilesCache = {};
+  _moveSearchQuery = '';
+}
+
+function toggleMoveSearch() {
+  const section = document.getElementById('moveSearchSection');
+  const btn = document.getElementById('moveSearchToggleBtn');
+  const input = document.getElementById('moveSearchInput');
+  const clearBtn = document.getElementById('moveSearchClearBtn');
+
+  const isOpen = section.classList.contains('open');
+
+  if (isOpen) {
+    section.classList.remove('open');
+    btn.classList.remove('active');
+    input.value = '';
+    toggleClearBtn(input, clearBtn);
+    _moveSearchQuery = '';
+    renderMoveProfilesList(0);
+  } else {
+    section.classList.add('open');
+    btn.classList.add('active');
+    toggleClearBtn(input, clearBtn);
+    setTimeout(() => input.focus(), 350);
+  }
+}
+
+function filterMoveProfiles(query) {
+  _moveSearchQuery = query.toLowerCase().trim();
+  toggleClearBtn(document.getElementById('moveSearchInput'), document.getElementById('moveSearchClearBtn'));
+  renderMoveProfilesList(0);
 }
 
 function switchMoveModalTab(tab) {
   _moveModalTab = tab;
   _moveSelected.clear();
+  _moveSearchQuery = '';
+  document.getElementById('moveSearchInput').value = '';
+  toggleClearBtn(document.getElementById('moveSearchInput'), document.getElementById('moveSearchClearBtn'));
   updateMoveModalTabs();
   loadMoveProfilesList();
 }
@@ -1234,7 +1274,18 @@ async function loadMoveProfilesList() {
 }
 
 function renderMoveProfilesList(page) {
-  const list = _moveProfilesCache[_moveModalTab] || [];
+  let list = _moveProfilesCache[_moveModalTab] || [];
+
+  // Поиск по нику, SteamID или имени добавившего
+  if (_moveSearchQuery) {
+    const q = _moveSearchQuery;
+    list = list.filter(p =>
+      (p.persona_name || '').toLowerCase().includes(q) ||
+      (p.steam_id || '').includes(q) ||
+      (p.checked_by_username || '').toLowerCase().includes(q)
+    );
+  }
+
   const container = document.getElementById('moveProfilesList');
   const pag = document.getElementById('moveProfilesPagination');
 
