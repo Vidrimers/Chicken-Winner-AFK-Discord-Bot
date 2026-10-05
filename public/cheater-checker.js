@@ -1589,7 +1589,10 @@ function startRenameGroup(groupKey, el) {
   input.focus();
   input.select();
 
+  let done = false;
   const finish = async (save) => {
+    if (done) return;
+    done = true;
     const newName = input.value.trim();
     if (save && newName && newName !== current) {
       try {
@@ -1603,7 +1606,7 @@ function startRenameGroup(groupKey, el) {
         showNotification('Ошибка при переименовании', 'error');
       }
     }
-    renderLinksGroupsPage();
+    renderLinksGroups();
   };
 
   input.addEventListener('keydown', (e) => {
