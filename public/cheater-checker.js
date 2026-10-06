@@ -901,19 +901,17 @@ function bindCardDelegation() {
     const card = e.target.closest('.profile-card');
     if (!card || !card.contains(e.target)) return;
 
-    // Кнопки внутри карточки
+    // Кнопки внутри карточки — не раскрываем
     if (e.target.closest('a, button, input, .notes-section, .card-links-section')) {
       const publishBtn = e.target.closest('.discord-publish-btn');
       if (publishBtn) {
         e.stopImmediatePropagation();
-        e.stopPropagation();
         publishToDiscord(publishBtn.dataset.steamId);
         return;
       }
       const deleteBtn = e.target.closest('.card-delete-btn');
       if (deleteBtn) {
         e.stopImmediatePropagation();
-        e.stopPropagation();
         showConfirmDialog(deleteBtn.dataset.steamId, deleteBtn.dataset.name);
         return;
       }
@@ -921,27 +919,28 @@ function bindCardDelegation() {
     }
 
     e.stopImmediatePropagation();
-    e.stopPropagation();
 
-    // Жёстко управляем: закрываем ВСЕ, открываем одну
     const steamId = card.dataset.steamId;
-    const allDetails = document.querySelectorAll('.card-details');
-    const allNames = document.querySelectorAll('.card-name');
-    allDetails.forEach(d => d.classList.remove('visible'));
-    allNames.forEach(n => n.classList.remove('expanded'));
-
     const details = card.querySelector('.card-details');
     const nameEl = card.querySelector('.card-name');
-    if (details) {
+    if (!details) return;
+
+    // Toggle: если открыта — закрываем, если закрыта — открываем
+    const wasOpen = details.classList.contains('visible');
+
+    // Закрываем все открытые
+    document.querySelectorAll('.card-details.visible').forEach(d => {
+      d.classList.remove('visible');
+      const n = d.closest('.profile-card')?.querySelector('.card-name');
+      if (n) n.classList.remove('expanded');
+    });
+
+    if (!wasOpen) {
       details.classList.add('visible');
       if (nameEl) nameEl.classList.add('expanded');
       renderNotes(steamId, card);
-      // card-links-section не нужен в табе «Связи» (группы и так показывают связи)
       if (!card.closest('#linksGroupsContainer')) {
         renderCardLinks(steamId, card);
-      } else {
-        const linksSection = card.querySelector('.card-links-section');
-        if (linksSection) linksSection.style.display = 'none';
       }
     }
   }, true);
