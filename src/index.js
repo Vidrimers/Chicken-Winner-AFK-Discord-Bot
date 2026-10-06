@@ -321,11 +321,20 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
 
           log(`🔄 Обновлён профиль ${profile.personaName} (${profile.steamId}) — статус бана изменился`);
 
+          // Только изменившиеся баны
           const banDetails = [];
-          if (profile.vacBanned) banDetails.push(`VAC-бан (${profile.numberOfVacBans || 1})`);
-          if ((profile.numberOfGameBans || 0) > 0) banDetails.push(`Игровой бан (${profile.numberOfGameBans})`);
-          if (profile.communityBanned) banDetails.push('Коммьюнити-бан');
-          if (profile.economyBan && profile.economyBan !== 'none') banDetails.push(`Торговый бан: ${profile.economyBan}`);
+          if (existing.vac_banned !== (profile.vacBanned ? 1 : 0)) {
+            banDetails.push(profile.vacBanned ? `VAC-бан (${profile.numberOfVacBans || 1})` : 'VAC-бан снят');
+          }
+          if (existing.number_of_game_bans !== (profile.numberOfGameBans || 0)) {
+            banDetails.push(profile.numberOfGameBans > 0 ? `Игровой бан (${profile.numberOfGameBans})` : 'Игровой бан снят');
+          }
+          if (existing.community_banned !== (profile.communityBanned ? 1 : 0)) {
+            banDetails.push(profile.communityBanned ? 'Коммьюнити-бан' : 'Коммьюнити-бан снят');
+          }
+          if (existing.economy_ban !== (profile.economyBan || 'none')) {
+            banDetails.push(profile.economyBan !== 'none' ? `Торговый бан: ${profile.economyBan}` : 'Торговый бан снят');
+          }
 
           if (banDetails.length > 0) {
             const profileName = escapeTgHtml(profile.personaName || profile.steamId);
@@ -519,11 +528,20 @@ export async function runBotBanCheck(db, sendTelegramReport, sendTelegramMessage
 
         updated++;
 
+        // Только изменившиеся баны
         const banDetails = [];
-        if (profile.vacBanned) banDetails.push(`VAC-бан (${profile.numberOfVacBans || 1})`);
-        if ((profile.numberOfGameBans || 0) > 0) banDetails.push(`Игровой бан (${profile.numberOfGameBans})`);
-        if (profile.communityBanned) banDetails.push('Коммьюнити-бан');
-        if (profile.economyBan && profile.economyBan !== 'none') banDetails.push(`Торговый бан: ${profile.economyBan}`);
+        if (existing.vac_banned !== (profile.vacBanned ? 1 : 0)) {
+          banDetails.push(profile.vacBanned ? `VAC-бан (${profile.numberOfVacBans || 1})` : 'VAC-бан снят');
+        }
+        if (existing.number_of_game_bans !== (profile.numberOfGameBans || 0)) {
+          banDetails.push(profile.numberOfGameBans > 0 ? `Игровой бан (${profile.numberOfGameBans})` : 'Игровой бан снят');
+        }
+        if (existing.community_banned !== (profile.communityBanned ? 1 : 0)) {
+          banDetails.push(profile.communityBanned ? 'Коммьюнити-бан' : 'Коммьюнити-бан снят');
+        }
+        if (existing.economy_ban !== (profile.economyBan || 'none')) {
+          banDetails.push(profile.economyBan !== 'none' ? `Торговый бан: ${profile.economyBan}` : 'Торговый бан снят');
+        }
 
         if (banDetails.length === 0) continue;
 
