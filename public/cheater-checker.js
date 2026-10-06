@@ -704,7 +704,7 @@ function createProfileCard(profile, isBanned) {
           <svg class="icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>
         </button>
         <button class="card-action-btn links-btn${(_linksCountMap[steamId] || 0) > 0 ? ' has-links' : ''}" data-steam-id="${steamId}" onclick="openLinksModal('${steamId}', event)" title="Связи между аккаунтами">
-          <svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связи
+          <svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg>
         </button>
         ${publishBtn}
       </div>
