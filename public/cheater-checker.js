@@ -1348,11 +1348,34 @@ async function loadLinksProfiles() {
       _linksProfilesCache = [...(cheaterData.profiles || []), ...(botData.profiles || [])];
     }
 
-    // Загружаем связи для текущего профиля
-    if (_linksSteamId && !_linksCache[_linksSteamId]) {
-      const res = await fetch(`/api/cheater-checker/links/${_linksSteamId}`);
-      const data = await res.json();
-      _linksCache[_linksSteamId] = new Set(data.linkedIds || []);
+    // Загружаем ВСЕ связи и считаем всю группу (BFS), а не только прямых
+    if (_linksSteamId) {
+      if (!_allLinksCache) {
+        const res = await fetch('/api/cheater-checker/links');
+        const data = await res.json();
+        _allLinksCache = data.links || [];
+      }
+      // BFS от _linksSteamId — вся компонента связности
+      const adj = {};
+      _allLinksCache.forEach(l => {
+        if (!adj[l.steam_id_a]) adj[l.steam_id_a] = [];
+        if (!adj[l.steam_id_b]) adj[l.steam_id_b] = [];
+        adj[l.steam_id_a].push(l.steam_id_b);
+        adj[l.steam_id_b].push(l.steam_id_a);
+      });
+      const groupSet = new Set([_linksSteamId]);
+      const stack = [_linksSteamId];
+      while (stack.length) {
+        const cur = stack.pop();
+        for (const n of (adj[cur] || [])) {
+          if (!groupSet.has(n)) {
+            groupSet.add(n);
+            stack.push(n);
+          }
+        }
+      }
+      groupSet.delete(_linksSteamId); // сам профиль не в списке
+      _linksCache[_linksSteamId] = groupSet;
     }
 
     renderLinksProfilesList(0);
@@ -1386,6 +1409,14 @@ function renderLinksProfilesList(page) {
   }
 
   const linkedSet = _linksCache[_linksSteamId] || new Set();
+
+  // Сортировка: отмеченные первыми
+  list.sort((a, b) => {
+    const aChecked = linkedSet.has(a.steam_id) ? 0 : 1;
+    const bChecked = linkedSet.has(b.steam_id) ? 0 : 1;
+    return aChecked - bChecked;
+  });
+
   const container = document.getElementById('linksProfilesList');
   const pag = document.getElementById('linksModalPagination');
 
