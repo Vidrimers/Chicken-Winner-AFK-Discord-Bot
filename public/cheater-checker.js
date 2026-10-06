@@ -1252,6 +1252,7 @@ let _linksGroupsData = [];       // вычисленные группы для �
 let linksPage = 1;
 let _linksCountMap = {};         // steamId → количество связей (кэш для has-links)
 let _linksGroupNames = {};       // groupKey → { name, renamed_by, renamed_at }
+let _allLinksCache = null;       // кэш всех связей (сбрасывается при изменении)
 
 async function openLinksModal(steamId, event) {
   if (event) { event.preventDefault(); event.stopPropagation(); }
@@ -1430,6 +1431,7 @@ async function toggleLink(steamId1, steamId2, isChecked) {
       if (_linksCache[steamId1]) _linksCache[steamId1].add(steamId2);
       _linksCountMap[steamId1] = (_linksCountMap[steamId1] || 0) + 1;
       _linksCountMap[steamId2] = (_linksCountMap[steamId2] || 0) + 1;
+      _allLinksCache = null; // сбрасываем кэш связей
     } else {
       await fetch('/api/cheater-checker/links', {
         method: 'DELETE',
@@ -1439,6 +1441,7 @@ async function toggleLink(steamId1, steamId2, isChecked) {
       if (_linksCache[steamId1]) _linksCache[steamId1].delete(steamId2);
       _linksCountMap[steamId1] = Math.max(0, (_linksCountMap[steamId1] || 1) - 1);
       _linksCountMap[steamId2] = Math.max(0, (_linksCountMap[steamId2] || 1) - 1);
+      _allLinksCache = null; // сбрасываем кэш связей
     }
     // Обновляем кнопки на обоих аккаунтах
     updateLinksButtonState(steamId1);
@@ -1659,10 +1662,13 @@ async function renderCardLinks(steamId, cardEl) {
   if (!container) return;
 
   try {
-    // Получаем ВСЕ связи и находим всю группу (не только прямых)
-    const res = await fetch('/api/cheater-checker/links');
-    const data = await res.json();
-    const allLinks = data.links || [];
+    // Используем кэш связей, загружаем только если его нет
+    if (!_allLinksCache) {
+      const res = await fetch('/api/cheater-checker/links');
+      const data = await res.json();
+      _allLinksCache = data.links || [];
+    }
+    const allLinks = _allLinksCache;
 
     // BFS от steamId — находим всю компоненту связности
     const adj = {};
