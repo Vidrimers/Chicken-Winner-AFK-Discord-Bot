@@ -350,7 +350,7 @@ export class CheatWatcherWorker {
       // CheatWatcher комментарий на стене
       const banDetails = formatBanDetails(profile);
       const cwComment =
-        `⚠️ Potential ch\u0435\u0430t\u0435r fl\u0430gg\u0435d by Ch\u0435\u0430tW\u0430tch\u0435rs Community\n\n` +
+        `⚠️ Suspected pl\u0430y\u0435r fl\u0430gg\u0435d by Ch\u0435\u0430tW\u0430tch\u0435rs Community\n\n` +
         `Player: ${profile.personaName || 'Unknown'}\n` +
         `SteamID64: ${profile.steamId}\n\n` +
         `Ban Details:\n${banDetails}\n` +

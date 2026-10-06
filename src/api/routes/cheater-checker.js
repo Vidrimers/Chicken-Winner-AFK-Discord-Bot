@@ -216,7 +216,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
           const banDetails = formatBanDetails(profile);
           const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
           const commentText =
-            `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
+            `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
             `Player: ${profile.personaName || 'Unknown'}\n` +
             `SteamID64: ${profile.steamId}\n\n` +
             `Ban Details:\n${banDetails}\n` +

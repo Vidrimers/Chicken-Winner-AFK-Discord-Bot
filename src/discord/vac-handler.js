@@ -290,7 +290,7 @@ export class VacHandler {
           `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
         ].join('\n');
         const cwComment =
-          `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
+          `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
           `Player: ${profile.personaName || 'Unknown'}\n` +
           `SteamID64: ${profile.steamId}\n\n` +
           `Ban Details:\n${cwBanDetails}\n` +
@@ -448,7 +448,7 @@ export class VacHandler {
         `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
       ].join('\n');
       const cwComment =
-        `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
+        `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
         `Player: ${profile.personaName || 'Unknown'}\n` +
         `SteamID64: ${profile.steamId}\n\n` +
         `Ban Details:\n${cwBanDetails}\n` +
@@ -640,7 +640,7 @@ export class VacHandler {
             `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
           ].join('\n');
           const cwComment =
-            `⚠️ Potential cheater flagged by CheatWatchers Community\n\n` +
+            `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
             `Player: ${profile.personaName || 'Unknown'}\n` +
             `SteamID64: ${profile.steamId}\n\n` +
             `Ban Details:\n${cwBanDetails}\n` +
