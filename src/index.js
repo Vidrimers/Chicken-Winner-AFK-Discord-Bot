@@ -306,7 +306,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             `Player: ${profile.personaName}\n` +
             `SteamID64: ${profile.steamId}\n` +
             `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-            `IP address saved and added to database.\n` +
+            `Network identifier logged and archived.\n` +
             `Evidence archived for review.\n` +
             `Added to CheatWatchers Community database and Valve database.`;
           db.addCheatWatcherComment(profile.steamId, cwUrlComment);
@@ -345,15 +345,29 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             if (shouldNotifyAdmin(db, 'ban')) notificationQueue.push({ type: 'admin', message: banMessage });
             notificationQueue.push(...collectUserNotifications(db, existing, banMessage));
 
-            // CheatWatcher
+            // CheatWatcher — только изменившиеся баны
+            const changedBanLines = [];
+            if (existing.vac_banned !== (profile.vacBanned ? 1 : 0)) {
+              changedBanLines.push(`VAC Ban: ${profile.vacBanned ? `Yes (${profile.numberOfVacBans || 1} ban${(profile.numberOfVacBans || 1) !== 1 ? 's' : ''})` : 'No'}`);
+            }
+            if (existing.number_of_game_bans !== (profile.numberOfGameBans || 0)) {
+              changedBanLines.push(`Game Bans: ${profile.numberOfGameBans > 0 ? profile.numberOfGameBans : 'No'}`);
+            }
+            if (existing.community_banned !== (profile.communityBanned ? 1 : 0)) {
+              changedBanLines.push(`Community Ban: ${profile.communityBanned ? 'Yes' : 'No'}`);
+            }
+            if (existing.economy_ban !== (profile.economyBan || 'none')) {
+              changedBanLines.push(`Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`);
+            }
+
             const cwBanComment =
               `🔄 Status update — ban detected!\n\n` +
               `Player: ${profile.personaName}\n` +
               `SteamID64: ${profile.steamId}\n\n` +
-              `Ban Details:\n${formatCheatWatcherBanDetails(profile)}\n` +
+              `${changedBanLines.join('\n')}\n` +
               `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
               `Previously: ${wasClean ? 'Clean' : 'Banned'}\n\n` +
-              `IP address saved and added to database.\n` +
+              `Network identifier logged and archived.\n` +
               `Evidence archived for review.\n` +
               `Added to CheatWatchers Community database and Valve database.`;
             db.addCheatWatcherComment(profile.steamId, cwBanComment);

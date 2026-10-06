@@ -355,7 +355,7 @@ export class CheatWatcherWorker {
         `SteamID64: ${profile.steamId}\n\n` +
         `Ban Details:\n${banDetails}\n` +
         `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-        `IP address saved and added to database.\n` +
+        `Network identifier logged and archived.\n` +
         `Evidence archived for review.\n` +
         `Added to Ch\u0435\u0430tW\u0430tch\u0435rs Community database and Valve database.`;
       this.db.addCheatWatcherComment(profile.steamId, cwComment);
