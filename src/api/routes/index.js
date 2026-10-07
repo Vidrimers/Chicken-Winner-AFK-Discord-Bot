@@ -44,6 +44,7 @@ export function registerRoutes(
       SITE_URL: SERVER_CONFIG.SITE_URL,
       TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME || "",
       ADMIN_STEAM_ID: process.env.ADMIN_STEAM_ID || "",
+      CHEAT_WATCHER_STEAM_ID: process.env.CHEAT_WATCHER_STEAM_ID || "",
       ADMIN_USER_ID: process.env.ADMIN_USER_ID || "",
     });
   });

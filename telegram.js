@@ -820,7 +820,9 @@ async function handleSteamUrlCheck(chatId, text, type = 'cheater') {
   }
 
   const adminSteamId = (process.env.ADMIN_STEAM_ID || '').trim();
-  if (adminSteamId && urlsToCheck.some((u) => u && u.includes(adminSteamId))) {
+  const cwSteamId = (process.env.CHEAT_WATCHER_STEAM_ID || '').trim();
+  const protectedIds = [adminSteamId, cwSteamId].filter(Boolean);
+  if (protectedIds.some(id => urlsToCheck.some((u) => u && u.includes(id)))) {
     await telegramBot.sendMessage(chatId, '❌ Ты сильно-то не охуевай там, малютка');
 
     try {

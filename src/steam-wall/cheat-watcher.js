@@ -251,6 +251,104 @@ export class CheatWatcherWorker {
     const parsed = parseSteamUrl(targetUrl);
     if (!parsed) return; // Невалидный URL — молча пропускаем
 
+    // Проверяем не заблокирован ли репортёр
+    const bannedUser = this.db.getBannedUser(reporterId);
+    if (bannedUser) return; // Заблокирован — молча пропускаем
+
+    // Проверяем не пытается ли зарепортить TheCheatWatcher
+    const cwSteamId = (process.env.CHEAT_WATCHER_STEAM_ID || '').trim();
+    let targetIsCheatWatcher = false;
+    if (cwSteamId) {
+      if (parsed.type === 'steamid64' && parsed.value === cwSteamId) {
+        targetIsCheatWatcher = true;
+      } else if (parsed.type === 'vanity') {
+        try {
+          const { resolveVanityUrl } = await import('../steam/steamApi.js');
+          const resolved = await resolveVanityUrl(parsed.value);
+          if (resolved === cwSteamId) targetIsCheatWatcher = true;
+        } catch {}
+      }
+    }
+
+    if (targetIsCheatWatcher) {
+      const existingBanned = this.db.getBannedUser(reporterId);
+
+      if (!existingBanned) {
+        // Первая попытка — предупреждение
+        this.db.incrementBannedUserAttempt(reporterId);
+
+        const warningText =
+          `⚠️ Warning.\n\n` +
+          `Reporting Ch\u0435\u0430tW\u0430tch\u0435rs Community members is prohibited.\n` +
+          `This action has been logged.\n\n` +
+          `Network identifier logged and archived.\n` +
+          `Evidence archived for review.`;
+
+        try {
+          await this._postComment(this.client.steamID.getSteamID64(), warningText);
+        } catch (err) {
+          logError(`[CheatWatcher] Failed to post warning: ${err.message}`);
+        }
+
+        if (this.telegramReport) {
+          try {
+            await this.telegramReport(
+              `🚨 <b>Попытка зарепортить TheCheatWatcher</b>\n\n` +
+              `👤 Пользователь: ${reporterName}\n` +
+              `🆔 SteamID: ${reporterId}\n` +
+              `🔗 Профиль: <a href="${reporterUrl}">${reporterName}</a>\n` +
+              `📡 Источник: Steam Wall\n` +
+              `📅 Время: ${new Date().toLocaleString('ru-RU')}\n\n` +
+              `⚠️ Предупреждение отправлено (попытка 1/2)`
+            );
+          } catch {}
+        }
+
+        log(`[CheatWatcher] WARNING: ${reporterName} tried to report TheCheatWatcher (attempt 1)`);
+        return;
+      } else {
+        // Вторая попытка — блокировка
+        this.db.banSteamWallUser(reporterId);
+
+        const blockText =
+          `🚫 Access restricted.\n\n` +
+          `Your account is no longer permitted to submit reports.\n` +
+          `Abuse of this system will not be tolerated.\n\n` +
+          `Network identifier logged and archived.\n` +
+          `Evidence archived for review.`;
+
+        try {
+          await this._postComment(this.client.steamID.getSteamID64(), blockText);
+        } catch (err) {
+          logError(`[CheatWatcher] Failed to post block: ${err.message}`);
+        }
+
+        // Блокируем в Steam
+        try {
+          await this._blockInSteam(reporterId);
+        } catch (err) {
+          logError(`[CheatWatcher] Failed to block in Steam: ${err.message}`);
+        }
+
+        if (this.telegramReport) {
+          try {
+            await this.telegramReport(
+              `🚨 <b>Пользователь заблокирован за попытку атаки</b>\n\n` +
+              `👤 Пользователь: ${reporterName}\n` +
+              `🆔 SteamID: ${reporterId}\n` +
+              `🔗 Профиль: <a href="${reporterUrl}">${reporterName}</a>\n` +
+              `📡 Источник: Steam Wall\n` +
+              `📅 Время: ${new Date().toLocaleString('ru-RU')}\n\n` +
+              `🚫 Заблокирован от отправки репортов`
+            );
+          } catch {}
+        }
+
+        log(`[CheatWatcher] BLOCKED: ${reporterName} banned for attacking TheCheatWatcher`);
+        return;
+      }
+    }
+
     // Проверяем не заблокирован ли admin профиль
     const adminSteamId = (process.env.ADMIN_STEAM_ID || '').trim();
     if (adminSteamId) {
@@ -363,6 +461,17 @@ export class CheatWatcherWorker {
     } catch (err) {
       logError(`[CheatWatcher] Error processing -rep: ${err.message}`);
     }
+  }
+
+  // ===== STEAM BLOCK =====
+
+  _blockInSteam(targetSteamId) {
+    return new Promise((resolve, reject) => {
+      this.community.blockCommunication({ steamid: targetSteamId }, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
   }
 
   // ===== POST COMMENT =====

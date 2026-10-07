@@ -116,7 +116,9 @@ export class VacHandler {
       await message.react('🔍');
 
       const adminSteamId = (process.env.ADMIN_STEAM_ID || '').trim();
-      if (adminSteamId && url && url.includes(adminSteamId)) {
+      const cwSteamId = (process.env.CHEAT_WATCHER_STEAM_ID || '').trim();
+      const protectedIds = [adminSteamId, cwSteamId].filter(Boolean);
+      if (protectedIds.some(id => url && url.includes(id))) {
         await message.reactions.cache.get('🔍')?.remove();
         await message.react('🚫');
         await message.reply('❌ Ты сильно-то не охуевай там, малютка');
@@ -327,7 +329,9 @@ export class VacHandler {
     await message.react('🔍');
 
     const adminSteamId = (process.env.ADMIN_STEAM_ID || '').trim();
-    if (adminSteamId && urls.some((u) => u && u.includes(adminSteamId))) {
+    const cwSteamId = (process.env.CHEAT_WATCHER_STEAM_ID || '').trim();
+    const protectedIds = [adminSteamId, cwSteamId].filter(Boolean);
+    if (protectedIds.some(id => urls.some((u) => u && u.includes(id)))) {
       await message.reactions.cache.get('🔍')?.remove();
       await message.react('🚫');
       await message.reply('❌ Ты сильно-то не охуевай там, малютка');
@@ -548,12 +552,13 @@ export class VacHandler {
         }
       });
 
-      const protectedAdminId = (process.env.ADMIN_STEAM_ID || '').trim();
-      if (protectedAdminId) {
-        for (const url of [...foundUrls]) {
-          if (url && url.includes(protectedAdminId)) {
-            foundUrls.delete(url);
-          }
+      const protectedIds = [
+        (process.env.ADMIN_STEAM_ID || '').trim(),
+        (process.env.CHEAT_WATCHER_STEAM_ID || '').trim(),
+      ].filter(Boolean);
+      for (const url of [...foundUrls]) {
+        if (url && protectedIds.some(id => url.includes(id))) {
+          foundUrls.delete(url);
         }
       }
 

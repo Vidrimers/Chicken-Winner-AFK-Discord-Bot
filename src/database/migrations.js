@@ -771,5 +771,20 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: таблица steam_wall_banned_users (заблокированные репортёры)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='steam_wall_banned_users'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE steam_wall_banned_users (
+          steam_id TEXT PRIMARY KEY,
+          attempts INTEGER NOT NULL DEFAULT 1,
+          banned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('✅ Таблица steam_wall_banned_users создана');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

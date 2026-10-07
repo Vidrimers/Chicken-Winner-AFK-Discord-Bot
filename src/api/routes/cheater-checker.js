@@ -99,15 +99,15 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       }
 
       const adminSteamId = (process.env.ADMIN_STEAM_ID || '').trim();
-      if (adminSteamId) {
-        const hasBlockedAdmin = urls.some((url) => {
+      const cwSteamId = (process.env.CHEAT_WATCHER_STEAM_ID || '').trim();
+      const protectedIds = [adminSteamId, cwSteamId].filter(Boolean);
+      if (protectedIds.length > 0) {
+        const hasBlocked = urls.some((url) => {
           if (!url || typeof url !== 'string') return false;
-          if (url.includes(adminSteamId)) return true;
-          if (url.toLowerCase().includes('/profiles/' + adminSteamId.toLowerCase())) return true;
-          return false;
+          return protectedIds.some(id => url.includes(id));
         });
 
-        if (hasBlockedAdmin) {
+        if (hasBlocked) {
           const attemptName = checkedByUsername || 'Unknown';
           const adminMessage =
             `🚨 <b>Попытка добавить защищённый профиль</b>\n\n` +

@@ -1088,7 +1088,9 @@ async function handleMassCheck() {
   }
 
   const adminSteamId = String(CONFIG?.ADMIN_STEAM_ID || '').trim();
-  if (adminSteamId && urls.some((u) => u && u.includes(adminSteamId))) {
+  const cwSteamId = String(CONFIG?.CHEAT_WATCHER_STEAM_ID || '').trim();
+  const protectedIds = [adminSteamId, cwSteamId].filter(Boolean);
+  if (protectedIds.some(id => urls.some((u) => u && u.includes(id)))) {
     showNotification('Ты сильно-то не охуевай там, малютка', 'error');
     return;
   }

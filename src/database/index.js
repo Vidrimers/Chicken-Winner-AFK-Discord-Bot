@@ -1077,6 +1077,28 @@ export class DatabaseManager {
     return row ? row.count : 0;
   }
 
+  // ===== STEAM WALL BANNED USERS =====
+
+  getBannedUser(steamId) {
+    return this.prepare(
+      'SELECT * FROM steam_wall_banned_users WHERE steam_id = ?'
+    ).get(steamId);
+  }
+
+  incrementBannedUserAttempt(steamId) {
+    return this.prepare(
+      `INSERT INTO steam_wall_banned_users (steam_id, attempts) VALUES (?, 1)
+       ON CONFLICT(steam_id) DO UPDATE SET attempts = attempts + 1`
+    ).run(steamId);
+  }
+
+  banSteamWallUser(steamId) {
+    return this.prepare(
+      `INSERT INTO steam_wall_banned_users (steam_id, attempts, banned_at) VALUES (?, 2, CURRENT_TIMESTAMP)
+       ON CONFLICT(steam_id) DO UPDATE SET attempts = 2, banned_at = CURRENT_TIMESTAMP`
+    ).run(steamId);
+  }
+
   getCheatWatcherQueueStats() {
     const pending = this.prepare(
       "SELECT COUNT(*) as count FROM cheat_watcher_queue WHERE status = 'pending'"
