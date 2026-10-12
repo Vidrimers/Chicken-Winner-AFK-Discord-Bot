@@ -24,19 +24,29 @@ export function createAchievementsRouter(db, telegram) {
 
   /**
    * GET /special-achievements
-   * Получить все специальные достижения
+   * Получить все специальные достижения.
+   * Гостям user_id не отдаётся — только username для отображения.
    */
   router.get('/special-achievements', (req, res) => {
     try {
       const stmt = db.prepare(`
-        SELECT DISTINCT a.achievement_id, a.emoji, a.name, a.description, a.type, a.color, a.special_date, a.user_id, ua.unlocked_at
+        SELECT DISTINCT a.achievement_id, a.emoji, a.name, a.description, a.type, a.color, a.special_date, a.user_id, ua.unlocked_at,
+               COALESCE(us.username, 'Неизвестный') as username
         FROM achievements a
         LEFT JOIN user_achievements ua ON a.achievement_id = ua.achievement_id AND a.user_id = ua.user_id
+        LEFT JOIN user_stats us ON a.user_id = us.user_id
         WHERE a.type = 'special'
         ORDER BY a.created_at DESC
       `);
       const specialAchievements = stmt.all();
-      res.json(specialAchievements);
+      const isGuest = !req.session?.userId;
+      const payload = specialAchievements.map(({ user_id: userId, ...rest }) => {
+        if (isGuest) {
+          return rest;
+        }
+        return { ...rest, user_id: userId };
+      });
+      res.json(payload);
     } catch (error) {
       logError(`Ошибка при получении специальных достижений: ${error.message}`);
       res.status(500).json({ error: 'Internal server error' });

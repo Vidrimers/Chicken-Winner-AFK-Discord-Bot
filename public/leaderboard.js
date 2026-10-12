@@ -1,6 +1,11 @@
 async function loadLeaderboard(forceRefresh = false) {
   try {
     const response = await fetch("/api/leaderboard");
+    if (response.status === 401) {
+      document.getElementById("leaderboardList").innerHTML =
+        '<div class="error">🔒 Рейтинг доступен только участникам после входа</div>';
+      return;
+    }
     const leaderboard = await response.json();
 
     // Получаем онлайн статусы

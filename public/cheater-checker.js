@@ -586,9 +586,8 @@ function createProfileCard(profile, isBanned) {
   const communityBanned = profile.community_banned ? 'Да' : 'Нет';
   const economyBan = (profile.economy_ban && profile.economy_ban !== 'none') ? profile.economy_ban : 'Нет';
 
-  // Кнопка публикации в Discord (только для админа или того, кто добавил)
-  const checkedByDiscordId = profile.checked_by_discord_id || '';
-  const canPublish = (currentUserId === CONFIG.ADMIN_USER_ID) || (currentUserId === checkedByDiscordId);
+  // Кнопка публикации в Discord (только для админа или того, кто добавил) — canPublish считает сервер
+  const canPublish = Boolean(profile.canPublish);
   const publishBtn = canPublish
     ? `<button class="card-action-btn discord-publish-btn" data-steam-id="${steamId}"><svg class="icon" aria-hidden="true"><use href="#icon-discord"></use></svg> Дискорд</button>`
     : '';

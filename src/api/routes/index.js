@@ -68,8 +68,8 @@ export function registerRoutes(
   const statsRouter = createStatsRouter(db, discordClient, telegram, gamesDb);
   app.use("/api/stats", statsRouter);
 
-  // Дополнительные stats endpoints
-  app.get("/api/leaderboard", (req, res) => {
+  // Дополнительные stats endpoints (только для авторизованных)
+  app.get("/api/leaderboard", requireAuth, (req, res) => {
     try {
       const topUsers = db.getTopUsers(20);
       res.json(topUsers);
@@ -78,7 +78,7 @@ export function registerRoutes(
     }
   });
 
-  app.get("/api/online-status", (req, res) => {
+  app.get("/api/online-status", requireAuth, (req, res) => {
     try {
       const guild = discordClient.guilds.cache.first();
       if (!guild) {

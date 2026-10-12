@@ -409,19 +409,35 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
 
       // lastViewedAt и избранное для авторизованных пользователей
       const userId = req.session?.userId || null;
+      const isAdmin = userId && userId === process.env.ADMIN_USER_ID;
       const lastViewedAt = userId ? db.getLastView(userId, type) : null;
       const favoriteSteamIds = userId ? db.getFavoriteSteamIds(userId, type) : [];
 
-      // Добавляем количество смен имени, isFavorite и notes к каждому профилю
-      const enrichedProfiles = profiles.map(profile => ({
-        ...profile,
-        name_history_count: db.getNameHistoryCount(profile.steam_id, type),
-        friends_count: db.getFriendsCount(profile.steam_id),
-        friends_last_refreshed_at: profile.friends_last_refreshed_at || null,
-        isFavorite: favoriteSteamIds.includes(profile.steam_id),
-        notes: userId ? db.getNotes(userId, profile.steam_id, type) : [],
-        report_count: (profile.report_source === 'steam_wall') ? db.getUniqueReportCount(profile.steam_id) : 0,
-      }));
+      // Добавляем количество смен имени, isFavorite и notes к каждому профилю.
+      // Гостям не отдаём Discord ID и ник автора — только «Участник».
+      const enrichedProfiles = profiles.map((profile) => {
+        const authorId = profile.checked_by_discord_id || null;
+        const canPublish = Boolean(
+          userId && (isAdmin || (authorId && String(authorId) === String(userId))),
+        );
+
+        const {
+          checked_by_discord_id: _omitAuthorId,
+          ...rest
+        } = profile;
+
+        return {
+          ...rest,
+          checked_by_username: userId ? (profile.checked_by_username || 'Unknown') : 'Участник',
+          canPublish,
+          name_history_count: db.getNameHistoryCount(profile.steam_id, type),
+          friends_count: db.getFriendsCount(profile.steam_id),
+          friends_last_refreshed_at: profile.friends_last_refreshed_at || null,
+          isFavorite: favoriteSteamIds.includes(profile.steam_id),
+          notes: userId ? db.getNotes(userId, profile.steam_id, type) : [],
+          report_count: (profile.report_source === 'steam_wall') ? db.getUniqueReportCount(profile.steam_id) : 0,
+        };
+      });
 
       res.json({ profiles: enrichedProfiles, total, lastViewedAt });
     } catch (error) {

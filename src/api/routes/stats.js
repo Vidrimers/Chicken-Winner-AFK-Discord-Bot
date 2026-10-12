@@ -108,9 +108,9 @@ export function createStatsRouter(db, discordClient, telegram, gamesDb) {
 
   /**
    * GET /api/leaderboard
-   * Получить топ пользователей
+   * Получить топ пользователей (только для авторизованных)
    */
-  router.get('/leaderboard', (req, res) => {
+  router.get('/leaderboard', requireAuth, (req, res) => {
     try {
       const topUsers = db.getTopUsers(20);
       res.json(topUsers);
@@ -122,9 +122,9 @@ export function createStatsRouter(db, discordClient, telegram, gamesDb) {
 
   /**
    * GET /api/online-status
-   * Получить онлайн статусы пользователей
+   * Получить онлайн статусы пользователей (только для авторизованных)
    */
-  router.get('/online-status', (req, res) => {
+  router.get('/online-status', requireAuth, (req, res) => {
     try {
       const guild = discordClient.guilds.cache.first();
       if (!guild) {
