@@ -1735,6 +1735,80 @@ body[data-theme="m3-light"] .ss-card {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 
+/* ===== НОВЫЕ ПОДРАЗДЕЛЫ ===== */
+
+.ss-subsection {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 18px 0 12px;
+  padding-left: 2px;
+}
+
+.ss-grid-detail,
+.ss-grid-weapons,
+.ss-grid-objectives,
+.ss-grid-faceit-detail {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+
+.ss-item-sm {
+  padding: 12px 10px;
+  gap: 4px;
+}
+
+.ss-item-sm .ss-item-icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+}
+
+.ss-item-sm .ss-item-icon svg {
+  width: 14px; height: 14px;
+}
+
+.ss-item-sm .ss-item-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.ss-item-sm .ss-item-label {
+  font-size: 0.65rem;
+}
+
+/* Строка результатов матчей FACEIT */
+.ss-recent-results {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  justify-content: center;
+}
+
+.ss-result {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.ss-result-win {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+}
+
+.ss-result-loss {
+  background: linear-gradient(135deg, #f44336, #d32f2f);
+}
+
+/* Страна */
+.ss-badge-country {
+  background: rgba(102, 126, 234, 0.12);
+  color: var(--accent-color, #667eea);
+  border: 1px solid rgba(102, 126, 234, 0.25);
+}
+
 /* User filter tabs */
 .user-filter-tab {
   padding: 8px 16px;

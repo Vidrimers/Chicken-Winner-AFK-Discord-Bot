@@ -781,6 +781,7 @@ function renderSteamStatsCard(data, isOwnProfile) {
 
   // Форматируем значение с защитой от null
   const fmt = (val, suffix = '') => val !== null && val !== undefined ? `${val}${suffix}` : '—';
+  const fmtNum = (val) => val !== null && val !== undefined ? Number(val).toLocaleString('ru-RU') : '—';
 
   const faceitHtml = renderFaceitBlock(data.faceit);
 
@@ -792,6 +793,16 @@ function renderSteamStatsCard(data, isOwnProfile) {
     winrate: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
     kd: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>`,
     hs: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+    kills: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+    deaths: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+    damage: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+    mvp: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>`,
+    rounds: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    accuracy: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>`,
+    knife: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3l3 3-3 3"/><path d="M6 21l-3-3 3-3"/><line x1="21" y1="6" x2="3" y2="18"/></svg>`,
+    pistol: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="2"/><line x1="22" y1="11" x2="18" y2="11"/></svg>`,
+    rifle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"/><line x1="20" y1="12" x2="20" y2="10"/><line x1="4" y1="12" x2="4" y2="14"/></svg>`,
+    bomb: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
   };
 
   return `
@@ -809,6 +820,7 @@ function renderSteamStatsCard(data, isOwnProfile) {
         </div>
       </div>
 
+      <!-- Основные статы -->
       <div class="ss-grid">
         <div class="ss-item">
           <div class="ss-item-icon">${icons.year}</div>
@@ -842,6 +854,96 @@ function renderSteamStatsCard(data, isOwnProfile) {
         </div>
       </div>
 
+      <!-- Детальная статистика -->
+      <div class="ss-subsection">Детальная статистика</div>
+      <div class="ss-grid ss-grid-detail">
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.kills}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalKills)}</div>
+          <div class="ss-item-label">Убийств</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.deaths}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalDeaths)}</div>
+          <div class="ss-item-label">Смертей</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.damage}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalDamage)}</div>
+          <div class="ss-item-label">Урон</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.mvp}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalMvps)}</div>
+          <div class="ss-item-label">MVP</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.rounds}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalRoundsPlayed)}</div>
+          <div class="ss-item-label">Раундов</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.accuracy}</div>
+          <div class="ss-item-value">${fmt(cs2.accuracy, '%')}</div>
+          <div class="ss-item-label">Точность</div>
+        </div>
+      </div>
+
+      <!-- Убийства по оружию -->
+      <div class="ss-subsection">Убийства по оружию</div>
+      <div class="ss-grid ss-grid-weapons">
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.knife}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalKnifeKills)}</div>
+          <div class="ss-item-label">Нож</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.pistol}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalPistolKills)}</div>
+          <div class="ss-item-label">Пистолет</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.rifle}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalSmgKills)}</div>
+          <div class="ss-item-label">ПП</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.rifle}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalRifleKills)}</div>
+          <div class="ss-item-label">Винтовка</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.rifle}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalSniperKills)}</div>
+          <div class="ss-item-label">Снайперка</div>
+        </div>
+      </div>
+
+      <!-- Объективы -->
+      <div class="ss-subsection">Объективы</div>
+      <div class="ss-grid ss-grid-objectives">
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.bomb}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalPlantedBombs)}</div>
+          <div class="ss-item-label">Заложено</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.bomb}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalDefusedBombs)}</div>
+          <div class="ss-item-label">Разминировано</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.mvp}</div>
+          <div class="ss-item-value">${fmtNum(cs2.totalRescuedHostages)}</div>
+          <div class="ss-item-label">Заложников</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-icon">${icons.damage}</div>
+          <div class="ss-item-value">$${fmtNum(cs2.totalMoneyEarned)}</div>
+          <div class="ss-item-label">Заработано</div>
+        </div>
+      </div>
+
       ${faceitHtml}
     </div>
   `;
@@ -861,6 +963,22 @@ function renderFaceitBlock(faceit) {
     ? '<span class="ss-badge ss-badge-ban">🔴 Забанен</span>'
     : '';
 
+  const country = faceit.country
+    ? `<span class="ss-badge ss-badge-country">🌍 ${escapeHtml(String(faceit.country).toUpperCase())}</span>`
+    : '';
+
+  const fmt = (val, suffix = '') => val !== null && val !== undefined && val !== 0 ? `${val}${suffix}` : '—';
+
+  // Результаты последних матчей
+  const recentHtml = faceit.recentResults && faceit.recentResults.length > 0
+    ? `<div class="ss-recent-results">
+        ${faceit.recentResults.slice(0, 5).map(r => {
+          const isWin = r.trim() === '1';
+          return `<span class="ss-result ss-result-${isWin ? 'win' : 'loss'}">${isWin ? 'W' : 'L'}</span>`;
+        }).join('')}
+      </div>`
+    : '';
+
   return `
     <div class="ss-divider"></div>
     <div class="ss-section">
@@ -871,21 +989,23 @@ function renderFaceitBlock(faceit) {
           </svg>
         </div>
         <div>
-          <div class="ss-section-title">FACEIT ${banBadge}</div>
-          <div class="ss-subtitle">FACEIT CS2</div>
+          <div class="ss-section-title">FACEIT ${banBadge} ${country}</div>
+          <div class="ss-subtitle">${escapeHtml(faceit.nickname || 'FACEIT CS2')}</div>
         </div>
       </div>
+
+      <!-- Основные статы FACEIT -->
       <div class="ss-grid ss-grid-faceit">
         <div class="ss-item ss-item-faceit">
           <div class="ss-faceit-level-badge faceit-level-${faceit.level || 0}">${faceit.level ?? '—'}</div>
           <div class="ss-item-label">Уровень</div>
         </div>
         <div class="ss-item">
-          <div class="ss-item-value">${faceit.elo ?? '—'}</div>
+          <div class="ss-item-value">${fmt(faceit.elo)}</div>
           <div class="ss-item-label">ELO</div>
         </div>
         <div class="ss-item">
-          <div class="ss-item-value">${faceit.matches ?? '—'}</div>
+          <div class="ss-item-value">${fmt(faceit.matches)}</div>
           <div class="ss-item-label">Матчей</div>
         </div>
         <div class="ss-item">
@@ -893,6 +1013,36 @@ function renderFaceitBlock(faceit) {
           <div class="ss-item-label">Побед</div>
         </div>
       </div>
+
+      <!-- Детальная статистика FACEIT -->
+      <div class="ss-grid ss-grid-faceit-detail">
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.avgKD)}</div>
+          <div class="ss-item-label">Avg K/D</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.avgKR)}</div>
+          <div class="ss-item-label">Avg K/R</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.avgHS, '%')}</div>
+          <div class="ss-item-label">Avg HS%</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.currentWinStreak)}</div>
+          <div class="ss-item-label">Текущая серия</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.longestWinStreak)}</div>
+          <div class="ss-item-label">Макс. серия</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.totalHeadshots, '%')}</div>
+          <div class="ss-item-label">HS% всего</div>
+        </div>
+      </div>
+
+      ${recentHtml}
     </div>
   `;
 }

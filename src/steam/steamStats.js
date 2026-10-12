@@ -137,6 +137,20 @@ export async function fetchSteamStats(steamId) {
   const totalWins          = statsData['total_wins']           ?? null;
   const totalTimePlayed    = statsData['total_time_played']    ?? null;
   const totalHsKills       = statsData['total_kills_headshot'] ?? null;
+  const totalShotsFired    = statsData['total_shots_fired']    ?? null;
+  const totalShotsHit      = statsData['total_shots_hit']      ?? null;
+  const totalDamage        = statsData['total_damage_done']    ?? null;
+  const totalMvps          = statsData['total_mvps']           ?? null;
+  const totalRoundsPlayed  = statsData['total_rounds_played']  ?? null;
+  const totalKnifeKills    = statsData['total_kills_knife']    ?? null;
+  const totalPistolKills   = statsData['total_kills_pistol']   ?? null;
+  const totalSmgKills      = statsData['total_kills_smg']      ?? null;
+  const totalRifleKills    = statsData['total_kills_rifle']    ?? null;
+  const totalSniperKills   = statsData['total_kills_sniper']   ?? null;
+  const totalPlantedBombs  = statsData['total_planted_bombs']  ?? null;
+  const totalDefusedBombs  = statsData['total_defused_bombs']  ?? null;
+  const totalRescuedHostages = statsData['total_rescued_hostages'] ?? null;
+  const totalMoneyEarned   = statsData['total_money_earned']   ?? null;
 
   return {
     private: false,
@@ -149,6 +163,20 @@ export async function fetchSteamStats(steamId) {
     totalWins,
     totalTimePlayed,
     totalHsKills,
+    totalShotsFired,
+    totalShotsHit,
+    totalDamage,
+    totalMvps,
+    totalRoundsPlayed,
+    totalKnifeKills,
+    totalPistolKills,
+    totalSmgKills,
+    totalRifleKills,
+    totalSniperKills,
+    totalPlantedBombs,
+    totalDefusedBombs,
+    totalRescuedHostages,
+    totalMoneyEarned,
     hoursPlayed: totalTimePlayed !== null
       ? Math.round(totalTimePlayed / 3600)
       : null,
@@ -160,6 +188,9 @@ export async function fetchSteamStats(steamId) {
       : null,
     hsPercent: (totalHsKills !== null && totalKills !== null && totalKills > 0)
       ? +(totalHsKills / totalKills * 100).toFixed(1)
+      : null,
+    accuracy: (totalShotsHit !== null && totalShotsFired !== null && totalShotsFired > 0)
+      ? +(totalShotsHit / totalShotsFired * 100).toFixed(1)
       : null,
   };
 }
