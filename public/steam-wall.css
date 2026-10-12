@@ -153,6 +153,17 @@
   font-weight: 500;
 }
 
+.auth-warning-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 700;
+}
+
+.auth-warning-link:hover {
+  opacity: 0.85;
+}
+
 /* Секция управления ботом */
 .bot-control-section {
   display: flex;

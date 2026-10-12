@@ -210,6 +210,16 @@ async function checkAuthStatus() {
 }
 
 async function loadUserDataAuto(userId) {
+  // Уже залогинен и пришли с returnTo — сразу возвращаемся
+  const returnTo = sessionStorage.getItem("loginReturnTo");
+  if (returnTo) {
+    sessionStorage.removeItem("loginReturnTo");
+    if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+      window.location.href = returnTo;
+      return;
+    }
+  }
+
   window.currentUserId = userId;
   localStorage.setItem("afkBotUserId", userId);
   document.getElementById("loading").style.display = "block";
@@ -479,6 +489,16 @@ function cancelTgLogin() {
 
 // Основная логика загрузки профиля (вынесена из loadUserData)
 async function _doLogin(userId) {
+  // Если пришли с ?login=1&returnTo=... — после успешного входа возвращаемся
+  const returnTo = sessionStorage.getItem("loginReturnTo");
+  if (returnTo) {
+    sessionStorage.removeItem("loginReturnTo");
+    if (returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+      window.location.href = returnTo;
+      return;
+    }
+  }
+
   window.currentUserId = userId;
   localStorage.setItem("afkBotUserId", userId);
   document.getElementById("loading").style.display = "block";
@@ -1574,6 +1594,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Сначала загружаем конфигурацию
   await loadConfig();
+
+  // ?login=1&returnTo=... — сразу показать форму входа (переход со страниц-чекеров)
+  {
+    const loginParams = new URLSearchParams(window.location.search);
+    if (loginParams.get("login") === "1") {
+      const returnTo = loginParams.get("returnTo");
+      if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+        sessionStorage.setItem("loginReturnTo", returnTo);
+      }
+      document.getElementById("manualInputSection").style.display = "flex";
+      setTimeout(() => {
+        const input = document.getElementById("userIdInput");
+        if (input) {
+          input.focus();
+          input.scrollIntoView({ block: "center", behavior: "smooth" });
+        }
+      }, 100);
+    }
+  }
 
   document.getElementById("userInfoDisplay").style.display = "none";
   document.getElementById("logoutBtn").style.display = "none";
