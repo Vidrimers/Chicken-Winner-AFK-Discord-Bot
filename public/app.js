@@ -138,6 +138,12 @@ async function loadConfig() {
 }
 
 // Функции для работы с авторизацией
+// TODO: Discord OAuth — кнопка «Войти через Discord» пока не используется.
+// Роут /auth/discord на сервере отдаёт 404. Для запуска нужно:
+// 1) Реализовать /auth/discord + /auth/discord/callback (см. bot.js.backup).
+// 2) В Discord Developer Portal → OAuth2 → Redirects добавить:
+//    https://chicken-winner.fun/auth/discord/callback
+// 3) Прописать DISCORD_REDIRECT_URI в .env на сервере.
 function loginWithDiscord() {
   window.location.href = "/auth/discord";
 }
