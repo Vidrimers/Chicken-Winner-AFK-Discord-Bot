@@ -73,8 +73,20 @@ function showConfirm(message) {
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Получаем данные пользователя из localStorage (как в cheater-checker)
+  // Получаем данные пользователя из localStorage / cookie-сессии
   currentUserId = localStorage.getItem('afkBotUserId') || null;
+
+  // OAuth кладёт сессию в cookie, но не в localStorage — досинхронизируем
+  if (!currentUserId) {
+    try {
+      const res = await fetch('/api/session');
+      const data = await res.json();
+      if (data.userId) {
+        currentUserId = data.userId;
+        localStorage.setItem('afkBotUserId', data.userId);
+      }
+    } catch { /* нет сессии — гость */ }
+  }
 
   if (!currentUserId) {
     showAuthWarning();

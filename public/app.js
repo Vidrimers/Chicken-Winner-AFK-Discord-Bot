@@ -229,7 +229,11 @@ async function refreshAdminFlag(userId) {
 }
 
 async function loadUserDataAuto(userId) {
-  // Уже залогинен и пришли с returnTo — сразу возвращаемся
+  // Уже залогинен и пришли с returnTo — возвращаемся.
+  // localStorage пишем ДО редиректа, чтобы принимающая страница увидела вход.
+  window.currentUserId = userId;
+  localStorage.setItem("afkBotUserId", userId);
+
   const returnTo = sessionStorage.getItem("loginReturnTo");
   if (returnTo) {
     sessionStorage.removeItem("loginReturnTo");
@@ -239,8 +243,6 @@ async function loadUserDataAuto(userId) {
     }
   }
 
-  window.currentUserId = userId;
-  localStorage.setItem("afkBotUserId", userId);
   await refreshAdminFlag(userId);
   document.getElementById("loading").style.display = "block";
   document.getElementById("userContent").style.display = "none";
@@ -509,6 +511,11 @@ function cancelTgLogin() {
 
 // Основная логика загрузки профиля (вынесена из loadUserData)
 async function _doLogin(userId) {
+  // Сначала сохраняем userId — иначе returnTo-редирект уйдёт без localStorage
+  // и страница (например cheater-checker) снова покажет «Войдите»
+  window.currentUserId = userId;
+  localStorage.setItem("afkBotUserId", userId);
+
   // Если пришли с ?login=1&returnTo=... — после успешного входа возвращаемся
   const returnTo = sessionStorage.getItem("loginReturnTo");
   if (returnTo) {
@@ -518,9 +525,6 @@ async function _doLogin(userId) {
       return;
     }
   }
-
-  window.currentUserId = userId;
-  localStorage.setItem("afkBotUserId", userId);
 
   // isAdmin должен обновляться при входе, а не только при перезагрузке страницы
   await refreshAdminFlag(userId);

@@ -17,9 +17,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Загружаем конфигурацию
   await loadConfig();
 
-  // Получаем данные пользователя из localStorage
+  // Получаем данные пользователя из localStorage / cookie-сессии
   currentUserId = localStorage.getItem('afkBotUserId') || null;
   currentUsername = localStorage.getItem('afkBotUsername') || null;
+
+  // OAuth кладёт сессию в cookie, но не в localStorage — досинхронизируем
+  if (!currentUserId) {
+    try {
+      const res = await fetch('/api/session');
+      const data = await res.json();
+      if (data.userId) {
+        currentUserId = data.userId;
+        localStorage.setItem('afkBotUserId', data.userId);
+      }
+    } catch { /* нет сессии — гость */ }
+  }
 
   // Если нет username, пробуем получить из сессии
   if (currentUserId && !currentUsername) {
