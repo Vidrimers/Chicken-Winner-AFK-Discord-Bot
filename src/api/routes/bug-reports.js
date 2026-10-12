@@ -69,9 +69,9 @@ export function createBugReportsRouter(db, telegram) {
   });
 
   /**
-   * GET /api/bug-reports/count — количество новых багрепортов (для бейджа)
+   * GET /api/bug-reports/count — количество новых багрепортов (для бейджа, только админ)
    */
-  router.get('/bug-reports/count', (req, res) => {
+  router.get('/bug-reports/count', requireAuth, requireAdmin, (req, res) => {
     try {
       const count = db.getBugReportCount('new');
       res.json({ count });
