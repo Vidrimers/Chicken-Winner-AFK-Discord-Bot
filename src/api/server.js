@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { randomBytes } from 'crypto';
 import { success, log } from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -47,17 +48,17 @@ export class SessionManager {
   }
 
   setSession(res, userId) {
-    const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const sessionId = 'session_' + randomBytes(32).toString('hex');
     const now = Date.now();
     const expiresAt = now + 30 * 86400 * 1000; // 30 дней
-    
+
     this.db.prepare(
       'INSERT INTO sessions (session_id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)'
     ).run(sessionId, userId, now, expiresAt);
-    
+
     res.setHeader(
       'Set-Cookie',
-      `sessionId=${sessionId}; Path=/; Max-Age=${30 * 86400}; SameSite=Lax; HttpOnly`
+      `sessionId=${sessionId}; Path=/; Max-Age=${30 * 86400}; SameSite=Lax; HttpOnly; Secure`
     );
     return sessionId;
   }
@@ -67,7 +68,7 @@ export class SessionManager {
     if (sessionId) {
       this.db.prepare('DELETE FROM sessions WHERE session_id = ?').run(sessionId);
     }
-    res.setHeader('Set-Cookie', 'sessionId=; Path=/; Max-Age=0');
+    res.setHeader('Set-Cookie', 'sessionId=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax');
   }
 
   cleanupExpired() {
@@ -88,8 +89,12 @@ export let sessionManager = null;
 export function createExpressServer(db) {
   // Инициализируем session manager с БД
   sessionManager = new SessionManager(db);
-  
+
   const app = express();
+
+  // За nginx/прокси: req.ip должен быть IP клиента, а не proxy
+  app.set('trust proxy', 1);
+  app.disable('x-powered-by');
 
   // Middleware
   app.use(express.json());

@@ -1,3 +1,9 @@
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text ?? "";
+  return div.innerHTML;
+}
+
 async function loadLeaderboard(forceRefresh = false) {
   try {
     const response = await fetch("/api/leaderboard");
@@ -21,7 +27,8 @@ async function loadLeaderboard(forceRefresh = false) {
     leaderboard.forEach((user, index) => {
       const hours = Math.floor(user.total_voice_time / 3600);
       const minutes = Math.floor((user.total_voice_time % 3600) / 60);
-      const userId = user.user_id.replace(/"/g, "&quot;");
+      const userId = escapeHtml(user.user_id);
+      const username = escapeHtml(user.username || "Неизвестный пользователь");
       const avatarUrl = user.avatar_url || "/avatars/nopic.png";
       // Добавляем timestamp только если принудительное обновление или nopic.png
       const avatarUrlFinal =
@@ -32,14 +39,14 @@ async function loadLeaderboard(forceRefresh = false) {
       // Получаем статус пользователя
       const userStatus = onlineStatuses[user.user_id];
       const statusIndicator = userStatus
-        ? `<span class="status-indicator ${userStatus}"></span>`
+        ? `<span class="status-indicator ${escapeHtml(userStatus)}"></span>`
         : "";
 
       html +=
         '<div class="leaderboard-item" onclick="showUserModal(&#34;' +
         userId +
         "&#34;, &#34;" +
-        (user.username || "Неизвестный пользователь").replace(/"/g, "&quot;") +
+        username +
         "&#34;, " +
         (index + 1) +
         ')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">' +
@@ -49,12 +56,12 @@ async function loadLeaderboard(forceRefresh = false) {
         "</span>" +
         '<div class="avatar-container">' +
         '<img src="' +
-        avatarUrlFinal +
+        escapeHtml(avatarUrlFinal) +
         '" alt="Avatar" onerror="this.src=\'/avatars/nopic.png\'">' +
         statusIndicator +
         "</div>" +
         "<strong>" +
-        (user.username || "Неизвестный пользователь") +
+        username +
         "</strong>" +
         "</div>" +
         '<div class="leaderboard-item-bottom" style="display: flex; align-items: center;">' +
@@ -308,12 +315,12 @@ function displayUserModal(
             <div class="modal-content" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;">
                 <div class="modal-header" style="display: flex; align-items: center; gap: 20px; position: relative; flex-shrink: 0;">
                     <div class="modal-avatar-container">
-                        <img src="${avatarUrlFinal}" alt="Avatar" class="modal-avatar" onerror="this.src='/avatars/nopic.png'">
+                        <img src="${escapeHtml(avatarUrlFinal)}" alt="Avatar" class="modal-avatar" onerror="this.src='/avatars/nopic.png'">
                         ${statusIndicator}
                     </div>
                     <div class="modal-header-name-block" style="flex: 1; text-align: center;">
                         <h2><svg class="icon" aria-hidden="true"><use href="#icon-profile"></use></svg> Профиль пользователя</h2>
-                        <h3>#${rank} ${username}</h3>
+                        <h3>#${escapeHtml(String(rank))} ${escapeHtml(username)}</h3>
                     </div>
                     <button class="close-btn" onclick="closeModal()">×</button>
                 </div>

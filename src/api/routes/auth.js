@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomInt } from 'crypto';
 import { log, error as logError } from '../../utils/logger.js';
 import { DISCORD_CONFIG } from '../../config.js';
 
@@ -197,7 +198,7 @@ function generateLoginCode(db, userId) {
   let code;
   let attempts = 0;
   do {
-    code = Math.floor(100000 + Math.random() * 900000).toString();
+    code = randomInt(100000, 1000000).toString();
     attempts++;
     if (attempts > 100) throw new Error('Не удалось сгенерировать уникальный код');
   } while (db.prepare('SELECT code FROM login_codes WHERE code = ?').get(code));

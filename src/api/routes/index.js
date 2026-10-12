@@ -336,7 +336,7 @@ export function registerRoutes(
       } catch (e) { /* ignore */ }
     }
     // Очищаем куки
-    res.setHeader('Set-Cookie', 'sessionId=; Path=/; Max-Age=0');
+    res.setHeader('Set-Cookie', 'sessionId=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax');
     // Редирект на главную
     res.redirect("/");
   });
