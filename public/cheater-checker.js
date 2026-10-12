@@ -699,9 +699,10 @@ function createProfileCard(profile, isBanned) {
         <button class="card-action-btn friends-btn" data-steam-id="${steamId}" onclick="openFriendsModal('${steamId}', event)" title="Друзья читера" style="display:${(profile.friends_count || 0) > 0 ? '' : 'none'}">
           <svg class="icon" aria-hidden="true"><use href="#icon-users"></use></svg> Друзья<span class="friends-count" data-count-for="${steamId}">${(profile.friends_count || 0) > 0 ? ` (${profile.friends_count})` : ''}</span>
         </button>
+        ${currentUserId ? `
         <button class="card-action-btn friends-refresh-btn" data-steam-id="${steamId}" onclick="refreshFriends('${steamId}', event)" title="${profile.friends_last_refreshed_at ? 'Обновлено: ' + new Date(profile.friends_last_refreshed_at).toLocaleString('ru-RU') : 'Обновить список друзей'}">
           <svg class="icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>
-        </button>
+        </button>` : ''}
         <button class="card-action-btn links-btn${(_linksCountMap[steamId] || 0) > 0 ? ' has-links' : ''}" data-steam-id="${steamId}" onclick="openLinksModal('${steamId}', event)" title="Связи между аккаунтами">
           <svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg>
         </button>
@@ -1248,6 +1249,7 @@ let _linksSteamId = null;        // steamId карточки, для котор�
 let _linksSearchQuery = '';
 let _linksProfilesCache = null;  // все профили (читеры + боты)
 let _linksModalTab = 'all';      // фильтр таба: all / cheater / bot
+let _linksModalPage = 0;         // текущая страница списка в модалке связей
 let _linksCache = {};            // steamId → [linkedSteamIds]
 let _linksGroupsData = [];       // вычисленные группы для пагинации
 let linksPage = 1;
@@ -1394,6 +1396,7 @@ function switchLinksModalTab(tab) {
 }
 
 function renderLinksProfilesList(page) {
+  _linksModalPage = page;
   let list = (_linksProfilesCache || []).filter(p => p.steam_id !== _linksSteamId);
 
   // Фильтр по табу
@@ -1431,15 +1434,21 @@ function renderLinksProfilesList(page) {
   const start = page * LINKS_PER_PAGE;
   const pageItems = list.slice(start, start + LINKS_PER_PAGE);
 
-  container.innerHTML = pageItems.map(p => `
+  container.innerHTML = pageItems.map(p => {
+    const isLinked = linkedSet.has(p.steam_id);
+    // Гостям связи только для просмотра — чекбоксы disabled
+    const checkbox = currentUserId
+      ? `<input type="checkbox" ${isLinked ? 'checked' : ''} onchange="toggleLink('${_linksSteamId}', '${p.steam_id}', this.checked)">`
+      : `<input type="checkbox" ${isLinked ? 'checked' : ''} disabled title="Войдите, чтобы изменять связи">`;
+    return `
     <label class="move-profile-item">
-      <input type="checkbox" ${linkedSet.has(p.steam_id) ? 'checked' : ''} onchange="toggleLink('${_linksSteamId}', '${p.steam_id}', this.checked)">
+      ${checkbox}
       <div class="move-profile-info">
         <div class="move-profile-name">${escapeHtml(p.persona_name || p.steam_id)}</div>
         <div class="move-profile-meta">${p.type === 'bot' ? '🤖 Бот' : '🔴 Читер'} • ${escapeHtml(p.checked_by_username || 'Unknown')}</div>
       </div>
-    </label>
-  `).join('');
+    </label>`;
+  }).join('');
 
   if (totalPages > 1) {
     let pagHtml = '';
@@ -1453,23 +1462,33 @@ function renderLinksProfilesList(page) {
 }
 
 async function toggleLink(steamId1, steamId2, isChecked) {
+  if (!currentUserId) {
+    showNotification('Войдите, чтобы изменять связи', 'error');
+    renderLinksProfilesList(_linksModalPage || 0);
+    return;
+  }
+
   try {
+    const res = await fetch('/api/cheater-checker/links', {
+      method: isChecked ? 'POST' : 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ steamId1, steamId2 }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      showNotification(data.error || 'Ошибка при обновлении связи', 'error');
+      // Откатываем чекбокс
+      renderLinksProfilesList(_linksModalPage || 0);
+      return;
+    }
+
     if (isChecked) {
-      await fetch('/api/cheater-checker/links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ steamId1, steamId2, createdBy: currentUsername || currentUserId }),
-      });
       if (_linksCache[steamId1]) _linksCache[steamId1].add(steamId2);
       _linksCountMap[steamId1] = (_linksCountMap[steamId1] || 0) + 1;
       _linksCountMap[steamId2] = (_linksCountMap[steamId2] || 0) + 1;
       _allLinksCache = null; // сбрасываем кэш связей
     } else {
-      await fetch('/api/cheater-checker/links', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ steamId1, steamId2 }),
-      });
       if (_linksCache[steamId1]) _linksCache[steamId1].delete(steamId2);
       _linksCountMap[steamId1] = Math.max(0, (_linksCountMap[steamId1] || 1) - 1);
       _linksCountMap[steamId2] = Math.max(0, (_linksCountMap[steamId2] || 1) - 1);
@@ -1602,7 +1621,7 @@ function renderLinksGroupsPage() {
     return `
       <div class="link-group">
         <div class="link-group-header">
-          <span class="link-group-name" onclick="startRenameGroup('${groupId}', this)" title="Нажмите для переименования">🔗 ${escapeHtml(displayName)}</span> — ${group.length} ${pluralAccounts(group.length)}
+          <span class="link-group-name" ${currentUserId ? `onclick="startRenameGroup('${groupId}', this)" title="Нажмите для переименования"` : 'title="Войдите, чтобы переименовать"'}>🔗 ${escapeHtml(displayName)}</span> — ${group.length} ${pluralAccounts(group.length)}
           ${renamedMeta}
           ${linkInfos.length ? `<div class="link-group-meta">Связи создал: ${linkInfos.join(' | ')}</div>` : ''}
         </div>
@@ -1616,6 +1635,10 @@ function renderLinksGroupsPage() {
 }
 
 function startRenameGroup(groupKey, el) {
+  if (!currentUserId) {
+    showNotification('Войдите, чтобы переименовывать группы', 'error');
+    return;
+  }
   const current = el.textContent.replace('🔗 ', '').trim();
   const input = document.createElement('input');
   input.type = 'text';
@@ -1633,12 +1656,17 @@ function startRenameGroup(groupKey, el) {
     const newName = input.value.trim();
     if (save && newName && newName !== current) {
       try {
-        await fetch('/api/cheater-checker/links/group-name', {
+        const res = await fetch('/api/cheater-checker/links/group-name', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ groupKey, name: newName, renamedBy: currentUsername || currentUserId }),
+          body: JSON.stringify({ groupKey, name: newName }),
         });
-        _linksGroupNames[groupKey] = { name: newName, renamed_by: currentUsername || currentUserId, renamed_at: Math.floor(Date.now() / 1000) };
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          showNotification(data.error || 'Ошибка при переименовании', 'error');
+        } else {
+          _linksGroupNames[groupKey] = { name: newName, renamed_by: currentUsername || currentUserId, renamed_at: Math.floor(Date.now() / 1000) };
+        }
       } catch {
         showNotification('Ошибка при переименовании', 'error');
       }
@@ -2940,7 +2968,10 @@ function renderFriendsPage() {
     const btnClass = f.isCheater ? 'friend-add-btn friend-add-done' : 'friend-add-btn';
     const btnTitle = f.isCheater ? 'Уже в списке' : 'Добавить в читеры';
     const btnIcon = f.isCheater ? '✓' : '+';
-    return `<div class="friend-item"><div class="friend-name">${name}</div><div class="friend-links">${links}</div><button class="${btnClass}" title="${btnTitle}" data-steam-id="${f.friend_steam_id}" onclick="addFriendAsCheater('${f.friend_steam_id}', this, event)">${btnIcon}</button></div>`;
+    const addBtn = currentUserId
+      ? `<button class="${btnClass}" title="${btnTitle}" data-steam-id="${f.friend_steam_id}" onclick="addFriendAsCheater('${f.friend_steam_id}', this, event)">${btnIcon}</button>`
+      : '';
+    return `<div class="friend-item"><div class="friend-name">${name}</div><div class="friend-links">${links}</div>${addBtn}</div>`;
   }).join('');
 
   if (totalPages > 1) {
@@ -2961,6 +2992,10 @@ function goFriendsPage(page) {
 
 async function addFriendAsCheater(steamId, btn, event) {
   if (event) event.stopPropagation();
+  if (!currentUserId) {
+    showNotification('Войдите, чтобы добавлять профили', 'error');
+    return;
+  }
   if (btn.classList.contains('friend-add-done')) return;
 
   const url = `https://steamcommunity.com/profiles/${steamId}`;
@@ -3000,11 +3035,20 @@ async function addFriendAsCheater(steamId, btn, event) {
 
 async function refreshFriends(steamId, event) {
   if (event) event.stopPropagation();
+  if (!currentUserId) {
+    showNotification('Войдите, чтобы обновлять список друзей', 'error');
+    return;
+  }
   const btn = document.querySelector(`.friends-refresh-btn[data-steam-id="${steamId}"]`);
   if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
 
   try {
     const res = await fetch(`/api/cheater-checker/friends/${steamId}/refresh`, { method: 'POST' });
+    if (res.status === 401) {
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      showNotification('Войдите, чтобы обновлять список друзей', 'error');
+      return;
+    }
     const data = await res.json();
     if (data.refreshed) {
       showNotification(`Обновлено: ${data.count} друзей`, 'success');
