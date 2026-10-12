@@ -1460,197 +1460,279 @@ body.modal-open {
 
 /* ===== STEAM CS2 СТАТИСТИКА ===== */
 
-.steam-stats-card {
-  background: white;
-  border-radius: 15px;
-  padding: 25px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
-  border: 2px solid transparent;
-  transition: all 0.3s ease;
+/* ===== STEAM STATS CARD — REDESIGN ===== */
+
+.ss-card {
+  position: relative;
+  background: var(--card-bg, #fff);
+  border-radius: 16px;
+  padding: 28px 24px 24px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+  overflow: hidden;
+  animation: ssFadeIn 0.4s ease;
 }
 
-.steam-stats-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
-  border-color: rgba(102, 126, 234, 0.3);
+@keyframes ssFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.steam-stats-header {
+.ss-accent {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  border-radius: 16px 16px 0 0;
+}
+
+.ss-header {
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 22px;
 }
 
-.steam-stats-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.steam-stats-title svg {
-  color: #1b2838;
+.ss-header-icon {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1b2838 0%, #2a475e 100%);
+  display: flex; align-items: center; justify-content: center;
+  color: #66c0f4;
   flex-shrink: 0;
 }
 
-.steam-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 12px;
-  margin-bottom: 0;
-}
-
-.steam-stat-item {
-  background: #f8f9fa;
-  border-radius: 10px;
-  padding: 14px 10px;
-  text-align: center;
-  border-left: 3px solid #667eea;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.steam-stat-value {
-  font-size: 1.4rem;
+.ss-title {
+  font-size: 1.15rem;
   font-weight: 700;
-  color: #333;
-  line-height: 1.1;
+  color: var(--text-primary, #333);
+  line-height: 1.2;
 }
 
-.steam-stat-label {
+.ss-subtitle {
   font-size: 0.78rem;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-/* ===== FACEIT БЛОК ===== */
-
-.faceit-block {
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid #eee;
-}
-
-.faceit-block-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 12px;
-}
-
-.faceit-stats-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
-.faceit-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 10px 16px;
-  min-width: 70px;
-  border-left: 3px solid #ff6600;
-}
-
-.faceit-stat-label {
-  font-size: 0.75rem;
-  color: #888;
-  text-transform: uppercase;
+  color: var(--text-secondary, #999);
+  margin-top: 2px;
   letter-spacing: 0.3px;
 }
 
-.faceit-stat-value {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #333;
-  margin-top: 2px;
+.ss-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
 }
 
-.faceit-ban-badge {
+.ss-item {
+  background: var(--stat-item-bg, #f4f6fb);
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--stat-item-border, transparent);
+}
+
+.ss-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.12);
+}
+
+.ss-item-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15));
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent-color, #667eea);
+}
+
+.ss-item-value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: var(--text-primary, #222);
+  line-height: 1.1;
+  letter-spacing: -0.3px;
+}
+
+.ss-item-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 600;
+}
+
+/* ===== FACEIT SECTION ===== */
+
+.ss-divider {
+  height: 1px;
+  background: var(--border-color, #e8e8e8);
+  margin: 22px 0;
+}
+
+.ss-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.ss-section-icon {
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff6600 0%, #ff8c00 100%);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ss-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary, #333);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ss-grid-faceit {
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+}
+
+.ss-item-faceit {
+  gap: 8px;
+}
+
+.ss-faceit-level-badge {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.ss-badge {
   display: inline-flex;
   align-items: center;
-  background: rgba(255, 68, 68, 0.1);
-  color: #cc0000;
-  border: 1px solid rgba(255, 68, 68, 0.3);
   border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 0.9rem;
+  padding: 4px 12px;
+  font-size: 0.78rem;
   font-weight: 600;
-  align-self: center;
 }
 
-/* Цвета уровней FACEIT (1–10) */
-.faceit-level-1,
-.faceit-level-2 { color: #808080; }
-.faceit-level-3,
-.faceit-level-4 { color: #ffd700; }
-.faceit-level-5,
-.faceit-level-6 { color: #ff8c00; }
-.faceit-level-7,
-.faceit-level-8 { color: #ff4500; }
-.faceit-level-9,
-.faceit-level-10 { color: #cc0000; }
-
-/* Тёмные темы — адаптация */
-body[data-theme="metal"] .steam-stats-card,
-body[data-theme="discord"] .steam-stats-card,
-body[data-theme="steam"] .steam-stats-card,
-body[data-theme="die-my-darling"] .steam-stats-card {
-  background: var(--card-bg, rgba(255, 255, 255, 0.07));
-  border-color: var(--border-color, rgba(255, 255, 255, 0.1));
+.ss-badge-ban {
+  background: rgba(255, 68, 68, 0.12);
+  color: #cc0000;
+  border: 1px solid rgba(255, 68, 68, 0.25);
 }
 
-body[data-theme="metal"] .steam-stat-item,
-body[data-theme="discord"] .steam-stat-item,
-body[data-theme="steam"] .steam-stat-item,
-body[data-theme="die-my-darling"] .steam-stat-item,
-body[data-theme="metal"] .faceit-stat,
-body[data-theme="discord"] .faceit-stat,
-body[data-theme="steam"] .faceit-stat,
-body[data-theme="die-my-darling"] .faceit-stat {
-  background: rgba(255, 255, 255, 0.07);
+/* Цвета уровней FACEIT (1–10) — фон бейджа */
+.ss-faceit-level-badge.faceit-level-1,
+.ss-faceit-level-badge.faceit-level-2 { background: linear-gradient(135deg, #808080, #a0a0a0); }
+.ss-faceit-level-badge.faceit-level-3,
+.ss-faceit-level-badge.faceit-level-4 { background: linear-gradient(135deg, #ffd700, #ffaa00); }
+.ss-faceit-level-badge.faceit-level-5,
+.ss-faceit-level-badge.faceit-level-6 { background: linear-gradient(135deg, #ff8c00, #ff6600); }
+.ss-faceit-level-badge.faceit-level-7,
+.ss-faceit-level-badge.faceit-level-8 { background: linear-gradient(135deg, #ff4500, #ff2200); }
+.ss-faceit-level-badge.faceit-level-9,
+.ss-faceit-level-badge.faceit-level-10 { background: linear-gradient(135deg, #cc0000, #990000); }
+
+/* ===== ТЕМЫ ===== */
+
+/* Тёмные темы */
+body[data-theme="metal"] .ss-card,
+body[data-theme="discord"] .ss-card,
+body[data-theme="steam"] .ss-card,
+body[data-theme="die-my-darling"] .ss-card,
+body[data-theme="neon"] .ss-card,
+body[data-theme="m3-dark"] .ss-card,
+body[data-theme="liquid-glass"] .ss-card {
+  background: var(--card-bg, rgba(255, 255, 255, 0.06));
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
-body[data-theme="metal"] .steam-stats-title,
-body[data-theme="discord"] .steam-stats-title,
-body[data-theme="steam"] .steam-stats-title,
-body[data-theme="die-my-darling"] .steam-stats-title,
-body[data-theme="metal"] .steam-stat-value,
-body[data-theme="discord"] .steam-stat-value,
-body[data-theme="steam"] .steam-stat-value,
-body[data-theme="die-my-darling"] .steam-stat-value,
-body[data-theme="metal"] .faceit-block-title,
-body[data-theme="discord"] .faceit-block-title,
-body[data-theme="steam"] .faceit-block-title,
-body[data-theme="die-my-darling"] .faceit-block-title,
-body[data-theme="metal"] .faceit-stat-value,
-body[data-theme="discord"] .faceit-stat-value,
-body[data-theme="steam"] .faceit-stat-value,
-body[data-theme="die-my-darling"] .faceit-stat-value {
-  color: #e0e0e0;
+body[data-theme="metal"] .ss-item,
+body[data-theme="discord"] .ss-item,
+body[data-theme="steam"] .ss-item,
+body[data-theme="die-my-darling"] .ss-item,
+body[data-theme="neon"] .ss-item,
+body[data-theme="m3-dark"] .ss-item,
+body[data-theme="liquid-glass"] .ss-item {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
-body[data-theme="metal"] .steam-stats-title svg,
-body[data-theme="discord"] .steam-stats-title svg,
-body[data-theme="steam"] .steam-stats-title svg,
-body[data-theme="die-my-darling"] .steam-stats-title svg {
-  color: #aaa;
+body[data-theme="metal"] .ss-title,
+body[data-theme="discord"] .ss-title,
+body[data-theme="steam"] .ss-title,
+body[data-theme="die-my-darling"] .ss-title,
+body[data-theme="neon"] .ss-title,
+body[data-theme="m3-dark"] .ss-title,
+body[data-theme="liquid-glass"] .ss-title,
+body[data-theme="metal"] .ss-item-value,
+body[data-theme="discord"] .ss-item-value,
+body[data-theme="steam"] .ss-item-value,
+body[data-theme="die-my-darling"] .ss-item-value,
+body[data-theme="neon"] .ss-item-value,
+body[data-theme="m3-dark"] .ss-item-value,
+body[data-theme="liquid-glass"] .ss-item-value,
+body[data-theme="metal"] .ss-section-title,
+body[data-theme="discord"] .ss-section-title,
+body[data-theme="steam"] .ss-section-title,
+body[data-theme="die-my-darling"] .ss-section-title,
+body[data-theme="neon"] .ss-section-title,
+body[data-theme="m3-dark"] .ss-section-title,
+body[data-theme="liquid-glass"] .ss-section-title {
+  color: #e8e8e8;
 }
 
-body[data-theme="metal"] .faceit-block,
-body[data-theme="discord"] .faceit-block,
-body[data-theme="steam"] .faceit-block,
-body[data-theme="die-my-darling"] .faceit-block {
-  border-top-color: rgba(255, 255, 255, 0.1);
+body[data-theme="metal"] .ss-subtitle,
+body[data-theme="discord"] .ss-subtitle,
+body[data-theme="steam"] .ss-subtitle,
+body[data-theme="die-my-darling"] .ss-subtitle,
+body[data-theme="neon"] .ss-subtitle,
+body[data-theme="m3-dark"] .ss-subtitle,
+body[data-theme="liquid-glass"] .ss-subtitle,
+body[data-theme="metal"] .ss-item-label,
+body[data-theme="discord"] .ss-item-label,
+body[data-theme="steam"] .ss-item-label,
+body[data-theme="die-my-darling"] .ss-item-label,
+body[data-theme="neon"] .ss-item-label,
+body[data-theme="m3-dark"] .ss-item-label,
+body[data-theme="liquid-glass"] .ss-item-label {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+body[data-theme="metal"] .ss-item-icon,
+body[data-theme="discord"] .ss-item-icon,
+body[data-theme="steam"] .ss-item-icon,
+body[data-theme="die-my-darling"] .ss-item-icon,
+body[data-theme="neon"] .ss-item-icon,
+body[data-theme="m3-dark"] .ss-item-icon,
+body[data-theme="liquid-glass"] .ss-item-icon {
+  background: rgba(102, 126, 234, 0.15);
+  color: #8ba3f7;
+}
+
+body[data-theme="metal"] .ss-divider,
+body[data-theme="discord"] .ss-divider,
+body[data-theme="steam"] .ss-divider,
+body[data-theme="die-my-darling"] .ss-divider,
+body[data-theme="neon"] .ss-divider,
+body[data-theme="m3-dark"] .ss-divider,
+body[data-theme="liquid-glass"] .ss-divider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Лёгкие темы — m3-light, default */
+body[data-theme="m3-light"] .ss-card {
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 
 /* User filter tabs */

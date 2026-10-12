@@ -784,42 +784,64 @@ function renderSteamStatsCard(data, isOwnProfile) {
 
   const faceitHtml = renderFaceitBlock(data.faceit);
 
+  // Иконки для статов
+  const icons = {
+    year: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+    hours: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    matches: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>`,
+    winrate: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+    kd: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>`,
+    hs: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+  };
+
   return `
-    <div class="steam-stats-card">
-      <div class="steam-stats-header">
-        <span class="steam-stats-title">
-          <svg class="icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <div class="ss-card">
+      <div class="ss-accent"></div>
+      <div class="ss-header">
+        <div class="ss-header-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.38l3.03-6.26A3.5 3.5 0 0 1 12 10.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5 3.5 3.5 0 0 1-1.38-.28l-3.13 3.28C8.62 21.28 10.27 21.5 12 21.5c5.24 0 9.5-4.26 9.5-9.5S17.24 2.5 12 2.5 2.5 7.26 2.5 12.5h2.5C5 8.63 8.13 5.5 12 5.5s7 3.13 7 7-3.13 7-7 7c-1.37 0-2.64-.39-3.72-1.06l-1.37 2.84C7.77 22.33 9.84 23 12 23c6.07 0 11-4.93 11-11S18.07 0 12 0z"/>
           </svg>
-          CS2 — Steam статистика
-        </span>
-      </div>
-      <div class="steam-stats-grid">
-        <div class="steam-stat-item">
-          <span class="steam-stat-value">${fmt(cs2.accountCreatedYear)}</span>
-          <span class="steam-stat-label">Год аккаунта</span>
         </div>
-        <div class="steam-stat-item">
-          <span class="steam-stat-value">${fmt(cs2.hoursPlayed, ' ч')}</span>
-          <span class="steam-stat-label">Часов в CS2</span>
-        </div>
-        <div class="steam-stat-item">
-          <span class="steam-stat-value">${fmt(cs2.totalMatchesPlayed)}</span>
-          <span class="steam-stat-label">Матчей</span>
-        </div>
-        <div class="steam-stat-item">
-          <span class="steam-stat-value">${fmt(cs2.winRate, '%')}</span>
-          <span class="steam-stat-label">Побед</span>
-        </div>
-        <div class="steam-stat-item">
-          <span class="steam-stat-value">${fmt(cs2.kd)}</span>
-          <span class="steam-stat-label">K/D</span>
-        </div>
-        <div class="steam-stat-item">
-          <span class="steam-stat-value">${fmt(cs2.hsPercent, '%')}</span>
-          <span class="steam-stat-label">HS%</span>
+        <div>
+          <div class="ss-title">CS2 — Steam статистика</div>
+          <div class="ss-subtitle">Counter-Strike 2</div>
         </div>
       </div>
+
+      <div class="ss-grid">
+        <div class="ss-item">
+          <div class="ss-item-icon">${icons.year}</div>
+          <div class="ss-item-value">${fmt(cs2.accountCreatedYear)}</div>
+          <div class="ss-item-label">Год аккаунта</div>
+        </div>
+        <div class="ss-item">
+          <div class="ss-item-icon">${icons.hours}</div>
+          <div class="ss-item-value">${fmt(cs2.hoursPlayed, ' ч')}</div>
+          <div class="ss-item-label">Часов в CS2</div>
+        </div>
+        <div class="ss-item">
+          <div class="ss-item-icon">${icons.matches}</div>
+          <div class="ss-item-value">${fmt(cs2.totalMatchesPlayed)}</div>
+          <div class="ss-item-label">Матчей</div>
+        </div>
+        <div class="ss-item">
+          <div class="ss-item-icon">${icons.winrate}</div>
+          <div class="ss-item-value">${fmt(cs2.winRate, '%')}</div>
+          <div class="ss-item-label">Побед</div>
+        </div>
+        <div class="ss-item">
+          <div class="ss-item-icon">${icons.kd}</div>
+          <div class="ss-item-value">${fmt(cs2.kd)}</div>
+          <div class="ss-item-label">K/D</div>
+        </div>
+        <div class="ss-item">
+          <div class="ss-item-icon">${icons.hs}</div>
+          <div class="ss-item-value">${fmt(cs2.hsPercent, '%')}</div>
+          <div class="ss-item-label">HS%</div>
+        </div>
+      </div>
+
       ${faceitHtml}
     </div>
   `;
@@ -835,31 +857,41 @@ function renderSteamStatsCard(data, isOwnProfile) {
 function renderFaceitBlock(faceit) {
   if (!faceit) return '';
 
-  const banHtml = faceit.isBanned
-    ? '<span class="faceit-ban-badge">🔴 Забанен</span>'
+  const banBadge = faceit.isBanned
+    ? '<span class="ss-badge ss-badge-ban">🔴 Забанен</span>'
     : '';
 
   return `
-    <div class="faceit-block">
-      <div class="faceit-block-title">🎮 FACEIT</div>
-      <div class="faceit-stats-row">
-        <span class="faceit-stat">
-          <span class="faceit-stat-label">Уровень</span>
-          <span class="faceit-stat-value faceit-level faceit-level-${faceit.level || 0}">${faceit.level ?? '—'}</span>
-        </span>
-        <span class="faceit-stat">
-          <span class="faceit-stat-label">ELO</span>
-          <span class="faceit-stat-value">${faceit.elo ?? '—'}</span>
-        </span>
-        <span class="faceit-stat">
-          <span class="faceit-stat-label">Матчей</span>
-          <span class="faceit-stat-value">${faceit.matches ?? '—'}</span>
-        </span>
-        <span class="faceit-stat">
-          <span class="faceit-stat-label">Побед</span>
-          <span class="faceit-stat-value">${faceit.winRate !== null && faceit.winRate !== undefined ? faceit.winRate + '%' : '—'}</span>
-        </span>
-        ${banHtml}
+    <div class="ss-divider"></div>
+    <div class="ss-section">
+      <div class="ss-section-header">
+        <div class="ss-section-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div>
+          <div class="ss-section-title">FACEIT ${banBadge}</div>
+          <div class="ss-subtitle">FACEIT CS2</div>
+        </div>
+      </div>
+      <div class="ss-grid ss-grid-faceit">
+        <div class="ss-item ss-item-faceit">
+          <div class="ss-faceit-level-badge faceit-level-${faceit.level || 0}">${faceit.level ?? '—'}</div>
+          <div class="ss-item-label">Уровень</div>
+        </div>
+        <div class="ss-item">
+          <div class="ss-item-value">${faceit.elo ?? '—'}</div>
+          <div class="ss-item-label">ELO</div>
+        </div>
+        <div class="ss-item">
+          <div class="ss-item-value">${faceit.matches ?? '—'}</div>
+          <div class="ss-item-label">Матчей</div>
+        </div>
+        <div class="ss-item">
+          <div class="ss-item-value">${faceit.winRate !== null && faceit.winRate !== undefined ? faceit.winRate + '%' : '—'}</div>
+          <div class="ss-item-label">Побед</div>
+        </div>
       </div>
     </div>
   `;
