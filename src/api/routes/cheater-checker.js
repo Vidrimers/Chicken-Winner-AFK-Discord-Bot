@@ -76,9 +76,13 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    * POST /api/cheater-checker/check
    * Проверка массива Steam-профилей
    */
-  router.post('/check', checkLimiter, async (req, res) => {
+  router.post('/check', requireAuth, checkLimiter, async (req, res) => {
     try {
-      const { urls, checkedByDiscordId, checkedByUsername, type = 'cheater' } = req.body;
+      const { urls, type = 'cheater' } = req.body;
+
+      // Идентичность только из сессии — клиент не может подменить автора
+      const checkedByDiscordId = req.authenticatedUserId;
+      const checkedByUsername = db.getUserStats(checkedByDiscordId)?.username || 'Unknown';
 
       // Валидация type
       if (!['cheater', 'bot'].includes(type)) {
@@ -92,10 +96,6 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
 
       if (urls.length > 20) {
         return res.status(400).json({ error: 'Максимум 20 ссылок за один запрос' });
-      }
-
-      if (!checkedByDiscordId) {
-        return res.status(400).json({ error: 'checkedByDiscordId обязательное поле' });
       }
 
       const adminSteamId = (process.env.ADMIN_STEAM_ID || '').trim();
@@ -248,9 +248,9 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    * POST /api/cheater-checker/move-type
    * Перемещение профиля в другой раздел (читер ↔ бот) по подтверждению пользователя
    */
-  router.post('/move-type', checkLimiter, async (req, res) => {
+  router.post('/move-type', requireAuth, checkLimiter, async (req, res) => {
     try {
-      const { steamId, targetType, movedByDiscordId, movedByUsername } = req.body;
+      const { steamId, targetType } = req.body;
 
       if (!steamId || !targetType) {
         return res.status(400).json({ error: 'steamId и targetType обязательны' });
@@ -299,13 +299,14 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    * PUT /api/cheater-checker/links/group-name
    * Переименование группы связей (должен быть ДО /links/:steamId)
    */
-  router.put('/links/group-name', (req, res) => {
+  router.put('/links/group-name', requireAuth, (req, res) => {
     try {
-      const { groupKey, name, renamedBy } = req.body;
+      const { groupKey, name } = req.body;
       if (!groupKey || !name) {
         return res.status(400).json({ error: 'groupKey и name обязательны' });
       }
-      db.setGroupName(groupKey, name.trim(), renamedBy || null);
+      const renamedBy = db.getUserStats(req.authenticatedUserId)?.username || req.authenticatedUserId;
+      db.setGroupName(groupKey, name.trim(), renamedBy);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -344,16 +345,17 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    * POST /api/cheater-checker/links
    * Создание связи между двумя профилями
    */
-  router.post('/links', (req, res) => {
+  router.post('/links', requireAuth, (req, res) => {
     try {
-      const { steamId1, steamId2, createdBy } = req.body;
+      const { steamId1, steamId2 } = req.body;
       if (!steamId1 || !steamId2) {
         return res.status(400).json({ error: 'steamId1 и steamId2 обязательны' });
       }
       if (steamId1 === steamId2) {
         return res.status(400).json({ error: 'Нельзя связать профиль с самим собой' });
       }
-      db.addLink(steamId1, steamId2, createdBy || null);
+      const createdBy = db.getUserStats(req.authenticatedUserId)?.username || req.authenticatedUserId;
+      db.addLink(steamId1, steamId2, createdBy);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -364,7 +366,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    * DELETE /api/cheater-checker/links
    * Удаление связи между двумя профилями
    */
-  router.delete('/links', (req, res) => {
+  router.delete('/links', requireAuth, (req, res) => {
     try {
       const { steamId1, steamId2 } = req.body;
       if (!steamId1 || !steamId2) {
@@ -736,7 +738,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    * POST /api/cheater-checker/publish-discord
    * Публикация embed в Discord-ветку
    */
-  router.post('/publish-discord', publishLimiter, async (req, res) => {
+  router.post('/publish-discord', requireAuth, publishLimiter, async (req, res) => {
     try {
       const { steamId } = req.body;
 
@@ -748,6 +750,14 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       const profile = db.getCheaterCheckBySteamId(steamId);
       if (!profile) {
         return res.status(404).json({ error: 'Профиль не найден в базе данных' });
+      }
+
+      // Публиковать может только админ или тот, кто добавил профиль
+      const userId = req.authenticatedUserId;
+      const isAdmin = userId === process.env.ADMIN_USER_ID;
+      const isAuthor = profile.checked_by_discord_id && String(profile.checked_by_discord_id) === String(userId);
+      if (!isAdmin && !isAuthor) {
+        return res.status(403).json({ error: 'Публиковать может только админ или автор проверки' });
       }
 
       // Определяем цвет embed
