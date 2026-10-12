@@ -61,7 +61,7 @@ export function registerRoutes(
   });
 
   // Auth роуты (вход через Discord ID + Telegram-код)
-  const authRouter = createAuthRouter(db, telegram);
+  const authRouter = createAuthRouter(db, telegram, discordClient);
   app.use("/api/auth", authRouter);
 
   // Stats роуты

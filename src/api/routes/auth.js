@@ -1,5 +1,34 @@
 import { Router } from 'express';
 import { log, error as logError } from '../../utils/logger.js';
+import { DISCORD_CONFIG } from '../../config.js';
+
+/**
+ * Fail-closed проверка членства в Discord-сервере.
+ * Если Discord/guild недоступны или GUILD_ID не задан — считаем, что НЕ участник.
+ */
+async function isGuildMember(discordClient, userId) {
+  const guildId = DISCORD_CONFIG.GUILD_ID;
+  if (!guildId || !discordClient) return false;
+
+  try {
+    let guild = discordClient.guilds.cache.get(guildId);
+    if (!guild) {
+      guild = await discordClient.guilds.fetch(guildId);
+    }
+    if (!guild) return false;
+
+    const member = await guild.members.fetch(userId);
+    return Boolean(member);
+  } catch {
+    return false;
+  }
+}
+
+function isNotMemberResponse(res) {
+  return res.status(403).json({
+    error: 'Вход доступен только участникам Discord-сервера',
+  });
+}
 
 /**
  * In-memory rate limiter для auth эндпоинтов
@@ -33,13 +62,14 @@ const verifyLoginLimiter = createRateLimiter(10, 60 * 1000); // 10 попыто�
 
 /**
  * Роуты для авторизации через Discord ID + Telegram-код
+ * Логин доступен только участникам GUILD_ID (fail-closed).
  */
-export function createAuthRouter(db, telegram) {
+export function createAuthRouter(db, telegram, discordClient) {
   const router = Router();
 
   /**
    * POST /api/auth/request-login
-   * Запрос на вход: проверяем есть ли TG, если да — отправляем код
+   * Запрос на вход: проверяем членство на сервере, затем TG-код (если привязан)
    * Body: { userId: string }
    * Response:
    *   { requiresCode: false }                  — TG не привязан, вход без кода
@@ -54,13 +84,20 @@ export function createAuthRouter(db, telegram) {
     }
 
     try {
+      // Только участники Discord-сервера. Fail-closed: нет ответа Discord — не пускаем.
+      const isMember = await isGuildMember(discordClient, userId);
+      if (!isMember) {
+        log(`⛔ Попытка входа не-участника: ${userId}`);
+        return isNotMemberResponse(res);
+      }
+
       // Проверяем есть ли привязанный Telegram
       const telegramUser = db.prepare(
         'SELECT telegram_chat_id FROM telegram_users WHERE user_id = ? AND started_bot = 1'
       ).get(userId);
 
       if (!telegramUser || !telegramUser.telegram_chat_id) {
-        // TG не привязан — вход без кода, сразу устанавливаем сессию
+        // TG не привязан (по желанию) — вход по членству без кода
         req.session.userId = userId;
         req.session.save();
         return res.json({ requiresCode: false });
@@ -89,13 +126,13 @@ export function createAuthRouter(db, telegram) {
 
   /**
    * POST /api/auth/verify-login
-   * Проверка кода из Telegram
+   * Проверка кода из Telegram (только для тех, у кого привязан TG)
    * Body: { userId: string, code: string }
    * Response:
    *   { success: true }   — код верный
    *   { error: string }   — ошибка
    */
-  router.post('/verify-login', verifyLoginLimiter, (req, res) => {
+  router.post('/verify-login', verifyLoginLimiter, async (req, res) => {
     const { userId, code } = req.body;
 
     if (!userId || typeof userId !== 'string' || !/^\d{17,20}$/.test(userId)) {
@@ -107,6 +144,13 @@ export function createAuthRouter(db, telegram) {
     }
 
     try {
+      // Повторно проверяем членство — пользователь мог выйти с сервера
+      const isMember = await isGuildMember(discordClient, userId);
+      if (!isMember) {
+        log(`⛔ verify-login от не-участника: ${userId}`);
+        return isNotMemberResponse(res);
+      }
+
       const now = new Date().toISOString();
       const record = db.prepare(
         'SELECT user_id, expires_at, used FROM login_codes WHERE code = ? AND user_id = ?'

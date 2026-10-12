@@ -3,6 +3,7 @@ dotenv.config();
 
 // ===== DISCORD CONFIGURATION =====
 export const DISCORD_CONFIG = {
+  GUILD_ID: process.env.GUILD_ID,
   AFK_CHANNEL_ID: process.env.AFK_CHANNEL_ID,
   STREAM_CHANNEL_ID: process.env.STREAM_CHANNEL_ID,
   ACHIEVEMENTS_CHANNEL_ID: process.env.ACHIEVEMENTS_CHANNEL_ID,
@@ -50,6 +51,7 @@ export const FACEIT_CONFIG = {
 // ===== VALIDATION =====
 export function validateConfig() {
   const required = [
+    { name: 'GUILD_ID', value: DISCORD_CONFIG.GUILD_ID },
     { name: 'AFK_CHANNEL_ID', value: DISCORD_CONFIG.AFK_CHANNEL_ID },
     { name: 'ADMIN_USER_ID', value: USER_IDS.ADMIN_USER_ID },
   ];
