@@ -182,44 +182,61 @@
 
           <div
             id="manualInputSection"
-            style="display: flex; gap: 10px; margin-bottom: 0; padding: 10px"
+            style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 0; padding: 10px"
           >
-            <input
-              type="text"
-              id="userIdInput"
-              placeholder="Discord ID"
-              style="flex: 1"
-              onkeydown="if(event.key==='Enter') loadUserData()"
-            />
             <button
-              onclick="loadUserData()"
+              onclick="loginWithDiscord()"
               style="
-                padding: 10px 20px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-              "
-            >
-              Загрузить
-            </button>
-            <button
-              id="clearBtn"
-              onclick="clearSavedUserId()"
-              style="
-                display: none;
-                padding: 10px 20px;
-                background: #ff4444;
+                padding: 12px 20px;
+                background: linear-gradient(135deg, #5865f2 0%, #4752c4 100%);
                 color: white;
                 border: none;
                 border-radius: 5px;
                 cursor: pointer;
                 font-weight: bold;
+                font-size: 15px;
               "
             >
-              Выход
+              ⚡ Войти через Discord
             </button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input
+                type="text"
+                id="userIdInput"
+                placeholder="Discord ID (если привязан Telegram)"
+                style="flex: 1"
+                onkeydown="if(event.key==='Enter') loadUserData()"
+              />
+              <button
+                onclick="loadUserData()"
+                style="
+                  padding: 10px 20px;
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  color: white;
+                  border: none;
+                  border-radius: 5px;
+                  cursor: pointer;
+                "
+              >
+                Войти
+              </button>
+              <button
+                id="clearBtn"
+                onclick="clearSavedUserId()"
+                style="
+                  display: none;
+                  padding: 10px 20px;
+                  background: #ff4444;
+                  color: white;
+                  border: none;
+                  border-radius: 5px;
+                  cursor: pointer;
+                  font-weight: bold;
+                "
+              >
+                Выход
+              </button>
+            </div>
           </div>
 
           <!-- Блок ввода кода из Telegram -->

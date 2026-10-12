@@ -145,7 +145,11 @@ async function loadConfig() {
 //    https://chicken-winner.fun/auth/discord/callback
 // 3) Прописать DISCORD_REDIRECT_URI в .env на сервере.
 function loginWithDiscord() {
-  window.location.href = "/auth/discord";
+  const returnTo = sessionStorage.getItem("loginReturnTo") || new URLSearchParams(window.location.search).get("returnTo");
+  const qs = returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+    ? `?returnTo=${encodeURIComponent(returnTo)}`
+    : "";
+  window.location.href = `/api/auth/discord${qs}`;
 }
 
 async function logout() {
@@ -433,7 +437,7 @@ async function loadUserData(skipSecurityCheck = false) {
       return;
     }
 
-    // TG не привязан — входим напрямую
+    // Успех без кода (на будущее) — входим
     await _doLogin(userId);
   } catch (error) {
     console.error("Ошибка при запросе входа:", error);
@@ -1611,6 +1615,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           input.scrollIntoView({ block: "center", behavior: "smooth" });
         }
       }, 100);
+    }
+    const oauthError = loginParams.get("error");
+    if (oauthError === "not_member") {
+      alert("❌ Вход доступен только участникам Discord-сервера");
+    } else if (oauthError === "oauth") {
+      alert("❌ Не удалось войти через Discord. Попробуйте ещё раз.");
     }
   }
 

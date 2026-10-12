@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { randomInt } from 'crypto';
+import { randomInt, randomBytes } from 'crypto';
 import { log, error as logError } from '../../utils/logger.js';
-import { DISCORD_CONFIG } from '../../config.js';
+import { DISCORD_CONFIG, SERVER_CONFIG } from '../../config.js';
 
 /**
  * Fail-closed проверка членства в Discord-сервере.
@@ -60,22 +60,149 @@ function createRateLimiter(maxRequests, windowMs) {
 // Rate limiters
 const requestLoginLimiter = createRateLimiter(5, 60 * 1000); // 5 запросов в минуту
 const verifyLoginLimiter = createRateLimiter(10, 60 * 1000); // 10 попыток в минуту
+const oauthLimiter = createRateLimiter(20, 60 * 1000); // 20 OAuth-попыток в минуту
+
+// OAuth state: state → { returnTo, expiresAt } (in-memory, TTL 10 минут)
+const oauthStates = new Map();
+
+function saveOAuthState(returnTo) {
+  const state = randomBytes(16).toString('hex');
+  oauthStates.set(state, {
+    returnTo: typeof returnTo === 'string' && returnTo.startsWith('/') && !returnTo.startsWith('//')
+      ? returnTo
+      : '/',
+    expiresAt: Date.now() + 10 * 60 * 1000,
+  });
+  return state;
+}
+
+function takeOAuthState(state) {
+  const entry = oauthStates.get(state);
+  oauthStates.delete(state);
+  if (!entry || entry.expiresAt < Date.now()) return null;
+  return entry;
+}
+
+function getDiscordRedirectUri() {
+  return `${SERVER_CONFIG.SITE_URL || 'https://chicken-winner.fun'}/api/auth/discord/callback`;
+}
 
 /**
- * Роуты для авторизации через Discord ID + Telegram-код
+ * Роуты для авторизации: Discord OAuth (основной) и Discord ID + TG-код.
  * Логин доступен только участникам GUILD_ID (fail-closed).
  */
 export function createAuthRouter(db, telegram, discordClient) {
   const router = Router();
 
   /**
+   * GET /api/auth/discord
+   * Редирект на Discord OAuth2
+   */
+  router.get('/discord', oauthLimiter, (req, res) => {
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    if (!clientId) {
+      return res.status(500).json({ error: 'Discord OAuth не настроен' });
+    }
+
+    const state = saveOAuthState(req.query.returnTo);
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: getDiscordRedirectUri(),
+      response_type: 'code',
+      scope: 'identify guilds.members.read',
+      state,
+      prompt: 'none',
+    });
+
+    return res.redirect(`https://discord.com/oauth2/authorize?${params.toString()}`);
+  });
+
+  /**
+   * GET /api/auth/discord/callback
+   * Discord OAuth2 callback → сессия
+   */
+  router.get('/discord/callback', oauthLimiter, async (req, res) => {
+    const { code, state, error: oauthError } = req.query;
+
+    if (oauthError) {
+      logError(`Discord OAuth error: ${oauthError}`);
+      return res.redirect('/?login=1&error=oauth');
+    }
+
+    if (!code || typeof code !== 'string' || !state || typeof state !== 'string') {
+      return res.redirect('/?login=1&error=oauth');
+    }
+
+    const stateData = takeOAuthState(state);
+    if (!stateData) {
+      logError('Discord OAuth: невалидный или истёкший state');
+      return res.redirect('/?login=1&error=oauth');
+    }
+
+    try {
+      // Обмен code → access token
+      const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: process.env.DISCORD_CLIENT_ID,
+          client_secret: process.env.DISCORD_CLIENT_SECRET,
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: getDiscordRedirectUri(),
+        }),
+      });
+
+      if (!tokenRes.ok) {
+        logError(`Discord OAuth token exchange failed: ${tokenRes.status}`);
+        return res.redirect('/?login=1&error=oauth');
+      }
+
+      const tokenData = await tokenRes.json();
+
+      // Профиль пользователя Discord
+      const userRes = await fetch('https://discord.com/api/users/@me', {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+
+      if (!userRes.ok) {
+        logError(`Discord OAuth user fetch failed: ${userRes.status}`);
+        return res.redirect('/?login=1&error=oauth');
+      }
+
+      const user = await userRes.json();
+      const userId = user.id;
+
+      // Только участники GUILD_ID. Fail-closed.
+      const isMember = await isGuildMember(discordClient, userId);
+      if (!isMember) {
+        log(`⛔ OAuth: не-участник ${userId} (${user.username})`);
+        return res.redirect('/?login=1&error=not_member');
+      }
+
+      // Сессия
+      req.session.userId = userId;
+      req.session.save();
+
+      // Сохраняем username, если профиль есть на сервере
+      try {
+        const username = user.global_name || user.username || 'Web User';
+        db.initUserStats(userId, username);
+      } catch { /* не критично */ }
+
+      log(`✅ OAuth вход: ${userId} (${user.username})`);
+      return res.redirect(stateData.returnTo);
+    } catch (error) {
+      logError(`Discord OAuth callback error: ${error.message}`);
+      return res.redirect('/?login=1&error=oauth');
+    }
+  });
+
+  /**
    * POST /api/auth/request-login
-   * Запрос на вход: проверяем членство на сервере, затем TG-код (если привязан)
+   * Вход по Discord ID + код в Telegram (только если TG привязан).
+   * Без TG — используйте Discord OAuth.
    * Body: { userId: string }
-   * Response:
-   *   { requiresCode: false }                  — TG не привязан, вход без кода
-   *   { requiresCode: true }                   — код отправлен в TG
-   *   { error: string }                        — ошибка
    */
   router.post('/request-login', requestLoginLimiter, async (req, res) => {
     const { userId } = req.body;
@@ -98,10 +225,11 @@ export function createAuthRouter(db, telegram, discordClient) {
       ).get(userId);
 
       if (!telegramUser || !telegramUser.telegram_chat_id) {
-        // TG не привязан (по желанию) — вход по членству без кода
-        req.session.userId = userId;
-        req.session.save();
-        return res.json({ requiresCode: false });
+        // Без TG вход по ID запрещён — только Discord OAuth
+        return res.status(403).json({
+          error: 'Для входа по Discord ID нужен привязанный Telegram. Или войдите через Discord.',
+          requiresOAuth: true,
+        });
       }
 
       // Генерируем 6-значный код
