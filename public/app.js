@@ -889,61 +889,6 @@ function renderSteamStatsCard(data, isOwnProfile) {
         </div>
       </div>
 
-      <!-- Убийства по оружию -->
-      <div class="ss-subsection">Убийства по оружию</div>
-      <div class="ss-grid ss-grid-weapons">
-        <div class="ss-item ss-item-sm">
-          <div class="ss-item-icon">${icons.knife}</div>
-          <div class="ss-item-value">${fmtNum(cs2.totalKnifeKills)}</div>
-          <div class="ss-item-label">Нож</div>
-        </div>
-        <div class="ss-item ss-item-sm">
-          <div class="ss-item-icon">${icons.pistol}</div>
-          <div class="ss-item-value">${fmtNum(cs2.totalPistolKills)}</div>
-          <div class="ss-item-label">Пистолет</div>
-        </div>
-        <div class="ss-item ss-item-sm">
-          <div class="ss-item-icon">${icons.rifle}</div>
-          <div class="ss-item-value">${fmtNum(cs2.totalSmgKills)}</div>
-          <div class="ss-item-label">ПП</div>
-        </div>
-        <div class="ss-item ss-item-sm">
-          <div class="ss-item-icon">${icons.rifle}</div>
-          <div class="ss-item-value">${fmtNum(cs2.totalRifleKills)}</div>
-          <div class="ss-item-label">Винтовка</div>
-        </div>
-        <div class="ss-item ss-item-sm">
-          <div class="ss-item-icon">${icons.rifle}</div>
-          <div class="ss-item-value">${fmtNum(cs2.totalSniperKills)}</div>
-          <div class="ss-item-label">Снайперка</div>
-        </div>
-      </div>
-
-      <!-- Объективы -->
-      <div class="ss-subsection">Объективы</div>
-      <div class="ss-grid ss-grid-objectives">
-        <div class="ss-item ss-item-sm">
-          <div class="ss-item-icon">${icons.bomb}</div>
-          <div class="ss-item-value">${fmtNum(cs2.totalPlantedBombs)}</div>
-          <div class="ss-item-label">Заложено</div>
-        </div>
-        <div class="ss-item ss-item-sm">
-          <div class="ss-item-icon">${icons.bomb}</div>
-          <div class="ss-item-value">${fmtNum(cs2.totalDefusedBombs)}</div>
-          <div class="ss-item-label">Разминировано</div>
-        </div>
-        <div class="ss-item ss-item-sm">
-          <div class="ss-item-icon">${icons.mvp}</div>
-          <div class="ss-item-value">${fmtNum(cs2.totalRescuedHostages)}</div>
-          <div class="ss-item-label">Заложников</div>
-        </div>
-        <div class="ss-item ss-item-sm">
-          <div class="ss-item-icon">${icons.damage}</div>
-          <div class="ss-item-value">$${fmtNum(cs2.totalMoneyEarned)}</div>
-          <div class="ss-item-label">Заработано</div>
-        </div>
-      </div>
-
       ${faceitHtml}
     </div>
   `;
@@ -967,7 +912,7 @@ function renderFaceitBlock(faceit) {
     ? `<span class="ss-badge ss-badge-country">🌍 ${escapeHtml(String(faceit.country).toUpperCase())}</span>`
     : '';
 
-  const fmt = (val, suffix = '') => val !== null && val !== undefined && val !== 0 ? `${val}${suffix}` : '—';
+  const fmt = (val, suffix = '') => val !== null && val !== undefined ? `${val}${suffix}` : '—';
 
   // Результаты последних матчей
   const recentHtml = faceit.recentResults && faceit.recentResults.length > 0
