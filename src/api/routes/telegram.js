@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { log, error as logError } from '../../utils/logger.js';
+import { requireAuth, requireOwnership } from '../middleware/auth.js';
 
 /**
  * Роуты для интеграции с Telegram
+ * Доступны только владельцу профиля (session userId === :userId)
  */
 export function createTelegramRouter(db, telegramService) {
   const router = Router();
@@ -11,7 +13,7 @@ export function createTelegramRouter(db, telegramService) {
    * POST /api/telegram-link/generate/:userId
    * Сгенерировать код для связывания с Telegram
    */
-  router.post('/generate/:userId', async (req, res) => {
+  router.post('/generate/:userId', requireAuth, requireOwnership, async (req, res) => {
     const userId = req.params.userId;
 
     try {
@@ -31,7 +33,7 @@ export function createTelegramRouter(db, telegramService) {
    * GET /api/telegram-link/status/:userId
    * Проверить статус связи с Telegram
    */
-  router.get('/status/:userId', async (req, res) => {
+  router.get('/status/:userId', requireAuth, requireOwnership, async (req, res) => {
     const userId = req.params.userId;
 
     try {
@@ -47,7 +49,7 @@ export function createTelegramRouter(db, telegramService) {
    * DELETE /api/telegram-link/unlink/:userId
    * Отвязать Telegram аккаунт
    */
-  router.delete('/unlink/:userId', async (req, res) => {
+  router.delete('/unlink/:userId', requireAuth, requireOwnership, async (req, res) => {
     const userId = req.params.userId;
 
     try {

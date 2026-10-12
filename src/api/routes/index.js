@@ -99,11 +99,12 @@ export function registerRoutes(
   });
 
   // Список участников Discord-сервера (без ботов) — с кешированием
+  // Только для авторизованных: гостям Discord ID не раздаём
   let guildMembersCache = null;
   let guildMembersCacheTime = 0;
   const GUILD_MEMBERS_CACHE_TTL = 5 * 60 * 1000; // 5 минут
 
-  app.get("/api/guild-members", async (req, res) => {
+  app.get("/api/guild-members", requireAuth, async (req, res) => {
     try {
       const guild = discordClient.guilds.cache.first();
       if (!guild) {

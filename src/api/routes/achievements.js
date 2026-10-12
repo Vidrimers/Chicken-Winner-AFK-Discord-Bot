@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { log, error as logError } from '../../utils/logger.js';
+import { requireAuth } from '../middleware/auth.js';
 
 /**
  * Роуты для достижений
@@ -55,21 +56,32 @@ export function createAchievementsRouter(db, telegram) {
 
   /**
    * POST /notify/profile-view
-   * Уведомить о просмотре профиля
+   * Уведомить о просмотре профиля.
+   * Viewer берётся из сессии — из body подменить нельзя.
    */
-  router.post('/notify/profile-view', async (req, res) => {
+  router.post('/notify/profile-view', requireAuth, async (req, res) => {
     try {
-      const { viewerId, viewerUsername, targetUserId, targetUsername } = req.body;
+      const viewerId = req.authenticatedUserId;
+      const viewerUsername = db.getUserStats(viewerId)?.username || viewerId;
+      const { targetUserId, targetUsername } = req.body;
+
+      if (!targetUserId) {
+        return res.status(400).json({ error: 'targetUserId обязателен' });
+      }
+
+      const targetName = targetUsername
+        || db.getUserStats(targetUserId)?.username
+        || targetUserId;
 
       if (viewerId === targetUserId) {
         return res.json({ success: true });
       }
 
-      log(`📬 ${viewerUsername} просмотрел профиль ${targetUsername}`);
+      log(`📬 ${viewerUsername} просмотрел профиль ${targetName}`);
 
       // Отправляем уведомление в Telegram
       if (telegram && telegram.sendProfileView) {
-        await telegram.sendProfileView(viewerUsername, viewerId, targetUsername, targetUserId);
+        await telegram.sendProfileView(viewerUsername, viewerId, targetName, targetUserId);
       }
 
       res.json({ success: true });

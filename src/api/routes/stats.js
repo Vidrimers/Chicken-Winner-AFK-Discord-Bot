@@ -10,12 +10,16 @@ export function createStatsRouter(db, discordClient, telegram, gamesDb) {
 
   /**
    * GET /api/stats/:userId
-   * Получить статистику пользователя
+   * Получить статистику пользователя.
+   * Только для авторизованных. Settings — только у своего профиля.
    */
-  router.get('/:userId', async (req, res) => {
+  router.get('/:userId', requireAuth, async (req, res) => {
     try {
       const userId = req.params.userId;
-      
+      const viewerId = req.authenticatedUserId;
+      const isSelf = String(userId) === String(viewerId);
+      const isAdmin = viewerId === process.env.ADMIN_USER_ID;
+
       // Проверяем был ли пользователь удален
       if (db.isUserDeleted(userId)) {
         return res.json({
@@ -69,26 +73,31 @@ export function createStatsRouter(db, discordClient, telegram, gamesDb) {
       }
 
       const achievements = db.getUserAchievements(userId);
-      const settings = {
-        dmNotifications: db.getUserDMSetting(userId),
-        afkTimeout: db.getUserTimeout(userId),
-        achievementNotifications: db.getUserAchievementNotificationSetting(userId),
-        theme: db.getUserTheme(userId),
-        secretThemeActivated: db.getSecretThemeActivated(userId),
-        channelNotifications: db.getUserChannelNotificationSetting(userId),
-        cheaterOwnNotifications: db.getUserCheaterOwnNotificationSetting(userId),
-        cheaterOthersNotifications: db.getUserCheaterOthersNotificationSetting(userId),
-        cheaterNickNotifications: db.getUserCheaterNickNotificationSetting(userId),
-        botOwnNotifications: db.getUserBotOwnNotificationSetting(userId),
-        botOthersNotifications: db.getUserBotOthersNotificationSetting(userId),
-        botNickNotifications: db.getUserBotNickNotificationSetting(userId),
-      };
 
-      // Price notification settings from games.db
-      if (gamesDb) {
-        const priceSettings = gamesDb.getNotificationSettings(userId);
-        settings.priceNotifyDiscord = priceSettings.notify_discord === 1;
-        settings.priceNotifyTelegram = priceSettings.notify_telegram === 1;
+      // Settings — только у своего профиля (иначе это чужие приватные настройки)
+      let settings = {};
+      if (isSelf || isAdmin) {
+        settings = {
+          dmNotifications: db.getUserDMSetting(userId),
+          afkTimeout: db.getUserTimeout(userId),
+          achievementNotifications: db.getUserAchievementNotificationSetting(userId),
+          theme: db.getUserTheme(userId),
+          secretThemeActivated: db.getSecretThemeActivated(userId),
+          channelNotifications: db.getUserChannelNotificationSetting(userId),
+          cheaterOwnNotifications: db.getUserCheaterOwnNotificationSetting(userId),
+          cheaterOthersNotifications: db.getUserCheaterOthersNotificationSetting(userId),
+          cheaterNickNotifications: db.getUserCheaterNickNotificationSetting(userId),
+          botOwnNotifications: db.getUserBotOwnNotificationSetting(userId),
+          botOthersNotifications: db.getUserBotOthersNotificationSetting(userId),
+          botNickNotifications: db.getUserBotNickNotificationSetting(userId),
+        };
+
+        // Price notification settings from games.db
+        if (gamesDb) {
+          const priceSettings = gamesDb.getNotificationSettings(userId);
+          settings.priceNotifyDiscord = priceSettings.notify_discord === 1;
+          settings.priceNotifyTelegram = priceSettings.notify_telegram === 1;
+        }
       }
 
       const combinedStats = db.getUserCombinedStats(userId);

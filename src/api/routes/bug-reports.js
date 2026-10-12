@@ -12,16 +12,19 @@ export function createBugReportsRouter(db, telegram) {
 
   /**
    * POST /api/bug-report — отправить багрепорт
+   * Автор берётся из сессии, body-поля userId/username игнорируются
    */
   router.post('/bug-report', requireAuth, async (req, res) => {
     try {
-      const { userId, username, bugText } = req.body;
+      const userId = req.authenticatedUserId;
+      const username = db.getUserStats(userId)?.username || userId;
+      const { bugText } = req.body;
 
       log(`🐛 POST /api/bug-report получен: userId=${userId}, username=${username}, bugText длина=${bugText?.length}`);
 
-      if (!userId || !username || !bugText) {
-        log(`🐛 Ошибка валидации: userId=${!!userId}, username=${!!username}, bugText=${!!bugText}`);
-        return res.status(400).json({ error: 'Все поля обязательны' });
+      if (!bugText) {
+        log(`🐛 Ошибка валидации: bugText пустой`);
+        return res.status(400).json({ error: 'Текст бага обязателен' });
       }
 
       if (bugText.length > 2000) {

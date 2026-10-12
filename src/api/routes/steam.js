@@ -5,6 +5,7 @@
 
 import { Router } from 'express';
 import { getCachedStats } from '../../steam/statsCache.js';
+import { requireAuth, requireOwnership } from '../middleware/auth.js';
 
 /**
  * Валидация Steam ID: 17 цифр, начинается с 765611
@@ -28,31 +29,23 @@ export function createSteamRouter(db) {
    * Привязать Steam ID к профилю пользователя
    * Body: { steamId: "76561198..." }
    */
-  router.post('/:discordId/steam', async (req, res) => {
+  router.post('/:discordId/steam', requireAuth, requireOwnership, async (req, res) => {
     const { discordId } = req.params;
-    const { steamId, userId: bodyUserId } = req.body;
-
-    // Получаем userId из сессии или из тела запроса (fallback для системы без OAuth)
-    const sessionUserId = req.session?.userId || bodyUserId || null;
+    const { steamId } = req.body;
 
     // 1. Аутентификация — есть ли идентификатор пользователя?
-    if (!sessionUserId) {
+    if (!req.authenticatedUserId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // 2. Авторизация — это твой профиль?
-    if (sessionUserId !== discordId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    // 3. Валидация Steam ID
+    // 2. Валидация Steam ID
     if (!steamId || !isValidSteamId(steamId)) {
       return res.status(400).json({
         error: 'Невалидный Steam ID. Ожидается 17-значный числовой идентификатор, начинающийся с 765611'
       });
     }
 
-    // 4. Бизнес-логика
+    // 3. Бизнес-логика
     db.setSteamId(discordId, steamId);
     return res.json({ success: true });
   });
@@ -61,17 +54,8 @@ export function createSteamRouter(db) {
    * DELETE /api/users/:discordId/steam
    * Отвязать Steam ID от профиля пользователя
    */
-  router.delete('/:discordId/steam', async (req, res) => {
+  router.delete('/:discordId/steam', requireAuth, requireOwnership, async (req, res) => {
     const { discordId } = req.params;
-    const sessionUserId = req.session?.userId || req.body?.userId || null;
-
-    if (!sessionUserId) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    if (sessionUserId !== discordId) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
 
     db.setSteamId(discordId, null);
     return res.json({ success: true });
@@ -80,8 +64,9 @@ export function createSteamRouter(db) {
   /**
    * GET /api/users/:discordId/steam-stats
    * Получить CS2 и FACEIT статистику пользователя (с кэшированием)
+   * Только для авторизованных участников — гостям связка Discord→Steam не светим.
    */
-  router.get('/:discordId/steam-stats', async (req, res) => {
+  router.get('/:discordId/steam-stats', requireAuth, async (req, res) => {
     const { discordId } = req.params;
 
     try {
