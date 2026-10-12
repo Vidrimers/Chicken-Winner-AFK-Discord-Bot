@@ -1087,13 +1087,7 @@ async function handleMassCheck() {
     return;
   }
 
-  const adminSteamId = String(CONFIG?.ADMIN_STEAM_ID || '').trim();
-  const cwSteamId = String(CONFIG?.CHEAT_WATCHER_STEAM_ID || '').trim();
-  const protectedIds = [adminSteamId, cwSteamId].filter(Boolean);
-  if (protectedIds.some(id => urls.some((u) => u && u.includes(id)))) {
-    showNotification('Ты сильно-то не охуевай там, малютка', 'error');
-    return;
-  }
+  // Защищённые профили проверяет сервер — Steam ID админа во фронт не отдаются
 
   closeMassCheckModal();
   showLoading(true);

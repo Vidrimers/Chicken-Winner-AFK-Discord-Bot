@@ -63,6 +63,23 @@ const EMBED_COLORS = {
 };
 
 /**
+ * Санитизация связей для ответа API.
+ * Гостям не отдаём Discord ID создавателя — только «Участник».
+ */
+function sanitizeLinksForGuest(links) {
+  return links.map((link) => {
+    const {
+      created_by: _omitCreatedBy,
+      ...rest
+    } = link;
+    return {
+      ...rest,
+      created_by_name: 'Участник',
+    };
+  });
+}
+
+/**
  * Роуты для cheater checker API
  */
 export function createCheaterCheckerRouter(db, discordClient, telegram, achievements, cheatWatcher = null) {
@@ -285,11 +302,17 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   /**
    * GET /api/cheater-checker/links/group-names
    * Получение имён групп связей (должен быть ДО /links/:steamId)
+   * Гостям не отдаём renamed_by — это ник участника.
    */
   router.get('/links/group-names', (req, res) => {
     try {
       const names = db.getAllGroupNames();
-      res.json({ names });
+      const isGuest = !req.session?.userId;
+      const payload = names.map(({ renamed_by: renamedBy, ...rest }) => {
+        if (isGuest) return rest;
+        return { ...rest, renamed_by: renamedBy };
+      });
+      res.json({ names: payload });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
@@ -320,8 +343,11 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   router.get('/links/:steamId', (req, res) => {
     try {
       const { steamId } = req.params;
-      const links = db.getLinksForSteamId(steamId);
       const linkedIds = db.getLinkedSteamIds(steamId);
+      const isGuest = !req.session?.userId;
+      const links = isGuest
+        ? sanitizeLinksForGuest(db.getLinksForSteamId(steamId))
+        : db.getLinksForSteamId(steamId);
       res.json({ links, linkedIds });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -334,7 +360,10 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    */
   router.get('/links', (req, res) => {
     try {
-      const links = db.getAllLinks();
+      const isGuest = !req.session?.userId;
+      const links = isGuest
+        ? sanitizeLinksForGuest(db.getAllLinks())
+        : db.getAllLinks();
       res.json({ links });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
