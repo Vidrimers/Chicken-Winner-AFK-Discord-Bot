@@ -213,6 +213,21 @@ async function checkAuthStatus() {
   }
 }
 
+/**
+ * Обновляет window.isAdmin из сессии / CONFIG.
+ * Нужно вызывать после входа — иначе админка появится только после F5.
+ */
+async function refreshAdminFlag(userId) {
+  try {
+    const response = await fetch("/api/session");
+    const data = await response.json();
+    window.isAdmin = Boolean(data.isAdmin) ||
+      String(userId) === String(window.CONFIG?.ADMIN_USER_ID || "");
+  } catch {
+    window.isAdmin = String(userId) === String(window.CONFIG?.ADMIN_USER_ID || "");
+  }
+}
+
 async function loadUserDataAuto(userId) {
   // Уже залогинен и пришли с returnTo — сразу возвращаемся
   const returnTo = sessionStorage.getItem("loginReturnTo");
@@ -226,6 +241,7 @@ async function loadUserDataAuto(userId) {
 
   window.currentUserId = userId;
   localStorage.setItem("afkBotUserId", userId);
+  await refreshAdminFlag(userId);
   document.getElementById("loading").style.display = "block";
   document.getElementById("userContent").style.display = "none";
   document.getElementById("userIdDisplay").style.display = "none";
@@ -505,6 +521,10 @@ async function _doLogin(userId) {
 
   window.currentUserId = userId;
   localStorage.setItem("afkBotUserId", userId);
+
+  // isAdmin должен обновляться при входе, а не только при перезагрузке страницы
+  await refreshAdminFlag(userId);
+
   document.getElementById("loading").style.display = "block";
   document.getElementById("userContent").style.display = "none";
   document.getElementById("userIdDisplay").style.display = "none";
