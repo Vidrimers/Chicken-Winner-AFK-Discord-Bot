@@ -83,7 +83,7 @@ export async function fetchFaceitStats(steamId) {
       avgHS = parseFloat(lifetime?.['Average HS %'] ?? '0');
       currentWinStreak = parseInt(lifetime?.['Current Win Streak'] ?? '0', 10);
       longestWinStreak = parseInt(lifetime?.['Longest Win Streak'] ?? '0', 10);
-      recentResults = lifetime?.['Recent Results']?.split(',') ?? [];
+      recentResults = Array.isArray(lifetime?.['Recent Results']) ? lifetime['Recent Results'] : (lifetime?.['Recent Results']?.split?.(',') ?? []);
       totalHeadshots = parseFloat(lifetime?.['Total Headshots %'] ?? '0');
     }
 
