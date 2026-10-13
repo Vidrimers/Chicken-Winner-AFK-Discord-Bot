@@ -810,9 +810,7 @@ function renderSteamStatsCard(data, isOwnProfile) {
       <div class="ss-accent"></div>
       <div class="ss-header">
         <div class="ss-header-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.38l3.03-6.26A3.5 3.5 0 0 1 12 10.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5 3.5 3.5 0 0 1-1.38-.28l-3.13 3.28C8.62 21.28 10.27 21.5 12 21.5c5.24 0 9.5-4.26 9.5-9.5S17.24 2.5 12 2.5 2.5 7.26 2.5 12.5h2.5C5 8.63 8.13 5.5 12 5.5s7 3.13 7 7-3.13 7-7 7c-1.37 0-2.64-.39-3.72-1.06l-1.37 2.84C7.77 22.33 9.84 23 12 23c6.07 0 11-4.93 11-11S18.07 0 12 0z"/>
-          </svg>
+          <svg class="icon" aria-hidden="true" width="24" height="24"><use href="#icon-steam"></use></svg>
         </div>
         <div>
           <div class="ss-title">CS2 — Steam статистика</div>
@@ -929,9 +927,7 @@ function renderFaceitBlock(faceit) {
     <div class="ss-section">
       <div class="ss-section-header">
         <div class="ss-section-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-          </svg>
+          <svg class="icon" aria-hidden="true" width="22" height="22"><use href="#icon-faceit"></use></svg>
         </div>
         <div>
           <div class="ss-section-title">FACEIT ${banBadge} ${country}</div>

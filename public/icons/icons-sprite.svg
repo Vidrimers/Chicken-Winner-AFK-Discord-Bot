@@ -403,4 +403,12 @@
     <line x1="4" y1="17" x2="20" y2="17"/>
   </symbol>
 
+  <!-- FACEIT -->
+  <symbol id="icon-faceit" viewBox="0 0 24 24" fill="currentColor">
+    <title>FACEIT</title>
+    <path d="M3.5 5.5L12 2l8.5 3.5v13L12 22l-8.5-3.5v-13z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M8 8h3.5c1.5 0 2.5.8 2.5 2s-1 2-2.5 2H10v2h3.5c1.5 0 2.5.8 2.5 2s-1 2-2.5 2H8V8zm2 2v2h1.3c.4 0 .7-.2.7-.6s-.3-.6-.7-.6H10v-1.2zM10 14v2h1.3c.4 0 .7-.2.7-.6s-.3-.6-.7-.6H10z"/>
+    <circle cx="17" cy="8" r="1.2"/>
+  </symbol>
+
 </svg>
