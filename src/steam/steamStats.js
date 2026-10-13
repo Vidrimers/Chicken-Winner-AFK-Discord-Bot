@@ -151,6 +151,17 @@ export async function fetchSteamStats(steamId) {
   const totalDefusedBombs  = statsData['total_defused_bombs']  ?? null;
   const totalRescuedHostages = statsData['total_rescued_hostages'] ?? null;
   const totalMoneyEarned   = statsData['total_money_earned']   ?? null;
+  const totalMatchesWon    = statsData['total_matches_won']    ?? null;
+  const totalGgMatchesPlayed = statsData['total_gg_matches_played'] ?? null;
+  const totalGgMatchesWon  = statsData['total_gg_matches_won'] ?? null;
+
+  // Competitive winrate (исключая gun game)
+  const competitivePlayed = (totalMatchesPlayed !== null && totalGgMatchesPlayed !== null)
+    ? totalMatchesPlayed - totalGgMatchesPlayed
+    : totalMatchesPlayed;
+  const competitiveWon = (totalMatchesWon !== null && totalGgMatchesWon !== null)
+    ? totalMatchesWon - totalGgMatchesWon
+    : totalMatchesWon;
 
   return {
     private: false,
@@ -159,8 +170,8 @@ export async function fetchSteamStats(steamId) {
     accountCreatedYear,
     totalKills,
     totalDeaths,
-    totalMatchesPlayed,
-    totalWins,
+    totalMatchesPlayed: competitivePlayed,
+    totalWins: competitiveWon,
     totalTimePlayed,
     totalHsKills,
     totalShotsFired,
@@ -177,14 +188,17 @@ export async function fetchSteamStats(steamId) {
     totalDefusedBombs,
     totalRescuedHostages,
     totalMoneyEarned,
+    totalMatchesWon: competitiveWon,
+    totalGgMatchesPlayed,
+    totalGgMatchesWon,
     hoursPlayed: totalTimePlayed !== null
       ? Math.round(totalTimePlayed / 3600)
       : null,
     kd: (totalKills !== null && totalDeaths !== null && totalDeaths > 0)
       ? +(totalKills / totalDeaths).toFixed(2)
       : null,
-    winRate: (totalWins !== null && totalMatchesPlayed !== null && totalMatchesPlayed > 0)
-      ? +(totalWins / totalMatchesPlayed * 100).toFixed(1)
+    winRate: (competitiveWon !== null && competitivePlayed !== null && competitivePlayed > 0)
+      ? +(competitiveWon / competitivePlayed * 100).toFixed(1)
       : null,
     hsPercent: (totalHsKills !== null && totalKills !== null && totalKills > 0)
       ? +(totalHsKills / totalKills * 100).toFixed(1)
