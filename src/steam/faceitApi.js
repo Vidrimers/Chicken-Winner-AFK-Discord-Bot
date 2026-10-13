@@ -42,6 +42,8 @@ export async function fetchFaceitStats(steamId) {
       { headers }
     );
 
+    console.log(`[FACEIT] playerRes status: ${playerRes.status} for ${steamId}`);
+
     if (playerRes.status === 404) return null; // Не зарегистрирован на FACEIT
     if (!playerRes.ok) return null;            // Другие ошибки — не ломаем
 
@@ -103,6 +105,7 @@ export async function fetchFaceitStats(steamId) {
       totalHeadshots,
     };
   } catch (err) {
+    console.log(`[FACEIT] Error for ${steamId}: ${err.message}`);
     return null; // Сеть недоступна или любая другая ошибка — не ломаем
   }
 }
