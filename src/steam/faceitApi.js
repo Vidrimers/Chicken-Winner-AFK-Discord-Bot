@@ -5,6 +5,23 @@
 
 const FACEIT_API_BASE = 'https://open.faceit.com/data/v4';
 
+// Заголовки для обхода Cloudflare bot protection
+const CF_HEADERS = {
+  'Authorization': '',
+  'Accept': 'application/json',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'Referer': 'https://www.faceit.com/',
+  'Origin': 'https://www.faceit.com',
+  'Sec-Fetch-Dest': 'empty',
+  'Sec-Fetch-Mode': 'cors',
+  'Sec-Fetch-Site': 'same-site',
+  'sec-ch-ua': '"Chromium";v="131", "Not_A Brand";v="24"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+};
+
 /**
  * Получить статистику FACEIT по Steam ID
  * @param {string} steamId — SteamID64
@@ -17,10 +34,12 @@ export async function fetchFaceitStats(steamId) {
   if (!apiKey) return null;
 
   try {
+    const headers = { ...CF_HEADERS, Authorization: `Bearer ${apiKey}` };
+
     // Запрос 1: найти игрока по Steam ID
     const playerRes = await fetch(
       `${FACEIT_API_BASE}/players?game=cs2&game_player_id=${steamId}`,
-      { headers: { Authorization: `Bearer ${apiKey}` } }
+      { headers }
     );
 
     if (playerRes.status === 404) return null; // Не зарегистрирован на FACEIT
@@ -49,7 +68,7 @@ export async function fetchFaceitStats(steamId) {
 
     const statsRes = await fetch(
       `${FACEIT_API_BASE}/players/${playerId}/stats/cs2`,
-      { headers: { Authorization: `Bearer ${apiKey}` } }
+      { headers }
     );
 
     if (statsRes.ok) {
