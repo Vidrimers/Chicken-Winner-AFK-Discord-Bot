@@ -387,8 +387,7 @@ export class CheatWatcherWorker {
 
           const dupReply =
             `⚠️ This profile is already in database.\n` +
-            `Player: ${profile.personaName || 'Unknown'}\n` +
-            `SteamID64: ${profile.steamId}`;
+            `${profile.steamId}`;
 
           try {
             await this._postComment(this.client.steamID.getSteamID64(), dupReply);
@@ -446,12 +445,9 @@ export class CheatWatcherWorker {
       }
 
       // CheatWatcher комментарий на стене
-      const banDetails = formatBanDetails(profile);
       const cwComment =
         `⚠️ Suspected pl\u0430y\u0435r fl\u0430gg\u0435d by Ch\u0435\u0430tW\u0430tch\u0435rs Community\n\n` +
-        `Player: ${profile.personaName || 'Unknown'}\n` +
-        `SteamID64: ${profile.steamId}\n\n` +
-        `Ban Details:\n${banDetails}\n` +
+        `${profile.steamId}\n\n` +
         `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
         `Network identifier logged and archived.\n` +
         `Evidence archived for review.\n` +

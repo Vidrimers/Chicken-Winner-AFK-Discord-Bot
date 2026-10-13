@@ -293,9 +293,7 @@ export class VacHandler {
         ].join('\n');
         const cwComment =
           `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
-          `Player: ${profile.personaName || 'Unknown'}\n` +
-          `SteamID64: ${profile.steamId}\n\n` +
-          `Ban Details:\n${cwBanDetails}\n` +
+          `${profile.steamId}\n\n` +
           `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
           `Network identifier logged and archived.\n` +
           `Evidence archived for review.\n` +
@@ -453,9 +451,7 @@ export class VacHandler {
       ].join('\n');
       const cwComment =
         `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
-        `Player: ${profile.personaName || 'Unknown'}\n` +
-        `SteamID64: ${profile.steamId}\n\n` +
-        `Ban Details:\n${cwBanDetails}\n` +
+        `${profile.steamId}\n\n` +
         `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
         `Network identifier logged and archived.\n` +
         `Evidence archived for review.\n` +
@@ -646,9 +642,7 @@ export class VacHandler {
           ].join('\n');
           const cwComment =
             `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
-            `Player: ${profile.personaName || 'Unknown'}\n` +
-            `SteamID64: ${profile.steamId}\n\n` +
-            `Ban Details:\n${cwBanDetails}\n` +
+            `${profile.steamId}\n\n` +
             `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
             `Network identifier logged and archived.\n` +
             `Evidence archived for review.\n` +

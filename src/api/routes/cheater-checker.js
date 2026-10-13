@@ -230,13 +230,9 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       // CheatWatcher: постинг комментариев на стенах новых читеров
       if (cheatWatcher && newProfiles.length > 0) {
         for (const profile of newProfiles) {
-          const banDetails = formatBanDetails(profile);
-          const profileUrl = profile.profileUrl || `https://steamcommunity.com/profiles/${profile.steamId}`;
           const commentText =
             `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
-            `Player: ${profile.personaName || 'Unknown'}\n` +
-            `SteamID64: ${profile.steamId}\n\n` +
-            `Ban Details:\n${banDetails}\n` +
+            `${profile.steamId}\n\n` +
             `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
             `Network identifier logged and archived.\n` +
             `Evidence archived for review.\n` +
