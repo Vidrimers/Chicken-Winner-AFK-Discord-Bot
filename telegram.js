@@ -2142,7 +2142,9 @@ export function initTelegramBot(
             const channel = await discordClient.channels.fetch(targetChannelId);
             const targetMessage = await channel.messages.fetch(targetMessageId);
             const replyContent = text.trim();
-            await targetMessage.reply(`${replyContent}\n*— отправлено из Telegram*`);
+            const discordId = getLinkedDiscordId(chatId);
+            const discordName = discordId ? getDiscordUsername(discordId) : 'Пользователь';
+            await targetMessage.reply(`*${discordName} ответил из Telegram:*\n${replyContent}`);
             await telegramBot.sendMessage(chatId, '✅ Ответ отправлен в Discord!');
           } catch (err) {
             console.error('[TG] Ошибка отправки ответа в Discord:', err.message);
