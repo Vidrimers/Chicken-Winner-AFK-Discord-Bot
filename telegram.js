@@ -1745,6 +1745,20 @@ export function initTelegramBot(
         return;
       }
 
+      // Обработка кнопки "Ответить" на упоминания
+      if (data.startsWith('mention_reply:')) {
+        const [, channelId, messageId] = data.split(':');
+        userStates.set(chatId, 'awaiting_discord_reply');
+        userStates.set(`${chatId}_reply_target`, `${channelId}:${messageId}`);
+        const replyCancelBtn = {
+          inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'cancel_reply' }]]
+        };
+        await telegramBot.sendMessage(chatId, '💬 Напишите сообщение для ответа в Discord:', {
+          reply_markup: replyCancelBtn
+        });
+        return;
+      }
+
       try {
         switch (data) {
           case 'move_type_cancel': {
@@ -1867,6 +1881,12 @@ export function initTelegramBot(
 
           case 'settings_toggle_mention':
             await toggleSetting(chatId, db.getUserMentionNotificationSetting, db.setUserMentionNotificationSetting);
+            break;
+
+          case 'cancel_reply':
+            userStates.delete(chatId);
+            userStates.delete(`${chatId}_reply_target`);
+            await telegramBot.sendMessage(chatId, '❌ Отправка отменена.');
             break;
 
           case 'settings_toggle_cheater_nick': {
@@ -2111,6 +2131,27 @@ export function initTelegramBot(
         return;
       }
 
+      // Проверяем состояние пользователя (ожидание ответа в Discord)
+      if (userStates.get(chatId) === 'awaiting_discord_reply') {
+        userStates.delete(chatId);
+        const replyTarget = userStates.get(`${chatId}_reply_target`);
+        userStates.delete(`${chatId}_reply_target`);
+        if (text && replyTarget) {
+          const [targetChannelId, targetMessageId] = replyTarget.split(':');
+          try {
+            const channel = await discordClient.channels.fetch(targetChannelId);
+            const targetMessage = await channel.messages.fetch(targetMessageId);
+            const replyContent = text.trim();
+            await targetMessage.reply(`${replyContent}\n*— отправлено из Telegram*`);
+            await telegramBot.sendMessage(chatId, '✅ Ответ отправлен в Discord!');
+          } catch (err) {
+            console.error('[TG] Ошибка отправки ответа в Discord:', err.message);
+            await telegramBot.sendMessage(chatId, '❌ Не удалось отправить ответ в Discord. Проверьте, что бот имеет доступ к каналу.');
+          }
+        }
+        return;
+      }
+
       // Проверяем состояние пользователя (ожидание текста багрепорта)
       if (userStates.get(chatId) === 'awaiting_bug_text') {
         userStates.delete(chatId);
@@ -2235,20 +2276,85 @@ export function registerTelegramUser(discordUserId, telegramChatId) {
  * @param {string} chatId - Telegram Chat ID пользователя
  * @param {string} message - Сообщение для отправки
  */
-export async function sendTelegramMessageToUser(chatId, message) {
+export async function sendTelegramMessageToUser(chatId, message, replyMarkup = null) {
   if (!telegramBot) {
     console.error("❌ Telegram бот не инициализирован");
     return false;
   }
 
   try {
-    await telegramBot.sendMessage(chatId, message, { parse_mode: "HTML" });
+    const options = { parse_mode: "HTML" };
+    if (replyMarkup) {
+      options.reply_markup = replyMarkup;
+    }
+    await telegramBot.sendMessage(chatId, message, options);
     console.log(`✅ Уведомление отправлено пользователю (chat_id: ${chatId})`);
     return true;
   } catch (error) {
     console.error(
       `❌ Ошибка отправки уведомления пользователю: ${error.message}`,
     );
+    return false;
+  }
+}
+
+export async function sendTelegramPhotosToUser(chatId, photoUrls) {
+  if (!telegramBot) {
+    console.error("❌ Telegram бот не инициализирован");
+    return false;
+  }
+
+  try {
+    for (const url of photoUrls) {
+      await telegramBot.sendPhoto(chatId, url);
+      console.log(`📷 Фото отправлено пользователю (chat_id: ${chatId})`);
+    }
+    return true;
+  } catch (error) {
+    console.error(`❌ Ошибка отправки фото: ${error.message}`);
+    return false;
+  }
+}
+
+export async function sendTelegramVideosToUser(chatId, videos) {
+  if (!telegramBot) {
+    console.error("❌ Telegram бот не инициализирован");
+    return false;
+  }
+
+  const MAX_SIZE = 50 * 1024 * 1024; // 50 МБ
+
+  try {
+    for (const video of videos) {
+      if (video.size && video.size > MAX_SIZE) {
+        await telegramBot.sendMessage(chatId, `📎 <a href="${video.url}">Видео (слишком большое для отправки)</a>`, { parse_mode: "HTML" });
+        console.log(`📎 Видео слишком большое, отправлена ссылка (chat_id: ${chatId})`);
+      } else {
+        await telegramBot.sendVideo(chatId, video.url);
+        console.log(`🎥 Видео отправлено пользователю (chat_id: ${chatId})`);
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error(`❌ Ошибка отправки видео: ${error.message}`);
+    return false;
+  }
+}
+
+export async function sendTelegramGifsToUser(chatId, gifUrls) {
+  if (!telegramBot) {
+    console.error("❌ Telegram бот не инициализирован");
+    return false;
+  }
+
+  try {
+    for (const url of gifUrls) {
+      await telegramBot.sendAnimation(chatId, url);
+      console.log(`🖼️ GIF отправлен пользователю (chat_id: ${chatId})`);
+    }
+    return true;
+  } catch (error) {
+    console.error(`❌ Ошибка отправки GIF: ${error.message}`);
     return false;
   }
 }

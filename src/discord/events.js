@@ -158,8 +158,20 @@ async function handleMentions(message, db, telegram) {
       content = content.replace(/<@!?\d+>/g, '').trim();
 
       // Вложения
-      const attachments = message.attachments?.filter(a => a.contentType?.startsWith('image/')) || [];
-      const imageUrls = attachments.map(a => a.url);
+      const attachments = message.attachments?.filter(a => {
+        const ct = a.contentType || '';
+        return ct.startsWith('image/') || ct.startsWith('video/');
+      }) || [];
+
+      // Разделяем по типам
+      const imageAttachments = attachments.filter(a => (a.contentType || '').startsWith('image/'));
+      const videoAttachments = attachments.filter(a => {
+        const ct = a.contentType || '';
+        if (ct === 'image/gif' || ct === 'image/apng') return true; // GIF через sendAnimation
+        return ct.startsWith('video/');
+      });
+      // GIF (image/gif) считаем анимацией
+      const gifAttachments = attachments.filter(a => (a.contentType || '') === 'image/gif');
 
       let msgText = `📢 <b>Вас упомянули в Discord</b>\n\n`;
       msgText += `👤 Кто: <b>${mentionerName}</b>\n`;
@@ -169,14 +181,32 @@ async function handleMentions(message, db, telegram) {
         msgText += `\n💬 <b>Сообщение:</b>\n${content}\n`;
       }
 
-      if (imageUrls.length > 0) {
-        msgText += `\n🖼️ <b>Вложений:</b> ${imageUrls.length} шт.\n`;
-        msgText += imageUrls.map(url => `📎 <a href="${url}">Изображение</a>`).join('\n') + '\n';
-      }
-
       msgText += `\n📅 ${new Date().toLocaleString('ru-RU')}`;
 
-      await telegram.sendTelegramMessageToUser(telegramChatId, msgText);
+      // Inline кнопка "Ответить"
+      const replyMarkup = {
+        inline_keyboard: [
+          [{ text: '💬 Ответить', callback_data: `mention_reply:${message.channel.id}:${message.id}` }]
+        ]
+      };
+
+      // Отправляем уведомление
+      await telegram.sendTelegramMessageToUser(telegramChatId, msgText, replyMarkup);
+
+      // Отправляем картинки через sendPhoto
+      if (imageAttachments.length > 0) {
+        await telegram.sendTelegramPhotosToUser(telegramChatId, imageAttachments.map(a => a.url));
+      }
+
+      // Отправляем видео через sendVideo (≤50 МБ), иначе ссылкой
+      if (videoAttachments.length > 0) {
+        await telegram.sendTelegramVideosToUser(telegramChatId, videoAttachments.map(a => ({ url: a.url, size: a.size })));
+      }
+
+      // Отправляем GIF через sendAnimation
+      if (gifAttachments.length > 0) {
+        await telegram.sendTelegramGifsToUser(telegramChatId, gifAttachments.map(a => a.url));
+      }
     }
   } catch (error) {
     log(`❌ Ошибка обработки упоминаний: ${error.message}`);
