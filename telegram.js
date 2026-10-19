@@ -2151,13 +2151,29 @@ export function initTelegramBot(
             const video = msg.video;
             const animation = msg.animation;
             const document = msg.document;
+            const sticker = msg.sticker;
             const DISCORD_MAX_FILE = 8 * 1024 * 1024; // 8 МБ — лимит Discord
 
             let mediaFile = null;
             let mediaType = null;
             let fileName = null;
 
-            if (animation) {
+            if (sticker) {
+              mediaFile = await telegramBot.getFileLink(sticker.file_id);
+              if (sticker.is_video) {
+                // Видео-стикер (WebM)
+                mediaType = 'video';
+                fileName = 'sticker.webm';
+              } else if (sticker.is_animated) {
+                // Анимированный стикер (TGS/Lottie) — Discord не поддерживает
+                mediaType = 'gif';
+                fileName = sticker.file_name || 'sticker.tgs';
+              } else {
+                // Статичный стикер (WebP)
+                mediaType = 'photo';
+                fileName = 'sticker.webp';
+              }
+            } else if (animation) {
               mediaFile = await telegramBot.getFileLink(animation.file_id);
               // Telegram конвертирует GIF в MP4 — определяем реальное расширение
               mediaType = 'gif';
