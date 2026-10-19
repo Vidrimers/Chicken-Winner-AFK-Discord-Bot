@@ -314,6 +314,18 @@ export class DatabaseManager {
     ).all();
   }
 
+  // ===== MENTION NOTIFICATIONS =====
+
+  getUserMentionNotificationSetting(userId) {
+    const result = this.prepare('SELECT mention_notifications FROM user_settings WHERE user_id = ?').get(userId);
+    return result ? Boolean(result.mention_notifications) : true;
+  }
+
+  setUserMentionNotificationSetting(userId, enabled) {
+    this.prepare('UPDATE user_settings SET mention_notifications = ? WHERE user_id = ?')
+      .run(enabled ? 1 : 0, userId);
+  }
+
   // ===== GENERIC CHECK METHODS (cheater/bot) =====
 
   upsertCheck(profile, type = 'cheater') {

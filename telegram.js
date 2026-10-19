@@ -577,6 +577,7 @@ async function sendSettingsMenu(chatId) {
   const channel = db.getUserChannelNotificationSetting(discordId);
   const cheaterOwn = db.getUserCheaterOwnNotificationSetting(discordId);
   const cheaterOthers = db.getUserCheaterOthersNotificationSetting(discordId);
+  const mention = db.getUserMentionNotificationSetting(discordId);
   const steamId = db.getSteamId(discordId);
 
   const timeoutDisplay = timeout < 15 ? `${timeout} сек` : `${timeout} мин`;
@@ -588,6 +589,7 @@ async function sendSettingsMenu(chatId) {
       [{ text: `🏆 Уведомления о достижениях [${achievement ? '✅' : '❌'}] · Для Discord`, callback_data: 'settings_toggle_achievement' }],
       [{ text: `🔔 Кто в канале [${channel ? '✅' : '❌'}] · Для Telegram`, callback_data: 'settings_toggle_channel' }],
       [{ text: `🚨 Уведомления о читерах · Для Telegram`, callback_data: 'settings_cheater_menu' }],
+      [{ text: `@ Упоминания [${mention ? '✅' : '❌'}] · Для Discord`, callback_data: 'settings_toggle_mention' }],
       [{ text: `🎮 Steam [${steamId ? '✅' : '❌'}]`, callback_data: 'settings_steam_menu' }],
       [{ text: '◀️ Назад', callback_data: 'back_to_menu' }]
     ]
@@ -1862,6 +1864,10 @@ export function initTelegramBot(
             }
             break;
           }
+
+          case 'settings_toggle_mention':
+            await toggleSetting(chatId, db.getUserMentionNotificationSetting, db.setUserMentionNotificationSetting);
+            break;
 
           case 'settings_toggle_cheater_nick': {
             const dIdNick = getLinkedDiscordId(chatId);

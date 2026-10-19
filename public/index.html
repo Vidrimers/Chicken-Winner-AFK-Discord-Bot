@@ -1291,6 +1291,33 @@
               </div>
 
               <div class="setting-card">
+                <div class="setting-card-icon"><svg class="icon" aria-hidden="true"><use href="#icon-mail"></use></svg></div>
+                <div class="setting-card-content">
+                  <h3 class="setting-card-title">Упоминания</h3>
+                  <p class="setting-card-description">
+                    Получать в Telegram уведомления, когда вас упоминают в Discord
+                  </p>
+                  <p
+                    id="mentionNotificationsHint"
+                    class="setting-card-description"
+                    style="
+                      font-size: 12px;
+                      margin-top: 5px;
+                      opacity: 0.8;
+                      color: #ff9800;
+                    "
+                  >
+                    ⚠️ Сначала свяжите аккаунт с Telegram ниже
+                  </p>
+                  <label class="setting-checkbox-label">
+                    <input type="checkbox" id="mentionNotifications" disabled style="opacity:0.5;cursor:not-allowed;" onchange="autoSaveCheckbox(this, 'mentionNotifications')">
+                    <span>Получать уведомления в Telegram при упоминании</span>
+                  </label>
+                  <div class="setting-save-indicator" id="mentionNotifications-indicator"></div>
+                </div>
+              </div>
+
+              <div class="setting-card">
                 <div class="setting-card-icon">🤖</div>
                 <div class="setting-card-content">
                   <h3 class="setting-card-title">Уведомления о ботах</h3>

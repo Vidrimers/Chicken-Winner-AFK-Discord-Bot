@@ -1026,6 +1026,10 @@ function displayUserSettings(settings) {
   if (priceDiscordEl) priceDiscordEl.checked = settings.priceNotifyDiscord === true;
   if (priceTelegramEl) priceTelegramEl.checked = settings.priceNotifyTelegram === true;
 
+  // Mention notification setting
+  const mentionEl = document.getElementById("mentionNotifications");
+  if (mentionEl) mentionEl.checked = settings.mentionNotifications !== false;
+
   // Проверяем активирована ли секретная тема на сервере
   const secretThemeActivated = settings.secretThemeActivated || false;
   const themeSelect = document.getElementById("themeSelect");
@@ -1296,6 +1300,20 @@ async function checkTelegramLinkStatus() {
         botHint.textContent = anyBotEnabled ? "✅ Уведомления будут приходить в Telegram" : "Настройки отключены";
         botHint.style.color = anyBotEnabled ? "#4CAF50" : "#999";
       }
+
+      // Разблокируем уведомления об упоминаниях
+      const mentionEl = document.getElementById("mentionNotifications");
+      const mentionHint = document.getElementById("mentionNotificationsHint");
+      if (mentionEl) {
+        mentionEl.disabled = false;
+        mentionEl.style.opacity = "1";
+        mentionEl.style.cursor = "pointer";
+      }
+      if (mentionHint) {
+        const mentionEnabled = mentionEl && mentionEl.checked;
+        mentionHint.textContent = mentionEnabled ? "✅ Уведомления будут приходить в Telegram" : "Настройка отключена";
+        mentionHint.style.color = mentionEnabled ? "#4CAF50" : "#999";
+      }
     } else {
       statusDiv.style.display = "none";
       btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-link"></use></svg> Связать';
@@ -1358,6 +1376,20 @@ async function checkTelegramLinkStatus() {
       if (botOthersEl) { botOthersEl.disabled = true; botOthersEl.checked = false; botOthersEl.style.opacity = "0.5"; botOthersEl.style.cursor = "not-allowed"; }
       if (botNickEl) { botNickEl.disabled = true; botNickEl.checked = false; botNickEl.style.opacity = "0.5"; botNickEl.style.cursor = "not-allowed"; }
       if (botHint) { botHint.textContent = "⚠️ Сначала свяжите аккаунт с Telegram"; botHint.style.color = "#ff9800"; }
+
+      // Блокируем уведомления об упоминаниях
+      const mentionEl = document.getElementById("mentionNotifications");
+      const mentionHint = document.getElementById("mentionNotificationsHint");
+      if (mentionEl) {
+        mentionEl.disabled = true;
+        mentionEl.checked = false;
+        mentionEl.style.opacity = "0.5";
+        mentionEl.style.cursor = "not-allowed";
+      }
+      if (mentionHint) {
+        mentionHint.textContent = "⚠️ Сначала свяжите аккаунт с Telegram";
+        mentionHint.style.color = "#ff9800";
+      }
     }
   } catch (error) {
     console.error("Ошибка проверки статуса Telegram:", error);

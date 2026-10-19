@@ -251,6 +251,19 @@ export function runMigrations(db) {
         }
       }
     }
+
+    if (!usColNames.includes('mention_notifications')) {
+      try {
+        db.exec('ALTER TABLE user_settings ADD COLUMN mention_notifications INTEGER DEFAULT 1');
+        console.log('✅ Добавлена колонка mention_notifications в user_settings');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка mention_notifications уже существует в user_settings');
+        } else {
+          throw error;
+        }
+      }
+    }
   }
 
   // Создание таблицы login_codes для входа через Telegram-код

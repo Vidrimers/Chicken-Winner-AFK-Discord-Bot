@@ -29,6 +29,7 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
       botNickNotifications,
       priceNotifyDiscord,
       priceNotifyTelegram,
+      mentionNotifications,
       settingName, // Имя изменённой настройки
     } = req.body;
 
@@ -247,6 +248,15 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
           changedSettingText = `💰 Уведомления о ценах в Discord: ${priceNotifyDiscord ? '✅ включены' : '❌ отключены'}`;
         } else if (priceNotifyTelegram !== undefined) {
           changedSettingText = `💰 Уведомления о ценах в Telegram: ${priceNotifyTelegram ? '✅ включены' : '❌ отключены'}`;
+        }
+      }
+
+      if (mentionNotifications !== undefined) {
+        const currentMention = db.getUserMentionNotificationSetting(userId);
+        if (mentionNotifications !== currentMention) {
+          db.setUserMentionNotificationSetting(userId, mentionNotifications);
+          settingsChanged = true;
+          changedSettingText = `@ Уведомления "Упоминания": ${mentionNotifications ? '✅ включены' : '❌ отключены'}`;
         }
       }
 

@@ -90,6 +90,7 @@ export function createStatsRouter(db, discordClient, telegram, gamesDb) {
           botOwnNotifications: db.getUserBotOwnNotificationSetting(userId),
           botOthersNotifications: db.getUserBotOthersNotificationSetting(userId),
           botNickNotifications: db.getUserBotNickNotificationSetting(userId),
+          mentionNotifications: db.getUserMentionNotificationSetting(userId),
         };
 
         // Price notification settings from games.db

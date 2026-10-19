@@ -37,6 +37,7 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
   // Сообщения
   client.on('messageCreate', async (message) => {
     await messageHandler.handle(message);
+    await handleMentions(message, db, telegram);
   });
 
   // Пользователь покинул сервер
@@ -116,4 +117,68 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
   });
 
   success('Обработчики Discord событий зарегистрированы');
+}
+
+/**
+ * Обработка упоминаний — отправка уведомлений в Telegram
+ */
+async function handleMentions(message, db, telegram) {
+  try {
+    // Игнорируем ботов и сообщения без упоминаний
+    if (message.author.bot) return;
+    if (message.mentions.users.size === 0) return;
+
+    // Игнорируем @everyone / @here
+    if (message.mentions.everyone) return;
+
+    // Получаем список упомянутых пользователей
+    const mentionedUsers = message.mentions.users;
+
+    for (const [userId, user] of mentionedUsers) {
+      // Пропускаем ботов
+      if (user.bot) continue;
+
+      // Проверяем настройку уведомлений об упоминаниях
+      const mentionEnabled = db.getUserMentionNotificationSetting(userId);
+      if (!mentionEnabled) continue;
+
+      // Проверяем привязку Telegram
+      const telegramChatId = db.getTelegramChatId(userId);
+      if (!telegramChatId) continue;
+
+      // Собираем информацию
+      const mentionerName = message.member?.displayName || message.author.username;
+      const channelName = message.channel.name || message.channel.id;
+      const isThread = message.channel.isThread?.() || false;
+      const channelType = isThread ? '🧵 ветка' : '📢 канал';
+
+      // Текст сообщения (без пустых)
+      let content = message.content || '';
+      // Убираем упоминания для чистоты
+      content = content.replace(/<@!?\d+>/g, '').trim();
+
+      // Вложения
+      const attachments = message.attachments?.filter(a => a.contentType?.startsWith('image/')) || [];
+      const imageUrls = attachments.map(a => a.url);
+
+      let msgText = `📢 <b>Вас упомянули в Discord</b>\n\n`;
+      msgText += `👤 Кто: <b>${mentionerName}</b>\n`;
+      msgText += `${channelType}: <b>#${channelName}</b>\n`;
+
+      if (content) {
+        msgText += `\n💬 <b>Сообщение:</b>\n${content}\n`;
+      }
+
+      if (imageUrls.length > 0) {
+        msgText += `\n🖼️ <b>Вложений:</b> ${imageUrls.length} шт.\n`;
+        msgText += imageUrls.map(url => `📎 <a href="${url}">Изображение</a>`).join('\n') + '\n';
+      }
+
+      msgText += `\n📅 ${new Date().toLocaleString('ru-RU')}`;
+
+      await telegram.sendTelegramMessageToUser(telegramChatId, msgText);
+    }
+  } catch (error) {
+    log(`❌ Ошибка обработки упоминаний: ${error.message}`);
+  }
 }
