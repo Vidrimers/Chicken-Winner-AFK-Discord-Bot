@@ -2136,15 +2136,59 @@ export function initTelegramBot(
         userStates.delete(chatId);
         const replyTarget = userStates.get(`${chatId}_reply_target`);
         userStates.delete(`${chatId}_reply_target`);
-        if (text && replyTarget) {
+        if (replyTarget) {
           const [targetChannelId, targetMessageId] = replyTarget.split(':');
           try {
             const channel = await discordClient.channels.fetch(targetChannelId);
             const targetMessage = await channel.messages.fetch(targetMessageId);
-            const replyContent = text.trim();
             const discordId = getLinkedDiscordId(chatId);
             const discordName = discordId ? getDiscordUsername(discordId) : 'Пользователь';
-            await targetMessage.reply(`*${discordName} ответил из Telegram:*\n${replyContent}`);
+            const header = `*${discordName} ответил из Telegram:*`;
+            const replyContent = text ? text.trim() : '';
+
+            // Определяем медиа из Telegram
+            const photo = msg.photo?.[msg.photo.length - 1]; // самое большое фото
+            const video = msg.video;
+            const animation = msg.animation;
+            const document = msg.document;
+            const DISCORD_MAX_FILE = 8 * 1024 * 1024; // 8 МБ — лимит Discord
+
+            let mediaFile = null;
+            let mediaType = null;
+
+            if (animation) {
+              mediaFile = await telegramBot.getFileLink(animation.file_id);
+              mediaType = 'gif';
+            } else if (photo) {
+              mediaFile = await telegramBot.getFileLink(photo.file_id);
+              mediaType = 'photo';
+            } else if (video) {
+              mediaFile = await telegramBot.getFileLink(video.file_id);
+              mediaType = 'video';
+            } else if (document && document.mime_type?.startsWith('image/')) {
+              mediaFile = await telegramBot.getFileLink(document.file_id);
+              mediaType = 'photo';
+            }
+
+            if (mediaFile) {
+              // Скачиваем файл с Telegram
+              const response = await fetch(mediaFile);
+              const buffer = Buffer.from(await response.arrayBuffer());
+
+              if (buffer.length > DISCORD_MAX_FILE) {
+                await targetMessage.reply(`${header}\n${replyContent ? replyContent + '\n' : ''}📎 <a href="${mediaFile}">Медиа (слишком большое для Discord)</a>`);
+              } else {
+                const { AttachmentBuilder } = await import('discord.js');
+                const attachment = new AttachmentBuilder(buffer, {
+                  name: mediaType === 'gif' ? 'animation.gif' : mediaType === 'video' ? 'video.mp4' : 'photo.jpg'
+                });
+                const textPart = replyContent ? `${header}\n${replyContent}` : header;
+                await targetMessage.reply({ content: textPart, files: [attachment] });
+              }
+            } else if (replyContent) {
+              await targetMessage.reply(`${header}\n${replyContent}`);
+            }
+
             await telegramBot.sendMessage(chatId, '✅ Ответ отправлен в Discord!');
           } catch (err) {
             console.error('[TG] Ошибка отправки ответа в Discord:', err.message);
