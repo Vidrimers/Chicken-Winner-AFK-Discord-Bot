@@ -2155,19 +2155,25 @@ export function initTelegramBot(
 
             let mediaFile = null;
             let mediaType = null;
+            let fileName = null;
 
             if (animation) {
               mediaFile = await telegramBot.getFileLink(animation.file_id);
+              // Telegram конвертирует GIF в MP4 — определяем реальное расширение
               mediaType = 'gif';
+              fileName = animation.file_name || (animation.mime_type === 'video/mp4' ? 'animation.mp4' : 'animation.gif');
             } else if (photo) {
               mediaFile = await telegramBot.getFileLink(photo.file_id);
               mediaType = 'photo';
+              fileName = 'photo.jpg';
             } else if (video) {
               mediaFile = await telegramBot.getFileLink(video.file_id);
               mediaType = 'video';
+              fileName = video.file_name || 'video.mp4';
             } else if (document && document.mime_type?.startsWith('image/')) {
               mediaFile = await telegramBot.getFileLink(document.file_id);
               mediaType = 'photo';
+              fileName = document.file_name || 'photo.jpg';
             }
 
             if (mediaFile) {
@@ -2179,9 +2185,7 @@ export function initTelegramBot(
                 await targetMessage.reply(`${header}\n${replyContent ? replyContent + '\n' : ''}📎 <a href="${mediaFile}">Медиа (слишком большое для Discord)</a>`);
               } else {
                 const { AttachmentBuilder } = await import('discord.js');
-                const attachment = new AttachmentBuilder(buffer, {
-                  name: mediaType === 'gif' ? 'animation.gif' : mediaType === 'video' ? 'video.mp4' : 'photo.jpg'
-                });
+                const attachment = new AttachmentBuilder(buffer, { name: fileName });
                 const textPart = replyContent ? `${header}\n${replyContent}` : header;
                 await targetMessage.reply({ content: textPart, files: [attachment] });
               }
