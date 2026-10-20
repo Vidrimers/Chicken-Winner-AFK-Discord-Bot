@@ -2315,7 +2315,7 @@ export function getTelegramBot() {
  * @param {string} discordUserId - Discord ID пользователя
  * @param {string} telegramChatId - Telegram Chat ID
  */
-export function registerTelegramUser(discordUserId, telegramChatId) {
+export async function registerTelegramUser(discordUserId, telegramChatId) {
   if (!db) {
     console.error("❌ База данных не инициализирована");
     return false;
@@ -2330,6 +2330,17 @@ export function registerTelegramUser(discordUserId, telegramChatId) {
     console.log(
       `✅ Пользователь ${discordUserId} зарегистрирован в Telegram (chat_id: ${telegramChatId})`,
     );
+
+    // Уведомление админу
+    const discordName = getDiscordUsername(discordUserId);
+    await sendTelegramReport(
+      `🔗 <b>Новая привязка Telegram</b>\n\n` +
+      `👤 Пользователь: <b>${discordName}</b>\n` +
+      `🆔 Discord ID: <code>${discordUserId}</code>\n` +
+      `📱 Telegram Chat ID: <code>${telegramChatId}</code>\n` +
+      `📅 Время: ${new Date().toLocaleString('ru-RU')}`
+    );
+
     return true;
   } catch (error) {
     console.error("❌ Ошибка регистрации Telegram пользователя:", error);

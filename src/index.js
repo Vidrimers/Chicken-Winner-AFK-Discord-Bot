@@ -25,6 +25,7 @@ import {
   sendSpecialAchievementNotification,
   sendBlocklistAddNotification,
   sendNewCheaterNotification,
+  registerTelegramUser,
   backfillTelegramUsernames
 } from '../telegram.js';
 
@@ -682,6 +683,7 @@ async function main() {
       sendSpecialAchievement: sendSpecialAchievementNotification,
       sendBlocklistAddNotification: sendBlocklistAddNotification,
       sendNewCheaterNotification: sendNewCheaterNotification,
+      registerUser: registerTelegramUser,
       notifyChannelActivity: async (message) => {
         try {
           // Получаем всех пользователей с включенными уведомлениями
