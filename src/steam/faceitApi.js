@@ -67,6 +67,16 @@ export async function fetchFaceitStats(steamId) {
     let longestWinStreak = 0;
     let recentResults = [];
     let totalHeadshots = 0;
+    let wins = 0;
+    let totalKills = 0;
+    let totalDamage = 0;
+    let totalRounds = 0;
+    let entryRate = 0;
+    let entrySuccessRate = 0;
+    let oneV1WinRate = 0;
+    let oneV2WinRate = 0;
+    let flashSuccessRate = 0;
+    let sniperKillRate = 0;
 
     const statsRes = await fetch(
       `${FACEIT_API_BASE}/players/${playerId}/stats/cs2`,
@@ -79,12 +89,24 @@ export async function fetchFaceitStats(steamId) {
       matches = parseInt(lifetime?.['Matches'] ?? '0', 10);
       winRate = parseFloat(lifetime?.['Win Rate %'] ?? '0');
       avgKD = parseFloat(lifetime?.['Average K/D Ratio'] ?? '0');
-      avgKR = parseFloat(lifetime?.['ADR'] ?? '0'); // K/R отсутствует в API — используем ADR
+      avgKR = parseFloat(lifetime?.['ADR'] ?? '0');
       avgHS = parseFloat(lifetime?.['Average Headshots %'] ?? '0');
       currentWinStreak = parseInt(lifetime?.['Current Win Streak'] ?? '0', 10);
       longestWinStreak = parseInt(lifetime?.['Longest Win Streak'] ?? '0', 10);
       recentResults = Array.isArray(lifetime?.['Recent Results']) ? lifetime['Recent Results'] : (lifetime?.['Recent Results']?.split?.(',') ?? []);
-      totalHeadshots = parseFloat(lifetime?.['Total Headshots %'] ?? '0'); // Это КОЛИЧЕСТВО, не %
+      totalHeadshots = parseFloat(lifetime?.['Total Headshots %'] ?? '0');
+
+      // Дополнительные поля
+      wins = parseInt(lifetime?.['Wins'] ?? '0', 10);
+      totalKills = parseInt(lifetime?.['Total Kills with extended stats'] ?? '0', 10);
+      totalDamage = parseInt(lifetime?.['Total Damage'] ?? '0', 10);
+      totalRounds = parseInt(lifetime?.['Total Rounds with extended stats'] ?? '0', 10);
+      entryRate = parseFloat(lifetime?.['Entry Rate'] ?? '0');
+      entrySuccessRate = parseFloat(lifetime?.['Entry Success Rate'] ?? '0');
+      oneV1WinRate = parseFloat(lifetime?.['1v1 Win Rate'] ?? '0');
+      oneV2WinRate = parseFloat(lifetime?.['1v2 Win Rate'] ?? '0');
+      flashSuccessRate = parseFloat(lifetime?.['Flash Success Rate'] ?? '0');
+      sniperKillRate = parseFloat(lifetime?.['Sniper Kill Rate'] ?? '0');
     }
 
     return {
@@ -103,6 +125,16 @@ export async function fetchFaceitStats(steamId) {
       longestWinStreak,
       recentResults,
       totalHeadshots,
+      wins,
+      totalKills,
+      totalDamage,
+      totalRounds,
+      entryRate,
+      entrySuccessRate,
+      oneV1WinRate,
+      oneV2WinRate,
+      flashSuccessRate,
+      sniperKillRate,
     };
   } catch (err) {
     console.log(`[FACEIT] Error for ${steamId}: ${err.message}`);

@@ -748,9 +748,12 @@ async function handleStatsRequest(chatId) {
       msg += `Уровень: <b>${faceit.level ?? '—'}</b> | ELO: <b>${faceit.elo ?? '—'}</b>`;
       if (faceit.country) msg += ` | ${faceit.country.toUpperCase()}`;
       msg += '\n';
-      msg += `Матчи: <b>${faceit.matches ?? '—'}</b> | Winrate: <b>${faceit.winRate ?? '—'}%</b>\n`;
+      msg += `Матчи: <b>${faceit.matches ?? '—'}</b> | Побед: <b>${faceit.wins ?? '—'}</b> | Winrate: <b>${faceit.winRate ?? '—'}%</b>\n`;
       msg += `K/D: <b>${faceit.avgKD ?? '—'}</b> | ADR: <b>${faceit.avgKR ?? '—'}</b> | HS: <b>${faceit.avgHS ?? '—'}%</b>\n`;
+      msg += `Убийств: <b>${faceit.totalKills ?? '—'}</b> | Урон: <b>${faceit.totalDamage ?? '—'}</b> | Раундов: <b>${faceit.totalRounds ?? '—'}</b>\n`;
       msg += `Серия: <b>${faceit.currentWinStreak ?? '—'}</b> | Макс: <b>${faceit.longestWinStreak ?? '—'}</b> | Хедшотов: <b>${faceit.totalHeadshots ?? '—'}</b>\n`;
+      msg += `Entry: <b>${faceit.entryRate ?? '—'}</b> | Успех: <b>${faceit.entrySuccessRate ?? '—'}</b> | 1v1: <b>${faceit.oneV1WinRate ?? '—'}%</b> | 1v2: <b>${faceit.oneV2WinRate ?? '—'}%</b>\n`;
+      msg += `Флешки: <b>${faceit.flashSuccessRate ?? '—'}%</b> | Снайпер: <b>${faceit.sniperKillRate ?? '—'}</b>\n`;
 
       if (faceit.isBanned) msg += '🔴 <b>Забанен на FACEIT</b>\n';
 

@@ -958,8 +958,12 @@ function renderFaceitBlock(faceit) {
       <!-- Детальная статистика FACEIT -->
       <div class="ss-grid ss-grid-faceit-detail">
         <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.wins)}</div>
+          <div class="ss-item-label">Побед</div>
+        </div>
+        <div class="ss-item ss-item-sm">
           <div class="ss-item-value">${fmt(faceit.avgKD)}</div>
-          <div class="ss-item-label">Avg K/D</div>
+          <div class="ss-item-label">K/D</div>
         </div>
         <div class="ss-item ss-item-sm">
           <div class="ss-item-value">${fmt(faceit.avgKR)}</div>
@@ -967,15 +971,51 @@ function renderFaceitBlock(faceit) {
         </div>
         <div class="ss-item ss-item-sm">
           <div class="ss-item-value">${fmt(faceit.avgHS, '%')}</div>
-          <div class="ss-item-label">Avg HS%</div>
+          <div class="ss-item-label">HS%</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.totalKills)}</div>
+          <div class="ss-item-label">Убийств</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.totalDamage)}</div>
+          <div class="ss-item-label">Урон</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.totalRounds)}</div>
+          <div class="ss-item-label">Раундов</div>
         </div>
         <div class="ss-item ss-item-sm">
           <div class="ss-item-value">${fmt(faceit.currentWinStreak)}</div>
-          <div class="ss-item-label">Текущая серия</div>
+          <div class="ss-item-label">Серия</div>
         </div>
         <div class="ss-item ss-item-sm">
           <div class="ss-item-value">${fmt(faceit.longestWinStreak)}</div>
           <div class="ss-item-label">Макс. серия</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.entryRate)}</div>
+          <div class="ss-item-label">Entry Rate</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.entrySuccessRate)}</div>
+          <div class="ss-item-label">Entry Успех</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.oneV1WinRate, '%')}</div>
+          <div class="ss-item-label">1v1 Winrate</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.oneV2WinRate, '%')}</div>
+          <div class="ss-item-label">1v2 Winrate</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.flashSuccessRate, '%')}</div>
+          <div class="ss-item-label">Флешки</div>
+        </div>
+        <div class="ss-item ss-item-sm">
+          <div class="ss-item-value">${fmt(faceit.sniperKillRate)}</div>
+          <div class="ss-item-label">Снайпер</div>
         </div>
         <div class="ss-item ss-item-sm">
           <div class="ss-item-value">${fmt(faceit.totalHeadshots)}</div>
