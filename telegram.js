@@ -374,6 +374,9 @@ async function sendMainMenu(chatId) {
         { text: '⚙️ Настройки', callback_data: 'menu_settings' }
       ],
       [
+        { text: '📊 Steam/Faceit статистика', callback_data: 'menu_stats' }
+      ],
+      [
         { text: '🌐 Открыть сайт', url: SERVER_CONFIG.SITE_URL }
       ]
     ]
@@ -689,6 +692,72 @@ async function sendSteamMenu(chatId) {
     parse_mode: 'HTML',
     reply_markup: { inline_keyboard: buttons }
   });
+}
+
+/**
+ * Отправка Steam/Faceit статистики
+ */
+async function handleStatsRequest(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  if (!discordId) return;
+
+  const steamId = db.getSteamId(discordId);
+  const username = getDiscordUsername(discordId);
+
+  // Steam не привязан
+  if (!steamId) {
+    const msg =
+      '🎮 <b>Steam аккаунт не привязан</b>\n\n' +
+      'Привяжите Steam ID чтобы видеть статистику:\n\n' +
+      '💡 Не знаешь свой Steam ID? В клиенте Steam нажми на свой ник сверху → <b>Об аккаунте</b> — ID будет указан под именем. Или найди через <a href="https://steamid.io">steamid.io</a>';
+    const buttons = {
+      inline_keyboard: [[{ text: '🔗 Привязать Steam', callback_data: 'settings_link_steam' }]]
+    };
+    await telegramBot.sendMessage(chatId, msg, { parse_mode: 'HTML', reply_markup: buttons });
+    return;
+  }
+
+  // Показываем загрузку
+  await telegramBot.sendMessage(chatId, '⏳ Загружаю статистику...');
+
+  try {
+    const result = await getCachedStats(steamId, db, 'user_stats', discordId);
+    const cs2 = result.cs2 || {};
+    const faceit = result.faceit || null;
+
+    let msg = `📊 <b>Статистика ${username}</b>\n\n`;
+
+    // CS2 (Steam)
+    if (cs2.private) {
+      msg += '🎮 <b>CS2 (Steam)</b>\nПрофиль приватный\n';
+    } else if (cs2.noData || cs2.totalMatchesPlayed === null) {
+      msg += '🎮 <b>CS2 (Steam)</b>\nНет данных (не играл в CS2)\n';
+    } else {
+      msg += '🎮 <b>CS2 (Steam)</b>\n';
+      msg += `K/D: <b>${cs2.kd ?? '—'}</b> | Матчи: <b>${cs2.totalMatchesPlayed ?? '—'}</b> | Winrate: <b>${cs2.winRate ?? '—'}%</b>\n`;
+      msg += `HS: <b>${cs2.hsPercent ?? '—'}%</b> | Часы: <b>${cs2.hoursPlayed ?? '—'}ч</b>\n`;
+    }
+
+    // FACEIT
+    if (faceit) {
+      msg += `\n🏆 <b>FACEIT</b>\n`;
+      msg += `Уровень: <b>${faceit.level ?? '—'}</b> | ELO: <b>${faceit.elo ?? '—'}</b>\n`;
+      msg += `Матчи: <b>${faceit.matches ?? '—'}</b> | Winrate: <b>${faceit.winRate ?? '—'}%</b>\n`;
+      msg += `K/D: <b>${faceit.avgKD ?? '—'}</b> | HS: <b>${faceit.avgHS ?? '—'}%</b>\n`;
+
+      if (faceit.recentResults && faceit.recentResults.length > 0) {
+        const streak = faceit.recentResults.slice(0, 5).map(r => r === 'W' ? '✅' : '❌').join('');
+        msg += `Последние 5: ${streak}\n`;
+      }
+    } else {
+      msg += `\n🏆 <b>FACEIT</b>\nНе найден на FACEIT\n`;
+    }
+
+    await telegramBot.sendMessage(chatId, msg, { parse_mode: 'HTML' });
+  } catch (err) {
+    console.error('[TG] Ошибка загрузки статистики:', err.message);
+    await telegramBot.sendMessage(chatId, '❌ Не удалось загрузить статистику. Попробуйте позже.');
+  }
 }
 
 /**
@@ -1846,6 +1915,10 @@ export function initTelegramBot(
             await sendSettingsMenu(chatId);
             break;
           }
+
+          case 'menu_stats':
+            await handleStatsRequest(chatId);
+            break;
 
           case 'settings_toggle_dm':
             await toggleSetting(chatId, db.getUserDMSetting, db.setUserDMSetting);
