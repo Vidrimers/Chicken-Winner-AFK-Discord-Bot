@@ -963,7 +963,7 @@ function renderFaceitBlock(faceit) {
         </div>
         <div class="ss-item ss-item-sm">
           <div class="ss-item-value">${fmt(faceit.avgKR)}</div>
-          <div class="ss-item-label">Avg K/R</div>
+          <div class="ss-item-label">ADR</div>
         </div>
         <div class="ss-item ss-item-sm">
           <div class="ss-item-value">${fmt(faceit.avgHS, '%')}</div>

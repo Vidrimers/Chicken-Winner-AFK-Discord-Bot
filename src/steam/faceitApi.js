@@ -76,17 +76,15 @@ export async function fetchFaceitStats(steamId) {
     if (statsRes.ok) {
       const statsJson = await statsRes.json();
       const lifetime = statsJson.lifetime;
-      // ВРЕМЕННЫЙ ЛОГ — удалить после отладки
-      console.log('[FACEIT DEBUG] lifetime для', steamId, JSON.stringify(lifetime, null, 2));
       matches = parseInt(lifetime?.['Matches'] ?? '0', 10);
       winRate = parseFloat(lifetime?.['Win Rate %'] ?? '0');
       avgKD = parseFloat(lifetime?.['Average K/D Ratio'] ?? '0');
-      avgKR = parseFloat(lifetime?.['Average K/R Ratio'] ?? '0');
-      avgHS = parseFloat(lifetime?.['Average HS %'] ?? '0');
+      avgKR = parseFloat(lifetime?.['ADR'] ?? '0'); // K/R отсутствует в API — используем ADR
+      avgHS = parseFloat(lifetime?.['Average Headshots %'] ?? '0');
       currentWinStreak = parseInt(lifetime?.['Current Win Streak'] ?? '0', 10);
       longestWinStreak = parseInt(lifetime?.['Longest Win Streak'] ?? '0', 10);
       recentResults = Array.isArray(lifetime?.['Recent Results']) ? lifetime['Recent Results'] : (lifetime?.['Recent Results']?.split?.(',') ?? []);
-      totalHeadshots = parseFloat(lifetime?.['Total Headshots %'] ?? '0');
+      totalHeadshots = parseFloat(lifetime?.['Total Headshots %'] ?? '0'); // Это КОЛИЧЕСТВО, не %
     }
 
     return {
