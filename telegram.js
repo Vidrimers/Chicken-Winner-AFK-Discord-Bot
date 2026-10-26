@@ -735,15 +735,24 @@ async function handleStatsRequest(chatId) {
     } else {
       msg += '🎮 <b>CS2 (Steam)</b>\n';
       msg += `K/D: <b>${cs2.kd ?? '—'}</b> | Матчи: <b>${cs2.totalMatchesPlayed ?? '—'}</b> | Winrate: <b>${cs2.winRate ?? '—'}%</b>\n`;
-      msg += `HS: <b>${cs2.hsPercent ?? '—'}%</b> | Часы: <b>${cs2.hoursPlayed ?? '—'}ч</b>\n`;
+      msg += `HS: <b>${cs2.hsPercent ?? '—'}%</b> | Часы: <b>${cs2.hoursPlayed ?? '—'}ч</b>`;
+      if (cs2.accountCreatedYear) msg += ` | Год: <b>${cs2.accountCreatedYear}</b>`;
+      msg += '\n';
+      msg += `Убийств: <b>${cs2.totalKills ?? '—'}</b> | Смертей: <b>${cs2.totalDeaths ?? '—'}</b> | Урон: <b>${cs2.totalDamage ?? '—'}</b>\n`;
+      msg += `MVP: <b>${cs2.totalMvps ?? '—'}</b> | Раундов: <b>${cs2.totalRoundsPlayed ?? '—'}</b> | Точность: <b>${cs2.accuracy ?? '—'}%</b>\n`;
     }
 
     // FACEIT
     if (faceit) {
       msg += `\n🏆 <b>FACEIT</b>\n`;
-      msg += `Уровень: <b>${faceit.level ?? '—'}</b> | ELO: <b>${faceit.elo ?? '—'}</b>\n`;
+      msg += `Уровень: <b>${faceit.level ?? '—'}</b> | ELO: <b>${faceit.elo ?? '—'}</b>`;
+      if (faceit.country) msg += ` | ${faceit.country.toUpperCase()}`;
+      msg += '\n';
       msg += `Матчи: <b>${faceit.matches ?? '—'}</b> | Winrate: <b>${faceit.winRate ?? '—'}%</b>\n`;
-      msg += `K/D: <b>${faceit.avgKD ?? '—'}</b> | HS: <b>${faceit.avgHS ?? '—'}%</b>\n`;
+      msg += `K/D: <b>${faceit.avgKD ?? '—'}</b> | K/R: <b>${faceit.avgKR ?? '—'}</b> | HS: <b>${faceit.avgHS ?? '—'}%</b>\n`;
+      msg += `Серия: <b>${faceit.currentWinStreak ?? '—'}</b> | Макс: <b>${faceit.longestWinStreak ?? '—'}</b> | HS всего: <b>${faceit.totalHeadshots ?? '—'}%</b>\n`;
+
+      if (faceit.isBanned) msg += '🔴 <b>Забанен на FACEIT</b>\n';
 
       if (faceit.recentResults && faceit.recentResults.length > 0) {
         const streak = faceit.recentResults.slice(0, 5).map(r => r === 'W' ? '✅' : '❌').join('');
