@@ -76,6 +76,8 @@ export async function fetchFaceitStats(steamId) {
     if (statsRes.ok) {
       const statsJson = await statsRes.json();
       const lifetime = statsJson.lifetime;
+      // ВРЕМЕННЫЙ ЛОГ — удалить после отладки
+      console.log('[FACEIT DEBUG] lifetime для', steamId, JSON.stringify(lifetime, null, 2));
       matches = parseInt(lifetime?.['Matches'] ?? '0', 10);
       winRate = parseFloat(lifetime?.['Win Rate %'] ?? '0');
       avgKD = parseFloat(lifetime?.['Average K/D Ratio'] ?? '0');

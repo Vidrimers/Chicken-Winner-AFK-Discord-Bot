@@ -750,12 +750,12 @@ async function handleStatsRequest(chatId) {
       msg += '\n';
       msg += `Матчи: <b>${faceit.matches ?? '—'}</b> | Winrate: <b>${faceit.winRate ?? '—'}%</b>\n`;
       msg += `K/D: <b>${faceit.avgKD ?? '—'}</b> | K/R: <b>${faceit.avgKR ?? '—'}</b> | HS: <b>${faceit.avgHS ?? '—'}%</b>\n`;
-      msg += `Серия: <b>${faceit.currentWinStreak ?? '—'}</b> | Макс: <b>${faceit.longestWinStreak ?? '—'}</b> | HS всего: <b>${faceit.totalHeadshots ?? '—'}%</b>\n`;
+      msg += `Серия: <b>${faceit.currentWinStreak ?? '—'}</b> | Макс: <b>${faceit.longestWinStreak ?? '—'}</b> | Хедшотов: <b>${faceit.totalHeadshots ?? '—'}</b>\n`;
 
       if (faceit.isBanned) msg += '🔴 <b>Забанен на FACEIT</b>\n';
 
       if (faceit.recentResults && faceit.recentResults.length > 0) {
-        const streak = faceit.recentResults.slice(0, 5).map(r => r === 'W' ? '✅' : '❌').join('');
+        const streak = faceit.recentResults.slice(0, 5).map(r => r.trim() === '1' ? '✅' : '❌').join('');
         msg += `Последние 5: ${streak}\n`;
       }
     } else {

@@ -978,8 +978,8 @@ function renderFaceitBlock(faceit) {
           <div class="ss-item-label">Макс. серия</div>
         </div>
         <div class="ss-item ss-item-sm">
-          <div class="ss-item-value">${fmt(faceit.totalHeadshots, '%')}</div>
-          <div class="ss-item-label">HS% всего</div>
+          <div class="ss-item-value">${fmt(faceit.totalHeadshots)}</div>
+          <div class="ss-item-label">Хедшотов</div>
         </div>
       </div>
 
