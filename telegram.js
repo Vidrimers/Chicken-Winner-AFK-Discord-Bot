@@ -725,44 +725,55 @@ async function handleStatsRequest(chatId) {
     const cs2 = result.cs2 || {};
     const faceit = result.faceit || null;
 
+    // Прогресс-бар
+    const bar = (pct, width = 10) => {
+      if (pct === null || pct === undefined) return '—';
+      const filled = Math.round((pct / 100) * width);
+      return '█'.repeat(filled) + '░'.repeat(width - filled) + ` ${pct}%`;
+    };
+
     let msg = `📊 <b>Статистика ${username}</b>\n\n`;
 
     // CS2 (Steam)
+    msg += `━━━ 🎮 <b>CS2 (Steam)</b> ━━━\n`;
     if (cs2.private) {
-      msg += '🎮 <b>CS2 (Steam)</b>\nПрофиль приватный\n';
+      msg += `Профиль приватный\n`;
     } else if (cs2.noData || cs2.totalMatchesPlayed === null) {
-      msg += '🎮 <b>CS2 (Steam)</b>\nНет данных (не играл в CS2)\n';
+      msg += `Нет данных (не играл в CS2)\n`;
     } else {
-      msg += '🎮 <b>CS2 (Steam)</b>\n';
-      msg += `K/D: <b>${cs2.kd ?? '—'}</b> | Матчи: <b>${cs2.totalMatchesPlayed ?? '—'}</b> | Winrate: <b>${cs2.winRate ?? '—'}%</b>\n`;
-      msg += `HS: <b>${cs2.hsPercent ?? '—'}%</b> | Часы: <b>${cs2.hoursPlayed ?? '—'}ч</b>`;
-      if (cs2.accountCreatedYear) msg += ` | Год: <b>${cs2.accountCreatedYear}</b>`;
-      msg += '\n';
-      msg += `Убийств: <b>${cs2.totalKills ?? '—'}</b> | Смертей: <b>${cs2.totalDeaths ?? '—'}</b> | Урон: <b>${cs2.totalDamage ?? '—'}</b>\n`;
-      msg += `MVP: <b>${cs2.totalMvps ?? '—'}</b> | Раундов: <b>${cs2.totalRoundsPlayed ?? '—'}</b> | Точность: <b>${cs2.accuracy ?? '—'}%</b>\n`;
+      msg += `K/D <code>${cs2.kd ?? '—'}</code>  ·  Матчи <code>${cs2.totalMatchesPlayed ?? '—'}</code>  ·  Часы <code>${cs2.hoursPlayed ?? '—'}ч</code>\n`;
+      if (cs2.accountCreatedYear) msg += `Год аккаунта: <code>${cs2.accountCreatedYear}</code>\n`;
+      msg += `Winrate  <code>${bar(cs2.winRate)}</code>\n`;
+      msg += `HS%      <code>${bar(cs2.hsPercent)}</code>\n`;
+      msg += `Убийств <code>${cs2.totalKills ?? '—'}</code>  ·  Смертей <code>${cs2.totalDeaths ?? '—'}</code>  ·  Урон <code>${cs2.totalDamage ?? '—'}</code>\n`;
+      msg += `MVP <code>${cs2.totalMvps ?? '—'}</code>  ·  Раундов <code>${cs2.totalRoundsPlayed ?? '—'}</code>  ·  Точность <code>${cs2.accuracy ?? '—'}%</code>\n`;
     }
 
     // FACEIT
     if (faceit) {
-      msg += `\n🏆 <b>FACEIT</b>\n`;
-      msg += `Уровень: <b>${faceit.level ?? '—'}</b> | ELO: <b>${faceit.elo ?? '—'}</b>`;
-      if (faceit.country) msg += ` | ${faceit.country.toUpperCase()}`;
+      msg += `\n━━━ 🏆 <b>FACEIT</b> ━━━\n`;
+      msg += `Уровень <code>${faceit.level ?? '—'}</code>  ·  ELO <code>${faceit.elo ?? '—'}</code>`;
+      if (faceit.country) msg += `  ·  ${faceit.country.toUpperCase()}`;
       msg += '\n';
-      msg += `Матчи: <b>${faceit.matches ?? '—'}</b> | Побед: <b>${faceit.wins ?? '—'}</b> | Winrate: <b>${faceit.winRate ?? '—'}%</b>\n`;
-      msg += `K/D: <b>${faceit.avgKD ?? '—'}</b> | ADR: <b>${faceit.avgKR ?? '—'}</b> | HS: <b>${faceit.avgHS ?? '—'}%</b>\n`;
-      msg += `Убийств: <b>${faceit.totalKills ?? '—'}</b> | Урон: <b>${faceit.totalDamage ?? '—'}</b> | Раундов: <b>${faceit.totalRounds ?? '—'}</b>\n`;
-      msg += `Серия: <b>${faceit.currentWinStreak ?? '—'}</b> | Макс: <b>${faceit.longestWinStreak ?? '—'}</b> | Хедшотов: <b>${faceit.totalHeadshots ?? '—'}</b>\n`;
-      msg += `Entry: <b>${faceit.entryRate ?? '—'}</b> | Успех: <b>${faceit.entrySuccessRate ?? '—'}</b> | 1v1: <b>${faceit.oneV1WinRate ?? '—'}%</b> | 1v2: <b>${faceit.oneV2WinRate ?? '—'}%</b>\n`;
-      msg += `Флешки: <b>${faceit.flashSuccessRate ?? '—'}%</b> | Снайпер: <b>${faceit.sniperKillRate ?? '—'}</b>\n`;
+      msg += `Матчи <code>${faceit.matches ?? '—'}</code>  ·  Побед <code>${faceit.wins ?? '—'}</code>  ·  K/D <code>${faceit.avgKD ?? '—'}</code>\n`;
+      msg += `ADR <code>${faceit.avgKR ?? '—'}</code>  ·  Убийств <code>${faceit.totalKills ?? '—'}</code>  ·  Урон <code>${faceit.totalDamage ?? '—'}</code>\n`;
+      msg += `Раундов <code>${faceit.totalRounds ?? '—'}</code>  ·  Хедшотов <code>${faceit.totalHeadshots ?? '—'}</code>\n`;
+      msg += `Winrate  <code>${bar(faceit.winRate)}</code>\n`;
+      msg += `HS%      <code>${bar(faceit.avgHS)}</code>\n`;
+      msg += `1v1      <code>${bar(faceit.oneV1WinRate)}</code>\n`;
+      msg += `1v2      <code>${bar(faceit.oneV2WinRate)}</code>\n`;
+      msg += `Серия: <code>${faceit.currentWinStreak ?? '—'}</code>  ·  Макс: <code>${faceit.longestWinStreak ?? '—'}</code>\n`;
+      msg += `Entry: <code>${faceit.entryRate ?? '—'}</code>  ·  Успех: <code>${faceit.entrySuccessRate ?? '—'}</code>  ·  Флешки: <code>${faceit.flashSuccessRate ?? '—'}%</code>  ·  Снайпер: <code>${faceit.sniperKillRate ?? '—'}</code>\n`;
 
-      if (faceit.isBanned) msg += '🔴 <b>Забанен на FACEIT</b>\n';
+      if (faceit.isBanned) msg += `\n🔴 <b>Забанен на FACEIT</b>\n`;
 
       if (faceit.recentResults && faceit.recentResults.length > 0) {
         const streak = faceit.recentResults.slice(0, 5).map(r => r.trim() === '1' ? '✅' : '❌').join('');
-        msg += `Последние 5: ${streak}\n`;
+        msg += `\nПоследние 5: ${streak}\n`;
       }
     } else {
-      msg += `\n🏆 <b>FACEIT</b>\nНе найден на FACEIT\n`;
+      msg += `\n━━━ 🏆 <b>FACEIT</b> ━━━\n`;
+      msg += `Не найден на FACEIT\n`;
     }
 
     await telegramBot.sendMessage(chatId, msg, { parse_mode: 'HTML' });
