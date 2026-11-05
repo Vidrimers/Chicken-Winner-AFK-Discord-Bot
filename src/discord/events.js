@@ -2,6 +2,7 @@ import { success, log } from '../utils/logger.js';
 import { VoiceStateHandler } from './voice-handler.js';
 import { MessageHandler } from './message-handler.js';
 import { formatTime } from '../utils/time.js';
+import { DISCORD_CONFIG } from '../config.js';
 
 /**
  * Зарегистрировать все обработчики событий Discord
@@ -60,13 +61,13 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
 
       // Получаем статистику пользователя
       const stats = db.getUserStats(userId);
-      
+
       let statsText = '';
       if (stats) {
         const voiceHours = Math.floor((stats.total_voice_time || 0) / 3600);
         const voiceMinutes = Math.floor(((stats.total_voice_time || 0) % 3600) / 60);
-        
-        statsText = 
+
+        statsText =
           `\n\n📊 <b>Статистика пользователя:</b>\n` +
           `⏱️ Время в голосовых: ${voiceHours}ч ${voiceMinutes}м\n` +
           `🎤 Всего сессий: ${stats.total_sessions || 0}\n` +
@@ -85,6 +86,9 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
           `📅 Время: ${formatTime(new Date())}`
         );
       }
+
+      // Публикуем анонс в Discord-канал (Press F)
+      await sendLeaveAnnouncement(client, member, stats);
     } catch (error) {
       log(`❌ Ошибка в guildMemberRemove: ${error.message}`);
     }
@@ -117,6 +121,56 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
   });
 
   success('Обработчики Discord событий зарегистрированы');
+}
+
+/**
+ * Анонс об уходе с сервера в Discord-канал (Press F to pay respect)
+ */
+async function sendLeaveAnnouncement(client, member, stats) {
+  const channelId = DISCORD_CONFIG.LEAVE_ANNOUNCE_CHANNEL_ID;
+  if (!channelId) return;
+
+  try {
+    const { EmbedBuilder, AttachmentBuilder } = await import('discord.js');
+    const path = await import('path');
+
+    const channel = await client.channels.fetch(channelId).catch(() => null);
+    if (!channel) {
+      log(`⚠️ Канал для анонсов об уходе не найден: ${channelId}`);
+      return;
+    }
+
+    const voiceHours = Math.floor((stats?.total_voice_time || 0) / 3600);
+    const voiceMinutes = Math.floor(((stats?.total_voice_time || 0) % 3600) / 60);
+
+    const embed = new EmbedBuilder()
+      .setColor(0x2f3136)
+      .setTitle('Покинул сервер')
+      .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
+      .addFields(
+        { name: '👤 Имя', value: member.displayName || member.user.username, inline: true },
+        { name: '🏷️ Тег', value: member.user.tag || '—', inline: true },
+        { name: '🆔 ID', value: `\`${member.id}\``, inline: true },
+        {
+          name: '📊 Статистика',
+          value:
+            `⏱️ В голосовых: **${voiceHours}ч ${voiceMinutes}м**\n` +
+            `🎤 Сессий: **${stats?.total_sessions || 0}**\n` +
+            `😴 В AFK: **${stats?.total_afk_moves || 0}**\n` +
+            `⭐ Очки: **${stats?.rank_points || 0}**\n` +
+            `💬 Сообщений: **${stats?.messages_sent || 0}**`,
+        }
+      )
+      .setImage('attachment://press-f.jpg')
+      .setTimestamp();
+
+    const imagePath = path.resolve('img', 'press-f.jpg');
+    const attachment = new AttachmentBuilder(imagePath, { name: 'press-f.jpg' });
+
+    await channel.send({ embeds: [embed], files: [attachment] });
+  } catch (error) {
+    log(`❌ Ошибка отправки анонса об уходе: ${error.message}`);
+  }
 }
 
 /**
