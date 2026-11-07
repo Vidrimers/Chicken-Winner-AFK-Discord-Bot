@@ -58,6 +58,9 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
       }
 
       const stats = db.getUserStats(userId);
+
+      // Небольшая задержка — чтобы guildBanAdd успел записаться в кэш
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       const removal = await detectRemovalReason(member.guild, userId);
 
       // Сохраняем тип ухода для меток в рейтинге
@@ -179,6 +182,21 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
     }
   });
 
+  // Бан — фиксируем в кэш, чтобы guildMemberRemove отличил бан от ухода
+  client.on('guildBanAdd', (ban) => {
+    try {
+      if (ban.user?.bot) return;
+      recentBans.set(ban.user.id, {
+        reason: ban.reason || null,
+        executor: null,
+        at: Date.now(),
+      });
+      log(`🔨 guildBanAdd: ${ban.user.tag || ban.user.username} (${ban.user.id})`);
+    } catch (error) {
+      log(`❌ Ошибка в guildBanAdd: ${error.message}`);
+    }
+  });
+
   // Обработка ошибок
   client.on('error', (error) => {
     log(`❌ Discord client error: ${error.message}`);
@@ -208,8 +226,11 @@ function buildStatsHtml(stats) {
  * Статистика для Discord-embed
  */
 function buildStatsField(stats, { isFirstVisit = false } = {}) {
-  if (isFirstVisit || !stats) {
+  if (isFirstVisit) {
     return '🎉 Это его первый визит — статистика только начнётся!';
+  }
+  if (!stats) {
+    return '📊 Статистики пока нет';
   }
   const voiceHours = Math.floor((stats.total_voice_time || 0) / 3600);
   const voiceMinutes = Math.floor(((stats.total_voice_time || 0) % 3600) / 60);
@@ -223,33 +244,56 @@ function buildStatsField(stats, { isFirstVisit = false } = {}) {
 }
 
 /**
- * Определить причину ухода: leave / kick / ban (по audit log)
+ * Кэш недавних банов (guildBanAdd срабатывает рядом с guildMemberRemove)
+ */
+const recentBans = new Map(); // userId -> { reason, executorId, at }
+
+/**
+ * Определить причину ухода: leave / kick / ban
  */
 async function detectRemovalReason(guild, userId) {
+  // 1. Проверяем кэш банов (событие guildBanAdd)
+  const cached = recentBans.get(userId);
+  if (cached && Date.now() - cached.at < 15000) {
+    recentBans.delete(userId);
+    return { type: 'ban', executor: cached.executor, reason: cached.reason };
+  }
+
+  // 2. Пробуем получить бан напрямую из списка банов сервера
+  try {
+    const ban = await guild.bans.fetch(userId).catch(() => null);
+    if (ban) {
+      return { type: 'ban', executor: null, reason: ban.reason };
+    }
+  } catch (e) {
+    log(`⚠️ Не удалось получить список банов: ${e.message}`);
+  }
+
+  // 3. Audit log — нужен View Audit Log
   try {
     const { AuditLogEvent } = await import('discord.js');
     const now = Date.now();
-    const logs = await guild.fetchAuditLogs({ limit: 8 });
 
-    const entry = logs.entries.find((e) => {
-      const age = now - e.createdTimestamp;
-      if (age > 10000) return false;
-      if (e.target?.id !== userId) return false;
-      return (
-        e.action === AuditLogEvent.MemberKick ||
-        e.action === AuditLogEvent.MemberBanAdd
-      );
-    });
-
-    if (!entry) return { type: 'leave' };
-    if (entry.action === AuditLogEvent.MemberBanAdd) {
-      return { type: 'ban', executor: entry.executor, reason: entry.reason };
+    const banLogs = await guild.fetchAuditLogs({ type: AuditLogEvent.MemberBanAdd, limit: 5 });
+    const banEntry = banLogs.entries.find(
+      (e) => e.target?.id === userId && now - e.createdTimestamp < 10000
+    );
+    if (banEntry) {
+      return { type: 'ban', executor: banEntry.executor, reason: banEntry.reason };
     }
-    return { type: 'kick', executor: entry.executor, reason: entry.reason };
+
+    const kickLogs = await guild.fetchAuditLogs({ type: AuditLogEvent.MemberKick, limit: 5 });
+    const kickEntry = kickLogs.entries.find(
+      (e) => e.target?.id === userId && now - e.createdTimestamp < 10000
+    );
+    if (kickEntry) {
+      return { type: 'kick', executor: kickEntry.executor, reason: kickEntry.reason };
+    }
   } catch (error) {
     log(`⚠️ Не удалось получить audit log: ${error.message}`);
-    return { type: 'leave' };
   }
+
+  return { type: 'leave' };
 }
 
 /**
