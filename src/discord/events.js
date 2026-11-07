@@ -41,7 +41,7 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
     await handleMentions(message, db, telegram);
   });
 
-  // Пользователь покинул сервер
+  // Пользователь покинул сервер (уход / кик / бан)
   client.on('guildMemberRemove', async (member) => {
     try {
       if (member.user.bot) return;
@@ -50,8 +50,6 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
       const username = member.displayName || member.user.username;
       const userTag = member.user.tag;
 
-      log(`👋 Пользователь ${username} (${userId}) покинул сервер`);
-
       // Обновляем статус на сервере
       try {
         db.prepare('UPDATE user_stats SET is_on_server = 0 WHERE user_id = ?').run(userId);
@@ -59,56 +57,114 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
         log(`⚠️ Не удалось обновить is_on_server: ${e.message}`);
       }
 
-      // Получаем статистику пользователя
       const stats = db.getUserStats(userId);
+      const removal = await detectRemovalReason(member.guild, userId);
 
-      let statsText = '';
-      if (stats) {
-        const voiceHours = Math.floor((stats.total_voice_time || 0) / 3600);
-        const voiceMinutes = Math.floor(((stats.total_voice_time || 0) % 3600) / 60);
-
-        statsText =
-          `\n\n📊 <b>Статистика пользователя:</b>\n` +
-          `⏱️ Время в голосовых: ${voiceHours}ч ${voiceMinutes}м\n` +
-          `🎤 Всего сессий: ${stats.total_sessions || 0}\n` +
-          `😴 Перемещений в AFK: ${stats.total_afk_moves || 0}\n` +
-          `⭐ Очки рейтинга: ${stats.rank_points || 0}\n` +
-          `💬 Сообщений: ${stats.messages_sent || 0}`;
+      if (removal.type === 'ban') {
+        log(`🔨 ${username} (${userId}) забанен`);
+        await sendMemberCard(client, member, {
+          type: 'ban',
+          stats,
+          executor: removal.executor,
+          reason: removal.reason,
+        });
+        if (telegram) {
+          await telegram.sendReport(
+            `🔨 <b>Пользователь забанен</b>\n\n` +
+            `👤 Имя: ${username}\n` +
+            `🏷️ Тег: ${userTag}\n` +
+            `🆔 ID: <code>${userId}</code>\n` +
+            `🛡️ Забанил: ${removal.executor?.tag || removal.executor?.username || '—'}\n` +
+            `📌 Причина: ${removal.reason || 'не указана'}\n` +
+            `${buildStatsHtml(stats)}\n\n` +
+            `📅 Время: ${formatTime(new Date())}`
+          );
+        }
+      } else if (removal.type === 'kick') {
+        log(`👢 ${username} (${userId}) кикнут`);
+        await sendMemberCard(client, member, {
+          type: 'kick',
+          stats,
+          executor: removal.executor,
+          reason: removal.reason,
+        });
+        if (telegram) {
+          await telegram.sendReport(
+            `👢 <b>Пользователь кикнут</b>\n\n` +
+            `👤 Имя: ${username}\n` +
+            `🏷️ Тег: ${userTag}\n` +
+            `🆔 ID: <code>${userId}</code>\n` +
+            `🛡️ Кикнул: ${removal.executor?.tag || removal.executor?.username || '—'}\n` +
+            `📌 Причина: ${removal.reason || 'не указана'}\n` +
+            `${buildStatsHtml(stats)}\n\n` +
+            `📅 Время: ${formatTime(new Date())}`
+          );
+        }
+      } else {
+        log(`👋 ${username} (${userId}) покинул сервер`);
+        await sendMemberCard(client, member, {
+          type: 'leave',
+          stats,
+        });
+        if (telegram) {
+          await telegram.sendReport(
+            `👋 <b>Пользователь покинул сервер</b>\n\n` +
+            `👤 Имя: ${username}\n` +
+            `🏷️ Тег: ${userTag}\n` +
+            `🆔 ID: <code>${userId}</code>${buildStatsHtml(stats)}\n\n` +
+            `📅 Время: ${formatTime(new Date())}`
+          );
+        }
       }
-
-      // Отправляем уведомление админу
-      if (telegram) {
-        await telegram.sendReport(
-          `👋 <b>Пользователь покинул сервер</b>\n\n` +
-          `👤 Имя: ${username}\n` +
-          `🏷️ Тег: ${userTag}\n` +
-          `🆔 ID: <code>${userId}</code>${statsText}\n\n` +
-          `📅 Время: ${formatTime(new Date())}`
-        );
-      }
-
-      // Публикуем анонс в Discord-канал (Press F)
-      await sendLeaveAnnouncement(client, member, stats);
     } catch (error) {
       log(`❌ Ошибка в guildMemberRemove: ${error.message}`);
     }
   });
 
-  // Пользователь присоединился к серверу
+  // Пользователь присоединился к серверу (первый раз / повторно)
   client.on('guildMemberAdd', async (member) => {
     try {
       if (member.user.bot) return;
 
       const userId = member.id;
       const username = member.displayName || member.user.username;
+      const userTag = member.user.tag;
 
-      log(`👋 Пользователь ${username} (${userId}) присоединился к серверу`);
+      // Определяем, был ли пользователь раньше — ДО обновления is_on_server
+      const previousStats = db.getUserStats(userId);
+      const isReturning = Boolean(previousStats);
 
-      // Обновляем статус на сервере
+      log(`👋 Пользователь ${username} (${userId}) ${isReturning ? 'вернулся' : 'впервые зашёл на сервер'}`);
+
       try {
         db.prepare('UPDATE user_stats SET is_on_server = 1 WHERE user_id = ?').run(userId);
       } catch (e) {
         log(`⚠️ Не удалось обновить is_on_server: ${e.message}`);
+      }
+
+      await sendMemberCard(client, member, {
+        type: isReturning ? 'join_again' : 'join_first',
+        stats: previousStats,
+      });
+
+      if (telegram) {
+        if (isReturning) {
+          await telegram.sendReport(
+            `👋 <b>Пользователь снова с нами</b>\n\n` +
+            `👤 Имя: ${username}\n` +
+            `🏷️ Тег: ${userTag}\n` +
+            `🆔 ID: <code>${userId}</code>${buildStatsHtml(previousStats)}\n\n` +
+            `📅 Время: ${formatTime(new Date())}`
+          );
+        } else {
+          await telegram.sendReport(
+            `🎉 <b>Новый пользователь на сервере</b>\n\n` +
+            `👤 Имя: ${username}\n` +
+            `🏷️ Тег: ${userTag}\n` +
+            `🆔 ID: <code>${userId}</code>\n\n` +
+            `📅 Время: ${formatTime(new Date())}`
+          );
+        }
       }
     } catch (error) {
       log(`❌ Ошибка в guildMemberAdd: ${error.message}`);
@@ -124,9 +180,75 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
 }
 
 /**
- * Анонс об уходе с сервера в Discord-канал (Press F to pay respect)
+ * Статистика для Telegram (HTML)
  */
-async function sendLeaveAnnouncement(client, member, stats) {
+function buildStatsHtml(stats) {
+  if (!stats) return '';
+  const voiceHours = Math.floor((stats.total_voice_time || 0) / 3600);
+  const voiceMinutes = Math.floor(((stats.total_voice_time || 0) % 3600) / 60);
+  return (
+    `\n\n📊 <b>Статистика пользователя:</b>\n` +
+    `⏱️ Время в голосовых: ${voiceHours}ч ${voiceMinutes}м\n` +
+    `🎤 Всего сессий: ${stats.total_sessions || 0}\n` +
+    `😴 Перемещений в AFK: ${stats.total_afk_moves || 0}\n` +
+    `⭐ Очки рейтинга: ${stats.rank_points || 0}\n` +
+    `💬 Сообщений: ${stats.messages_sent || 0}`
+  );
+}
+
+/**
+ * Статистика для Discord-embed
+ */
+function buildStatsField(stats, { isFirstVisit = false } = {}) {
+  if (isFirstVisit || !stats) {
+    return '🎉 Это его первый визит — статистика только начнётся!';
+  }
+  const voiceHours = Math.floor((stats.total_voice_time || 0) / 3600);
+  const voiceMinutes = Math.floor(((stats.total_voice_time || 0) % 3600) / 60);
+  return (
+    `⏱️ В голосовых: **${voiceHours}ч ${voiceMinutes}м**\n` +
+    `🎤 Сессий: **${stats.total_sessions || 0}**\n` +
+    `😴 В AFK: **${stats.total_afk_moves || 0}**\n` +
+    `⭐ Очки: **${stats.rank_points || 0}**\n` +
+    `💬 Сообщений: **${stats.messages_sent || 0}**`
+  );
+}
+
+/**
+ * Определить причину ухода: leave / kick / ban (по audit log)
+ */
+async function detectRemovalReason(guild, userId) {
+  try {
+    const { AuditLogEvent } = await import('discord.js');
+    const now = Date.now();
+    const logs = await guild.fetchAuditLogs({ limit: 8 });
+
+    const entry = logs.entries.find((e) => {
+      const age = now - e.createdTimestamp;
+      if (age > 10000) return false;
+      if (e.target?.id !== userId) return false;
+      return (
+        e.action === AuditLogEvent.MemberKick ||
+        e.action === AuditLogEvent.MemberBanAdd
+      );
+    });
+
+    if (!entry) return { type: 'leave' };
+    if (entry.action === AuditLogEvent.MemberBanAdd) {
+      return { type: 'ban', executor: entry.executor, reason: entry.reason };
+    }
+    return { type: 'kick', executor: entry.executor, reason: entry.reason };
+  } catch (error) {
+    log(`⚠️ Не удалось получить audit log: ${error.message}`);
+    return { type: 'leave' };
+  }
+}
+
+/**
+ * Универсальная карточка участника в Discord
+ * type: join_first | join_again | leave | kick | ban
+ */
+async function sendMemberCard(client, member, { type, stats, executor, reason }) {
   const channelId = DISCORD_CONFIG.LEAVE_ANNOUNCE_CHANNEL_ID;
   if (!channelId) return;
 
@@ -136,16 +258,54 @@ async function sendLeaveAnnouncement(client, member, stats) {
 
     const channel = await client.channels.fetch(channelId).catch(() => null);
     if (!channel) {
-      log(`⚠️ Канал для анонсов об уходе не найден: ${channelId}`);
+      log(`⚠️ Канал для анонсов не найден: ${channelId}`);
       return;
     }
 
-    const voiceHours = Math.floor((stats?.total_voice_time || 0) / 3600);
-    const voiceMinutes = Math.floor(((stats?.total_voice_time || 0) % 3600) / 60);
+    const presets = {
+      join_first: {
+        title: 'Приветики',
+        color: 0x2ecc71,
+        image: 'privet.jpg',
+        description:
+          `Добро пожаловать в Chicken Winner, <@${member.id}>! 🐔\n\n` +
+          `Ты только что стал частью команды.\n` +
+          `Заходи в голосовые — твоё время в AFK идёт в статистику.\n` +
+          `Выполняй достижения, набирай рейтинг и поднимайся в топе.\n\n` +
+          `Рады видеть тебя с нами!`,
+      },
+      join_again: {
+        title: 'Снова с нами',
+        color: 0x3498db,
+        image: 'again.jpg',
+        description: `С возвращением, <@${member.id}>! 👋\nПродолжай в том же духе.`,
+      },
+      leave: {
+        title: 'Покинул сервер',
+        color: 0x2f3136,
+        image: 'press-f.jpg',
+        description: null,
+      },
+      kick: {
+        title: 'Кикнут с сервера',
+        color: 0xe67e22,
+        image: 'kick.jpg',
+        description: null,
+      },
+      ban: {
+        title: 'Забанен',
+        color: 0x8b0000,
+        image: 'ban.jpg',
+        description: null,
+      },
+    };
+
+    const preset = presets[type];
+    if (!preset) return;
 
     const embed = new EmbedBuilder()
-      .setColor(0x2f3136)
-      .setTitle('Покинул сервер')
+      .setColor(preset.color)
+      .setTitle(preset.title)
       .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
       .addFields(
         { name: '👤 Имя', value: member.displayName || member.user.username, inline: true },
@@ -153,23 +313,33 @@ async function sendLeaveAnnouncement(client, member, stats) {
         { name: '🆔 ID', value: `\`${member.id}\``, inline: true },
         {
           name: '📊 Статистика',
-          value:
-            `⏱️ В голосовых: **${voiceHours}ч ${voiceMinutes}м**\n` +
-            `🎤 Сессий: **${stats?.total_sessions || 0}**\n` +
-            `😴 В AFK: **${stats?.total_afk_moves || 0}**\n` +
-            `⭐ Очки: **${stats?.rank_points || 0}**\n` +
-            `💬 Сообщений: **${stats?.messages_sent || 0}**`,
+          value: buildStatsField(stats, { isFirstVisit: type === 'join_first' }),
         }
       )
-      .setImage('attachment://press-f.jpg')
+      .setImage(`attachment://${preset.image}`)
       .setTimestamp();
 
-    const imagePath = path.resolve('img', 'press-f.jpg');
-    const attachment = new AttachmentBuilder(imagePath, { name: 'press-f.jpg' });
+    if (preset.description) {
+      embed.setDescription(preset.description);
+    }
 
-    await channel.send({ embeds: [embed], files: [attachment] });
+    if (executor) {
+      const executorLabel = type === 'ban' ? '🛡️ Забанил' : '🛡️ Кикнул';
+      embed.addFields({
+        name: executorLabel,
+        value: `${executor.tag || executor.username || '—'}\n📌 Причина: ${reason || 'не указана'}`,
+      });
+    }
+
+    const imagePath = path.resolve('img', preset.image);
+    const attachment = new AttachmentBuilder(imagePath, { name: preset.image });
+
+    // content с упоминанием — для join, чтобы пинговать пользователя
+    const content = type === 'join_first' || type === 'join_again' ? `<@${member.id}>` : null;
+
+    await channel.send({ content, embeds: [embed], files: [attachment] });
   } catch (error) {
-    log(`❌ Ошибка отправки анонса об уходе: ${error.message}`);
+    log(`❌ Ошибка отправки карточки (${type}): ${error.message}`);
   }
 }
 
