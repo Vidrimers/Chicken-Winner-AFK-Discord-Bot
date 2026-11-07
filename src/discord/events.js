@@ -80,12 +80,13 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
           reason: removal.reason,
         });
         if (telegram) {
+          const executorName = await getExecutorDisplayName(member.guild, removal.executor);
           await telegram.sendReport(
             `🔨 <b>Пользователь забанен</b>\n\n` +
             `👤 Имя: ${username}\n` +
             `🏷️ Тег: ${userTag}\n` +
             `🆔 ID: <code>${userId}</code>\n` +
-            `🛡️ Забанил: ${removal.executor?.tag || removal.executor?.username || '—'}\n` +
+            `🛡️ Забанил: ${executorName}\n` +
             `📌 Причина: ${removal.reason || 'не указана'}\n` +
             `${buildStatsHtml(stats)}\n\n` +
             `📅 Время: ${formatTime(new Date())}`
@@ -100,12 +101,13 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
           reason: removal.reason,
         });
         if (telegram) {
+          const executorName = await getExecutorDisplayName(member.guild, removal.executor);
           await telegram.sendReport(
             `👢 <b>Пользователь кикнут</b>\n\n` +
             `👤 Имя: ${username}\n` +
             `🏷️ Тег: ${userTag}\n` +
             `🆔 ID: <code>${userId}</code>\n` +
-            `🛡️ Кикнул: ${removal.executor?.tag || removal.executor?.username || '—'}\n` +
+            `🛡️ Кикнул: ${executorName}\n` +
             `📌 Причина: ${removal.reason || 'не указана'}\n` +
             `${buildStatsHtml(stats)}\n\n` +
             `📅 Время: ${formatTime(new Date())}`
@@ -297,6 +299,19 @@ async function detectRemovalReason(guild, userId) {
 }
 
 /**
+ * Имя на сервере (ник), а не имя профиля Discord
+ */
+async function getExecutorDisplayName(guild, executor) {
+  if (!executor) return '—';
+  try {
+    const member = await guild.members.fetch(executor.id).catch(() => null);
+    return member?.displayName || executor.globalName || executor.tag || executor.username || '—';
+  } catch {
+    return executor.globalName || executor.tag || executor.username || '—';
+  }
+}
+
+/**
  * Универсальная карточка участника в Discord
  * type: join_first | join_again | leave | kick | ban
  */
@@ -377,9 +392,10 @@ async function sendMemberCard(client, member, { type, stats, executor, reason })
 
     if (executor) {
       const executorLabel = type === 'ban' ? '🛡️ Забанил' : '🛡️ Кикнул';
+      const executorName = await getExecutorDisplayName(member.guild, executor);
       embed.addFields({
         name: executorLabel,
-        value: `${executor.tag || executor.username || '—'}\n📌 Причина: ${reason || 'не указана'}`,
+        value: `${executorName}\n📌 Причина: ${reason || 'не указана'}`,
       });
     }
 
