@@ -68,7 +68,7 @@ export function registerRoutes(
   // Дополнительные stats endpoints (только для авторизованных)
   app.get("/api/leaderboard", requireAuth, (req, res) => {
     try {
-      const topUsers = db.getTopUsers(20);
+      const topUsers = db.getTopUsers(0); // все пользователи со статистикой
       res.json(topUsers);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });

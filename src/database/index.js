@@ -88,6 +88,12 @@ export class DatabaseManager {
   }
 
   getTopUsers(limit = 10) {
+    // Без лимита — возвращаем всех пользователей со статистикой
+    if (limit === 0) {
+      return this.prepare(
+        'SELECT * FROM user_stats ORDER BY rank_points DESC, total_voice_time DESC'
+      ).all();
+    }
     return this.prepare(
       'SELECT * FROM user_stats ORDER BY rank_points DESC, total_voice_time DESC LIMIT ?'
     ).all(limit);

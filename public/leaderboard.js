@@ -42,6 +42,16 @@ async function loadLeaderboard(forceRefresh = false) {
         ? `<span class="status-indicator ${escapeHtml(userStatus)}"></span>`
         : "";
 
+      // Метки для ушедших / кикнутых / забаненных
+      let removalBadge = "";
+      if (user.removal_type === "banned") {
+        removalBadge = '<span class="removal-badge banned">[Забанен]</span>';
+      } else if (user.removal_type === "kicked") {
+        removalBadge = '<span class="removal-badge kicked">[Кикнут]</span>';
+      } else if (!user.is_on_server || user.removal_type === "left") {
+        removalBadge = '<span class="removal-badge left">[Покинул сервер]</span>';
+      }
+
       html +=
         '<div class="leaderboard-item" onclick="showUserModal(&#34;' +
         userId +
@@ -63,6 +73,7 @@ async function loadLeaderboard(forceRefresh = false) {
         "<strong>" +
         username +
         "</strong>" +
+        removalBadge +
         "</div>" +
         '<div class="leaderboard-item-bottom" style="display: flex; align-items: center;">' +
         "<span>" +

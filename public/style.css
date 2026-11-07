@@ -390,6 +390,33 @@ body.modal-open {
   margin-right: 10px;
 }
 
+.removal-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.removal-badge.left {
+  background: rgba(102, 126, 234, 0.15);
+  color: #667eea;
+}
+
+.removal-badge.kicked {
+  background: rgba(230, 126, 34, 0.18);
+  color: #e67e22;
+}
+
+.removal-badge.banned {
+  background: rgba(231, 76, 60, 0.18);
+  color: #e74c3c;
+}
+
 .settings-form {
   background: #f8f9fa;
   padding: 25px;

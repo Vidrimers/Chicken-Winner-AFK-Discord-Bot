@@ -60,6 +60,14 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
       const stats = db.getUserStats(userId);
       const removal = await detectRemovalReason(member.guild, userId);
 
+      // Сохраняем тип ухода для меток в рейтинге
+      try {
+        const removalType = removal.type === 'ban' ? 'banned' : removal.type === 'kick' ? 'kicked' : 'left';
+        db.prepare('UPDATE user_stats SET removal_type = ? WHERE user_id = ?').run(removalType, userId);
+      } catch (e) {
+        log(`⚠️ Не удалось обновить removal_type: ${e.message}`);
+      }
+
       if (removal.type === 'ban') {
         log(`🔨 ${username} (${userId}) забанен`);
         await sendMemberCard(client, member, {
@@ -137,7 +145,7 @@ export function registerDiscordEvents(client, db, achievements, telegram) {
       log(`👋 Пользователь ${username} (${userId}) ${isReturning ? 'вернулся' : 'впервые зашёл на сервер'}`);
 
       try {
-        db.prepare('UPDATE user_stats SET is_on_server = 1 WHERE user_id = ?').run(userId);
+        db.prepare('UPDATE user_stats SET is_on_server = 1, removal_type = NULL WHERE user_id = ?').run(userId);
       } catch (e) {
         log(`⚠️ Не удалось обновить is_on_server: ${e.message}`);
       }

@@ -122,7 +122,7 @@ export function createStatsRouter(db, discordClient, telegram, gamesDb) {
    */
   router.get('/leaderboard', requireAuth, (req, res) => {
     try {
-      const topUsers = db.getTopUsers(20);
+      const topUsers = db.getTopUsers(0); // все пользователи со статистикой
       res.json(topUsers);
     } catch (error) {
       logError(`Ошибка в API /api/leaderboard: ${error.message}`);

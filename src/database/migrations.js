@@ -338,6 +338,25 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция user_stats: добавить колонку removal_type (left / kicked / banned)
+  {
+    const usCols = db.prepare('PRAGMA table_info(user_stats)').all();
+    const usColNames = usCols.map(c => c.name);
+
+    if (!usColNames.includes('removal_type')) {
+      try {
+        db.exec("ALTER TABLE user_stats ADD COLUMN removal_type TEXT DEFAULT NULL");
+        console.log('✅ Добавлена колонка removal_type в user_stats');
+      } catch (error) {
+        if (error.message.includes('duplicate column name')) {
+          console.log('ℹ️ Колонка removal_type уже существует в user_stats');
+        } else {
+          throw error;
+        }
+      }
+    }
+  }
+
   // Миграция: таблица ban_check_log
   {
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='ban_check_log'").all();
