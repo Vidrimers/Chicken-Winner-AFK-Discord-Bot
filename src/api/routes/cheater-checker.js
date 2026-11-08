@@ -4,6 +4,7 @@ import { getCachedStats } from '../../steam/statsCache.js';
 import { USER_IDS, STEAM_CONFIG } from '../../config.js';
 import { EmbedBuilder } from 'discord.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { getRandomFlagMessage } from '../../steam-wall/wall-messages.js';
 import { error as logError } from '../../utils/logger.js';
 
 /**
@@ -230,13 +231,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       // CheatWatcher: постинг комментариев на стенах новых читеров
       if (cheatWatcher && newProfiles.length > 0) {
         for (const profile of newProfiles) {
-          const commentText =
-            `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
-            `${profile.steamId}\n\n` +
-            `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-            `Network identifier logged and archived.\n` +
-            `Evidence archived for review.\n` +
-            `Added to CheatWatchers Community database and Valve database.`;
+          const commentText = getRandomFlagMessage(profile.steamId);
 
           db.addCheatWatcherComment(profile.steamId, commentText);
         }

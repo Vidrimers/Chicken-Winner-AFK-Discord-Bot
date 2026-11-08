@@ -3,6 +3,7 @@ import { checkProfiles } from '../steam/steamApi.js';
 import { getCachedStats } from '../steam/statsCache.js';
 import { getFriendsWithDetails } from '../steam/steamApi.js';
 import { STEAM_CONFIG, SERVER_CONFIG } from '../config.js';
+import { getRandomFlagMessage } from '../steam-wall/wall-messages.js';
 
 // Цветовая схема
 const EMBED_COLORS = {
@@ -291,13 +292,7 @@ export class VacHandler {
           `• Community Ban: ${profile.communityBanned ? 'Yes' : 'No'}`,
           `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
         ].join('\n');
-        const cwComment =
-          `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
-          `${profile.steamId}\n\n` +
-          `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-          `Network identifier logged and archived.\n` +
-          `Evidence archived for review.\n` +
-          `Added to CheatWatchers Community database and Valve database.`;
+        const cwComment = getRandomFlagMessage(profile.steamId);
         this.db.addCheatWatcherComment(profile.steamId, cwComment);
 
         // Строим и отправляем embed
@@ -449,13 +444,7 @@ export class VacHandler {
         `• Community Ban: ${profile.communityBanned ? 'Yes' : 'No'}`,
         `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
       ].join('\n');
-      const cwComment =
-        `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
-        `${profile.steamId}\n\n` +
-        `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-        `Network identifier logged and archived.\n` +
-        `Evidence archived for review.\n` +
-        `Added to CheatWatchers Community database and Valve database.`;
+      const cwComment = getRandomFlagMessage(profile.steamId);
       this.db.addCheatWatcherComment(profile.steamId, cwComment);
     }
 
@@ -640,13 +629,7 @@ export class VacHandler {
             `• Community Ban: ${profile.communityBanned ? 'Yes' : 'No'}`,
             `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
           ].join('\n');
-          const cwComment =
-            `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
-            `${profile.steamId}\n\n` +
-            `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-            `Network identifier logged and archived.\n` +
-            `Evidence archived for review.\n` +
-            `Added to CheatWatchers Community database and Valve database.`;
+          const cwComment = getRandomFlagMessage(profile.steamId);
           this.db.addCheatWatcherComment(profile.steamId, cwComment);
         }
       }

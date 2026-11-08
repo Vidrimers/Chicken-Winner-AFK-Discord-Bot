@@ -5,6 +5,7 @@ import { getFriendsWithDetails } from '../steam/steamApi.js';
 import { getCachedStats } from '../steam/statsCache.js';
 import { parseSteamUrl } from '../steam/urlParser.js';
 import { error as logError, log, success } from '../utils/logger.js';
+import { getRandomFlagMessage, getRandomDuplicateMessage, getRandomWarningMessage, getRandomBlockMessage } from './wall-messages.js';
 
 const POST_DELAY_MS = 20000; // 20 секунд между постами
 const WALL_POLL_INTERVAL_MS = 60000; // 1 минута между опросами стены
@@ -277,12 +278,7 @@ export class CheatWatcherWorker {
         // Первая попытка — предупреждение
         this.db.incrementBannedUserAttempt(reporterId);
 
-        const warningText =
-          `⚠️ Warning.\n\n` +
-          `Reporting Ch\u0435\u0430tW\u0430tch\u0435rs Community members is prohibited.\n` +
-          `This action has been logged.\n\n` +
-          `Network identifier logged and archived.\n` +
-          `Evidence archived for review.`;
+        const warningText = getRandomWarningMessage();
 
         try {
           await this._postComment(this.client.steamID.getSteamID64(), warningText);
@@ -310,12 +306,7 @@ export class CheatWatcherWorker {
         // Вторая попытка — блокировка
         this.db.banSteamWallUser(reporterId);
 
-        const blockText =
-          `🚫 Access restricted.\n\n` +
-          `Your account is no longer permitted to submit reports.\n` +
-          `Abuse of this system will not be tolerated.\n\n` +
-          `Network identifier logged and archived.\n` +
-          `Evidence archived for review.`;
+        const blockText = getRandomBlockMessage();
 
         try {
           await this._postComment(this.client.steamID.getSteamID64(), blockText);
@@ -385,9 +376,7 @@ export class CheatWatcherWorker {
           // Записываем репорт и отвечаем на стене
           this.db.addSteamWallReport(reporterId, profile.steamId);
 
-          const dupReply =
-            `⚠️ This profile is already in database.\n` +
-            `${profile.steamId}`;
+          const dupReply = getRandomDuplicateMessage(profile.steamId);
 
           try {
             await this._postComment(this.client.steamID.getSteamID64(), dupReply);
@@ -445,13 +434,7 @@ export class CheatWatcherWorker {
       }
 
       // CheatWatcher комментарий на стене
-      const cwComment =
-        `⚠️ Suspected pl\u0430y\u0435r fl\u0430gg\u0435d by Ch\u0435\u0430tW\u0430tch\u0435rs Community\n\n` +
-        `${profile.steamId}\n\n` +
-        `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-        `Network identifier logged and archived.\n` +
-        `Evidence archived for review.\n` +
-        `Added to Ch\u0435\u0430tW\u0430tch\u0435rs Community database and Valve database.`;
+      const cwComment = getRandomFlagMessage(profile.steamId);
       this.db.addCheatWatcherComment(profile.steamId, cwComment);
 
     } catch (err) {

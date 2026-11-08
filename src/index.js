@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { validateConfig, SERVER_CONFIG } from './config.js';
 import { success, log, error as logError } from './utils/logger.js';
+import { getRandomBanMessage } from './steam-wall/wall-messages.js';
 import { DatabaseManager } from './database/index.js';
 import { GamesDatabase } from './database/games-db.js';
 import { getCachedStats } from './steam/statsCache.js';
@@ -355,15 +356,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
               changedBanLines.push(profile.economyBan !== 'none' ? `Trade Ban: ${profile.economyBan}` : 'Trade Ban removed');
             }
 
-            const cwBanComment =
-              `🔄 Status update — ban detected!\n\n` +
-              `${profile.steamId}\n\n` +
-              `${changedBanLines.join('\n')}\n` +
-              `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-              `Previously: ${wasClean ? 'Clean' : 'Banned'}\n\n` +
-              `Network identifier logged and archived.\n` +
-              `Evidence archived for review.\n` +
-              `Added to CheatWatchers Community database and Valve database.`;
+            const cwBanComment = getRandomBanMessage(profile.steamId, changedBanLines.join('\n'), new Date(), wasClean);
             db.addCheatWatcherComment(profile.steamId, cwBanComment);
           }
         }

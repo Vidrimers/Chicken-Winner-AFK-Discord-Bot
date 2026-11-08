@@ -9,6 +9,7 @@ import { getFriendsWithDetails } from './src/steam/steamApi.js';
 import { STEAM_CONFIG, SERVER_CONFIG } from './src/config.js';
 import { EmbedBuilder } from 'discord.js';
 import { stripRtl } from './src/utils/rtl.js';
+import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
 /**
  * Экранирование HTML-спецсимволов для Telegram (parse_mode: HTML)
@@ -1073,13 +1074,7 @@ async function handleSteamUrlCheck(chatId, text, type = 'cheater') {
           `• Community Ban: ${profile.communityBanned ? 'Yes' : 'No'}`,
           `• Trade Ban: ${profile.economyBan !== 'none' ? profile.economyBan : 'No'}`,
         ].join('\n');
-        const cwComment =
-          `⚠️ Suspected player flagged by CheatWatchers Community\n\n` +
-          `${profile.steamId}\n\n` +
-          `Date: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Moscow' })}\n\n` +
-          `Network identifier logged and archived.\n` +
-          `Evidence archived for review.\n` +
-          `Added to CheatWatchers Community database and Valve database.`;
+        const cwComment = getRandomFlagMessage(profile.steamId);
         db.addCheatWatcherComment(profile.steamId, cwComment);
       }
 
