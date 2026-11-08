@@ -32,6 +32,23 @@ function dateFormats(date) {
   };
 }
 
+// ===== THANK YOU VARIANTS =====
+
+const thankYouVariants = [
+  'Thank you for your contribution to the community.',
+  'Your report is appreciated.',
+  'Community contribution noted. Thank you.',
+  'Thanks for helping keep the community safe.',
+  'Your input has been recorded. Gratitude.',
+  'Appreciate the report — community effort valued.',
+  'Thank you for supporting CheatWatchers Community.',
+  'Your vigilance helps us all. Thank you.',
+];
+
+function getRandomThankYou() {
+  return pickRandom('thankyou', thankYouVariants);
+}
+
 // ===== NEW CHEATER FLAGGED (10+ variants) =====
 
 export function getRandomFlagMessage(steamId, date) {
@@ -67,7 +84,21 @@ export function getRandomFlagMessage(steamId, date) {
 
     (id, dt) => `🔍 Profile reviewed — CheatWatchers Community\n\n${id} · ${dt.slash}\n\nConnection data logged and archived.\nEvidence retained.\nRegistered in CheatWatchers Community database and Valve database.`,
   ];
-  return pickRandom('flag', variants)(steamId, d);
+  const template = pickRandom('flag', variants);
+  let msg = template(steamId, d);
+  // Вставляем благодарность после строки с датой (перед финальными строками)
+  const thankYou = getRandomThankYou();
+  const lines = msg.split('\n');
+  // Находим позицию после строки с датой — вставляем благодарность перед пустой строкой перед финальными
+  let insertIdx = lines.length;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].trim() === '' && i > 0) {
+      insertIdx = i;
+      break;
+    }
+  }
+  lines.splice(insertIdx, 0, thankYou);
+  return lines.join('\n');
 }
 
 // ===== BAN DETECTED (10+ variants) =====
@@ -126,7 +157,8 @@ export function getRandomDuplicateMessage(steamId) {
     (id) => `📋 Previously recorded.\nID: ${id}`,
     (id) => `🔍 Duplicate report — already tracked.\n${id}`,
   ];
-  return pickRandom('duplicate', variants)(steamId);
+  const template = pickRandom('duplicate', variants);
+  return template(steamId) + '\n\n' + getRandomThankYou();
 }
 
 // ===== WARNING — TheCheatWatcher protection (10+ variants) =====
