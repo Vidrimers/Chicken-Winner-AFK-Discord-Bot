@@ -1256,6 +1256,7 @@ let _linksSearchQuery = '';
 let _linksProfilesCache = null;  // все профили (читеры + боты)
 let _linksModalTab = 'all';      // фильтр таба: all / cheater / bot
 let _linksModalPage = 0;         // текущая страница списка в модалке связей
+let _tagTargetSteamId = null;    // целевой профиль для добавления метки
 let _linksCache = {};            // steamId → [linkedSteamIds]
 let _linksGroupsData = [];       // вычисленные группы для пагинации
 let linksPage = 1;
@@ -1420,19 +1421,44 @@ function renderLinksProfilesList(page) {
             <button class="tag-remove" onclick="removeTag(${t.id})" title="Удалить метку">×</button>
           </span>
         `).join('')}
-        <button class="tag-add-btn" onclick="showAddTagForm()" title="Добавить метку">+</button>
+        <button class="tag-add-btn" onclick="showAddTagForm('${_linksSteamId}')" title="Добавить метку">+</button>
       </div>
     </div>
-    <!-- Список профилей -->
-    ${pageItems.map(p => `
+    <!-- Список профилей с метками и кнопкой + -->
+    ${pageItems.map(p => {
+      const pTags = _linksCache[p.steam_id] || [];
+      return `
       <div class="move-profile-item" style="cursor:default">
         <div class="move-profile-info">
           <div class="move-profile-name">${escapeHtml(p.persona_name || p.steam_id)}</div>
           <div class="move-profile-meta">${p.type === 'bot' ? '🤖 Бот' : '🔴 Читер'} • ${escapeHtml(p.checked_by_username || 'Unknown')}</div>
+          ${pTags.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${pTags.map(t => `<span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="font-size:10px;padding:1px 6px">${escapeHtml(t.tag_name)}${t.is_private ? ' 🔒' : ''}</span>`).join('')}</div>` : ''}
         </div>
-      </div>
-    `).join('')}
+        <button class="tag-add-btn" onclick="showAddTagForm('${p.steam_id}')" title="Добавить метку этому профилю" style="flex-shrink:0">+</button>
+      </div>`;
+    }).join('')}
   `;
+
+  // Загружаем метки для профилей в списке (лениво)
+  pageItems.forEach(p => {
+    if (!_linksCache[p.steam_id]) {
+      fetch(`/api/cheater-checker/tags/${p.steam_id}`)
+        .then(r => r.json())
+        .then(d => {
+          _linksCache[p.steam_id] = d.tags || [];
+          // Обновляем бейджи в DOM
+          const item = container.querySelector(`.move-profile-item [data-sid="${p.steam_id}"]`);
+          if (item) {
+            const tagsDiv = item.querySelector('.tag-badges');
+            if (tagsDiv && (_linksCache[p.steam_id] || []).length) {
+              tagsDiv.innerHTML = _linksCache[p.steam_id].map(t =>
+                `<span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="font-size:10px;padding:1px 6px">${escapeHtml(t.tag_name)}${t.is_private ? ' 🔒' : ''}</span>`
+              ).join('');
+            }
+          }
+        }).catch(() => {});
+    }
+  });
 
   if (totalPages > 1) {
     let pagHtml = '';
@@ -1445,12 +1471,37 @@ function renderLinksProfilesList(page) {
   }
 }
 
-function showAddTagForm() {
+function showAddTagForm(targetSteamId) {
+  _tagTargetSteamId = targetSteamId || _linksSteamId;
   const container = document.getElementById('linksProfilesList');
-  if (document.getElementById('addTagForm')) return;
+  const oldForm = document.getElementById('addTagForm');
+  if (oldForm) oldForm.remove();
+
+  // Собираем все уникальные метки для выбора
+  const allTags = new Map();
+  Object.values(_linksCache).forEach(tags => {
+    (tags || []).forEach(t => {
+      if (!allTags.has(t.tag_name)) allTags.set(t.tag_name, t);
+    });
+  });
+
+  const existingTags = [...allTags.values()];
+
   const formHtml = `
     <div id="addTagForm" style="margin:10px 0;padding:12px;background:rgba(102,126,234,0.1);border-radius:10px">
-      <div style="font-size:12px;opacity:0.7;margin-bottom:8px">Название метки:</div>
+      ${existingTags.length ? `
+        <div style="font-size:12px;opacity:0.7;margin-bottom:8px">Выберите существующую метку:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+          ${existingTags.map(t => `
+            <button class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="cursor:pointer;border:none" onclick="applyExistingTag('${_tagTargetSteamId}', '${escapeHtml(t.tag_name).replace(/'/g, "\\'")}', ${t.is_private ? 1 : 0})">
+              ${escapeHtml(t.tag_name)}${t.is_private ? ' 🔒' : ''} <small style="opacity:0.5">(${escapeHtml(t.created_by || '?')})</small>
+            </button>
+          `).join('')}
+        </div>
+        <div style="font-size:12px;opacity:0.7;margin-bottom:8px">Или создайте новую:</div>
+      ` : `
+        <div style="font-size:12px;opacity:0.7;margin-bottom:8px">Название метки:</div>
+      `}
       <input type="text" id="newTagName" placeholder="Название метки..." style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:#e0e0e0;font-size:13px;box-sizing:border-box;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
@@ -1468,6 +1519,27 @@ function showAddTagForm() {
   document.getElementById('newTagName').focus();
 }
 
+async function applyExistingTag(targetSteamId, tagName, isPrivate) {
+  try {
+    await fetch('/api/cheater-checker/tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ steamId: targetSteamId, tagName, createdBy: currentUsername || currentUserId, isPrivate: !!isPrivate }),
+    });
+    // Обновляем кэш
+    const res = await fetch(`/api/cheater-checker/tags/${targetSteamId}`);
+    const data = await res.json();
+    _linksCache[targetSteamId] = data.tags || [];
+    cancelAddTag();
+    renderLinksProfilesList(_linksModalPage || 0);
+    // Динамическое обновление кнопки
+    updateLinksButtonState(targetSteamId);
+    showNotification(`Метка «${tagName}» добавлена`, 'success');
+  } catch {
+    showNotification('Ошибка при добавлении метки', 'error');
+  }
+}
+
 function cancelAddTag() {
   const form = document.getElementById('addTagForm');
   if (form) form.remove();
@@ -1476,6 +1548,7 @@ function cancelAddTag() {
 async function createTag() {
   const name = document.getElementById('newTagName')?.value?.trim();
   const isPrivate = document.getElementById('newTagPrivate')?.checked;
+  const target = _tagTargetSteamId || _linksSteamId;
   if (!name) {
     showNotification('Введите название метки', 'warning');
     return;
@@ -1484,12 +1557,14 @@ async function createTag() {
     await fetch('/api/cheater-checker/tags', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ steamId: _linksSteamId, tagName: name, createdBy: currentUsername || currentUserId, isPrivate: !!isPrivate }),
+      body: JSON.stringify({ steamId: target, tagName: name, createdBy: currentUsername || currentUserId, isPrivate: !!isPrivate }),
     });
-    const res = await fetch(`/api/cheater-checker/tags/${_linksSteamId}`);
+    const res = await fetch(`/api/cheater-checker/tags/${target}`);
     const data = await res.json();
-    _linksCache[_linksSteamId] = data.tags || [];
+    _linksCache[target] = data.tags || [];
+    cancelAddTag();
     renderLinksProfilesList(_linksModalPage || 0);
+    updateLinksButtonState(target);
     showNotification(`Метка «${name}» добавлена`, 'success');
   } catch {
     showNotification('Ошибка при создании метки', 'error');
@@ -1507,6 +1582,7 @@ async function removeTag(tagId) {
     const data = await res.json();
     _linksCache[_linksSteamId] = data.tags || [];
     renderLinksProfilesList(_linksModalPage || 0);
+    updateLinksButtonState(_linksSteamId);
     showNotification('Метка удалена', 'success');
   } catch {
     showNotification('Ошибка при удалении метки', 'error');
