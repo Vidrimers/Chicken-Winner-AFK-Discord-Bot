@@ -451,7 +451,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    */
   router.get('/tags/profiles', (req, res) => {
     try {
-      const { tagId } = req.query;
+      const tagId = parseInt(req.query.tagId, 10);
       if (!tagId) {
         return res.status(400).json({ error: 'tagId обязателен' });
       }

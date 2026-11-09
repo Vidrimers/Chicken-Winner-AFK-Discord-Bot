@@ -1720,9 +1720,9 @@ async function updateLinksButtonState(steamId) {
     _linksCache[steamId] = tags;
     const btn = document.querySelector(`.links-btn[data-steam-id="${steamId}"]`);
     if (btn) {
-      // Розовая если есть видимые метки (общие или свои приватные)
       const hasVisible = tags.some(t => !t.is_private || String(t.created_by) === String(currentUserId));
       btn.classList.toggle('has-links', hasVisible);
+      _linksCountMap[steamId] = hasVisible ? tags.length : 0;
     }
   } catch {}
 }
@@ -1754,17 +1754,19 @@ async function renderLinksGroups() {
       return;
     }
 
-    // Каждая метка = группа. Загружаем профили для каждой метки
+    // Получаем привязки для каждой метки и строим группы из кэша профилей
     const groups = await Promise.all(tags.map(async (t) => {
       const res = await fetch(`/api/cheater-checker/tags/profiles?tagId=${t.id}`);
       const data = await res.json();
+      const steamIds = (data.profiles || []).map(p => p.steam_id);
+      const members = steamIds.map(sid => profileMap[sid]).filter(Boolean);
       return {
         groupId: t.id,
         name: t.name,
         isPrivate: !!t.is_private,
         createdBy: t.created_by,
         createdAt: t.created_at,
-        group: data.profiles || [],
+        group: members,
         profileMap,
       };
     }));
@@ -1884,23 +1886,8 @@ function goToLinksPage(page) {
 // Обновление кнопок «Связи» на всех карточках после загрузки профилей
 async function updateAllLinksButtons() {
   try {
-    const res = await fetch('/api/cheater-checker/tags');
-    const data = await res.json();
-    const tags = data.tags || [];
-    // Метки профиля → есть ли видимые
-    const tagMap = {};
-    tags.forEach(t => {
-      if (!tagMap[t.steam_id]) tagMap[t.steam_id] = [];
-      tagMap[t.steam_id].push(t);
-    });
-    _linksCountMap = {};
-    Object.entries(tagMap).forEach(([sid, ts]) => {
-      const hasVisible = ts.some(t => !t.is_private || String(t.created_by) === String(currentUserId));
-      _linksCountMap[sid] = hasVisible ? ts.length : 0;
-    });
     document.querySelectorAll('.links-btn[data-steam-id]').forEach(btn => {
-      const sid = btn.dataset.steamId;
-      btn.classList.toggle('has-links', (_linksCountMap[sid] || 0) > 0);
+      updateLinksButtonState(btn.dataset.steamId);
     });
   } catch {}
 }
