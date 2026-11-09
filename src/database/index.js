@@ -492,6 +492,11 @@ export class DatabaseManager {
   }
 
   addTag(steamId, tagName, createdBy, isPrivate = 0) {
+    // Проверяем дубликат (метка с тем же именем от того же создателя)
+    const existing = this.prepare(
+      'SELECT id FROM profile_tags WHERE steam_id = ? AND tag_name = ? AND created_by = ?'
+    ).get(steamId, tagName, createdBy);
+    if (existing) return { changes: 0, duplicate: true };
     return this.prepare(
       'INSERT INTO profile_tags (steam_id, tag_name, created_by, is_private, created_at) VALUES (?, ?, ?, ?, strftime(\'%s\',\'now\'))'
     ).run(steamId, tagName, createdBy, isPrivate);

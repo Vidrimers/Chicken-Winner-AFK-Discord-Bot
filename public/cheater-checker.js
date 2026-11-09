@@ -1520,6 +1520,12 @@ function showAddTagForm(targetSteamId) {
 }
 
 async function applyExistingTag(targetSteamId, tagName, isPrivate) {
+  // Проверяем дубликат
+  const existing = (_linksCache[targetSteamId] || []).find(t => t.tag_name === tagName && t.created_by === (currentUsername || currentUserId));
+  if (existing) {
+    showNotification(`Метка «${tagName}» уже есть у этого профиля`, 'warning');
+    return;
+  }
   try {
     await fetch('/api/cheater-checker/tags', {
       method: 'POST',
@@ -1532,7 +1538,6 @@ async function applyExistingTag(targetSteamId, tagName, isPrivate) {
     _linksCache[targetSteamId] = data.tags || [];
     cancelAddTag();
     renderLinksProfilesList(_linksModalPage || 0);
-    // Динамическое обновление кнопки
     updateLinksButtonState(targetSteamId);
     showNotification(`Метка «${tagName}» добавлена`, 'success');
   } catch {
@@ -1551,6 +1556,12 @@ async function createTag() {
   const target = _tagTargetSteamId || _linksSteamId;
   if (!name) {
     showNotification('Введите название метки', 'warning');
+    return;
+  }
+  // Проверяем дубликат
+  const existing = (_linksCache[target] || []).find(t => t.tag_name === name && t.created_by === (currentUsername || currentUserId));
+  if (existing) {
+    showNotification(`Метка «${name}» уже есть у этого профиля`, 'warning');
     return;
   }
   try {
