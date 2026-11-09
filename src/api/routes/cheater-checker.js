@@ -400,6 +400,69 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   });
 
   /**
+   * GET /api/cheater-checker/tags/:steamId
+   * Метки профиля (приватные — только для создателя)
+   */
+  router.get('/tags/:steamId', (req, res) => {
+    try {
+      const { steamId } = req.params;
+      const viewerId = req.session?.userId || null;
+      const tags = db.getTagsForSteamId(steamId, viewerId);
+      res.json({ tags });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * GET /api/cheater-checker/tags
+   * Все видимые метки (общие + свои приватные)
+   */
+  router.get('/tags', (req, res) => {
+    try {
+      const viewerId = req.session?.userId || null;
+      const tags = db.getAllTagsForUser(viewerId);
+      res.json({ tags });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * POST /api/cheater-checker/tags
+   * Создание метки на профиле
+   */
+  router.post('/tags', (req, res) => {
+    try {
+      const { steamId, tagName, createdBy, isPrivate } = req.body;
+      if (!steamId || !tagName || !createdBy) {
+        return res.status(400).json({ error: 'steamId, tagName и createdBy обязательны' });
+      }
+      db.addTag(steamId, tagName.trim(), createdBy, isPrivate ? 1 : 0);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * DELETE /api/cheater-checker/tags
+   * Удаление метки (своей или админской)
+   */
+  router.delete('/tags', (req, res) => {
+    try {
+      const { tagId, userId, isAdmin } = req.body;
+      if (!tagId) {
+        return res.status(400).json({ error: 'tagId обязателен' });
+      }
+      db.removeTag(tagId, userId || null, !!isAdmin);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
    * GET /api/cheater-checker/profiles
    * Получение сохранённых профилей с пагинацией и фильтром
    */

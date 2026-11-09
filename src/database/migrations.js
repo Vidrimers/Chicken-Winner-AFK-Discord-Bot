@@ -803,6 +803,27 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: таблица profile_tags (метки на профилях)
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='profile_tags'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE profile_tags (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          steam_id TEXT NOT NULL,
+          tag_name TEXT NOT NULL,
+          created_by TEXT NOT NULL,
+          is_private INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+        )
+      `);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_pt_steam ON profile_tags(steam_id)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_pt_name ON profile_tags(tag_name)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_pt_creator ON profile_tags(created_by)');
+      console.log('✅ Таблица profile_tags создана');
+    }
+  }
+
   // Миграция: таблица steam_wall_banned_users (заблокированные репортёры)
   {
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='steam_wall_banned_users'").all();

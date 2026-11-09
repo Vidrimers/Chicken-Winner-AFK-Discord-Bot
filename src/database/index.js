@@ -477,6 +477,44 @@ export class DatabaseManager {
     return this.prepare('DELETE FROM cheater_links WHERE steam_id_a = ? OR steam_id_b = ?').run(steamId, steamId);
   }
 
+  // ===== МЕТКИ ПРОФИЛЕЙ (profile_tags) =====
+
+  getTagsForSteamId(steamId, viewerId = null) {
+    // Приватные метки видит только создатель
+    return this.prepare(
+      `SELECT * FROM profile_tags WHERE steam_id = ? AND (is_private = 0 OR created_by = ?)`
+    ).all(steamId, viewerId || '');
+  }
+
+  getTagsForSteamIdAdmin(steamId) {
+    // Админ не видит чужие приватные — тот же запрос
+    return this.getTagsForSteamId(steamId);
+  }
+
+  addTag(steamId, tagName, createdBy, isPrivate = 0) {
+    return this.prepare(
+      'INSERT INTO profile_tags (steam_id, tag_name, created_by, is_private, created_at) VALUES (?, ?, ?, ?, strftime(\'%s\',\'now\'))'
+    ).run(steamId, tagName, createdBy, isPrivate);
+  }
+
+  removeTag(tagId, userId, isAdmin = false) {
+    if (isAdmin) {
+      return this.prepare('DELETE FROM profile_tags WHERE id = ?').run(tagId);
+    }
+    return this.prepare('DELETE FROM profile_tags WHERE id = ? AND created_by = ?').run(tagId, userId);
+  }
+
+  getAllTagsForUser(viewerId) {
+    // Все метки, которые может видеть пользователь (общие + свои приватные)
+    return this.prepare(
+      `SELECT * FROM profile_tags WHERE is_private = 0 OR created_by = ?`
+    ).all(viewerId || '');
+  }
+
+  getTagById(tagId) {
+    return this.prepare('SELECT * FROM profile_tags WHERE id = ?').get(tagId);
+  }
+
   // ===== ИМЕНА ГРУПП СВЯЗЕЙ =====
 
   getGroupName(groupKey) {
