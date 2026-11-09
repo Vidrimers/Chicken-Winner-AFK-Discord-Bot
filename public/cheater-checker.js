@@ -1754,15 +1754,12 @@ async function renderLinksGroups() {
       return;
     }
 
-    // Получаем привязки для каждой метки и строим группы
+    // Получаем привязки для каждой метки и строим группы из кэша профилей
     const groups = await Promise.all(tags.map(async (t) => {
       const res = await fetch(`/api/cheater-checker/tags/profiles?tagId=${t.id}`);
       const data = await res.json();
-      // Берём профили напрямую из ответа, обогащаем из кэша если есть
-      const members = (data.profiles || []).map(raw => {
-        const enriched = profileMap[raw.steam_id];
-        return enriched || raw;
-      });
+      const steamIds = data.profiles || [];
+      const members = steamIds.map(sid => profileMap[sid]).filter(Boolean);
       return {
         groupId: t.id,
         name: t.name,

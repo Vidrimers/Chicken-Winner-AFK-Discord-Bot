@@ -455,8 +455,8 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       if (!tagId) {
         return res.status(400).json({ error: 'tagId обязателен' });
       }
-      const profiles = db.getProfilesForTag(tagId);
-      res.json({ profiles });
+      const steamIds = db.getProfilesForTag(tagId);
+      res.json({ profiles: steamIds });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }

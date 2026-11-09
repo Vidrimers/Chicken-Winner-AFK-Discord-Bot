@@ -505,13 +505,12 @@ export class DatabaseManager {
     return this.prepare('SELECT * FROM tags WHERE id = ?').get(tagId);
   }
 
-  // Профили, привязанные к метке
+  // Steam ID профилей, привязанных к метке
   getProfilesForTag(tagId) {
     return this.prepare(
-      `SELECT cc.* FROM profile_tags pt
-       JOIN cheater_checks cc ON pt.steam_id = cc.steam_id
+      `SELECT pt.steam_id FROM profile_tags pt
        WHERE pt.tag_id = ?`
-    ).all(tagId);
+    ).all(tagId).map(r => r.steam_id);
   }
 
   // Создаёт новую метку и привязывает к профилю. Возвращает tag_id.
