@@ -477,47 +477,92 @@ export class DatabaseManager {
     return this.prepare('DELETE FROM cheater_links WHERE steam_id_a = ? OR steam_id_b = ?').run(steamId, steamId);
   }
 
-  // ===== МЕТКИ ПРОФИЛЕЙ (profile_tags) =====
+  // ===== МЕТКИ ПРОФИЛЕЙ (tags + profile_tags) =====
 
   getTagsForSteamId(steamId, viewerId = null) {
-    // Приватные метки видит только создатель
+    // Возвращает метки профиля с учётом приватности
     return this.prepare(
-      `SELECT * FROM profile_tags WHERE steam_id = ? AND (is_private = 0 OR created_by = ?)`
+      `SELECT t.id, t.name, t.created_by, t.is_private, t.created_at
+       FROM profile_tags pt
+       JOIN tags t ON pt.tag_id = t.id
+       WHERE pt.steam_id = ? AND (t.is_private = 0 OR t.created_by = ?)`
     ).all(steamId, viewerId || '');
   }
 
-  getTagsForSteamIdAdmin(steamId) {
-    // Админ не видит чужие приватные — тот же запрос
-    return this.getTagsForSteamId(steamId);
-  }
-
-  addTag(steamId, tagName, createdBy, isPrivate = 0) {
-    // Проверяем дубликат (метка с тем же именем от того же создателя)
-    const existing = this.prepare(
-      'SELECT id FROM profile_tags WHERE steam_id = ? AND tag_name = ? AND created_by = ?'
-    ).get(steamId, tagName, createdBy);
-    if (existing) return { changes: 0, duplicate: true };
-    return this.prepare(
-      'INSERT INTO profile_tags (steam_id, tag_name, created_by, is_private, created_at) VALUES (?, ?, ?, ?, strftime(\'%s\',\'now\'))'
-    ).run(steamId, tagName, createdBy, isPrivate);
-  }
-
-  removeTag(tagId, userId, isAdmin = false) {
-    if (isAdmin) {
-      return this.prepare('DELETE FROM profile_tags WHERE id = ?').run(tagId);
-    }
-    return this.prepare('DELETE FROM profile_tags WHERE id = ? AND created_by = ?').run(tagId, userId);
-  }
-
   getAllTagsForUser(viewerId) {
-    // Все метки, которые может видеть пользователь (общие + свои приватные)
+    // Все видимые метки (общие + свои приватные) с количеством профилей
     return this.prepare(
-      `SELECT * FROM profile_tags WHERE is_private = 0 OR created_by = ?`
+      `SELECT t.id, t.name, t.created_by, t.is_private, t.created_at,
+              COUNT(pt.steam_id) as profile_count
+       FROM tags t
+       LEFT JOIN profile_tags pt ON pt.tag_id = t.id
+       WHERE t.is_private = 0 OR t.created_by = ?
+       GROUP BY t.id`
     ).all(viewerId || '');
   }
 
   getTagById(tagId) {
-    return this.prepare('SELECT * FROM profile_tags WHERE id = ?').get(tagId);
+    return this.prepare('SELECT * FROM tags WHERE id = ?').get(tagId);
+  }
+
+  // Профили, привязанные к метке
+  getProfilesForTag(tagId) {
+    return this.prepare(
+      `SELECT cc.* FROM profile_tags pt
+       JOIN cheater_checks cc ON pt.steam_id = cc.steam_id
+       WHERE pt.tag_id = ?`
+    ).all(tagId);
+  }
+
+  // Создаёт новую метку и привязывает к профилю. Возвращает tag_id.
+  addTag(steamId, tagName, createdBy, isPrivate = 0) {
+    // Ищем существующую метку с таким именем от этого создателя
+    let tag = this.prepare(
+      'SELECT id FROM tags WHERE name = ? AND created_by = ?'
+    ).get(tagName, createdBy);
+
+    if (!tag) {
+      const res = this.prepare(
+        'INSERT INTO tags (name, created_by, is_private, created_at) VALUES (?, ?, ?, strftime(\'%s\',\'now\'))'
+      ).run(tagName, createdBy, isPrivate);
+      tag = { id: res.lastInsertRowid };
+    }
+
+    // Привязываем профиль (если ещё не привязан)
+    const existing = this.prepare(
+      'SELECT 1 FROM profile_tags WHERE steam_id = ? AND tag_id = ?'
+    ).get(steamId, tag.id);
+    if (existing) return { tagId: tag.id, duplicate: true };
+
+    this.prepare('INSERT OR IGNORE INTO profile_tags (steam_id, tag_id) VALUES (?, ?)').run(steamId, tag.id);
+    return { tagId: tag.id, duplicate: false };
+  }
+
+  // Привязывает профиль к существующей метке
+  assignTag(steamId, tagId) {
+    return this.prepare('INSERT OR IGNORE INTO profile_tags (steam_id, tag_id) VALUES (?, ?)').run(steamId, tagId);
+  }
+
+  // Удаляет привязку профиля к метке (не удаляет саму метку)
+  unassignTag(steamId, tagId) {
+    return this.prepare('DELETE FROM profile_tags WHERE steam_id = ? AND tag_id = ?').run(steamId, tagId);
+  }
+
+  // Переименование метки (только создатель или админ)
+  renameTag(tagId, newName, userId, isAdmin = false) {
+    const tag = this.getTagById(tagId);
+    if (!tag) return { changes: 0 };
+    if (!isAdmin && tag.created_by !== userId) return { changes: 0 };
+    return this.prepare('UPDATE tags SET name = ? WHERE id = ?').run(newName, tagId);
+  }
+
+  // Удаление метки полностью (только создатель или админ)
+  deleteTag(tagId, userId, isAdmin = false) {
+    const tag = this.getTagById(tagId);
+    if (!tag) return { changes: 0 };
+    if (!isAdmin && tag.created_by !== userId) return { changes: 0 };
+    this.prepare('DELETE FROM profile_tags WHERE tag_id = ?').run(tagId);
+    return this.prepare('DELETE FROM tags WHERE id = ?').run(tagId);
   }
 
   // ===== ИМЕНА ГРУПП СВЯЗЕЙ =====

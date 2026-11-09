@@ -430,7 +430,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
 
   /**
    * POST /api/cheater-checker/tags
-   * Создание метки на профиле
+   * Создание метки + привязка к профилю
    */
   router.post('/tags', (req, res) => {
     try {
@@ -438,7 +438,78 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       if (!steamId || !tagName || !createdBy) {
         return res.status(400).json({ error: 'steamId, tagName и createdBy обязательны' });
       }
-      db.addTag(steamId, tagName.trim(), createdBy, isPrivate ? 1 : 0);
+      const result = db.addTag(steamId, tagName.trim(), createdBy, isPrivate ? 1 : 0);
+      res.json({ success: true, tagId: result.tagId, duplicate: result.duplicate });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * GET /api/cheater-checker/tags/profiles?tagId=
+   * Профили, привязанные к метке
+   */
+  router.get('/tags/profiles', (req, res) => {
+    try {
+      const { tagId } = req.query;
+      if (!tagId) {
+        return res.status(400).json({ error: 'tagId обязателен' });
+      }
+      const profiles = db.getProfilesForTag(tagId);
+      res.json({ profiles });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * POST /api/cheater-checker/tags/assign
+   * Привязка существующей метки к профилю
+   */
+  router.post('/tags/assign', (req, res) => {
+    try {
+      const { steamId, tagId } = req.body;
+      if (!steamId || !tagId) {
+        return res.status(400).json({ error: 'steamId и tagId обязательны' });
+      }
+      db.assignTag(steamId, tagId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * PUT /api/cheater-checker/tags/rename
+   * Переименование метки (создатель или админ)
+   */
+  router.put('/tags/rename', (req, res) => {
+    try {
+      const { tagId, newName, userId, isAdmin } = req.body;
+      if (!tagId || !newName) {
+        return res.status(400).json({ error: 'tagId и newName обязательны' });
+      }
+      const result = db.renameTag(tagId, newName.trim(), userId || null, !!isAdmin);
+      if (result.changes === 0) {
+        return res.status(403).json({ error: 'Нет прав на переименование' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
+   * DELETE /api/cheater-checker/tags/unassign
+   * Отвязать метку от профиля (не удалять метку)
+   */
+  router.delete('/tags/unassign', (req, res) => {
+    try {
+      const { steamId, tagId } = req.body;
+      if (!steamId || !tagId) {
+        return res.status(400).json({ error: 'steamId и tagId обязательны' });
+      }
+      db.unassignTag(steamId, tagId);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -447,7 +518,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
 
   /**
    * DELETE /api/cheater-checker/tags
-   * Удаление метки (своей или админской)
+   * Удаление метки (своей или админской) + всех привязок
    */
   router.delete('/tags', (req, res) => {
     try {
@@ -455,7 +526,10 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       if (!tagId) {
         return res.status(400).json({ error: 'tagId обязателен' });
       }
-      db.removeTag(tagId, userId || null, !!isAdmin);
+      const result = db.deleteTag(tagId, userId || null, !!isAdmin);
+      if (result.changes === 0) {
+        return res.status(403).json({ error: 'Нет прав на удаление' });
+      }
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });

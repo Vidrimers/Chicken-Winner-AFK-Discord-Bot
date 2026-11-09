@@ -803,24 +803,72 @@ export function runMigrations(db) {
     }
   }
 
-  // Миграция: таблица profile_tags (метки на профилях)
+  // Миграция: таблица tags (метки) + profile_tags (привязки профиль↔метка)
   {
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='profile_tags'").all();
-    if (tables.length === 0) {
+    const tagsExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='tags'").all();
+    if (tagsExists.length === 0) {
       db.exec(`
-        CREATE TABLE profile_tags (
+        CREATE TABLE tags (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          steam_id TEXT NOT NULL,
-          tag_name TEXT NOT NULL,
+          name TEXT NOT NULL,
           created_by TEXT NOT NULL,
           is_private INTEGER NOT NULL DEFAULT 0,
           created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
         )
       `);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_tags_creator ON tags(created_by)');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name)');
+      console.log('✅ Таблица tags создана');
+    }
+
+    // Пересоздаём profile_tags с новой схемой (steam_id, tag_id)
+    const ptExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='profile_tags'").all();
+    const ptColumns = ptExists.length > 0 ? db.prepare("PRAGMA table_info(profile_tags)").all() : [];
+    const hasTagId = ptColumns.some(c => c.name === 'tag_id');
+
+    if (!hasTagId) {
+      // Есть старая схема (tag_name, created_by) или нет таблицы — пересоздаём
+      if (ptExists.length > 0) {
+        // Мигрируем данные из старой схемы
+        const oldRows = db.prepare("SELECT steam_id, tag_name, created_by, is_private, created_at FROM profile_tags").all();
+        // Группируем по (tag_name, created_by) — каждая уникальная пара = одна метка
+        const tagMap = {};
+        oldRows.forEach(r => {
+          const key = r.tag_name + '|' + r.created_by;
+          if (!tagMap[key]) {
+            const res = db.prepare("INSERT INTO tags (name, created_by, is_private, created_at) VALUES (?, ?, ?, ?)").run(r.tag_name, r.created_by, r.is_private, r.created_at);
+            tagMap[key] = res.lastInsertRowid;
+          }
+        });
+        db.exec('DROP TABLE profile_tags');
+        db.exec(`
+          CREATE TABLE profile_tags (
+            steam_id TEXT NOT NULL,
+            tag_id INTEGER NOT NULL,
+            PRIMARY KEY (steam_id, tag_id)
+          )
+        `);
+        // Переносим привязки
+        oldRows.forEach(r => {
+          const key = r.tag_name + '|' + r.created_by;
+          const tagId = tagMap[key];
+          if (tagId) {
+            db.prepare("INSERT OR IGNORE INTO profile_tags (steam_id, tag_id) VALUES (?, ?)").run(r.steam_id, tagId);
+          }
+        });
+        console.log(`✅ profile_tags пересоздана, мигрировано ${oldRows.length} записей в ${Object.keys(tagMap).length} меток`);
+      } else {
+        db.exec(`
+          CREATE TABLE profile_tags (
+            steam_id TEXT NOT NULL,
+            tag_id INTEGER NOT NULL,
+            PRIMARY KEY (steam_id, tag_id)
+          )
+        `);
+        console.log('✅ Таблица profile_tags создана');
+      }
       db.exec('CREATE INDEX IF NOT EXISTS idx_pt_steam ON profile_tags(steam_id)');
-      db.exec('CREATE INDEX IF NOT EXISTS idx_pt_name ON profile_tags(tag_name)');
-      db.exec('CREATE INDEX IF NOT EXISTS idx_pt_creator ON profile_tags(created_by)');
-      console.log('✅ Таблица profile_tags создана');
+      db.exec('CREATE INDEX IF NOT EXISTS idx_pt_tag ON profile_tags(tag_id)');
     }
   }
 

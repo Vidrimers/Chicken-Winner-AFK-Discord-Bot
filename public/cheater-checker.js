@@ -1417,7 +1417,7 @@ function renderLinksProfilesList(page) {
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
         ${myTags.map(t => `
           <span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}">
-            ${escapeHtml(t.tag_name)}${t.is_private ? ' 🔒' : ''}
+            ${escapeHtml(t.name)}${t.is_private ? ' 🔒' : ''}
             <button class="tag-remove" onclick="removeTag(${t.id})" title="Удалить метку">×</button>
           </span>
         `).join('')}
@@ -1432,7 +1432,7 @@ function renderLinksProfilesList(page) {
         <div class="move-profile-info">
           <div class="move-profile-name">${escapeHtml(p.persona_name || p.steam_id)}</div>
           <div class="move-profile-meta">${p.type === 'bot' ? '🤖 Бот' : '🔴 Читер'} • ${escapeHtml(p.checked_by_username || 'Unknown')}</div>
-          ${pTags.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${pTags.map(t => `<span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="font-size:10px;padding:1px 6px">${escapeHtml(t.tag_name)}${t.is_private ? ' 🔒' : ''}</span>`).join('')}</div>` : ''}
+          ${pTags.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${pTags.map(t => `<span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="font-size:10px;padding:1px 6px">${escapeHtml(t.name)}${t.is_private ? ' 🔒' : ''}</span>`).join('')}</div>` : ''}
         </div>
         <button class="tag-add-btn" onclick="showAddTagForm('${p.steam_id}')" title="Добавить метку этому профилю" style="flex-shrink:0">+</button>
       </div>`;
@@ -1452,7 +1452,7 @@ function renderLinksProfilesList(page) {
             const tagsDiv = item.querySelector('.tag-badges');
             if (tagsDiv && (_linksCache[p.steam_id] || []).length) {
               tagsDiv.innerHTML = _linksCache[p.steam_id].map(t =>
-                `<span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="font-size:10px;padding:1px 6px">${escapeHtml(t.tag_name)}${t.is_private ? ' 🔒' : ''}</span>`
+                `<span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="font-size:10px;padding:1px 6px">${escapeHtml(t.name)}${t.is_private ? ' 🔒' : ''}</span>`
               ).join('');
             }
           }
@@ -1481,7 +1481,7 @@ function showAddTagForm(targetSteamId) {
   const allTags = new Map();
   Object.values(_linksCache).forEach(tags => {
     (tags || []).forEach(t => {
-      if (!allTags.has(t.tag_name)) allTags.set(t.tag_name, t);
+      if (!allTags.has(t.id)) allTags.set(t.id, t);
     });
   });
 
@@ -1493,8 +1493,8 @@ function showAddTagForm(targetSteamId) {
         <div style="font-size:12px;opacity:0.7;margin-bottom:8px">Выберите существующую метку:</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
           ${existingTags.map(t => `
-            <button class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="cursor:pointer;border:none" onclick="applyExistingTag('${_tagTargetSteamId}', '${escapeHtml(t.tag_name).replace(/'/g, "\\'")}', ${t.is_private ? 1 : 0})">
-              ${escapeHtml(t.tag_name)}${t.is_private ? ' 🔒' : ''} <small style="opacity:0.5">(${escapeHtml(t.created_by || '?')})</small>
+            <button class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="cursor:pointer;border:none" onclick="applyExistingTag(${t.id})">
+              ${escapeHtml(t.name)}${t.is_private ? ' 🔒' : ''} <small style="opacity:0.5">(${escapeHtml(t.created_by || '?')})</small>
             </button>
           `).join('')}
         </div>
@@ -1519,27 +1519,27 @@ function showAddTagForm(targetSteamId) {
   document.getElementById('newTagName').focus();
 }
 
-async function applyExistingTag(targetSteamId, tagName, isPrivate) {
+async function applyExistingTag(tagId) {
+  const target = _tagTargetSteamId || _linksSteamId;
   // Проверяем дубликат
-  const existing = (_linksCache[targetSteamId] || []).find(t => t.tag_name === tagName && t.created_by === (currentUsername || currentUserId));
+  const existing = (_linksCache[target] || []).find(t => t.id === tagId);
   if (existing) {
-    showNotification(`Метка «${tagName}» уже есть у этого профиля`, 'warning');
+    showNotification('Эта метка уже есть у профиля', 'warning');
     return;
   }
   try {
-    await fetch('/api/cheater-checker/tags', {
+    await fetch('/api/cheater-checker/tags/assign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ steamId: targetSteamId, tagName, createdBy: currentUsername || currentUserId, isPrivate: !!isPrivate }),
+      body: JSON.stringify({ steamId: target, tagId }),
     });
-    // Обновляем кэш
-    const res = await fetch(`/api/cheater-checker/tags/${targetSteamId}`);
+    const res = await fetch(`/api/cheater-checker/tags/${target}`);
     const data = await res.json();
-    _linksCache[targetSteamId] = data.tags || [];
+    _linksCache[target] = data.tags || [];
     cancelAddTag();
     renderLinksProfilesList(_linksModalPage || 0);
-    updateLinksButtonState(targetSteamId);
-    showNotification(`Метка «${tagName}» добавлена`, 'success');
+    updateLinksButtonState(target);
+    showNotification('Метка добавлена', 'success');
   } catch {
     showNotification('Ошибка при добавлении метки', 'error');
   }
@@ -1558,21 +1558,20 @@ async function createTag() {
     showNotification('Введите название метки', 'warning');
     return;
   }
-  // Проверяем дубликат
-  const existing = (_linksCache[target] || []).find(t => t.tag_name === name && t.created_by === (currentUsername || currentUserId));
-  if (existing) {
-    showNotification(`Метка «${name}» уже есть у этого профиля`, 'warning');
-    return;
-  }
   try {
-    await fetch('/api/cheater-checker/tags', {
+    const res = await fetch('/api/cheater-checker/tags', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ steamId: target, tagName: name, createdBy: currentUsername || currentUserId, isPrivate: !!isPrivate }),
     });
-    const res = await fetch(`/api/cheater-checker/tags/${target}`);
     const data = await res.json();
-    _linksCache[target] = data.tags || [];
+    if (data.duplicate) {
+      showNotification(`Метка «${name}» уже есть у этого профиля`, 'warning');
+      return;
+    }
+    const res2 = await fetch(`/api/cheater-checker/tags/${target}`);
+    const data2 = await res2.json();
+    _linksCache[target] = data2.tags || [];
     cancelAddTag();
     renderLinksProfilesList(_linksModalPage || 0);
     updateLinksButtonState(target);
@@ -1582,22 +1581,67 @@ async function createTag() {
   }
 }
 
+// Отвязать метку от профиля (не удалять саму метку)
 async function removeTag(tagId) {
   try {
-    await fetch('/api/cheater-checker/tags', {
+    await fetch('/api/cheater-checker/tags/unassign', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tagId, userId: currentUserId, isAdmin: String(currentUserId) === String(CONFIG.ADMIN_USER_ID) }),
+      body: JSON.stringify({ steamId: _linksSteamId, tagId }),
     });
     const res = await fetch(`/api/cheater-checker/tags/${_linksSteamId}`);
     const data = await res.json();
     _linksCache[_linksSteamId] = data.tags || [];
     renderLinksProfilesList(_linksModalPage || 0);
     updateLinksButtonState(_linksSteamId);
-    showNotification('Метка удалена', 'success');
+    showNotification('Метка отвязана', 'success');
   } catch {
-    showNotification('Ошибка при удалении метки', 'error');
+    showNotification('Ошибка при отвязке метки', 'error');
   }
+}
+
+// Переименование метки из таба «Связи»
+function startRenameTag(tagId, el) {
+  const current = el.textContent.replace('🔗 ', '').trim();
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = current;
+  input.className = 'link-group-name-input';
+  input.maxLength = 64;
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    const newName = input.value.trim();
+    if (save && newName && newName !== current) {
+      try {
+        const res = await fetch('/api/cheater-checker/tags/rename', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tagId, newName, userId: currentUserId, isAdmin: String(currentUserId) === String(CONFIG.ADMIN_USER_ID) }),
+        });
+        if (res.ok) {
+          showNotification(`Метка переименована в «${newName}»`, 'success');
+        } else {
+          const data = await res.json();
+          showNotification(data.error || 'Нет прав на переименование', 'error');
+        }
+      } catch {
+        showNotification('Ошибка при переименовании', 'error');
+      }
+    }
+    renderLinksGroups();
+  };
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') finish(true);
+    if (e.key === 'Escape') finish(false);
+  });
+  input.addEventListener('blur', () => finish(true));
 }
 
 async function toggleLink(steamId1, steamId2, isChecked) {
@@ -1689,23 +1733,19 @@ async function renderLinksGroups() {
       return;
     }
 
-    // Группируем по tag_name (метка = группа)
-    const groupMap = {};
-    tags.forEach(t => {
-      const key = t.tag_name;
-      if (!groupMap[key]) groupMap[key] = { name: t.tag_name, members: [], isPrivate: !!t.is_private, createdBy: t.created_by, tagIds: [] };
-      if (!groupMap[key].members.includes(t.steam_id)) groupMap[key].members.push(t.steam_id);
-      groupMap[key].tagIds.push(t.id);
-    });
-
-    const groups = Object.values(groupMap).map(g => ({
-      groupId: g.name,
-      group: g.members,
-      name: g.name,
-      isPrivate: g.isPrivate,
-      createdBy: g.createdBy,
-      links: [],
-      profileMap,
+    // Каждая метка = группа. Загружаем профили для каждой метки
+    const groups = await Promise.all(tags.map(async (t) => {
+      const res = await fetch(`/api/cheater-checker/tags/profiles?tagId=${t.id}`);
+      const data = await res.json();
+      return {
+        groupId: t.id,
+        name: t.name,
+        isPrivate: !!t.is_private,
+        createdBy: t.created_by,
+        createdAt: t.created_at,
+        group: data.profiles || [],
+        profileMap,
+      };
     }));
 
     groups.sort((a, b) => b.group.length - a.group.length);
@@ -1728,22 +1768,23 @@ function renderLinksGroupsPage() {
   const pageGroups = groups.slice(start, start + PAGE_SIZE);
 
   container.innerHTML = pageGroups.map((entry, i) => {
-    const { group, profileMap, name, isPrivate, createdBy } = entry;
-    const idx = start + i;
+    const { group, profileMap, groupId, name, isPrivate, createdBy, createdAt } = entry;
 
-    const cards = group.map(id => {
-      const p = profileMap[id];
+    const cards = group.map(p => {
       if (!p) return '';
       const isBanned = (p.vac_banned || p.number_of_game_bans > 0 || p.community_banned || (p.economy_ban && p.economy_ban !== 'none'));
       return createProfileCard(p, isBanned);
     }).join('');
 
+    const canRename = currentUserId && (String(createdBy) === String(currentUserId) || String(currentUserId) === String(CONFIG.ADMIN_USER_ID));
+    const createdDate = createdAt ? new Date(createdAt * 1000).toLocaleDateString('ru-RU') : '';
+
     return `
       <div class="link-group">
         <div class="link-group-header">
-          <span class="link-group-name">🔗 ${escapeHtml(name)}</span> — ${group.length} ${pluralAccounts(group.length)}
+          <span class="link-group-name" ${canRename ? `onclick="startRenameTag(${groupId}, this)" title="Нажмите для переименования"` : ''}>🔗 ${escapeHtml(name)}</span> — ${group.length} ${pluralAccounts(group.length)}
           ${isPrivate ? '<div class="link-group-meta">🔒 Приватная метка — видна только вам</div>' : ''}
-          ${createdBy ? `<div class="link-group-meta">Создал: ${escapeHtml(createdBy)}</div>` : ''}
+          ${createdBy ? `<div class="link-group-meta">Создал: ${escapeHtml(createdBy)}${createdDate ? ' • ' + createdDate : ''}</div>` : ''}
         </div>
         <div class="link-group-cards">${cards}</div>
       </div>
@@ -1861,7 +1902,7 @@ async function renderCardLinks(steamId, cardEl) {
       <div class="card-links-list">
         ${tags.map(t => `
           <div class="card-links-item">
-            <span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}">${escapeHtml(t.tag_name)}${t.is_private ? ' 🔒' : ''}</span>
+            <span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}">${escapeHtml(t.name)}${t.is_private ? ' 🔒' : ''}</span>
           </div>
         `).join('')}
       </div>
