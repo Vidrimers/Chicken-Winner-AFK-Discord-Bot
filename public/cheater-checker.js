@@ -1644,6 +1644,27 @@ function startRenameTag(tagId, el) {
   input.addEventListener('blur', () => finish(true));
 }
 
+// Удаление метки и всей группы
+async function deleteTagGroup(tagId) {
+  if (!confirm('Удалить метку и все привязки?')) return;
+  try {
+    const res = await fetch('/api/cheater-checker/tags', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tagId, userId: currentUserId, isAdmin: String(currentUserId) === String(CONFIG.ADMIN_USER_ID) }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      showNotification(data.error || 'Нет прав на удаление', 'error');
+      return;
+    }
+    showNotification('Метка удалена', 'success');
+    renderLinksGroups();
+  } catch {
+    showNotification('Ошибка при удалении метки', 'error');
+  }
+}
+
 async function toggleLink(steamId1, steamId2, isChecked) {
   if (!currentUserId) {
     showNotification('Войдите, чтобы изменять связи', 'error');
@@ -1777,12 +1798,14 @@ function renderLinksGroupsPage() {
     }).join('');
 
     const canRename = currentUserId && (String(createdBy) === String(currentUserId) || String(currentUserId) === String(CONFIG.ADMIN_USER_ID));
+    const canDelete = canRename;
     const createdDate = createdAt ? new Date(createdAt * 1000).toLocaleDateString('ru-RU') : '';
 
     return `
       <div class="link-group">
         <div class="link-group-header">
           <span class="link-group-name" ${canRename ? `onclick="startRenameTag(${groupId}, this)" title="Нажмите для переименования"` : ''}>🔗 ${escapeHtml(name)}</span> — ${group.length} ${pluralAccounts(group.length)}
+          ${canDelete ? `<button class="link-group-delete" onclick="deleteTagGroup(${groupId})" title="Удалить метку">×</button>` : ''}
           ${isPrivate ? '<div class="link-group-meta">🔒 Приватная метка — видна только вам</div>' : ''}
           ${createdBy ? `<div class="link-group-meta">Создал: ${escapeHtml(createdBy)}${createdDate ? ' • ' + createdDate : ''}</div>` : ''}
         </div>

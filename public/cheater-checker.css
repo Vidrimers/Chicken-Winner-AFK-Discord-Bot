@@ -1805,6 +1805,22 @@
   letter-spacing: 0;
 }
 
+.link-group-delete {
+  background: none;
+  border: none;
+  color: rgba(255, 100, 100, 0.6);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 4px;
+  line-height: 1;
+  margin-left: 8px;
+  transition: color 0.2s;
+}
+
+.link-group-delete:hover {
+  color: #ff4444;
+}
+
 .link-group-name {
   cursor: pointer;
   border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
