@@ -2468,8 +2468,10 @@ export function initTelegramBot(
           }
           // Парсинг @имя → <@discord_id>
           const parsed = await parseMentionsToDiscord(msgText);
-          await channel.send(`<@${targetUserId}> **${discordName}** из Telegram:\n${parsed}`);
-          await telegramBot.sendMessage(chatId, '✅ Сообщение отправлено!');
+          await channel.send(`**${discordName}** из Telegram:\n<@${targetUserId}>\n${parsed}`);
+          await telegramBot.sendMessage(chatId, '✅ Сообщение отправлено!', {
+            reply_markup: { inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'menu_online' }]] }
+          });
         } catch (err) {
           console.error('[TG] Ошибка отправки в онлайн-чат:', err.message);
           await telegramBot.sendMessage(chatId, '❌ Ошибка отправки сообщения');
