@@ -2069,6 +2069,50 @@ export function initTelegramBot(
         return;
       }
 
+      // Написать в личку пользователю из уведомления о канале
+      if (data.startsWith('vm:')) {
+        const targetUserId = data.split(':')[1];
+        let targetName = targetUserId;
+        try {
+          const guild = discordClient?.guilds?.cache?.first();
+          if (guild) {
+            const member = await guild.members.fetch(targetUserId).catch(() => null);
+            if (member) targetName = member.displayName || member.user.username;
+          }
+        } catch {}
+        userStates.set(chatId, 'awaiting_voice_dm');
+        userStates.set(`${chatId}_voice_dm_target`, targetUserId);
+        await telegramBot.sendMessage(chatId, `💬 Напишите сообщение в личку для <b>${escapeTgHtml(targetName)}</b>:`, {
+          parse_mode: 'HTML',
+          reply_markup: { inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'cancel_reply' }]] }
+        });
+        return;
+      }
+
+      // Написать в канал из уведомления о канале
+      if (data.startsWith('vc:')) {
+        const targetUserId = data.split(':')[1];
+        if (!process.env.ONLINE_CHAT_CHANNEL_ID) {
+          await telegramBot.sendMessage(chatId, '❌ Канал для чата не настроен');
+          return;
+        }
+        let targetName = targetUserId;
+        try {
+          const guild = discordClient?.guilds?.cache?.first();
+          if (guild) {
+            const member = await guild.members.fetch(targetUserId).catch(() => null);
+            if (member) targetName = member.displayName || member.user.username;
+          }
+        } catch {}
+        userStates.set(chatId, 'awaiting_voice_channel_msg');
+        userStates.set(`${chatId}_voice_channel_target`, targetUserId);
+        await telegramBot.sendMessage(chatId, `💬 Напишите сообщение для канала (упомянет <b>${escapeTgHtml(targetName)}</b>):`, {
+          parse_mode: 'HTML',
+          reply_markup: { inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'cancel_reply' }]] }
+        });
+        return;
+      }
+
       try {
         switch (data) {
           case 'move_type_cancel': {
@@ -2201,6 +2245,8 @@ export function initTelegramBot(
             userStates.delete(chatId);
             userStates.delete(`${chatId}_reply_target`);
             userStates.delete(`${chatId}_online_chat_target`);
+            userStates.delete(`${chatId}_voice_dm_target`);
+            userStates.delete(`${chatId}_voice_channel_target`);
             await telegramBot.sendMessage(chatId, '❌ Отправка отменена.');
             break;
 
@@ -2474,6 +2520,67 @@ export function initTelegramBot(
           });
         } catch (err) {
           console.error('[TG] Ошибка отправки в онлайн-чат:', err.message);
+          await telegramBot.sendMessage(chatId, '❌ Ошибка отправки сообщения');
+        }
+        return;
+      }
+
+      // Отправка ЛС пользователю Discord из уведомления о канале
+      if (userStates.get(chatId) === 'awaiting_voice_dm') {
+        userStates.delete(chatId);
+        const targetUserId = userStates.get(`${chatId}_voice_dm_target`);
+        userStates.delete(`${chatId}_voice_dm_target`);
+        if (!targetUserId) {
+          await telegramBot.sendMessage(chatId, '❌ Ошибка: цель не найдена');
+          return;
+        }
+        const msgText = text ? text.trim() : (msg.caption || '');
+        if (!msgText) {
+          await telegramBot.sendMessage(chatId, '❌ Пустое сообщение. Попробуйте ещё раз.');
+          return;
+        }
+        try {
+          const discordId = getLinkedDiscordId(chatId);
+          const discordName = discordId ? getDiscordUsername(discordId) : 'Пользователь';
+          const parsed = await parseMentionsToDiscord(msgText);
+          const targetUser = await discordClient.users.fetch(targetUserId);
+          await targetUser.send(`**${discordName}** из Telegram:\n<@${targetUserId}>\n${parsed}`);
+          await telegramBot.sendMessage(chatId, '✅ Сообщение отправлено в личку!', {
+            reply_markup: { inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'back_to_menu' }]] }
+          });
+        } catch (err) {
+          console.error('[TG] Ошибка отправки в личку:', err.message);
+          await telegramBot.sendMessage(chatId, '❌ Не удалось отправить сообщение (возможно, у пользователя закрыты ЛС)');
+        }
+        return;
+      }
+
+      // Отправка сообщения в канал ONLINE_CHAT из уведомления о канале
+      if (userStates.get(chatId) === 'awaiting_voice_channel_msg') {
+        userStates.delete(chatId);
+        const targetUserId = userStates.get(`${chatId}_voice_channel_target`);
+        userStates.delete(`${chatId}_voice_channel_target`);
+        const onlineChatChannelId = process.env.ONLINE_CHAT_CHANNEL_ID;
+        if (!targetUserId || !onlineChatChannelId) {
+          await telegramBot.sendMessage(chatId, '❌ Ошибка: цель или канал не найдены');
+          return;
+        }
+        const msgText = text ? text.trim() : (msg.caption || '');
+        if (!msgText) {
+          await telegramBot.sendMessage(chatId, '❌ Пустое сообщение. Попробуйте ещё раз.');
+          return;
+        }
+        try {
+          const channel = await discordClient.channels.fetch(onlineChatChannelId);
+          const discordId = getLinkedDiscordId(chatId);
+          const discordName = discordId ? getDiscordUsername(discordId) : 'Пользователь';
+          const parsed = await parseMentionsToDiscord(msgText);
+          await channel.send(`**${discordName}** из Telegram:\n<@${targetUserId}>\n${parsed}`);
+          await telegramBot.sendMessage(chatId, '✅ Сообщение отправлено в канал!', {
+            reply_markup: { inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'back_to_menu' }]] }
+          });
+        } catch (err) {
+          console.error('[TG] Ошибка отправки в канал:', err.message);
           await telegramBot.sendMessage(chatId, '❌ Ошибка отправки сообщения');
         }
         return;

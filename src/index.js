@@ -677,7 +677,7 @@ async function main() {
       sendBlocklistAddNotification: sendBlocklistAddNotification,
       sendNewCheaterNotification: sendNewCheaterNotification,
       registerUser: registerTelegramUser,
-      notifyChannelActivity: async (message) => {
+      notifyChannelActivity: async (message, targetUserId = null) => {
         try {
           // Получаем всех пользователей с включенными уведомлениями
           const usersWithNotifications = db.prepare(`
@@ -687,8 +687,15 @@ async function main() {
             WHERE us.channel_notifications = 1 AND tu.started_bot = 1
           `).all();
 
+          const replyMarkup = targetUserId ? {
+            inline_keyboard: [[
+              { text: 'Написать в личку', callback_data: `vm:${targetUserId}` },
+              { text: 'Написать в канал', callback_data: `vc:${targetUserId}` }
+            ]]
+          } : null;
+
           for (const user of usersWithNotifications) {
-            await sendTelegramMessageToUser(user.telegram_chat_id, message);
+            await sendTelegramMessageToUser(user.telegram_chat_id, message, replyMarkup);
           }
         } catch (error) {
           logError(`Ошибка отправки уведомлений о канале: ${error.message}`);
