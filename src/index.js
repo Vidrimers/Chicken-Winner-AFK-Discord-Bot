@@ -169,8 +169,8 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
     log('🔄 Перепроверка профилей из БД...');
     const { checkProfiles, resolveVanityUrl } = await import('./steam/steamApi.js');
 
-    const batchSize = 20;
-    const delayMs = 3000;
+    const batchSize = 50;
+    const delayMs = 1000;
     let offset = 0;
     let totalChecked = 0;
     let updated = 0;
@@ -203,7 +203,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
             vanityChanges.set(existing.steam_id, { type: 'deleted' });
           }
         }
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise(r => setTimeout(r, 500));
       }
 
       const urls = batch.map(p => p.profile_url).filter(Boolean);
@@ -395,7 +395,7 @@ export async function runBanCheck(db, sendTelegramReport, sendTelegramMessageToU
 
         // Задержка между сообщениями (кроме последнего)
         if (i < notificationQueue.length - 1) {
-          await new Promise(r => setTimeout(r, 1500));
+          await new Promise(r => setTimeout(r, 500));
         }
       }
 
@@ -451,8 +451,8 @@ export async function runBotBanCheck(db, sendTelegramReport, sendTelegramMessage
     const { checkProfiles } = await import('./steam/steamApi.js');
     const notificationQueue = [];
 
-    const batchSize = 20;
-    const delayMs = 3000;
+    const batchSize = 50;
+    const delayMs = 1000;
     let offset = 0;
     let totalChecked = 0;
     let updated = 0;
@@ -564,7 +564,7 @@ export async function runBotBanCheck(db, sendTelegramReport, sendTelegramMessage
         } catch (err) {
           logError(`Ошибка отправки уведомления: ${err.message}`);
         }
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise(r => setTimeout(r, 500));
       }
     }
 
