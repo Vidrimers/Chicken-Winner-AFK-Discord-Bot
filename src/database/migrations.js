@@ -884,6 +884,67 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: created_by/renamed_by в tags — username → числовой Discord ID
+  {
+    const rows = db.prepare('SELECT id, created_by, renamed_by FROM tags').all();
+    const users = db.prepare('SELECT user_id, username FROM user_stats').all();
+    // Имена не уникальны — конвертируем только однозначные
+    const nameCounts = {};
+    users.forEach(u => { nameCounts[u.username] = (nameCounts[u.username] || 0) + 1; });
+    const byName = new Map(users.filter(u => nameCounts[u.username] === 1).map(u => [u.username, u.user_id]));
+    const isDiscordId = (v) => /^\d{17,20}$/.test(v || '');
+    const updCreated = db.prepare('UPDATE tags SET created_by = ? WHERE id = ?');
+    const updRenamed = db.prepare('UPDATE tags SET renamed_by = ? WHERE id = ?');
+    let converted = 0;
+    for (const row of rows) {
+      if (row.created_by && !isDiscordId(row.created_by)) {
+        const uid = byName.get(row.created_by);
+        if (uid) {
+          updCreated.run(uid, row.id);
+          converted++;
+        } else {
+          console.warn(`⚠️ tags.id=${row.id}: created_by «${row.created_by}» не найден в user_stats — оставлен как есть`);
+        }
+      }
+      if (row.renamed_by && !isDiscordId(row.renamed_by)) {
+        const uid = byName.get(row.renamed_by);
+        if (uid) updRenamed.run(uid, row.id);
+      }
+    }
+    if (converted > 0) {
+      console.log(`✅ created_by в tags мигрирован на Discord ID: ${converted} записей`);
+    }
+  }
+
+  // Миграция: перевыпуск ID меток на 4-значные (1000–9999)
+  {
+    const needReissue = db.prepare('SELECT COUNT(*) as c FROM tags WHERE id < 1000 OR id > 9999').get();
+    if (needReissue.c > 0) {
+      const rows = db.prepare('SELECT id FROM tags').all();
+      const used = new Set();
+      const mapping = new Map();
+      for (const r of rows) {
+        let newId;
+        do {
+          newId = 1000 + Math.floor(Math.random() * 9000);
+        } while (used.has(newId));
+        used.add(newId);
+        mapping.set(r.id, newId);
+      }
+      // Фаза 1: во временное отрицательное значение (чтобы не было конфликтов PK)
+      for (const [oldId] of mapping) {
+        db.prepare('UPDATE tags SET id = ? WHERE id = ?').run(-oldId, oldId);
+        db.prepare('UPDATE profile_tags SET tag_id = ? WHERE tag_id = ?').run(-oldId, oldId);
+      }
+      // Фаза 2: в финальные 4-значные ID
+      for (const [oldId, newId] of mapping) {
+        db.prepare('UPDATE tags SET id = ? WHERE id = ?').run(newId, -oldId);
+        db.prepare('UPDATE profile_tags SET tag_id = ? WHERE tag_id = ?').run(newId, -oldId);
+      }
+      console.log(`✅ ID меток перевыпущены на 4-значные: ${mapping.size} записей`);
+    }
+  }
+
   // Миграция: таблица steam_wall_banned_users (заблокированные репортёры)
   {
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='steam_wall_banned_users'").all();

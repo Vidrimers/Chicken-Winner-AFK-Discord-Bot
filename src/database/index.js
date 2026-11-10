@@ -482,9 +482,10 @@ export class DatabaseManager {
   getTagsForSteamId(steamId, viewerId = null) {
     // Возвращает метки профиля с учётом приватности
     return this.prepare(
-      `SELECT t.id, t.name, t.created_by, t.is_private, t.created_at
+      `SELECT t.id, t.name, t.created_by, t.is_private, t.created_at, us.username AS created_by_name
        FROM profile_tags pt
        JOIN tags t ON pt.tag_id = t.id
+       LEFT JOIN user_stats us ON us.user_id = t.created_by
        WHERE pt.steam_id = ? AND (t.is_private = 0 OR t.created_by = ?)`
     ).all(steamId, viewerId || '');
   }
@@ -493,9 +494,12 @@ export class DatabaseManager {
     // Все видимые метки (общие + свои приватные) с количеством профилей
     return this.prepare(
       `SELECT t.id, t.name, t.created_by, t.is_private, t.created_at, t.renamed_by, t.renamed_at, t.old_name,
+              us.username AS created_by_name, rs.username AS renamed_by_name,
               COUNT(pt.steam_id) as profile_count
        FROM tags t
        LEFT JOIN profile_tags pt ON pt.tag_id = t.id
+       LEFT JOIN user_stats us ON us.user_id = t.created_by
+       LEFT JOIN user_stats rs ON rs.user_id = t.renamed_by
        WHERE t.is_private = 0 OR t.created_by = ?
        GROUP BY t.id`
     ).all(viewerId || '');
@@ -513,28 +517,24 @@ export class DatabaseManager {
     ).all(tagId).map(r => r.steam_id);
   }
 
-  // Создаёт новую метку и привязывает к профилю. Возвращает tag_id.
-  addTag(steamId, tagName, createdBy, isPrivate = 0) {
-    // Ищем существующую метку с таким именем от этого создателя
-    let tag = this.prepare(
-      'SELECT id FROM tags WHERE name = ? AND created_by = ?'
-    ).get(tagName, createdBy);
-
-    if (!tag) {
-      const res = this.prepare(
-        'INSERT INTO tags (name, created_by, is_private, created_at) VALUES (?, ?, ?, strftime(\'%s\',\'now\'))'
-      ).run(tagName, createdBy, isPrivate);
-      tag = { id: res.lastInsertRowid };
+  // Генерация 4-значного ID метки (1000–9999), уникального среди существующих
+  generateTagId() {
+    for (let i = 0; i < 100; i++) {
+      const id = 1000 + Math.floor(Math.random() * 9000);
+      const exists = this.prepare('SELECT 1 FROM tags WHERE id = ?').get(id);
+      if (!exists) return id;
     }
+    throw new Error('Не удалось сгенерировать уникальный ID метки');
+  }
 
-    // Привязываем профиль (если ещё не привязан)
-    const existing = this.prepare(
-      'SELECT 1 FROM profile_tags WHERE steam_id = ? AND tag_id = ?'
-    ).get(steamId, tag.id);
-    if (existing) return { tagId: tag.id, duplicate: true };
-
-    this.prepare('INSERT OR IGNORE INTO profile_tags (steam_id, tag_id) VALUES (?, ?)').run(steamId, tag.id);
-    return { tagId: tag.id, duplicate: false };
+  // Создаёт НОВУЮ метку (даже с уже существующим именем) и привязывает к профилю
+  addTag(steamId, tagName, createdBy, isPrivate = 0) {
+    const tagId = this.generateTagId();
+    this.prepare(
+      'INSERT INTO tags (id, name, created_by, is_private, created_at) VALUES (?, ?, ?, ?, strftime(\'%s\',\'now\'))'
+    ).run(tagId, tagName, createdBy, isPrivate);
+    this.prepare('INSERT OR IGNORE INTO profile_tags (steam_id, tag_id) VALUES (?, ?)').run(steamId, tagId);
+    return { tagId };
   }
 
   // Привязывает профиль к существующей метке

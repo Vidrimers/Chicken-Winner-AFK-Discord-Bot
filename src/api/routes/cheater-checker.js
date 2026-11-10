@@ -452,11 +452,13 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   router.post('/tags', (req, res) => {
     try {
       const { steamId, tagName, createdBy, isPrivate } = req.body;
-      if (!steamId || !tagName || !createdBy) {
+      // created_by — всегда числовой Discord ID (из сессии)
+      const creatorId = req.session?.userId || createdBy;
+      if (!steamId || !tagName || !creatorId) {
         return res.status(400).json({ error: 'steamId, tagName и createdBy обязательны' });
       }
-      const result = db.addTag(steamId, tagName.trim(), createdBy, isPrivate ? 1 : 0);
-      res.json({ success: true, tagId: result.tagId, duplicate: result.duplicate });
+      const result = db.addTag(steamId, tagName.trim(), creatorId, isPrivate ? 1 : 0);
+      res.json({ success: true, tagId: result.tagId });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }

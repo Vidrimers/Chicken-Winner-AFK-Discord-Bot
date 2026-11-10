@@ -1417,7 +1417,7 @@ function renderLinksProfilesList(page) {
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
         ${myTags.map(t => `
           <span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}">
-            ${escapeHtml(t.name)}${t.is_private ? ' 🔒' : ''}
+            ${escapeHtml(t.name)} #${t.id}${t.is_private ? ' 🔒' : ''}
             <button class="tag-remove" onclick="removeTag(${t.id})" title="Удалить метку">×</button>
           </span>
         `).join('')}
@@ -1432,7 +1432,7 @@ function renderLinksProfilesList(page) {
         <div class="move-profile-info">
           <div class="move-profile-name">${escapeHtml(p.persona_name || p.steam_id)}</div>
           <div class="move-profile-meta">${p.type === 'bot' ? '🤖 Бот' : '🔴 Читер'} • ${escapeHtml(p.checked_by_username || 'Unknown')}</div>
-          ${pTags.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${pTags.map(t => `<span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="font-size:10px;padding:1px 6px">${escapeHtml(t.name)}${t.is_private ? ' 🔒' : ''}</span>`).join('')}</div>` : ''}
+          ${pTags.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${pTags.map(t => `<span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="font-size:10px;padding:1px 6px">${escapeHtml(t.name)} #${t.id}${t.is_private ? ' 🔒' : ''}</span>`).join('')}</div>` : ''}
         </div>
         <button class="tag-add-btn" onclick="showAddTagForm('${p.steam_id}')" title="Добавить метку этому профилю" style="flex-shrink:0">+</button>
       </div>`;
@@ -1452,7 +1452,7 @@ function renderLinksProfilesList(page) {
             const tagsDiv = item.querySelector('.tag-badges');
             if (tagsDiv && (_linksCache[p.steam_id] || []).length) {
               tagsDiv.innerHTML = _linksCache[p.steam_id].map(t =>
-                `<span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="font-size:10px;padding:1px 6px">${escapeHtml(t.name)}${t.is_private ? ' 🔒' : ''}</span>`
+                `<span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="font-size:10px;padding:1px 6px">${escapeHtml(t.name)} #${t.id}${t.is_private ? ' 🔒' : ''}</span>`
               ).join('');
             }
           }
@@ -1471,21 +1471,19 @@ function renderLinksProfilesList(page) {
   }
 }
 
-function showAddTagForm(targetSteamId) {
+async function showAddTagForm(targetSteamId) {
   _tagTargetSteamId = targetSteamId || _linksSteamId;
   const container = document.getElementById('linksProfilesList');
   const oldForm = document.getElementById('addTagForm');
   if (oldForm) oldForm.remove();
 
-  // Собираем все уникальные метки для выбора
-  const allTags = new Map();
-  Object.values(_linksCache).forEach(tags => {
-    (tags || []).forEach(t => {
-      if (!allTags.has(t.id)) allTags.set(t.id, t);
-    });
-  });
-
-  const existingTags = [...allTags.values()];
+  // Все видимые метки (публичные + свои приватные)
+  let existingTags = [];
+  try {
+    const res = await fetch('/api/cheater-checker/tags');
+    const data = await res.json();
+    existingTags = data.tags || [];
+  } catch {}
 
   const formHtml = `
     <div id="addTagForm" style="margin:10px 0;padding:12px;background:rgba(102,126,234,0.1);border-radius:10px">
@@ -1494,7 +1492,7 @@ function showAddTagForm(targetSteamId) {
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
           ${existingTags.map(t => `
             <button class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}" style="cursor:pointer;border:none" onclick="applyExistingTag(${t.id})">
-              ${escapeHtml(t.name)}${t.is_private ? ' 🔒' : ''} <small style="opacity:0.5">(${escapeHtml(t.created_by || '?')})</small>
+              ${escapeHtml(t.name)} #${t.id}${t.is_private ? ' 🔒 Приватная' : ''} <small style="opacity:0.5">(${escapeHtml(t.created_by_name || t.created_by || '?')})</small>
             </button>
           `).join('')}
         </div>
@@ -1550,6 +1548,47 @@ function cancelAddTag() {
   if (form) form.remove();
 }
 
+// Диалог: похожая метка уже существует — добавить в существующую или создать новую
+function showTagExistsDialog(matches) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+    overlay.innerHTML = `
+      <div class="modal-box confirm-box">
+        <div class="modal-box-header confirm-header">
+          <h2><svg class="icon" aria-hidden="true"><use href="#icon-warning"></use></svg> Метка уже существует</h2>
+        </div>
+        <div class="modal-box-body confirm-body">
+          <p>Похожие метки уже есть. Добавить профиль к существующей или создать новую с тем же именем?</p>
+          <div style="display:flex;flex-direction:column;gap:6px;margin:10px 0">
+            ${matches.map(t => `
+              <button class="confirm-cancel-btn" style="text-align:left" data-tag-id="${t.id}">
+                Добавить в «${escapeHtml(t.name)}» #${t.id}${t.is_private ? ' 🔒' : ''} <small style="opacity:0.5">(${escapeHtml(t.created_by_name || t.created_by || '?')})</small>
+              </button>
+            `).join('')}
+          </div>
+          <div class="confirm-buttons">
+            <button class="confirm-delete-btn" data-action="create">Создать новую</button>
+            <button class="confirm-cancel-btn" data-action="cancel">Отмена</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const done = (result) => { overlay.remove(); resolve(result); };
+    overlay.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) {
+        if (e.target === overlay) done({ action: 'cancel' });
+        return;
+      }
+      if (btn.dataset.tagId) return done({ action: 'add', tagId: parseInt(btn.dataset.tagId, 10) });
+      done({ action: btn.dataset.action || 'cancel' });
+    });
+  });
+}
+
 async function createTag() {
   const name = document.getElementById('newTagName')?.value?.trim();
   const isPrivate = document.getElementById('newTagPrivate')?.checked;
@@ -1559,23 +1598,32 @@ async function createTag() {
     return;
   }
   try {
+    // Совпадение имени проверяем только среди видимых меток (публичные + свои приватные)
+    const visRes = await fetch('/api/cheater-checker/tags');
+    const visData = await visRes.json();
+    const matches = (visData.tags || []).filter(t => (t.name || '').trim().toLowerCase() === name.toLowerCase());
+    if (matches.length) {
+      const choice = await showTagExistsDialog(matches);
+      if (choice.action === 'cancel' || !choice.action) return;
+      if (choice.action === 'add') {
+        await applyExistingTag(choice.tagId);
+        return;
+      }
+      // 'create' — создаём новую метку с тем же именем
+    }
     const res = await fetch('/api/cheater-checker/tags', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ steamId: target, tagName: name, createdBy: currentUsername || currentUserId, isPrivate: !!isPrivate }),
+      body: JSON.stringify({ steamId: target, tagName: name, createdBy: currentUserId, isPrivate: !!isPrivate }),
     });
     const data = await res.json();
-    if (data.duplicate) {
-      showNotification(`Метка «${name}» уже есть у этого профиля`, 'warning');
-      return;
-    }
     const res2 = await fetch(`/api/cheater-checker/tags/${target}`);
     const data2 = await res2.json();
     _linksCache[target] = data2.tags || [];
     cancelAddTag();
     renderLinksProfilesList(_linksModalPage || 0);
     updateLinksButtonState(target);
-    showNotification(`Метка «${name}» добавлена`, 'success');
+    showNotification(`Метка «${name}» #${data.tagId} добавлена`, 'success');
   } catch {
     showNotification('Ошибка при создании метки', 'error');
   }
@@ -1602,7 +1650,7 @@ async function removeTag(tagId) {
 
 // Переименование метки из таба «Связи»
 function startRenameTag(tagId, el) {
-  const current = el.textContent.replace('🔗 ', '').trim();
+  const current = el.textContent.replace('🔗 ', '').replace(/ #\d+$/, '').trim();
   const input = document.createElement('input');
   input.type = 'text';
   input.value = current;
@@ -1766,8 +1814,10 @@ async function renderLinksGroups() {
         name: t.name,
         isPrivate: !!t.is_private,
         createdBy: t.created_by,
+        createdByName: t.created_by_name || t.created_by,
         createdAt: t.created_at,
         renamedBy: t.renamed_by,
+        renamedByName: t.renamed_by_name || t.renamed_by,
         renamedAt: t.renamed_at,
         oldName: t.old_name,
         group: members,
@@ -1811,11 +1861,11 @@ function renderLinksGroupsPage() {
     return `
       <div class="link-group">
         <div class="link-group-header">
-          <span class="link-group-name" ${canRename ? `onclick="startRenameTag(${groupId}, this)" title="Нажмите для переименования"` : ''}>🔗 ${escapeHtml(name)}</span> — ${group.length} ${pluralAccounts(group.length)}
+          <span class="link-group-name" ${canRename ? `onclick="startRenameTag(${groupId}, this)" title="Нажмите для переименования"` : ''}>🔗 ${escapeHtml(name)} #${groupId}</span> — ${group.length} ${pluralAccounts(group.length)}
           ${canDelete ? `<button class="link-group-delete" onclick="deleteTagGroup(${groupId})" title="Удалить метку">×</button>` : ''}
           ${isPrivate ? '<div class="link-group-meta">🔒 Приватная метка — видна только вам</div>' : ''}
-          ${createdBy ? `<div class="link-group-meta">Создал: ${escapeHtml(createdBy)}${createdDate ? ' • ' + createdDate : ''}</div>` : ''}
-          ${entry.renamedBy ? `<div class="link-group-meta">Переименовал: ${escapeHtml(entry.renamedBy)}${renamedDate ? ' • ' + renamedDate : ''}${entry.oldName ? ` (было: «${escapeHtml(entry.oldName)}»)` : ''}</div>` : ''}
+          ${createdBy ? `<div class="link-group-meta">Создал: ${escapeHtml(entry.createdByName || createdBy)}${createdDate ? ' • ' + createdDate : ''}</div>` : ''}
+          ${entry.renamedBy ? `<div class="link-group-meta">Переименовал: ${escapeHtml(entry.renamedByName || entry.renamedBy)}${renamedDate ? ' • ' + renamedDate : ''}${entry.oldName ? ` (было: «${escapeHtml(entry.oldName)}»)` : ''}</div>` : ''}
         </div>
         <div class="link-group-cards">${cards}</div>
       </div>
@@ -1918,7 +1968,7 @@ async function renderCardLinks(steamId, cardEl) {
       <div class="card-links-list">
         ${tags.map(t => `
           <div class="card-links-item">
-            <span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}">${escapeHtml(t.name)}${t.is_private ? ' 🔒' : ''}</span>
+            <span class="tag-badge ${t.is_private ? 'tag-private' : 'tag-public'}">${escapeHtml(t.name)} #${t.id}${t.is_private ? ' 🔒' : ''}</span>
           </div>
         `).join('')}
       </div>
