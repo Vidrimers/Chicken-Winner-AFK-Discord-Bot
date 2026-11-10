@@ -905,7 +905,7 @@ async function handleVoiceActivity(chatId) {
 /**
  * Обработка онлайн пользователей (для inline кнопки)
  */
-async function handleOnlineUsers(chatId) {
+async function handleOnlineUsers(chatId, page = 0, queryObj = null) {
   try {
     if (!getOnlineUsersHandler) {
       await telegramBot.sendMessage(chatId, '❌ Функция временно недоступна');
@@ -922,10 +922,52 @@ async function handleOnlineUsers(chatId) {
 
     const result = getOnlineUsersHandler(blockedIds);
 
-    if (result.success) {
-      await telegramBot.sendMessage(chatId, result.message, { parse_mode: 'HTML' });
-    } else {
+    if (!result.success) {
       await telegramBot.sendMessage(chatId, result.message || '❌ Не удалось получить список пользователей');
+      return;
+    }
+
+    // Собираем онлайн-пользователей для кнопок
+    let keyboard = null;
+    const guild = discordClient?.guilds?.cache?.first();
+    if (guild && process.env.ONLINE_CHAT_CHANNEL_ID) {
+      await guild.members.fetch();
+      const onlineMembers = [...guild.members.cache.values()].filter(m =>
+        !m.user.bot &&
+        (m.presence?.status === 'online' || m.presence?.status === 'idle' || m.presence?.status === 'dnd') &&
+        !blockedIds.includes(m.id)
+      );
+
+      if (onlineMembers.length > 0) {
+        const totalPages = Math.ceil(onlineMembers.length / ONLINE_PAGE_SIZE);
+        const start = page * ONLINE_PAGE_SIZE;
+        const pageMembers = onlineMembers.slice(start, start + ONLINE_PAGE_SIZE);
+
+        const rows = pageMembers.map(m => [{
+          text: `💬 ${m.displayName || m.user.username}`,
+          callback_data: `on:${m.id}`
+        }]);
+
+        const navRow = [];
+        if (page > 0) navRow.push({ text: '◀️', callback_data: `onp:${page - 1}` });
+        if (page < totalPages - 1) navRow.push({ text: '▶️', callback_data: `onp:${page + 1}` });
+        if (navRow.length) rows.push(navRow);
+
+        keyboard = { inline_keyboard: rows };
+      }
+    }
+
+    const options = { parse_mode: 'HTML' };
+    if (keyboard) options.reply_markup = keyboard;
+
+    if (queryObj && queryObj.message) {
+      await telegramBot.editMessageText(result.message, {
+        chat_id: chatId,
+        message_id: queryObj.message.message_id,
+        ...options
+      });
+    } else {
+      await telegramBot.sendMessage(chatId, result.message, options);
     }
   } catch (error) {
     console.error('❌ Ошибка при обработке "Кто онлайн":', error);
@@ -1920,6 +1962,38 @@ export function initTelegramBot(
       }
 
       // Обработка кнопки "Ответить" на упоминания
+      // Выбор онлайн-пользователя для чата в ветке
+      if (data.startsWith('on:')) {
+        const targetUserId = data.split(':')[1];
+        if (!process.env.ONLINE_CHAT_CHANNEL_ID) {
+          await telegramBot.sendMessage(chatId, '❌ Ветка для чата не настроена');
+          return;
+        }
+        // Получаем имя пользователя
+        let targetName = targetUserId;
+        try {
+          const guild = discordClient?.guilds?.cache?.first();
+          if (guild) {
+            const member = await guild.members.fetch(targetUserId).catch(() => null);
+            if (member) targetName = member.displayName || member.user.username;
+          }
+        } catch {}
+        userStates.set(chatId, 'awaiting_online_chat');
+        userStates.set(`${chatId}_online_chat_target`, targetUserId);
+        await telegramBot.sendMessage(chatId, `💬 Напишите сообщение для <b>${escapeTgHtml(targetName)}</b>:`, {
+          parse_mode: 'HTML',
+          reply_markup: { inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'cancel_reply' }]] }
+        });
+        return;
+      }
+
+      // Пагинация списка онлайн в «Кто онлайн»
+      if (data.startsWith('onp:')) {
+        const page = parseInt(data.split(':')[1], 10) || 0;
+        await handleOnlineUsers(chatId, page, query);
+        return;
+      }
+
       if (data.startsWith('mr:')) {
         const [, channelId, messageId] = data.split(':');
         userStates.set(chatId, 'awaiting_discord_reply');
@@ -2010,7 +2084,7 @@ export function initTelegramBot(
             break;
 
           case 'menu_online':
-            await handleOnlineUsers(chatId);
+            await handleOnlineUsers(chatId, 0, query);
             break;
 
           case 'menu_checker': {
@@ -2126,6 +2200,7 @@ export function initTelegramBot(
           case 'cancel_reply':
             userStates.delete(chatId);
             userStates.delete(`${chatId}_reply_target`);
+            userStates.delete(`${chatId}_online_chat_target`);
             await telegramBot.sendMessage(chatId, '❌ Отправка отменена.');
             break;
 
@@ -2372,6 +2447,36 @@ export function initTelegramBot(
       }
 
       // Проверяем состояние пользователя (ожидание ответа в Discord)
+      // Отправка сообщения в ветку онлайн-чата
+      if (userStates.get(chatId) === 'awaiting_online_chat') {
+        userStates.delete(chatId);
+        const targetUserId = userStates.get(`${chatId}_online_chat_target`);
+        userStates.delete(`${chatId}_online_chat_target`);
+        const onlineChatChannelId = process.env.ONLINE_CHAT_CHANNEL_ID;
+        if (!targetUserId || !onlineChatChannelId) {
+          await telegramBot.sendMessage(chatId, '❌ Ошибка: цель или ветка не найдены');
+          return;
+        }
+        try {
+          const channel = await discordClient.channels.fetch(onlineChatChannelId);
+          const discordId = getLinkedDiscordId(chatId);
+          const discordName = discordId ? getDiscordUsername(discordId) : 'Пользователь';
+          const msgText = text ? text.trim() : (msg.caption || '');
+          if (!msgText) {
+            await telegramBot.sendMessage(chatId, '❌ Пустое сообщение. Попробуйте ещё раз.');
+            return;
+          }
+          // Парсинг @имя → <@discord_id>
+          const parsed = await parseMentionsToDiscord(msgText);
+          await channel.send(`<@${targetUserId}> **${discordName}** из Telegram:\n${parsed}`);
+          await telegramBot.sendMessage(chatId, '✅ Сообщение отправлено!');
+        } catch (err) {
+          console.error('[TG] Ошибка отправки в онлайн-чат:', err.message);
+          await telegramBot.sendMessage(chatId, '❌ Ошибка отправки сообщения');
+        }
+        return;
+      }
+
       if (userStates.get(chatId) === 'awaiting_discord_reply') {
         userStates.delete(chatId);
         const replyTarget = userStates.get(`${chatId}_reply_target`);
