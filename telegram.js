@@ -317,6 +317,93 @@ function escapeHtml(text) {
 /**
  * Получить связанный Discord ID по Telegram chat ID
  */
+// Парсинг @имя в тексте → <@discord_id> (по нику на сервере)
+async function parseMentionsToDiscord(text) {
+  try {
+    const guild = discordClient?.guilds?.cache?.first();
+    if (!guild) return text;
+
+    await guild.members.fetch();
+    const members = [...guild.members.cache.values()].filter(m => !m.user.bot);
+
+    return text.replace(/@([^\s@]+)/g, (match, name) => {
+      // Ищем по нику на сервере (displayName) — без учёта регистра
+      const lower = name.toLowerCase();
+      const found = members.find(m =>
+        (m.displayName || m.user.username).toLowerCase() === lower ||
+        m.user.username.toLowerCase() === lower
+      );
+      return found ? `<@${found.id}>` : match;
+    });
+  } catch {
+    return text;
+  }
+}
+
+// Показ онлайн-пользователей Discord для выбора получателя ответа
+const ONLINE_PAGE_SIZE = 10;
+
+async function showOnlineUsersForReply(chatId, channelId, messageId, page = 0) {
+  try {
+    const guild = discordClient?.guilds?.cache?.first();
+    if (!guild) {
+      await telegramBot.sendMessage(chatId, '❌ Discord сервер недоступен');
+      return;
+    }
+
+    await guild.members.fetch();
+    const onlineMembers = guild.members.cache.filter(m =>
+      !m.user.bot &&
+      (m.presence?.status === 'online' || m.presence?.status === 'idle' || m.presence?.status === 'dnd')
+    );
+
+    const membersList = [...onlineMembers.values()];
+    if (!membersList.length) {
+      await telegramBot.sendMessage(chatId, '📭 Сейчас никто не онлайн');
+      return;
+    }
+
+    const totalPages = Math.ceil(membersList.length / ONLINE_PAGE_SIZE);
+    const start = page * ONLINE_PAGE_SIZE;
+    const pageMembers = membersList.slice(start, start + ONLINE_PAGE_SIZE);
+
+    const rows = pageMembers.map(m => [{
+      text: `🟢 ${m.displayName || m.user.username}`,
+      callback_data: `mention_online_pick:${channelId}:${messageId}:${m.id}`
+    }]);
+
+    // Пагинация
+    const navRow = [];
+    if (page > 0) {
+      navRow.push({ text: '◀️', callback_data: `mention_online_page:${channelId}:${messageId}:${page - 1}` });
+    }
+    if (page < totalPages - 1) {
+      navRow.push({ text: '▶️', callback_data: `mention_online_page:${channelId}:${messageId}:${page + 1}` });
+    }
+    if (navRow.length) rows.push(navRow);
+
+    const text = `🟢 <b>Онлайн пользователи</b> (${membersList.length})\nСтраница ${page + 1}/${totalPages}\nВыберите кому ответить:`;
+
+    // Редактируем или отправляем
+    if (query && query.message) {
+      await telegramBot.editMessageText(text, {
+        chat_id: chatId,
+        message_id: query.message.message_id,
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: rows }
+      });
+    } else {
+      await telegramBot.sendMessage(chatId, text, {
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: rows }
+      });
+    }
+  } catch (err) {
+    console.error('[TG] Ошибка показа онлайн:', err.message);
+    await telegramBot.sendMessage(chatId, '❌ Ошибка загрузки списка');
+  }
+}
+
 function getLinkedDiscordId(chatId) {
   // Ищем все записи для этого chat_id и возвращаем настоящий Discord ID (17-20 цифр)
   const results = db.prepare(
@@ -1846,6 +1933,68 @@ export function initTelegramBot(
         return;
       }
 
+      // Ответить конкретному пользователю (с упоминанием)
+      if (data.startsWith('mention_reply_user:')) {
+        const [, channelId, messageId, targetUserId] = data.split(':');
+        userStates.set(chatId, 'awaiting_discord_reply');
+        userStates.set(`${chatId}_reply_target`, `${channelId}:${messageId}:${targetUserId}`);
+        const replyCancelBtn = {
+          inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'cancel_reply' }]]
+        };
+        await telegramBot.sendMessage(chatId, '💬 Напишите сообщение для ответа:', {
+          reply_markup: replyCancelBtn
+        });
+        return;
+      }
+
+      // Ответить онлайн пользователю — показать список онлайн
+      if (data.startsWith('mention_reply_online:')) {
+        const [, channelId, messageId] = data.split(':');
+        await showOnlineUsersForReply(chatId, channelId, messageId, 0);
+        return;
+      }
+
+      // Ответить всем онлайн
+      if (data.startsWith('mention_reply_all_online:')) {
+        const [, channelId, messageId] = data.split(':');
+        userStates.set(chatId, 'awaiting_discord_reply');
+        userStates.set(`${chatId}_reply_target`, `${channelId}:${messageId}:all_online`);
+        const replyCancelBtn = {
+          inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'cancel_reply' }]]
+        };
+        await telegramBot.sendMessage(chatId, '💬 Напишите сообщение для ответа всем онлайн:', {
+          reply_markup: replyCancelBtn
+        });
+        return;
+      }
+
+      // Пагинация списка онлайн-пользователей
+      if (data.startsWith('mention_online_page:')) {
+        const parts = data.split(':');
+        const channelId = parts[1];
+        const messageId = parts[2];
+        const page = parseInt(parts[3], 10) || 0;
+        await showOnlineUsersForReply(chatId, channelId, messageId, page);
+        return;
+      }
+
+      // Выбор онлайн-пользователя для ответа
+      if (data.startsWith('mention_online_pick:')) {
+        const parts = data.split(':');
+        const channelId = parts[1];
+        const messageId = parts[2];
+        const targetUserId = parts[3];
+        userStates.set(chatId, 'awaiting_discord_reply');
+        userStates.set(`${chatId}_reply_target`, `${channelId}:${messageId}:${targetUserId}`);
+        const replyCancelBtn = {
+          inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'cancel_reply' }]]
+        };
+        await telegramBot.sendMessage(chatId, '💬 Напишите сообщение для ответа:', {
+          reply_markup: replyCancelBtn
+        });
+        return;
+      }
+
       try {
         switch (data) {
           case 'move_type_cancel': {
@@ -2228,14 +2377,37 @@ export function initTelegramBot(
         const replyTarget = userStates.get(`${chatId}_reply_target`);
         userStates.delete(`${chatId}_reply_target`);
         if (replyTarget) {
-          const [targetChannelId, targetMessageId] = replyTarget.split(':');
+          const parts = replyTarget.split(':');
+          const targetChannelId = parts[0];
+          const targetMessageId = parts[1];
+          const mentionTarget = parts[2]; // undefined | discordId | 'all_online'
           try {
             const channel = await discordClient.channels.fetch(targetChannelId);
             const targetMessage = await channel.messages.fetch(targetMessageId);
             const discordId = getLinkedDiscordId(chatId);
             const discordName = discordId ? getDiscordUsername(discordId) : 'Пользователь';
             const header = `*${discordName} ответил из Telegram:*`;
-            const replyContent = text ? text.trim() : '';
+            let replyContent = text ? text.trim() : '';
+
+            // Парсинг @имя → <@discord_id> (по нику на сервере)
+            if (replyContent.includes('@')) {
+              replyContent = await parseMentionsToDiscord(replyContent);
+            }
+
+            // Добавляем упоминание цели
+            let mentionPrefix = '';
+            if (mentionTarget === 'all_online') {
+              const guild = discordClient.guilds.cache.first();
+              if (guild) {
+                await guild.members.fetch();
+                const onlineIds = [...guild.members.cache.values()]
+                  .filter(m => !m.user.bot && (m.presence?.status === 'online' || m.presence?.status === 'idle' || m.presence?.status === 'dnd'))
+                  .map(m => `<@${m.id}>`);
+                if (onlineIds.length) mentionPrefix = onlineIds.join(' ') + ' ';
+              }
+            } else if (mentionTarget) {
+              mentionPrefix = `<@${mentionTarget}> `;
+            }
 
             // Определяем медиа из Telegram
             const photo = msg.photo?.[msg.photo.length - 1]; // самое большое фото
@@ -2252,21 +2424,17 @@ export function initTelegramBot(
             if (sticker) {
               mediaFile = await telegramBot.getFileLink(sticker.file_id);
               if (sticker.is_video) {
-                // Видео-стикер (WebM)
                 mediaType = 'video';
                 fileName = 'sticker.webm';
               } else if (sticker.is_animated) {
-                // Анимированный стикер (TGS/Lottie) — Discord не поддерживает
                 mediaType = 'gif';
                 fileName = sticker.file_name || 'sticker.tgs';
               } else {
-                // Статичный стикер (WebP)
                 mediaType = 'photo';
                 fileName = 'sticker.webp';
               }
             } else if (animation) {
               mediaFile = await telegramBot.getFileLink(animation.file_id);
-              // Telegram конвертирует GIF в MP4 — определяем реальное расширение
               mediaType = 'gif';
               fileName = animation.file_name || (animation.mime_type === 'video/mp4' ? 'animation.mp4' : 'animation.gif');
             } else if (photo) {
@@ -2284,20 +2452,19 @@ export function initTelegramBot(
             }
 
             if (mediaFile) {
-              // Скачиваем файл с Telegram
               const response = await fetch(mediaFile);
               const buffer = Buffer.from(await response.arrayBuffer());
 
               if (buffer.length > DISCORD_MAX_FILE) {
-                await targetMessage.reply(`${header}\n${replyContent ? replyContent + '\n' : ''}📎 <a href="${mediaFile}">Медиа (слишком большое для Discord)</a>`);
+                await targetMessage.reply(`${mentionPrefix}${header}\n${replyContent ? replyContent + '\n' : ''}📎 <a href="${mediaFile}">Медиа (слишком большое для Discord)</a>`);
               } else {
                 const { AttachmentBuilder } = await import('discord.js');
                 const attachment = new AttachmentBuilder(buffer, { name: fileName });
-                const textPart = replyContent ? `${header}\n${replyContent}` : header;
+                const textPart = `${mentionPrefix}${header}\n${replyContent}`;
                 await targetMessage.reply({ content: textPart, files: [attachment] });
               }
-            } else if (replyContent) {
-              await targetMessage.reply(`${header}\n${replyContent}`);
+            } else if (replyContent || mentionPrefix) {
+              await targetMessage.reply(`${mentionPrefix}${header}\n${replyContent}`);
             }
 
             await telegramBot.sendMessage(chatId, '✅ Ответ отправлен в Discord!');

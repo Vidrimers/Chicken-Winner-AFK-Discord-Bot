@@ -475,10 +475,14 @@ async function handleMentions(message, db, telegram) {
 
       msgText += `\n📅 ${new Date().toLocaleString('ru-RU')}`;
 
-      // Inline кнопка "Ответить"
+      // Inline кнопки ответа
+      const mentionerId = message.author.id;
       const replyMarkup = {
         inline_keyboard: [
-          [{ text: '💬 Ответить', callback_data: `mention_reply:${message.channel.id}:${message.id}` }]
+          [{ text: '💬 Ответить', callback_data: `mention_reply:${message.channel.id}:${message.id}` }],
+          [{ text: `👤 Ответить ${mentionerName}`, callback_data: `mention_reply_user:${message.channel.id}:${message.id}:${mentionerId}` }],
+          [{ text: '🟢 Ответить онлайн пользователю', callback_data: `mention_reply_online:${message.channel.id}:${message.id}` }],
+          [{ text: '👥 Ответить всем онлайн', callback_data: `mention_reply_all_online:${message.channel.id}:${message.id}` }]
         ]
       };
 
