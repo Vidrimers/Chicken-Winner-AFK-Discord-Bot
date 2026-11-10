@@ -1646,7 +1646,8 @@ function startRenameTag(tagId, el) {
 
 // Удаление метки и всей группы
 async function deleteTagGroup(tagId) {
-  if (!confirm('Удалить метку и все привязки?')) return;
+  const confirmed = await showConfirmDialogCustom('Удалить метку и все привязки?');
+  if (!confirmed) return;
   try {
     const res = await fetch('/api/cheater-checker/tags', {
       method: 'DELETE',
