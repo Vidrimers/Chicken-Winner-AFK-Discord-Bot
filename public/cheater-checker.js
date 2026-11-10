@@ -1760,6 +1760,8 @@ async function renderLinksGroups() {
       const data = await res.json();
       const steamIds = data.profiles || [];
       const members = steamIds.map(sid => profileMap[sid]).filter(Boolean);
+      // DEBUG: диагностика
+      console.warn('[LinksGroup]', { tagId: t.id, name: t.name, steamIdsCount: steamIds.length, membersCount: members.length, sampleSteamId: steamIds[0], sampleProfileMapKey: Object.keys(profileMap)[0], profileMapSize: Object.keys(profileMap).length });
       return {
         groupId: t.id,
         name: t.name,
