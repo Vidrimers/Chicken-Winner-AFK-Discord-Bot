@@ -1766,6 +1766,9 @@ async function renderLinksGroups() {
         isPrivate: !!t.is_private,
         createdBy: t.created_by,
         createdAt: t.created_at,
+        renamedBy: t.renamed_by,
+        renamedAt: t.renamed_at,
+        oldName: t.old_name,
         group: members,
         profileMap,
       };
@@ -1802,6 +1805,7 @@ function renderLinksGroupsPage() {
     const canRename = currentUserId && (String(createdBy) === String(currentUserId) || String(currentUserId) === String(CONFIG.ADMIN_USER_ID));
     const canDelete = canRename;
     const createdDate = createdAt ? new Date(createdAt * 1000).toLocaleDateString('ru-RU') : '';
+    const renamedDate = entry.renamedAt ? new Date(entry.renamedAt * 1000).toLocaleDateString('ru-RU') : '';
 
     return `
       <div class="link-group">
@@ -1810,6 +1814,7 @@ function renderLinksGroupsPage() {
           ${canDelete ? `<button class="link-group-delete" onclick="deleteTagGroup(${groupId})" title="Удалить метку">×</button>` : ''}
           ${isPrivate ? '<div class="link-group-meta">🔒 Приватная метка — видна только вам</div>' : ''}
           ${createdBy ? `<div class="link-group-meta">Создал: ${escapeHtml(createdBy)}${createdDate ? ' • ' + createdDate : ''}</div>` : ''}
+          ${entry.renamedBy ? `<div class="link-group-meta">Переименовал: ${escapeHtml(entry.renamedBy)}${renamedDate ? ' • ' + renamedDate : ''}${entry.oldName ? ` (было: «${escapeHtml(entry.oldName)}»)` : ''}</div>` : ''}
         </div>
         <div class="link-group-cards">${cards}</div>
       </div>

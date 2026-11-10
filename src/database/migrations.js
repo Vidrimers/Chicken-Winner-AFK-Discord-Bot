@@ -872,6 +872,18 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: renamed_by, renamed_at, old_name в tags (история переименований)
+  {
+    const columns = db.prepare("PRAGMA table_info(tags)").all();
+    const hasRenamedBy = columns.some(c => c.name === 'renamed_by');
+    if (!hasRenamedBy) {
+      db.exec("ALTER TABLE tags ADD COLUMN renamed_by TEXT");
+      db.exec("ALTER TABLE tags ADD COLUMN renamed_at INTEGER");
+      db.exec("ALTER TABLE tags ADD COLUMN old_name TEXT");
+      console.log('✅ Колонки renamed_by, renamed_at, old_name добавлены в tags');
+    }
+  }
+
   // Миграция: таблица steam_wall_banned_users (заблокированные репортёры)
   {
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='steam_wall_banned_users'").all();

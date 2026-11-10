@@ -492,7 +492,7 @@ export class DatabaseManager {
   getAllTagsForUser(viewerId) {
     // Все видимые метки (общие + свои приватные) с количеством профилей
     return this.prepare(
-      `SELECT t.id, t.name, t.created_by, t.is_private, t.created_at,
+      `SELECT t.id, t.name, t.created_by, t.is_private, t.created_at, t.renamed_by, t.renamed_at, t.old_name,
               COUNT(pt.steam_id) as profile_count
        FROM tags t
        LEFT JOIN profile_tags pt ON pt.tag_id = t.id
@@ -552,7 +552,9 @@ export class DatabaseManager {
     const tag = this.getTagById(tagId);
     if (!tag) return { changes: 0 };
     if (!isAdmin && tag.created_by !== userId) return { changes: 0 };
-    return this.prepare('UPDATE tags SET name = ? WHERE id = ?').run(newName, tagId);
+    return this.prepare(
+      'UPDATE tags SET name = ?, renamed_by = ?, renamed_at = strftime(\'%s\',\'now\'), old_name = ? WHERE id = ?'
+    ).run(newName, userId, tag.name, tagId);
   }
 
   // Удаление метки полностью (только создатель или админ)
