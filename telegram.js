@@ -2451,20 +2451,22 @@ export function initTelegramBot(
               fileName = document.file_name || 'photo.jpg';
             }
 
+            const mentionLine = mentionPrefix ? `${mentionPrefix}\n` : '';
+
             if (mediaFile) {
               const response = await fetch(mediaFile);
               const buffer = Buffer.from(await response.arrayBuffer());
 
               if (buffer.length > DISCORD_MAX_FILE) {
-                await targetMessage.reply(`${mentionPrefix}${header}\n${replyContent ? replyContent + '\n' : ''}📎 <a href="${mediaFile}">Медиа (слишком большое для Discord)</a>`);
+                await targetMessage.reply(`${header}\n${mentionLine}${replyContent ? replyContent + '\n' : ''}📎 <a href="${mediaFile}">Медиа (слишком большое для Discord)</a>`);
               } else {
                 const { AttachmentBuilder } = await import('discord.js');
                 const attachment = new AttachmentBuilder(buffer, { name: fileName });
-                const textPart = `${mentionPrefix}${header}\n${replyContent}`;
+                const textPart = `${header}\n${mentionLine}${replyContent}`;
                 await targetMessage.reply({ content: textPart, files: [attachment] });
               }
             } else if (replyContent || mentionPrefix) {
-              await targetMessage.reply(`${mentionPrefix}${header}\n${replyContent}`);
+              await targetMessage.reply(`${header}\n${mentionLine}${replyContent}`);
             }
 
             await telegramBot.sendMessage(chatId, '✅ Ответ отправлен в Discord!');
