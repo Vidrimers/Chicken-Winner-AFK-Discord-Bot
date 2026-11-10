@@ -2544,7 +2544,7 @@ export function initTelegramBot(
           const discordName = discordId ? getDiscordUsername(discordId) : 'Пользователь';
           const parsed = await parseMentionsToDiscord(msgText);
           const targetUser = await discordClient.users.fetch(targetUserId);
-          await targetUser.send(`**${discordName}** из Telegram:\n<@${targetUserId}>\n${parsed}`);
+          await targetUser.send(`**${discordName}** из Telegram:\n${parsed}`);
           await telegramBot.sendMessage(chatId, '✅ Сообщение отправлено в личку!', {
             reply_markup: { inline_keyboard: [[{ text: '◀️ Назад', callback_data: 'back_to_menu' }]] }
           });
