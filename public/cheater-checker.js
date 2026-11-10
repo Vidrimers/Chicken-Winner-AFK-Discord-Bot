@@ -1537,6 +1537,7 @@ async function applyExistingTag(tagId) {
     cancelAddTag();
     renderLinksProfilesList(_linksModalPage || 0);
     updateLinksButtonState(target);
+    if (currentReportFilter === 'links') renderLinksGroups();
     showNotification('Метка добавлена', 'success');
   } catch {
     showNotification('Ошибка при добавлении метки', 'error');
@@ -1623,6 +1624,7 @@ async function createTag() {
     cancelAddTag();
     renderLinksProfilesList(_linksModalPage || 0);
     updateLinksButtonState(target);
+    if (currentReportFilter === 'links') renderLinksGroups();
     showNotification(`Метка «${name}» #${data.tagId} добавлена`, 'success');
   } catch {
     showNotification('Ошибка при создании метки', 'error');
@@ -1642,6 +1644,7 @@ async function removeTag(tagId) {
     _linksCache[_linksSteamId] = data.tags || [];
     renderLinksProfilesList(_linksModalPage || 0);
     updateLinksButtonState(_linksSteamId);
+    if (currentReportFilter === 'links') renderLinksGroups();
     showNotification('Метка отвязана', 'success');
   } catch {
     showNotification('Ошибка при отвязке метки', 'error');
