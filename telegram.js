@@ -343,7 +343,7 @@ async function parseMentionsToDiscord(text) {
 // Показ онлайн-пользователей Discord для выбора получателя ответа
 const ONLINE_PAGE_SIZE = 10;
 
-async function showOnlineUsersForReply(chatId, channelId, messageId, page = 0) {
+async function showOnlineUsersForReply(chatId, channelId, messageId, page = 0, queryObj = null) {
   try {
     const guild = discordClient?.guilds?.cache?.first();
     if (!guild) {
@@ -385,10 +385,10 @@ async function showOnlineUsersForReply(chatId, channelId, messageId, page = 0) {
     const text = `🟢 <b>Онлайн пользователи</b> (${membersList.length})\nСтраница ${page + 1}/${totalPages}\nВыберите кому ответить:`;
 
     // Редактируем или отправляем
-    if (query && query.message) {
+    if (queryObj && queryObj.message) {
       await telegramBot.editMessageText(text, {
         chat_id: chatId,
-        message_id: query.message.message_id,
+        message_id: queryObj.message.message_id,
         parse_mode: 'HTML',
         reply_markup: { inline_keyboard: rows }
       });
@@ -1950,7 +1950,7 @@ export function initTelegramBot(
       // Ответить онлайн пользователю — показать список онлайн
       if (data.startsWith('mo:')) {
         const [, channelId, messageId] = data.split(':');
-        await showOnlineUsersForReply(chatId, channelId, messageId, 0);
+        await showOnlineUsersForReply(chatId, channelId, messageId, 0, query);
         return;
       }
 
@@ -1974,7 +1974,7 @@ export function initTelegramBot(
         const channelId = parts[1];
         const messageId = parts[2];
         const page = parseInt(parts[3], 10) || 0;
-        await showOnlineUsersForReply(chatId, channelId, messageId, page);
+        await showOnlineUsersForReply(chatId, channelId, messageId, page, query);
         return;
       }
 
