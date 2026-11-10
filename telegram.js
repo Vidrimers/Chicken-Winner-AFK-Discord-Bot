@@ -369,16 +369,16 @@ async function showOnlineUsersForReply(chatId, channelId, messageId, page = 0) {
 
     const rows = pageMembers.map(m => [{
       text: `🟢 ${m.displayName || m.user.username}`,
-      callback_data: `mention_online_pick:${channelId}:${messageId}:${m.id}`
+      callback_data: `mk:${channelId}:${messageId}:${m.id}`
     }]);
 
     // Пагинация
     const navRow = [];
     if (page > 0) {
-      navRow.push({ text: '◀️', callback_data: `mention_online_page:${channelId}:${messageId}:${page - 1}` });
+      navRow.push({ text: '◀️', callback_data: `mp:${channelId}:${messageId}:${page - 1}` });
     }
     if (page < totalPages - 1) {
-      navRow.push({ text: '▶️', callback_data: `mention_online_page:${channelId}:${messageId}:${page + 1}` });
+      navRow.push({ text: '▶️', callback_data: `mp:${channelId}:${messageId}:${page + 1}` });
     }
     if (navRow.length) rows.push(navRow);
 
@@ -1920,7 +1920,7 @@ export function initTelegramBot(
       }
 
       // Обработка кнопки "Ответить" на упоминания
-      if (data.startsWith('mention_reply:')) {
+      if (data.startsWith('mr:')) {
         const [, channelId, messageId] = data.split(':');
         userStates.set(chatId, 'awaiting_discord_reply');
         userStates.set(`${chatId}_reply_target`, `${channelId}:${messageId}`);
@@ -1934,7 +1934,7 @@ export function initTelegramBot(
       }
 
       // Ответить конкретному пользователю (с упоминанием)
-      if (data.startsWith('mention_reply_user:')) {
+      if (data.startsWith('mu:')) {
         const [, channelId, messageId, targetUserId] = data.split(':');
         userStates.set(chatId, 'awaiting_discord_reply');
         userStates.set(`${chatId}_reply_target`, `${channelId}:${messageId}:${targetUserId}`);
@@ -1948,14 +1948,14 @@ export function initTelegramBot(
       }
 
       // Ответить онлайн пользователю — показать список онлайн
-      if (data.startsWith('mention_reply_online:')) {
+      if (data.startsWith('mo:')) {
         const [, channelId, messageId] = data.split(':');
         await showOnlineUsersForReply(chatId, channelId, messageId, 0);
         return;
       }
 
       // Ответить всем онлайн
-      if (data.startsWith('mention_reply_all_online:')) {
+      if (data.startsWith('ma:')) {
         const [, channelId, messageId] = data.split(':');
         userStates.set(chatId, 'awaiting_discord_reply');
         userStates.set(`${chatId}_reply_target`, `${channelId}:${messageId}:all_online`);
@@ -1969,7 +1969,7 @@ export function initTelegramBot(
       }
 
       // Пагинация списка онлайн-пользователей
-      if (data.startsWith('mention_online_page:')) {
+      if (data.startsWith('mp:')) {
         const parts = data.split(':');
         const channelId = parts[1];
         const messageId = parts[2];
@@ -1979,7 +1979,7 @@ export function initTelegramBot(
       }
 
       // Выбор онлайн-пользователя для ответа
-      if (data.startsWith('mention_online_pick:')) {
+      if (data.startsWith('mk:')) {
         const parts = data.split(':');
         const channelId = parts[1];
         const messageId = parts[2];
