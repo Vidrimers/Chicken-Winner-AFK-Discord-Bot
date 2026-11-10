@@ -400,6 +400,23 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   });
 
   /**
+   * GET /api/cheater-checker/tags/profiles?tagId=
+   * Профили, привязанные к метке (должен быть ДО /tags/:steamId)
+   */
+  router.get('/tags/profiles', (req, res) => {
+    try {
+      const tagId = parseInt(req.query.tagId, 10);
+      if (!tagId) {
+        return res.status(400).json({ error: 'tagId обязателен' });
+      }
+      const steamIds = db.getProfilesForTag(tagId);
+      res.json({ profiles: steamIds });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
    * GET /api/cheater-checker/tags/:steamId
    * Метки профиля (приватные — только для создателя)
    */
@@ -440,23 +457,6 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       }
       const result = db.addTag(steamId, tagName.trim(), createdBy, isPrivate ? 1 : 0);
       res.json({ success: true, tagId: result.tagId, duplicate: result.duplicate });
-    } catch (error) {
-      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
-    }
-  });
-
-  /**
-   * GET /api/cheater-checker/tags/profiles?tagId=
-   * Профили, привязанные к метке
-   */
-  router.get('/tags/profiles', (req, res) => {
-    try {
-      const tagId = parseInt(req.query.tagId, 10);
-      if (!tagId) {
-        return res.status(400).json({ error: 'tagId обязателен' });
-      }
-      const steamIds = db.getProfilesForTag(tagId);
-      res.json({ profiles: steamIds });
     } catch (error) {
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
