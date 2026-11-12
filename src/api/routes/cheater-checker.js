@@ -502,6 +502,30 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
   });
 
   /**
+   * PUT /api/cheater-checker/tags/description
+   * Описание метки (создатель или админ)
+   */
+  router.put('/tags/description', (req, res) => {
+    try {
+      const { tagId, description, userId, isAdmin } = req.body;
+      if (!tagId) {
+        return res.status(400).json({ error: 'tagId обязателен' });
+      }
+      const desc = (description || '').trim();
+      if (desc.length > 300) {
+        return res.status(400).json({ error: 'Описание не длиннее 300 символов' });
+      }
+      const result = db.setDescription(tagId, desc, userId || null, !!isAdmin);
+      if (result.changes === 0) {
+        return res.status(403).json({ error: 'Нет прав на изменение описания' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
+  /**
    * DELETE /api/cheater-checker/tags/unassign
    * Отвязать метку от профиля (не удалять метку)
    */

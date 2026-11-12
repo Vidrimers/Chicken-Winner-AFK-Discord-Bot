@@ -1695,6 +1695,52 @@ function startRenameTag(tagId, el) {
   input.addEventListener('blur', () => finish(true));
 }
 
+// Редактирование описания метки из таба «Связи»
+function startEditDescription(tagId, el) {
+  const entry = (_linksGroupsData || []).find(g => g.groupId === tagId);
+  const current = (entry && entry.description) || '';
+  const textarea = document.createElement('textarea');
+  textarea.value = current;
+  textarea.className = 'link-group-name-input';
+  textarea.maxLength = 300;
+  textarea.rows = 3;
+  textarea.style.width = '100%';
+  textarea.placeholder = 'Описание метки (до 300 символов)';
+  el.replaceWith(textarea);
+  textarea.focus();
+
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    const newDesc = textarea.value.trim();
+    if (save && newDesc !== current) {
+      try {
+        const res = await fetch('/api/cheater-checker/tags/description', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tagId, description: newDesc, userId: currentUserId, isAdmin: String(currentUserId) === String(CONFIG.ADMIN_USER_ID) }),
+        });
+        if (res.ok) {
+          showNotification('Описание сохранено', 'success');
+        } else {
+          const data = await res.json();
+          showNotification(data.error || 'Нет прав на изменение описания', 'error');
+        }
+      } catch {
+        showNotification('Ошибка при сохранении описания', 'error');
+      }
+    }
+    renderLinksGroups();
+  };
+
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); finish(true); }
+    if (e.key === 'Escape') finish(false);
+  });
+  textarea.addEventListener('blur', () => finish(true));
+}
+
 // Удаление метки и всей группы
 async function deleteTagGroup(tagId) {
   const confirmed = await showConfirmDialogCustom('Удалить метку и все привязки?');
@@ -1823,6 +1869,9 @@ async function renderLinksGroups() {
         renamedByName: t.renamed_by_name || t.renamed_by,
         renamedAt: t.renamed_at,
         oldName: t.old_name,
+        description: t.description || '',
+        descriptionByName: t.description_by_name || t.description_by,
+        descriptionAt: t.description_at,
         group: members,
         profileMap,
       };
@@ -1861,6 +1910,18 @@ function renderLinksGroupsPage() {
     const createdDate = createdAt ? new Date(createdAt * 1000).toLocaleDateString('ru-RU') : '';
     const renamedDate = entry.renamedAt ? new Date(entry.renamedAt * 1000).toLocaleDateString('ru-RU') : '';
 
+    const desc = entry.description || '';
+    let descHtml = '';
+    if (desc) {
+      const descDate = entry.descriptionAt ? new Date(entry.descriptionAt * 1000).toLocaleDateString('ru-RU') : '';
+      descHtml = `<div class="link-group-meta"${canRename ? ` onclick="startEditDescription(${groupId}, this)" title="Нажмите для редактирования" style="cursor:pointer"` : ''}>${escapeHtml(desc).replace(/\n/g, '<br>')}</div>`;
+      if (entry.descriptionByName) {
+        descHtml += `<div class="link-group-meta" style="opacity:0.6">Описание: ${escapeHtml(entry.descriptionByName)}${descDate ? ' • ' + descDate : ''}</div>`;
+      }
+    } else if (canRename) {
+      descHtml = `<div class="link-group-meta" onclick="startEditDescription(${groupId}, this)" title="Добавить описание" style="cursor:pointer;opacity:0.6">+ Добавить описание</div>`;
+    }
+
     return `
       <div class="link-group">
         <div class="link-group-header">
@@ -1869,6 +1930,7 @@ function renderLinksGroupsPage() {
           ${isPrivate ? '<div class="link-group-meta">🔒 Приватная метка — видна только вам</div>' : ''}
           ${createdBy ? `<div class="link-group-meta">Создал: ${escapeHtml(entry.createdByName || createdBy)}${createdDate ? ' • ' + createdDate : ''}</div>` : ''}
           ${entry.renamedBy ? `<div class="link-group-meta">Переименовал: ${escapeHtml(entry.renamedByName || entry.renamedBy)}${renamedDate ? ' • ' + renamedDate : ''}${entry.oldName ? ` (было: «${escapeHtml(entry.oldName)}»)` : ''}</div>` : ''}
+          ${descHtml}
         </div>
         <div class="link-group-cards">${cards}</div>
       </div>

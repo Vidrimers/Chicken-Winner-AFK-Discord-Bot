@@ -494,12 +494,14 @@ export class DatabaseManager {
     // Все видимые метки (общие + свои приватные) с количеством профилей
     return this.prepare(
       `SELECT t.id, t.name, t.created_by, t.is_private, t.created_at, t.renamed_by, t.renamed_at, t.old_name,
-              us.username AS created_by_name, rs.username AS renamed_by_name,
+              t.description, t.description_by, t.description_at,
+              us.username AS created_by_name, rs.username AS renamed_by_name, ds.username AS description_by_name,
               COUNT(pt.steam_id) as profile_count
        FROM tags t
        LEFT JOIN profile_tags pt ON pt.tag_id = t.id
        LEFT JOIN user_stats us ON us.user_id = t.created_by
        LEFT JOIN user_stats rs ON rs.user_id = t.renamed_by
+       LEFT JOIN user_stats ds ON ds.user_id = t.description_by
        WHERE t.is_private = 0 OR t.created_by = ?
        GROUP BY t.id`
     ).all(viewerId || '');
@@ -555,6 +557,16 @@ export class DatabaseManager {
     return this.prepare(
       'UPDATE tags SET name = ?, renamed_by = ?, renamed_at = strftime(\'%s\',\'now\'), old_name = ? WHERE id = ?'
     ).run(newName, userId, tag.name, tagId);
+  }
+
+  // Описание метки (только создатель или админ)
+  setDescription(tagId, description, userId, isAdmin = false) {
+    const tag = this.getTagById(tagId);
+    if (!tag) return { changes: 0 };
+    if (!isAdmin && tag.created_by !== userId) return { changes: 0 };
+    return this.prepare(
+      'UPDATE tags SET description = ?, description_by = ?, description_at = strftime(\'%s\',\'now\') WHERE id = ?'
+    ).run(description, userId, tagId);
   }
 
   // Удаление метки полностью (только создатель или админ)

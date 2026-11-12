@@ -884,6 +884,18 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: description, description_by, description_at в tags (описания групп)
+  {
+    const columns = db.prepare("PRAGMA table_info(tags)").all();
+    const hasDescription = columns.some(c => c.name === 'description');
+    if (!hasDescription) {
+      db.exec("ALTER TABLE tags ADD COLUMN description TEXT");
+      db.exec("ALTER TABLE tags ADD COLUMN description_by TEXT");
+      db.exec("ALTER TABLE tags ADD COLUMN description_at INTEGER");
+      console.log('✅ Колонки description, description_by, description_at добавлены в tags');
+    }
+  }
+
   // Миграция: created_by/renamed_by в tags — username → числовой Discord ID
   {
     const rows = db.prepare('SELECT id, created_by, renamed_by FROM tags').all();
