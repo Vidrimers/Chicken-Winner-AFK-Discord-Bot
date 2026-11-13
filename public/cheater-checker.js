@@ -1615,7 +1615,7 @@ async function createTag() {
     const res = await fetch('/api/cheater-checker/tags', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ steamId: target, tagName: name, createdBy: currentUserId, isPrivate: !!isPrivate }),
+      body: JSON.stringify({ steamId: target, tagName: name, isPrivate: !!isPrivate }),
     });
     const data = await res.json();
     const res2 = await fetch(`/api/cheater-checker/tags/${target}`);
@@ -1673,7 +1673,7 @@ function startRenameTag(tagId, el) {
         const res = await fetch('/api/cheater-checker/tags/rename', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tagId, newName, userId: currentUserId, isAdmin: String(currentUserId) === String(CONFIG.ADMIN_USER_ID) }),
+          body: JSON.stringify({ tagId, newName }),
         });
         if (res.ok) {
           showNotification(`Метка переименована в «${newName}»`, 'success');
@@ -1719,7 +1719,7 @@ function startEditDescription(tagId, el) {
         const res = await fetch('/api/cheater-checker/tags/description', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tagId, description: newDesc, userId: currentUserId, isAdmin: String(currentUserId) === String(CONFIG.ADMIN_USER_ID) }),
+          body: JSON.stringify({ tagId, description: newDesc }),
         });
         if (res.ok) {
           showNotification('Описание сохранено', 'success');
@@ -1749,7 +1749,7 @@ async function deleteTagGroup(tagId) {
     const res = await fetch('/api/cheater-checker/tags', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tagId, userId: currentUserId, isAdmin: String(currentUserId) === String(CONFIG.ADMIN_USER_ID) }),
+      body: JSON.stringify({ tagId }),
     });
     if (!res.ok) {
       const data = await res.json();

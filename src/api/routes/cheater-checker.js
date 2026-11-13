@@ -451,11 +451,14 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    */
   router.post('/tags', (req, res) => {
     try {
-      const { steamId, tagName, createdBy, isPrivate } = req.body;
-      // created_by — всегда числовой Discord ID (из сессии)
-      const creatorId = req.session?.userId || createdBy;
-      if (!steamId || !tagName || !creatorId) {
-        return res.status(400).json({ error: 'steamId, tagName и createdBy обязательны' });
+      const { steamId, tagName, isPrivate } = req.body;
+      // created_by — всегда числовой Discord ID из сессии (из тела не принимаем)
+      const creatorId = req.session?.userId;
+      if (!creatorId) {
+        return res.status(401).json({ error: 'Необходим вход' });
+      }
+      if (!steamId || !tagName) {
+        return res.status(400).json({ error: 'steamId и tagName обязательны' });
       }
       const result = db.addTag(steamId, tagName.trim(), creatorId, isPrivate ? 1 : 0);
       res.json({ success: true, tagId: result.tagId });
@@ -487,11 +490,16 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    */
   router.put('/tags/rename', (req, res) => {
     try {
-      const { tagId, newName, userId, isAdmin } = req.body;
+      const { tagId, newName } = req.body;
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Необходим вход' });
+      }
+      const isAdmin = userId === process.env.ADMIN_USER_ID;
       if (!tagId || !newName) {
         return res.status(400).json({ error: 'tagId и newName обязательны' });
       }
-      const result = db.renameTag(tagId, newName.trim(), userId || null, !!isAdmin);
+      const result = db.renameTag(tagId, newName.trim(), userId, isAdmin);
       if (result.changes === 0) {
         return res.status(403).json({ error: 'Нет прав на переименование' });
       }
@@ -507,7 +515,12 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    */
   router.put('/tags/description', (req, res) => {
     try {
-      const { tagId, description, userId, isAdmin } = req.body;
+      const { tagId, description } = req.body;
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Необходим вход' });
+      }
+      const isAdmin = userId === process.env.ADMIN_USER_ID;
       if (!tagId) {
         return res.status(400).json({ error: 'tagId обязателен' });
       }
@@ -515,7 +528,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
       if (desc.length > 300) {
         return res.status(400).json({ error: 'Описание не длиннее 300 символов' });
       }
-      const result = db.setDescription(tagId, desc, userId || null, !!isAdmin);
+      const result = db.setDescription(tagId, desc, userId, isAdmin);
       if (result.changes === 0) {
         return res.status(403).json({ error: 'Нет прав на изменение описания' });
       }
@@ -548,11 +561,16 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
    */
   router.delete('/tags', (req, res) => {
     try {
-      const { tagId, userId, isAdmin } = req.body;
+      const { tagId } = req.body;
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Необходим вход' });
+      }
+      const isAdmin = userId === process.env.ADMIN_USER_ID;
       if (!tagId) {
         return res.status(400).json({ error: 'tagId обязателен' });
       }
-      const result = db.deleteTag(tagId, userId || null, !!isAdmin);
+      const result = db.deleteTag(tagId, userId, isAdmin);
       if (result.changes === 0) {
         return res.status(403).json({ error: 'Нет прав на удаление' });
       }
