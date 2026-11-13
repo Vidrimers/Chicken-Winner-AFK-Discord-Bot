@@ -1677,6 +1677,14 @@ function startRenameTag(tagId, el) {
         });
         if (res.ok) {
           showNotification(`Метка переименована в «${newName}»`, 'success');
+          const entry = (_linksGroupsData || []).find(g => g.groupId === tagId);
+          if (entry) {
+            entry.oldName = entry.name;
+            entry.name = newName;
+            entry.renamedBy = currentUserId;
+            entry.renamedByName = currentUsername || currentUserId;
+            entry.renamedAt = Math.floor(Date.now() / 1000);
+          }
         } else {
           const data = await res.json();
           showNotification(data.error || 'Нет прав на переименование', 'error');
@@ -1685,7 +1693,7 @@ function startRenameTag(tagId, el) {
         showNotification('Ошибка при переименовании', 'error');
       }
     }
-    renderLinksGroups();
+    updateGroupHeader(tagId);
   };
 
   input.addEventListener('keydown', (e) => {
@@ -1723,6 +1731,12 @@ function startEditDescription(tagId, el) {
         });
         if (res.ok) {
           showNotification('Описание сохранено', 'success');
+          const entry = (_linksGroupsData || []).find(g => g.groupId === tagId);
+          if (entry) {
+            entry.description = newDesc;
+            entry.descriptionByName = currentUsername || currentUserId;
+            entry.descriptionAt = Math.floor(Date.now() / 1000);
+          }
         } else {
           const data = await res.json();
           showNotification(data.error || 'Нет прав на изменение описания', 'error');
@@ -1731,7 +1745,7 @@ function startEditDescription(tagId, el) {
         showNotification('Ошибка при сохранении описания', 'error');
       }
     }
-    renderLinksGroups();
+    updateGroupHeader(tagId);
   };
 
   textarea.addEventListener('keydown', (e) => {
@@ -1886,6 +1900,42 @@ async function renderLinksGroups() {
   }
 }
 
+// HTML заголовка группы — общий для полной отрисовки и точечного обновления
+function buildGroupHeaderHtml(entry) {
+  const { groupId, name, isPrivate, createdBy } = entry;
+  const canRename = currentUserId && (String(createdBy) === String(currentUserId) || String(currentUserId) === String(CONFIG.ADMIN_USER_ID));
+  const createdDate = entry.createdAt ? new Date(entry.createdAt * 1000).toLocaleDateString('ru-RU') : '';
+  const renamedDate = entry.renamedAt ? new Date(entry.renamedAt * 1000).toLocaleDateString('ru-RU') : '';
+
+  const desc = entry.description || '';
+  let descHtml = '';
+  if (desc) {
+    const descDate = entry.descriptionAt ? new Date(entry.descriptionAt * 1000).toLocaleDateString('ru-RU') : '';
+    descHtml = `<div class="link-group-meta"${canRename ? ` onclick="startEditDescription(${groupId}, this)" title="Нажмите для редактирования" style="cursor:pointer"` : ''}>${escapeHtml(desc).replace(/\n/g, '<br>')}</div>`;
+    if (entry.descriptionByName) {
+      descHtml += `<div class="link-group-meta" style="opacity:0.6">Описание: ${escapeHtml(entry.descriptionByName)}${descDate ? ' • ' + descDate : ''}</div>`;
+    }
+  } else if (canRename) {
+    descHtml = `<div class="link-group-meta" onclick="startEditDescription(${groupId}, this)" title="Добавить описание" style="cursor:pointer;opacity:0.6">+ Добавить описание</div>`;
+  }
+
+  return `
+    <span class="link-group-name" ${canRename ? `onclick="startRenameTag(${groupId}, this)" title="Нажмите для переименования"` : ''}>🔗 ${escapeHtml(name)} #${groupId}</span> — ${entry.group.length} ${pluralAccounts(entry.group.length)}
+    ${canRename ? `<button class="link-group-delete" onclick="deleteTagGroup(${groupId})" title="Удалить метку">×</button>` : ''}
+    ${isPrivate ? '<div class="link-group-meta">🔒 Приватная метка — видна только вам</div>' : ''}
+    ${createdBy ? `<div class="link-group-meta">Создал: ${escapeHtml(entry.createdByName || createdBy)}${createdDate ? ' • ' + createdDate : ''}</div>` : ''}
+    ${entry.renamedBy ? `<div class="link-group-meta">Переименовал: ${escapeHtml(entry.renamedByName || entry.renamedBy)}${renamedDate ? ' • ' + renamedDate : ''}${entry.oldName ? ` (было: «${escapeHtml(entry.oldName)}»)` : ''}</div>` : ''}
+    ${descHtml}
+  `;
+}
+
+// Точечное обновление только заголовка группы — без запросов и перерисовки списка
+function updateGroupHeader(groupId) {
+  const entry = (_linksGroupsData || []).find(g => g.groupId === groupId);
+  const header = document.querySelector(`.link-group-header[data-group-id="${groupId}"]`);
+  if (entry && header) header.innerHTML = buildGroupHeaderHtml(entry);
+}
+
 function renderLinksGroupsPage() {
   const container = document.getElementById('linksGroupsContainer');
   const groups = _linksGroupsData;
@@ -1896,8 +1946,8 @@ function renderLinksGroupsPage() {
   const start = (linksPage - 1) * PAGE_SIZE;
   const pageGroups = groups.slice(start, start + PAGE_SIZE);
 
-  container.innerHTML = pageGroups.map((entry, i) => {
-    const { group, profileMap, groupId, name, isPrivate, createdBy, createdAt } = entry;
+  container.innerHTML = pageGroups.map((entry) => {
+    const { group, groupId } = entry;
 
     const cards = group.map(p => {
       if (!p) return '';
@@ -1905,33 +1955,9 @@ function renderLinksGroupsPage() {
       return createProfileCard(p, isBanned);
     }).join('');
 
-    const canRename = currentUserId && (String(createdBy) === String(currentUserId) || String(currentUserId) === String(CONFIG.ADMIN_USER_ID));
-    const canDelete = canRename;
-    const createdDate = createdAt ? new Date(createdAt * 1000).toLocaleDateString('ru-RU') : '';
-    const renamedDate = entry.renamedAt ? new Date(entry.renamedAt * 1000).toLocaleDateString('ru-RU') : '';
-
-    const desc = entry.description || '';
-    let descHtml = '';
-    if (desc) {
-      const descDate = entry.descriptionAt ? new Date(entry.descriptionAt * 1000).toLocaleDateString('ru-RU') : '';
-      descHtml = `<div class="link-group-meta"${canRename ? ` onclick="startEditDescription(${groupId}, this)" title="Нажмите для редактирования" style="cursor:pointer"` : ''}>${escapeHtml(desc).replace(/\n/g, '<br>')}</div>`;
-      if (entry.descriptionByName) {
-        descHtml += `<div class="link-group-meta" style="opacity:0.6">Описание: ${escapeHtml(entry.descriptionByName)}${descDate ? ' • ' + descDate : ''}</div>`;
-      }
-    } else if (canRename) {
-      descHtml = `<div class="link-group-meta" onclick="startEditDescription(${groupId}, this)" title="Добавить описание" style="cursor:pointer;opacity:0.6">+ Добавить описание</div>`;
-    }
-
     return `
       <div class="link-group">
-        <div class="link-group-header">
-          <span class="link-group-name" ${canRename ? `onclick="startRenameTag(${groupId}, this)" title="Нажмите для переименования"` : ''}>🔗 ${escapeHtml(name)} #${groupId}</span> — ${group.length} ${pluralAccounts(group.length)}
-          ${canDelete ? `<button class="link-group-delete" onclick="deleteTagGroup(${groupId})" title="Удалить метку">×</button>` : ''}
-          ${isPrivate ? '<div class="link-group-meta">🔒 Приватная метка — видна только вам</div>' : ''}
-          ${createdBy ? `<div class="link-group-meta">Создал: ${escapeHtml(entry.createdByName || createdBy)}${createdDate ? ' • ' + createdDate : ''}</div>` : ''}
-          ${entry.renamedBy ? `<div class="link-group-meta">Переименовал: ${escapeHtml(entry.renamedByName || entry.renamedBy)}${renamedDate ? ' • ' + renamedDate : ''}${entry.oldName ? ` (было: «${escapeHtml(entry.oldName)}»)` : ''}</div>` : ''}
-          ${descHtml}
-        </div>
+        <div class="link-group-header" data-group-id="${groupId}">${buildGroupHeaderHtml(entry)}</div>
         <div class="link-group-cards">${cards}</div>
       </div>
     `;
