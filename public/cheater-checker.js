@@ -660,7 +660,7 @@ function createProfileCard(profile, isBanned) {
       <div class="card-header">
         <img class="card-avatar" src="${avatarUrl}" alt="Avatar" onerror="this.src='/avatars/nopic.png'" />
         <div class="card-info">
-          <div class="card-checker">Проверил: ${checkerName} ${sourceBadge}</div>
+          <div class="card-checker">Проверил: ${checkerName} ${sourceBadge} ${profile.short_code ? `<span class="card-shortcode" onclick="copySteamId('${steamId}', event)" title="Клик — скопировать SteamID">${profile.short_code}</span>` : ''}</div>
           <div class="card-name" data-steam-id="${steamId}">
             <span class="expand-icon">▶</span>
             ${personaName}
@@ -2614,6 +2614,36 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Копировать SteamID по клику на короткий код
+function copySteamId(steamId, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  const text = String(steamId);
+  const done = () => showNotification(`SteamID ${text} скопирован`, 'success');
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      done();
+    } catch {
+      showNotification('Не удалось скопировать', 'error');
+    }
+    ta.remove();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(fallback);
+  } else {
+    fallback();
+  }
 }
 
 

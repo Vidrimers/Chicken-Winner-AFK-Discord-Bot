@@ -1,7 +1,16 @@
 /**
  * Randomized Steam wall messages
  * 10+ variants per type, no consecutive repeats
+ * SteamID replaced with 6-char codes to avoid Steam spam filter
  */
+
+import { createHash } from 'crypto';
+
+// Generate deterministic 6-char code from SteamID
+export function shortCode(steamId) {
+  const hash = createHash('sha256').update(String(steamId)).digest('hex');
+  return 'CW-' + hash.substring(0, 6).toUpperCase();
+}
 
 // Track last used index per type to avoid consecutive duplicates
 const lastIndex = {};
@@ -85,7 +94,8 @@ export function getRandomFlagMessage(steamId, date) {
     (id, dt) => `🔍 Profile reviewed — CheatWatchers Community\n\n${id} · ${dt.slash}\n\nConnection data logged and archived.\nEvidence retained.\nRegistered in CheatWatchers Community database and Valve database.`,
   ];
   const template = pickRandom('flag', variants);
-  let msg = template(steamId, d);
+  const code = shortCode(steamId);
+  let msg = template(code, d);
   // Вставляем благодарность после строки с датой (перед финальными строками)
   const thankYou = getRandomThankYou();
   const lines = msg.split('\n');
@@ -137,7 +147,9 @@ export function getRandomBanMessage(steamId, banLine, date, wasClean) {
 
     (id, dt) => `🔄 Case modified — CheatWatchers Community\n\n${id} · ${dt.slash}\n\n${banLine}\nPreviously: ${prev}\n\nConnection data logged and archived.\nEvidence retained.\nRegistered in CheatWatchers Community database and Valve database.`,
   ];
-  return pickRandom('ban', variants)(steamId, d);
+  const template = pickRandom('ban', variants);
+  const code = shortCode(steamId);
+  return template(code, d);
 }
 
 // ===== DUPLICATE (10+ variants) =====
@@ -158,7 +170,8 @@ export function getRandomDuplicateMessage(steamId) {
     (id) => `🔍 Duplicate report — already tracked.\n${id}`,
   ];
   const template = pickRandom('duplicate', variants);
-  return template(steamId) + '\n\n' + getRandomThankYou();
+  const code = shortCode(steamId);
+  return template(code) + '\n\n' + getRandomThankYou();
 }
 
 // ===== WARNING — TheCheatWatcher protection (10+ variants) =====

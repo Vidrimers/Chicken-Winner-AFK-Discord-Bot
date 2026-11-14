@@ -4,7 +4,7 @@ import { getCachedStats } from '../../steam/statsCache.js';
 import { USER_IDS, STEAM_CONFIG } from '../../config.js';
 import { EmbedBuilder } from 'discord.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
-import { getRandomFlagMessage } from '../../steam-wall/wall-messages.js';
+import { getRandomFlagMessage, shortCode } from '../../steam-wall/wall-messages.js';
 import { error as logError } from '../../utils/logger.js';
 
 /**
@@ -630,6 +630,7 @@ export function createCheaterCheckerRouter(db, discordClient, telegram, achievem
         return {
           ...rest,
           checked_by_username: userId ? (profile.checked_by_username || 'Unknown') : 'Участник',
+          short_code: shortCode(profile.steam_id),
           canPublish,
           name_history_count: db.getNameHistoryCount(profile.steam_id, type),
           friends_count: db.getFriendsCount(profile.steam_id),
