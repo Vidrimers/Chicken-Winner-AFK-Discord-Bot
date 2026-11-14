@@ -415,21 +415,16 @@
 .card-shortcode {
   display: inline-block;
   margin-left: 6px;
-  padding: 1px 6px;
   font-family: 'Consolas', 'Courier New', monospace;
   font-size: 0.72rem;
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.12);
-  border: 1px solid rgba(102, 126, 234, 0.3);
-  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   user-select: none;
-  transition: background 0.2s, color 0.2s;
+  transition: color 0.2s;
 }
 
 .card-shortcode:hover {
-  background: rgba(102, 126, 234, 0.28);
-  color: #8fa2ff;
+  color: #667eea;
 }
 
 .card-name {

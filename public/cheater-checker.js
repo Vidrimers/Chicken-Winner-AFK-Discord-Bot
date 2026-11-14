@@ -914,7 +914,7 @@ function bindCardDelegation() {
     if (!card || !card.contains(e.target)) return;
 
     // Кнопки внутри карточки — не раскрываем
-    if (e.target.closest('a, button, input, .notes-section, .card-links-section')) {
+    if (e.target.closest('a, button, input, .notes-section, .card-links-section, .card-shortcode')) {
       const publishBtn = e.target.closest('.discord-publish-btn');
       if (publishBtn) {
         e.stopImmediatePropagation();
