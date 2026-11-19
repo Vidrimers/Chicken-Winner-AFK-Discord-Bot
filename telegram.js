@@ -13,6 +13,7 @@ import { sendWidget, answerWidgetQuery, editMessageWidgetData, checkWidgetSize }
 import { sendRichMessage, buildButtonRow, buildInlineKeyboard } from './src/telegram/rich-message.js';
 import { buildMainMenuWidget, buildMainMenuRichHtml, buildMainMenuInlineKeyboard, MENU_SECTIONS } from './src/telegram/widgets/main-menu.js';
 import { buildSettingsRichHtml, buildSettingsInlineKeyboard, buildSettingsWidget, buildTimeoutRichHtml, buildTimeoutInlineKeyboard, buildCheaterSettingsRichHtml, buildCheaterSettingsInlineKeyboard, buildSteamRichHtml, buildSteamInlineKeyboard } from './src/telegram/widgets/settings-menu.js';
+import { buildStatsRichHtml, buildStatsWidget } from './src/telegram/widgets/stats.js';
 import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
 /**
@@ -807,7 +808,20 @@ async function handleStatsRequest(chatId) {
     const cs2 = result.cs2 || {};
     const faceit = result.faceit || null;
 
-    // Прогресс-бар
+    // 1. HTML Widget
+    const widgetHtml = buildStatsWidget(username, cs2, faceit);
+    const sizeCheck = checkWidgetSize(widgetHtml);
+    if (sizeCheck.valid) {
+      const wResult = await sendWidget(TELEGRAM_TOKEN, chatId, widgetHtml);
+      if (wResult) return;
+    }
+
+    // 2. Rich Message
+    const richHtml = buildStatsRichHtml(username, cs2, faceit);
+    const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+    if (richOk) return;
+
+    // 3. Fallback: обычное сообщение с HTML
     const bar = (pct, width = 10) => {
       if (pct === null || pct === undefined) return '—';
       const filled = Math.round((pct / 100) * width);
@@ -815,8 +829,6 @@ async function handleStatsRequest(chatId) {
     };
 
     let msg = `📊 <b>Статистика ${username}</b>\n\n`;
-
-    // CS2 (Steam)
     msg += `━━━ 🎮 <b>CS2 (Steam)</b> ━━━\n`;
     if (cs2.private) {
       msg += `Профиль приватный\n`;
@@ -831,7 +843,6 @@ async function handleStatsRequest(chatId) {
       msg += `MVP <code>${cs2.totalMvps ?? '—'}</code>  ·  Раундов <code>${cs2.totalRoundsPlayed ?? '—'}</code>  ·  Точность <code>${cs2.accuracy ?? '—'}%</code>\n`;
     }
 
-    // FACEIT
     if (faceit) {
       msg += `\n━━━ 🏆 <b>FACEIT</b> ━━━\n`;
       msg += `Уровень <code>${faceit.level ?? '—'}</code>  ·  ELO <code>${faceit.elo ?? '—'}</code>`;
@@ -846,9 +857,7 @@ async function handleStatsRequest(chatId) {
       msg += `1v2      <code>${bar(faceit.oneV2WinRate)}</code>\n`;
       msg += `Серия: <code>${faceit.currentWinStreak ?? '—'}</code>  ·  Макс: <code>${faceit.longestWinStreak ?? '—'}</code>\n`;
       msg += `Entry: <code>${faceit.entryRate ?? '—'}</code>  ·  Успех: <code>${faceit.entrySuccessRate ?? '—'}</code>  ·  Флешки: <code>${faceit.flashSuccessRate ?? '—'}%</code>  ·  Снайпер: <code>${faceit.sniperKillRate ?? '—'}</code>\n`;
-
       if (faceit.isBanned) msg += `\n🔴 <b>Забанен на FACEIT</b>\n`;
-
       if (faceit.recentResults && faceit.recentResults.length > 0) {
         const streak = faceit.recentResults.slice(0, 5).map(r => r.trim() === '1' ? '✅' : '❌').join('');
         msg += `\nПоследние 5: ${streak}\n`;
