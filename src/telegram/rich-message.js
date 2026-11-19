@@ -10,8 +10,8 @@ const API_BASE = 'https://api.telegram.org';
  * Отправить Rich Message
  * @param {string} token
  * @param {number|string} chatId
- * @param {string} html — HTML rich message с <tg-button>
- * @param {object} options — { caption, reply_markup, parse_mode }
+ * @param {string} html — HTML rich message
+ * @param {object} options — { caption, reply_markup }
  * @returns {Promise<boolean>} true если успешно
  */
 export async function sendRichMessage(token, chatId, html, options = {}) {

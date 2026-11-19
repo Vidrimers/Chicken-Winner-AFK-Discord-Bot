@@ -12,6 +12,7 @@ import { stripRtl } from './src/utils/rtl.js';
 import { sendWidget, answerWidgetQuery, editMessageWidgetData, checkWidgetSize } from './src/telegram/widget-helper.js';
 import { sendRichMessage, buildButtonRow, buildInlineKeyboard } from './src/telegram/rich-message.js';
 import { buildMainMenuWidget, buildMainMenuRichHtml, buildMainMenuInlineKeyboard, MENU_SECTIONS } from './src/telegram/widgets/main-menu.js';
+import { buildSettingsRichHtml, buildSettingsInlineKeyboard, buildSettingsWidget } from './src/telegram/widgets/settings-menu.js';
 import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
 /**
@@ -660,30 +661,30 @@ async function sendSettingsMenu(chatId) {
     return;
   }
 
-  const dm = db.getUserDMSetting(discordId);
-  const timeout = db.getUserTimeout(discordId);
-  const achievement = db.getUserAchievementNotificationSetting(discordId);
-  const channel = db.getUserChannelNotificationSetting(discordId);
-  const cheaterOwn = db.getUserCheaterOwnNotificationSetting(discordId);
-  const cheaterOthers = db.getUserCheaterOthersNotificationSetting(discordId);
-  const mention = db.getUserMentionNotificationSetting(discordId);
-  const steamId = db.getSteamId(discordId);
-
-  const timeoutDisplay = timeout < 15 ? `${timeout} сек` : `${timeout} мин`;
-
-  const settingsButtons = {
-    inline_keyboard: [
-      [{ text: `📩 ЛС уведомления [${dm ? '✅' : '❌'}] · Для Discord`, callback_data: 'settings_toggle_dm' }],
-      [{ text: `⏱ Время до AFK [${timeoutDisplay}] · Для Discord`, callback_data: 'settings_change_timeout' }],
-      [{ text: `🏆 Уведомления о достижениях [${achievement ? '✅' : '❌'}] · Для Discord`, callback_data: 'settings_toggle_achievement' }],
-      [{ text: `🔔 Кто в канале [${channel ? '✅' : '❌'}] · Для Telegram`, callback_data: 'settings_toggle_channel' }],
-      [{ text: `🚨 Уведомления о читерах · Для Telegram`, callback_data: 'settings_cheater_menu' }],
-      [{ text: `@ Упоминания [${mention ? '✅' : '❌'}] · Для Discord`, callback_data: 'settings_toggle_mention' }],
-      [{ text: `🎮 Steam [${steamId ? '✅' : '❌'}]`, callback_data: 'settings_steam_menu' }],
-      [{ text: '◀️ Назад', callback_data: 'back_to_menu' }]
-    ]
+  const settings = {
+    dm: db.getUserDMSetting(discordId),
+    timeout: db.getUserTimeout(discordId),
+    achievement: db.getUserAchievementNotificationSetting(discordId),
+    channel: db.getUserChannelNotificationSetting(discordId),
+    mention: db.getUserMentionNotificationSetting(discordId),
+    steamId: db.getSteamId(discordId),
   };
 
+  // 1. HTML Widget
+  const widgetHtml = buildSettingsWidget(settings);
+  const sizeCheck = checkWidgetSize(widgetHtml);
+  if (sizeCheck.valid) {
+    const result = await sendWidget(TELEGRAM_TOKEN, chatId, widgetHtml, { allow_queries: true });
+    if (result) return;
+  }
+
+  // 2. Rich Message
+  const richHtml = buildSettingsRichHtml(settings);
+  const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+  if (richOk) return;
+
+  // 3. Fallback: inline-клавиатура
+  const settingsButtons = buildSettingsInlineKeyboard(settings);
   await telegramBot.sendMessage(chatId, '<b>⚙️ Настройки</b>\n\nНажмите на настройку чтобы изменить:', {
     parse_mode: 'HTML',
     reply_markup: settingsButtons
