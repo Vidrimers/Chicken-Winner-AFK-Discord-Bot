@@ -16,6 +16,7 @@ import { buildSettingsRichHtml, buildSettingsInlineKeyboard, buildSettingsWidget
 import { buildCheckerRichHtml, buildCheckerInlineKeyboard } from './src/telegram/widgets/checker-menu.js';
 import { buildSteamWallRichHtml, buildSteamWallInlineKeyboard } from './src/telegram/widgets/steam-wall-menu.js';
 import { buildVoiceActivityRichHtml, buildOnlineUsersRichHtml, buildOnlineUsersInlineKeyboard } from './src/telegram/widgets/voice-online-menu.js';
+import { buildBugReportRichHtml, buildBugReportInlineKeyboard } from './src/telegram/widgets/bug-report-menu.js';
 import { buildStatsRichHtml, buildStatsWidget } from './src/telegram/widgets/stats.js';
 import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
@@ -1531,20 +1532,13 @@ async function handlePublishToDiscord(chatId, steamId) {
  * Отправка подменю багрепортов
  */
 async function sendBugReportMenu(chatId) {
-  const bugReportButtons = {
-    inline_keyboard: [
-      [
-        { text: '📋 Мои багрепорты', callback_data: 'bugreport_my' }
-      ],
-      [
-        { text: '✍️ Написать багрепорт', callback_data: 'bugreport_write' }
-      ],
-      [
-        { text: '◀️ Назад', callback_data: 'back_to_menu' }
-      ]
-    ]
-  };
+  // 1. Rich Message
+  const richHtml = buildBugReportRichHtml();
+  const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+  if (richOk) return;
 
+  // 2. Fallback
+  const bugReportButtons = buildBugReportInlineKeyboard();
   await telegramBot.sendMessage(chatId, '<b>🐛 Багрепорт</b>\n\nВыберите действие:', {
     parse_mode: 'HTML',
     reply_markup: bugReportButtons
