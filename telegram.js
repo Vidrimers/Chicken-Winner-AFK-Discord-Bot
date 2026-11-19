@@ -15,6 +15,7 @@ import { buildMainMenuWidget, buildMainMenuRichHtml, buildMainMenuInlineKeyboard
 import { buildSettingsRichHtml, buildSettingsInlineKeyboard, buildSettingsWidget, buildTimeoutRichHtml, buildTimeoutInlineKeyboard, buildCheaterSettingsRichHtml, buildCheaterSettingsInlineKeyboard, buildSteamRichHtml, buildSteamInlineKeyboard } from './src/telegram/widgets/settings-menu.js';
 import { buildCheckerRichHtml, buildCheckerInlineKeyboard } from './src/telegram/widgets/checker-menu.js';
 import { buildSteamWallRichHtml, buildSteamWallInlineKeyboard } from './src/telegram/widgets/steam-wall-menu.js';
+import { buildVoiceActivityRichHtml, buildOnlineUsersRichHtml, buildOnlineUsersInlineKeyboard } from './src/telegram/widgets/voice-online-menu.js';
 import { buildStatsRichHtml, buildStatsWidget } from './src/telegram/widgets/stats.js';
 import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
@@ -879,6 +880,12 @@ async function handleVoiceActivity(chatId) {
     const result = getVoiceActivityHandler(blockedIds);
 
     if (result.success) {
+      // 1. Rich Message
+      const richHtml = buildVoiceActivityRichHtml(result.message);
+      const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+      if (richOk) return;
+
+      // 2. Fallback
       await telegramBot.sendMessage(chatId, result.message, { parse_mode: 'HTML' });
     } else {
       await telegramBot.sendMessage(chatId, result.message || '❌ Не удалось получить информацию о каналах');
@@ -914,35 +921,29 @@ async function handleOnlineUsers(chatId, page = 0, queryObj = null) {
       return;
     }
 
-    // Собираем онлайн-пользователей для кнопок
-    let keyboard = null;
+    // Собираем онлайн-пользователей
+    let members = [];
     const guild = discordClient?.guilds?.cache?.first();
     if (guild && process.env.ONLINE_CHAT_CHANNEL_ID) {
       await guild.members.fetch();
-      const onlineMembers = [...guild.members.cache.values()].filter(m =>
+      members = [...guild.members.cache.values()].filter(m =>
         !m.user.bot &&
         (m.presence?.status === 'online' || m.presence?.status === 'idle' || m.presence?.status === 'dnd') &&
         !blockedIds.includes(m.id)
-      );
-
-      if (onlineMembers.length > 0) {
-        const totalPages = Math.ceil(onlineMembers.length / ONLINE_PAGE_SIZE);
-        const start = page * ONLINE_PAGE_SIZE;
-        const pageMembers = onlineMembers.slice(start, start + ONLINE_PAGE_SIZE);
-
-        const rows = pageMembers.map(m => [{
-          text: `💬 ${m.displayName || m.user.username}`,
-          callback_data: `on:${m.id}`
-        }]);
-
-        const navRow = [];
-        if (page > 0) navRow.push({ text: '◀️', callback_data: `onp:${page - 1}` });
-        if (page < totalPages - 1) navRow.push({ text: '▶️', callback_data: `onp:${page + 1}` });
-        if (navRow.length) rows.push(navRow);
-
-        keyboard = { inline_keyboard: rows };
-      }
+      ).map(m => ({ id: m.id, name: m.displayName || m.user.username }));
     }
+
+    const totalPages = Math.ceil(members.length / ONLINE_PAGE_SIZE);
+
+    // 1. Rich Message
+    const richHtml = buildOnlineUsersRichHtml(result.message, members, page, totalPages, ONLINE_PAGE_SIZE);
+    const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+    if (richOk) return;
+
+    // 2. Fallback
+    const keyboard = members.length > 0
+      ? buildOnlineUsersInlineKeyboard(members, page, totalPages, ONLINE_PAGE_SIZE)
+      : null;
 
     const options = { parse_mode: 'HTML' };
     if (keyboard) options.reply_markup = keyboard;
