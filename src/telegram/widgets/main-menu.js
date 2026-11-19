@@ -107,13 +107,14 @@ export function buildMainMenuWidget(username) {
 
 /**
  * Сгенерировать HTML главного меню для Rich Message
+ * Кнопки через <tg-button>, вид задаёт Telegram
  * @param {string} username
  * @param {string} discordId — Discord ID для отображения
  * @param {string} siteUrl — URL сайта
  * @returns {string} HTML
  */
 export function buildMainMenuRichHtml(username, discordId = '', siteUrl = '') {
-  const idLine = discordId ? `\n<code>${discordId}</code>` : '';
+  const idLine = discordId ? `\n🆔 <code>${discordId}</code>` : '';
 
   let sectionsHtml = '';
   for (const section of MENU_SECTIONS) {
