@@ -9,6 +9,8 @@ import { getFriendsWithDetails } from './src/steam/steamApi.js';
 import { STEAM_CONFIG, SERVER_CONFIG } from './src/config.js';
 import { EmbedBuilder } from 'discord.js';
 import { stripRtl } from './src/utils/rtl.js';
+import { sendWidget, answerWidgetQuery, editMessageWidgetData, checkWidgetSize } from './src/telegram/widget-helper.js';
+import { buildMainMenuWidget } from './src/telegram/widgets/main-menu.js';
 import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
 /**
@@ -444,9 +446,24 @@ async function isGuildMember(discordId) {
 // ===== INLINE MENU FUNCTIONS =====
 
 /**
- * Отправка главного меню с inline-кнопками
+ * Отправка главного меню
+ * Пробует HTML Widget, при ошибке — fallback на inline-клавиатуру
  */
 async function sendMainMenu(chatId) {
+  const discordId = getLinkedDiscordId(chatId);
+  const username = discordId ? getDiscordUsername(discordId) : 'Пользователь';
+
+  // Пробуем HTML Widget (Bot API 10.4)
+  const html = buildMainMenuWidget(username);
+  const sizeCheck = checkWidgetSize(html);
+  if (sizeCheck.valid) {
+    const result = await sendWidget(TELEGRAM_TOKEN, chatId, html, { allow_queries: true });
+    if (result) return;
+  } else {
+    console.log(`[Widget] MainMenu размер не прошёл: ${sizeCheck.errors.join(', ')}`);
+  }
+
+  // Fallback: inline-клавиатура
   const menuButtons = {
     inline_keyboard: [
       [
@@ -470,7 +487,6 @@ async function sendMainMenu(chatId) {
     ]
   };
 
-  const discordId = getLinkedDiscordId(chatId);
   const idLine = discordId ? `\n\n🆔 <code>${discordId}</code>` : '';
 
   await telegramBot.sendMessage(chatId, `<b>📱 Главное меню</b>${idLine}\n\nВыберите действие:`, {
@@ -1624,6 +1640,96 @@ async function handleMyBugReports(chatId) {
 /**
  * Инициализация Telegram бота
  */
+/**
+ * Обработка widget_query апдейтов
+ */
+async function handleWidgetQueryUpdate(wq) {
+  const chatId = wq.message?.chat?.id;
+  const data = wq.data || '';
+
+  console.log(`🔘 Widget query: ${data} от chat_id: ${chatId}`);
+
+  try {
+    // Маршрутизация по data
+    switch (data) {
+      case 'menu_voice':
+        await handleVoiceActivity(chatId);
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        break;
+
+      case 'menu_online':
+        await handleOnlineUsers(chatId);
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        break;
+
+      case 'menu_checker': {
+        const discordId = getLinkedDiscordId(chatId);
+        if (!discordId) {
+          await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом.');
+          await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+          return;
+        }
+        await sendCheckerMenu(chatId);
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        break;
+      }
+
+      case 'menu_settings': {
+        const discordIdSettings = getLinkedDiscordId(chatId);
+        if (!discordIdSettings) {
+          await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом.');
+          await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+          return;
+        }
+        await sendSettingsMenu(chatId);
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        break;
+      }
+
+      case 'menu_stats':
+        await handleStatsRequest(chatId);
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        break;
+
+      case 'menu_bugreport': {
+        const discordIdBug = getLinkedDiscordId(chatId);
+        if (!discordIdBug) {
+          await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом.');
+          await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+          return;
+        }
+        await sendBugReportMenu(chatId);
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        break;
+      }
+
+      case 'menu_steam_wall':
+        await sendSteamWallMenu(chatId);
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        break;
+
+      case 'open_site':
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        await telegramBot.sendMessage(chatId, `🌐 ${SERVER_CONFIG.SITE_URL || 'http://localhost:3000'}`);
+        break;
+
+      case 'back_to_menu':
+        await sendMainMenu(chatId);
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        break;
+
+      default:
+        // Неизвестный запрос — отвечаем пустым
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+    }
+  } catch (err) {
+    console.error(`[Widget] Ошибка обработки: ${err.message}`);
+    try {
+      await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+    } catch (e) { /* ignore */ }
+  }
+}
+
 export function initTelegramBot(
   database,
   client,
@@ -1652,6 +1758,16 @@ export function initTelegramBot(
   try {
     telegramBot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
     console.log("✅ Telegram бот запущен");
+
+    // Перехват widget_query ДО диспетчера библиотеки (node-telegram-bot-api не знает об этом типе)
+    const origProcessUpdate = telegramBot.processUpdate.bind(telegramBot);
+    telegramBot.processUpdate = async function (update) {
+      if (update.widget_query) {
+        await handleWidgetQueryUpdate(update.widget_query);
+        return; // не передаём в диспетчер библиотеки
+      }
+      return origProcessUpdate(update);
+    };
 
     // Регистрируем команды для кнопки Menu в Telegram
     telegramBot.setMyCommands([
