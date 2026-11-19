@@ -13,6 +13,7 @@ import { sendWidget, answerWidgetQuery, editMessageWidgetData, checkWidgetSize }
 import { sendRichMessage, buildButtonRow, buildInlineKeyboard } from './src/telegram/rich-message.js';
 import { buildMainMenuWidget, buildMainMenuRichHtml, buildMainMenuInlineKeyboard, MENU_SECTIONS } from './src/telegram/widgets/main-menu.js';
 import { buildSettingsRichHtml, buildSettingsInlineKeyboard, buildSettingsWidget, buildTimeoutRichHtml, buildTimeoutInlineKeyboard, buildCheaterSettingsRichHtml, buildCheaterSettingsInlineKeyboard, buildSteamRichHtml, buildSteamInlineKeyboard } from './src/telegram/widgets/settings-menu.js';
+import { buildCheckerRichHtml, buildCheckerInlineKeyboard } from './src/telegram/widgets/checker-menu.js';
 import { buildStatsRichHtml, buildStatsWidget } from './src/telegram/widgets/stats.js';
 import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
@@ -485,26 +486,13 @@ async function sendMainMenu(chatId) {
 async function sendCheckerMenu(chatId) {
   const isAdmin = chatId.toString() === TELEGRAM_CHAT_ID;
 
-  const checkerButtons = {
-    inline_keyboard: [
-      [
-        { text: '📋 Мои добавленные', callback_data: 'checker_my_added' }
-      ],
-      [
-        { text: '🔎 Проверить читера', callback_data: 'checker_check' }
-      ],
-      [
-        { text: '🤖 Добавить бота', callback_data: 'checker_add_bot' }
-      ],
-      ...(isAdmin ? [[
-        { text: '🔍 CheatWatcher', callback_data: 'cw_qr_start' }
-      ]] : []),
-      [
-        { text: '◀️ Назад', callback_data: 'back_to_menu' }
-      ]
-    ]
-  };
+  // 1. Rich Message
+  const richHtml = buildCheckerRichHtml(isAdmin);
+  const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+  if (richOk) return;
 
+  // 2. Fallback
+  const checkerButtons = buildCheckerInlineKeyboard(isAdmin);
   await telegramBot.sendMessage(chatId, '<b>🔍 Чекер читеров</b>\n\nВыберите действие:', {
     parse_mode: 'HTML',
     reply_markup: checkerButtons
