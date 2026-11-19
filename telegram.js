@@ -463,7 +463,7 @@ async function sendMainMenu(chatId) {
   }
 
   // 2. Rich Message с кнопками внутри текста (Bot API 10.3+)
-  const richHtml = buildMainMenuRichHtml(username);
+  const richHtml = buildMainMenuRichHtml(username, discordId || '', SERVER_CONFIG.SITE_URL || '');
   const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
   if (richOk) return;
 

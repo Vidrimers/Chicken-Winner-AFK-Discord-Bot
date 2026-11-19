@@ -5,11 +5,12 @@
 import { buildButtonRow } from '../rich-message.js';
 
 // Единый источник кнопок — генерируем и rich message, и inline keyboard
+// Формат: [текст, callback_data, стиль для rich]
 export const MENU_ROWS = [
-  [['🎤 Кто в канале', 'menu_voice'], ['👥 Кто онлайн', 'menu_online']],
-  [['🔍 Чекер читеров', 'menu_checker'], ['🤖 Автоответчик', 'menu_steam_wall']],
-  [['🐛 Багрепорт', 'menu_bugreport'], ['⚙️ Настройки', 'menu_settings']],
-  [['📊 Steam/Faceit статистика', 'menu_stats']],
+  [['🎤 Кто в канале', 'menu_voice', 'primary'], ['👥 Кто онлайн', 'menu_online', 'primary']],
+  [['🔍 Чекер читеров', 'menu_checker', 'primary'], ['🤖 Автоответчик', 'menu_steam_wall', 'link']],
+  [['🐛 Багрепорт', 'menu_bugreport', 'link'], ['⚙️ Настройки', 'menu_settings', 'link']],
+  [['📊 Steam/Faceit статистика', 'menu_stats', 'success']],
 ];
 
 /**
@@ -77,14 +78,20 @@ export function buildMainMenuWidget(username) {
 /**
  * Сгенерировать HTML главного меню для Rich Message
  * @param {string} username
+ * @param {string} discordId — Discord ID для отображения
+ * @param {string} siteUrl — URL сайта
  * @returns {string} HTML
  */
-export function buildMainMenuRichHtml(username) {
+export function buildMainMenuRichHtml(username, discordId = '', siteUrl = '') {
   const rowsHtml = MENU_ROWS.map(row => buildButtonRow(row)).join('\n');
+  const idLine = discordId ? `\n<code>${discordId}</code>` : '';
+  const siteButton = siteUrl
+    ? `\n<tg-button-row align="center"><tg-button type="url" url="${escapeHtml(siteUrl)}">🌐 Открыть сайт</tg-button></tg-button-row>`
+    : '';
 
   return `<h2>📱 Главное меню</h2>
-<p>Привет, <b>${escapeHtml(username)}</b>!</p>
-${rowsHtml}`;
+<p>Привет, <b>${escapeHtml(username)}</b>!${idLine}</p>
+${rowsHtml}${siteButton}`;
 }
 
 /**
