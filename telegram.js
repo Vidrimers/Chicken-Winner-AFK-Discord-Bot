@@ -2768,6 +2768,24 @@ export function initTelegramBot(
     // Обработчик ошибок polling
     telegramBot.on("polling_error", (error) => {
       console.error("❌ Ошибка Telegram polling:", error.code, error.message);
+
+      // EFATAL останавливает polling навсегда — перезапускаем
+      if (error.code === "EFATAL") {
+        console.log("🔄 Перезапуск Telegram polling после EFATAL...");
+        setTimeout(() => {
+          try {
+            telegramBot.stopPolling();
+          } catch (e) { /* ignore */ }
+          setTimeout(() => {
+            try {
+              telegramBot.startPolling();
+              console.log("✅ Telegram polling перезапущен");
+            } catch (e) {
+              console.error("❌ Не удалось перезапустить polling:", e.message);
+            }
+          }, 2000);
+        }, 5000);
+      }
     });
 
     return telegramBot;
