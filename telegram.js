@@ -12,7 +12,7 @@ import { stripRtl } from './src/utils/rtl.js';
 import { sendWidget, answerWidgetQuery, editMessageWidgetData, checkWidgetSize } from './src/telegram/widget-helper.js';
 import { sendRichMessage, buildButtonRow, buildInlineKeyboard } from './src/telegram/rich-message.js';
 import { buildMainMenuWidget, buildMainMenuRichHtml, buildMainMenuInlineKeyboard, MENU_SECTIONS } from './src/telegram/widgets/main-menu.js';
-import { buildSettingsRichHtml, buildSettingsInlineKeyboard, buildSettingsWidget } from './src/telegram/widgets/settings-menu.js';
+import { buildSettingsRichHtml, buildSettingsInlineKeyboard, buildSettingsWidget, buildTimeoutRichHtml, buildTimeoutInlineKeyboard, buildCheaterSettingsRichHtml, buildCheaterSettingsInlineKeyboard, buildSteamRichHtml, buildSteamInlineKeyboard } from './src/telegram/widgets/settings-menu.js';
 import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
 /**
@@ -712,16 +712,16 @@ async function sendTimeoutMenu(chatId) {
 
   const current = db.getUserTimeout(discordId);
 
-  const buttons = [
-    [{ text: `${current === 15 ? '👉 ' : ''}15 минут`, callback_data: 'settings_set_timeout_15' }],
-    [{ text: `${current === 30 ? '👉 ' : ''}30 минут`, callback_data: 'settings_set_timeout_30' }],
-    [{ text: `${current === 45 ? '👉 ' : ''}45 минут`, callback_data: 'settings_set_timeout_45' }],
-    [{ text: '◀️ Назад', callback_data: 'menu_settings' }]
-  ];
+  // 1. Rich Message
+  const richHtml = buildTimeoutRichHtml(current);
+  const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+  if (richOk) return;
 
+  // 2. Fallback
+  const buttons = buildTimeoutInlineKeyboard(current);
   await telegramBot.sendMessage(chatId, '<b>⏱ Время до AFK</b>\n\nВыберите время неактивности:', {
     parse_mode: 'HTML',
-    reply_markup: { inline_keyboard: buttons }
+    reply_markup: buttons
   });
 }
 
@@ -732,27 +732,25 @@ async function sendCheaterSettingsMenu(chatId) {
   const discordId = getLinkedDiscordId(chatId);
   if (!discordId) return;
 
-  const own = db.getUserCheaterOwnNotificationSetting(discordId);
-  const others = db.getUserCheaterOthersNotificationSetting(discordId);
-  const nick = db.getUserCheaterNickNotificationSetting(discordId);
-  const botOwn = db.getUserBotOwnNotificationSetting(discordId);
-  const botOthers = db.getUserBotOthersNotificationSetting(discordId);
-  const botNick = db.getUserBotNickNotificationSetting(discordId);
+  const s = {
+    own: db.getUserCheaterOwnNotificationSetting(discordId),
+    others: db.getUserCheaterOthersNotificationSetting(discordId),
+    nick: db.getUserCheaterNickNotificationSetting(discordId),
+    botOwn: db.getUserBotOwnNotificationSetting(discordId),
+    botOthers: db.getUserBotOthersNotificationSetting(discordId),
+    botNick: db.getUserBotNickNotificationSetting(discordId),
+  };
 
-  const buttons = [
-    [{ text: `👤 Мои читеры [${own ? '✅' : '❌'}]`, callback_data: 'settings_toggle_cheater_own' }],
-    [{ text: `👥 Чужие читеры [${others ? '✅' : '❌'}]`, callback_data: 'settings_toggle_cheater_others' }],
-    [{ text: `✏️ Смена ников [${nick ? '✅' : '❌'}]`, callback_data: 'settings_toggle_cheater_nick' }],
-    [{ text: '— — — — —', callback_data: 'noop' }],
-    [{ text: `🤖 Мои боты [${botOwn ? '✅' : '❌'}]`, callback_data: 'settings_toggle_bot_own' }],
-    [{ text: `🤖 Чужие боты [${botOthers ? '✅' : '❌'}]`, callback_data: 'settings_toggle_bot_others' }],
-    [{ text: `✏️ Смена ников ботов [${botNick ? '✅' : '❌'}]`, callback_data: 'settings_toggle_bot_nick' }],
-    [{ text: '◀️ Назад', callback_data: 'menu_settings' }]
-  ];
+  // 1. Rich Message
+  const richHtml = buildCheaterSettingsRichHtml(s);
+  const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+  if (richOk) return;
 
+  // 2. Fallback
+  const buttons = buildCheaterSettingsInlineKeyboard(s);
   await telegramBot.sendMessage(chatId, '<b>🚨 Уведомления</b>\n\nВыберите опцию:', {
     parse_mode: 'HTML',
-    reply_markup: { inline_keyboard: buttons }
+    reply_markup: buttons
   });
 }
 
@@ -765,19 +763,16 @@ async function sendSteamMenu(chatId) {
 
   const steamId = db.getSteamId(discordId);
 
-  const buttons = [];
-  if (steamId) {
-    buttons.push([{ text: `✅ Привязан: ${steamId}`, callback_data: 'noop' }]);
-    buttons.push([{ text: '🗑️ Отвязать Steam', callback_data: 'settings_unlink_steam' }]);
-  } else {
-    buttons.push([{ text: '❌ Не привязан', callback_data: 'noop' }]);
-    buttons.push([{ text: '🔗 Привязать Steam ID', callback_data: 'settings_link_steam' }]);
-  }
-  buttons.push([{ text: '◀️ Назад', callback_data: 'menu_settings' }]);
+  // 1. Rich Message
+  const richHtml = buildSteamRichHtml(steamId);
+  const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+  if (richOk) return;
 
-  await telegramBot.sendMessage(chatId, '<b>🎮 Steam аккаунт</b>\n\nПривяжи Steam ID чтобы показывать CS2 статистику на профиле.\n\n💡 Не знаешь свой Steam ID? В клиенте Steam нажми на свой ник сверху → <b>Об аккаунте</b> — ID будет указан под именем. Или найди через <a href="https://steamid.io">steamid.io</a>', {
+  // 2. Fallback
+  const buttons = buildSteamInlineKeyboard(steamId);
+  await telegramBot.sendMessage(chatId, '<b>🎮 Steam аккаунт</b>\n\nПривяжи Steam ID чтобы показывать CS2 статистику на профиле.', {
     parse_mode: 'HTML',
-    reply_markup: { inline_keyboard: buttons }
+    reply_markup: buttons
   });
 }
 

@@ -5,6 +5,117 @@
 import { buildButtonRow } from '../rich-message.js';
 
 /**
+ * Подменю: Время до AFK
+ * @param {number} current — текущее значение
+ * @returns {string} HTML
+ */
+export function buildTimeoutRichHtml(current) {
+  const opts = [15, 30, 45];
+  const rows = opts.map(v =>
+    buildButtonRow([[`${current === v ? '👉 ' : ''}${v} минут`, `settings_set_timeout_${v}`, current === v ? 'success' : 'link']])
+  ).join('\n');
+
+  return `<h2>⏱ Время до AFK</h2>
+<p>Выберите время неактивности:</p>
+${rows}
+${buildButtonRow([['◀️ Назад', 'menu_settings', 'link']], 'center')}`;
+}
+
+/**
+ * Подменю: Уведомления о читерах и ботах
+ * @param {object} s — { own, others, nick, botOwn, botOthers, botNick }
+ * @returns {string} HTML
+ */
+export function buildCheaterSettingsRichHtml(s) {
+  const yn = (v) => v ? '✅' : '❌';
+  const st = (v) => v ? 'success' : 'danger';
+
+  return `<h2>🚨 Уведомления</h2>
+<p>Выберите опцию:</p>
+
+<blockquote>🔍 Читеры</blockquote>
+${buildButtonRow([[`${yn(s.own)} Мои читеры`, 'settings_toggle_cheater_own', st(s.own)]])}
+${buildButtonRow([[`${yn(s.others)} Чужие читеры`, 'settings_toggle_cheater_others', st(s.others)]])}
+${buildButtonRow([[`${yn(s.nick)} Смена ников`, 'settings_toggle_cheater_nick', st(s.nick)]])}
+
+<blockquote>🤖 Боты</blockquote>
+${buildButtonRow([[`${yn(s.botOwn)} Мои боты`, 'settings_toggle_bot_own', st(s.botOwn)]])}
+${buildButtonRow([[`${yn(s.botOthers)} Чужие боты`, 'settings_toggle_bot_others', st(s.botOthers)]])}
+${buildButtonRow([[`${yn(s.botNick)} Смена ников ботов`, 'settings_toggle_bot_nick', st(s.botNick)]])}
+
+${buildButtonRow([['◀️ Назад', 'menu_settings', 'link']], 'center')}`;
+}
+
+/**
+ * Подменю: Steam аккаунт
+ * @param {string|null} steamId
+ * @returns {string} HTML
+ */
+export function buildSteamRichHtml(steamId) {
+  const status = steamId
+    ? `✅ Привязан: <code>${steamId}</code>`
+    : '❌ Не привязан';
+
+  const buttons = steamId
+    ? buildButtonRow([['🗑️ Отвязать Steam', 'settings_unlink_steam', 'danger']])
+    : buildButtonRow([['🔗 Привязать Steam ID', 'settings_link_steam', 'success']]);
+
+  return `<h2>🎮 Steam аккаунт</h2>
+<p>${status}</p>
+<p>Привяжи Steam ID чтобы показывать CS2 статистику на профиле.</p>
+<p>💡 Не знаешь свой Steam ID? В клиенте Steam нажми на свой ник сверху → <b>Об аккаунте</b> — ID будет указан под именем. Или найди через <a href="https://steamid.io">steamid.io</a></p>
+${buttons}
+${buildButtonRow([['◀️ Назад', 'menu_settings', 'link']], 'center')}`;
+}
+
+/**
+ * Inline keyboard: Время до AFK (fallback)
+ */
+export function buildTimeoutInlineKeyboard(current) {
+  const opts = [15, 30, 45];
+  const rows = opts.map(v =>
+    [{ text: `${current === v ? '👉 ' : ''}${v} минут`, callback_data: `settings_set_timeout_${v}` }]
+  );
+  rows.push([{ text: '◀️ Назад', callback_data: 'menu_settings' }]);
+  return { inline_keyboard: rows };
+}
+
+/**
+ * Inline keyboard: Уведомления о читерах (fallback)
+ */
+export function buildCheaterSettingsInlineKeyboard(s) {
+  const yn = (v) => v ? '✅' : '❌';
+  return {
+    inline_keyboard: [
+      [{ text: `${yn(s.own)} Мои читеры`, callback_data: 'settings_toggle_cheater_own' }],
+      [{ text: `${yn(s.others)} Чужие читеры`, callback_data: 'settings_toggle_cheater_others' }],
+      [{ text: `${yn(s.nick)} Смена ников`, callback_data: 'settings_toggle_cheater_nick' }],
+      [{ text: '— — — — —', callback_data: 'noop' }],
+      [{ text: `${yn(s.botOwn)} Мои боты`, callback_data: 'settings_toggle_bot_own' }],
+      [{ text: `${yn(s.botOthers)} Чужие боты`, callback_data: 'settings_toggle_bot_others' }],
+      [{ text: `${yn(s.botNick)} Смена ников ботов`, callback_data: 'settings_toggle_bot_nick' }],
+      [{ text: '◀️ Назад', callback_data: 'menu_settings' }]
+    ]
+  };
+}
+
+/**
+ * Inline keyboard: Steam (fallback)
+ */
+export function buildSteamInlineKeyboard(steamId) {
+  const buttons = [];
+  if (steamId) {
+    buttons.push([{ text: `✅ Привязан: ${steamId}`, callback_data: 'noop' }]);
+    buttons.push([{ text: '🗑️ Отвязать Steam', callback_data: 'settings_unlink_steam' }]);
+  } else {
+    buttons.push([{ text: '❌ Не привязан', callback_data: 'noop' }]);
+    buttons.push([{ text: '🔗 Привязать Steam ID', callback_data: 'settings_link_steam' }]);
+  }
+  buttons.push([{ text: '◀️ Назад', callback_data: 'menu_settings' }]);
+  return { inline_keyboard: buttons };
+}
+
+/**
  * Сгенерировать HTML виджет настроек (Bot API 10.4)
  * @param {object} settings
  * @returns {string} HTML
