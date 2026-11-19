@@ -11,7 +11,7 @@ import { EmbedBuilder } from 'discord.js';
 import { stripRtl } from './src/utils/rtl.js';
 import { sendWidget, answerWidgetQuery, editMessageWidgetData, checkWidgetSize } from './src/telegram/widget-helper.js';
 import { sendRichMessage, buildButtonRow, buildInlineKeyboard } from './src/telegram/rich-message.js';
-import { buildMainMenuWidget, buildMainMenuRichHtml, buildMainMenuInlineKeyboard, MENU_ROWS } from './src/telegram/widgets/main-menu.js';
+import { buildMainMenuWidget, buildMainMenuRichHtml, buildMainMenuInlineKeyboard, MENU_SECTIONS } from './src/telegram/widgets/main-menu.js';
 import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
 /**
