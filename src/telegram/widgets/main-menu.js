@@ -16,7 +16,7 @@ export const MENU_SECTIONS = [
   {
     title: '🔍 Инструменты',
     rows: [
-      [['🔍 Чекер читеров', 'menu_checker', 'primary'], ['🤖 Автоответчик', 'menu_steam_wall', 'link']],
+      [['🔍 Чекер читеров', 'menu_checker', 'link'], ['🤖 Автоответчик', 'menu_steam_wall', 'link']],
       [['🐛 Багрепорт', 'menu_bugreport', 'link'], ['⚙️ Настройки', 'menu_settings', 'link']],
     ]
   },
@@ -114,7 +114,7 @@ export function buildMainMenuWidget(username) {
  * @returns {string} HTML
  */
 export function buildMainMenuRichHtml(username, discordId = '', siteUrl = '') {
-  const idLine = discordId ? `\n🆔 <code>${discordId}</code>` : '';
+  const idLine = discordId ? `<code>${discordId}</code>\n` : '';
 
   let sectionsHtml = '';
   for (const section of MENU_SECTIONS) {
@@ -129,8 +129,8 @@ export function buildMainMenuRichHtml(username, discordId = '', siteUrl = '') {
     : '';
 
   return `<h2>📱 Главное меню</h2>
-<p>Привет, <b>${escapeHtml(username)}</b>!${idLine}</p>
-${sectionsHtml}${siteButton}`;
+<p>Привет, <b>${escapeHtml(username)}</b>!</p>
+${idLine}${sectionsHtml}${siteButton}`;
 }
 
 /**
