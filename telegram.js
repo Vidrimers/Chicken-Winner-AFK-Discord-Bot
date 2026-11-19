@@ -17,6 +17,7 @@ import { buildCheckerRichHtml, buildCheckerInlineKeyboard } from './src/telegram
 import { buildSteamWallRichHtml, buildSteamWallInlineKeyboard } from './src/telegram/widgets/steam-wall-menu.js';
 import { buildVoiceActivityRichHtml, buildOnlineUsersRichHtml, buildOnlineUsersInlineKeyboard } from './src/telegram/widgets/voice-online-menu.js';
 import { buildBugReportRichHtml, buildBugReportInlineKeyboard } from './src/telegram/widgets/bug-report-menu.js';
+import { buildCheatWatcherRichHtml, buildCheatWatcherInlineKeyboard } from './src/telegram/widgets/cheat-watcher-menu.js';
 import { buildStatsRichHtml, buildStatsWidget } from './src/telegram/widgets/stats.js';
 import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
@@ -1963,36 +1964,27 @@ export function initTelegramBot(
         return;
       }
 
-      if (cheatWatcher.isConnected()) {
-        await telegramBot.sendMessage(chatId,
-          `✅ CheatWatcher is already connected.\n` +
-          `SteamID: ${cheatWatcher.getSteamId()}\n\n` +
-          `To reconnect, use the button below.`,
-          {
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '🔄 Reconnect', callback_data: 'cw_qr_reconnect' }],
-              ]
-            }
-          }
-        );
-        return;
-      }
+      const s = {
+        isConnected: cheatWatcher.isConnected(),
+        steamId: cheatWatcher.isConnected() ? cheatWatcher.getSteamId() : null,
+        hasToken: !!process.env.CHEAT_WATCHER_REFRESH_TOKEN,
+      };
 
-      const hasToken = !!process.env.CHEAT_WATCHER_REFRESH_TOKEN;
-      await telegramBot.sendMessage(chatId,
-        `🔍 <b>CheatWatcher</b>\n\n` +
-        `Status: ${hasToken ? 'Token set, not connected' : 'Not configured'}\n\n` +
-        `Connect TheCheatWatcher account to post comments on cheater profiles.`,
-        {
-          parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '📱 Connect via QR', callback_data: 'cw_qr_start' }],
-            ]
-          }
-        }
-      );
+      // 1. Rich Message
+      const richHtml = buildCheatWatcherRichHtml(s);
+      const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+      if (richOk) return;
+
+      // 2. Fallback
+      const buttons = buildCheatWatcherInlineKeyboard(s);
+      const statusText = s.isConnected
+        ? `✅ CheatWatcher is already connected.\nSteamID: ${s.steamId || '—'}`
+        : `🔍 <b>CheatWatcher</b>\n\nStatus: ${s.hasToken ? 'Token set, not connected' : 'Not configured'}\n\nConnect TheCheatWatcher account to post comments on cheater profiles.`;
+
+      await telegramBot.sendMessage(chatId, statusText, {
+        parse_mode: 'HTML',
+        reply_markup: buttons
+      });
     });
 
     // ===== CALLBACK QUERY HANDLER (inline кнопки) =====
