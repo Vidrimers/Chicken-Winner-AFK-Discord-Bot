@@ -12,6 +12,11 @@ const API_BASE = 'https://api.telegram.org';
 const MAX_HTML_BYTES = 32768;
 const MAX_COMPRESSED_BYTES = 4096;
 
+// Автоблокировка при отказе Telegram (INPUT_MEDIA_WIDGET_NOT_ALLOWED)
+// Повторная попытка автоматически через 6 часов
+let widgetBlockedUntil = 0;
+const BLOCK_DURATION_MS = 6 * 60 * 60 * 1000; // 6 часов
+
 /**
  * Проверить размер HTML виджета
  * @param {string} html
@@ -42,10 +47,13 @@ export function checkWidgetSize(html) {
  * @param {string} token — токен бота
  * @param {number|string} chatId
  * @param {string} html — HTML виджета
- * @param {object} options — { allow_queries, data, ... }
+ * @param {object} options — { allow_queries, public_data, chat_data, caption, reply_parameters, ... }
  * @returns {Promise<object|null>} результат или null при ошибке
  */
 export async function sendWidget(token, chatId, html, options = {}) {
+  // Автоблокировка: Telegram не разрешает виджеты — не делаем запрос
+  if (Date.now() < widgetBlockedUntil) return null;
+
   // Проверяем размер
   const sizeCheck = checkWidgetSize(html);
   if (!sizeCheck.valid) {
@@ -59,8 +67,10 @@ export async function sendWidget(token, chatId, html, options = {}) {
       html,
       allow_queries: options.allow_queries !== false,
     };
-    if (options.data) body.data = options.data;
-    if (options.reply_to_message_id) body.reply_to_message_id = options.reply_to_message_id;
+    if (options.public_data !== undefined) body.public_data = options.public_data;
+    if (options.chat_data !== undefined) body.chat_data = options.chat_data;
+    if (options.caption) body.caption = options.caption;
+    if (options.reply_parameters) body.reply_parameters = options.reply_parameters;
 
     const res = await fetch(`${API_BASE}/bot${token}/sendWidget`, {
       method: 'POST',
@@ -70,7 +80,12 @@ export async function sendWidget(token, chatId, html, options = {}) {
 
     const json = await res.json();
     if (!json.ok) {
-      console.error(`[Widget] sendWidget ошибка: ${json.description}`);
+      if (String(json.description).includes('INPUT_MEDIA_WIDGET_NOT_ALLOWED')) {
+        widgetBlockedUntil = Date.now() + BLOCK_DURATION_MS;
+        console.warn('[Widget] Telegram не разрешает виджеты, пауза 6 часов');
+      } else {
+        console.error(`[Widget] sendWidget ошибка: ${json.description}`);
+      }
       return null;
     }
 
@@ -86,15 +101,17 @@ export async function sendWidget(token, chatId, html, options = {}) {
  * Ответить на запрос виджета
  * @param {string} token
  * @param {string} widgetQueryId
- * @param {object} data — данные для обновления виджета
+ * @param {string} data — строка с данными (до 1024 байт)
  * @returns {Promise<boolean>}
  */
-export async function answerWidgetQuery(token, widgetQueryId, data = {}) {
+export async function answerWidgetQuery(token, widgetQueryId, data = '') {
   try {
+    const body = { widget_query_id: widgetQueryId };
+    if (data) body.data = data;
     const res = await fetch(`${API_BASE}/bot${token}/answerWidgetQuery`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ widget_query_id: widgetQueryId, ...data }),
+      body: JSON.stringify(body),
     });
     const json = await res.json();
     return json.ok;
@@ -105,50 +122,32 @@ export async function answerWidgetQuery(token, widgetQueryId, data = {}) {
 }
 
 /**
- * Обновить данные виджета в сообщении
+ * Обновить состояние виджета (chat_data / public_data)
+ * HTML виджета неизменяем — меняется только состояние
  * @param {string} token
  * @param {number|string} chatId
  * @param {number} messageId
- * @param {string} html — новый HTML
- * @param {object} data — данные
+ * @param {object} state — { chat_data?, public_data? } (пустое = оставить как есть)
  * @returns {Promise<boolean>}
  */
-export async function editMessageWidgetData(token, chatId, messageId, html, data = {}) {
-  const sizeCheck = checkWidgetSize(html);
-  if (!sizeCheck.valid) {
-    console.error(`[Widget] editMessageWidgetData размер: ${sizeCheck.errors.join(', ')}`);
-    return false;
-  }
-
+export async function editMessageWidgetData(token, chatId, messageId, state = {}) {
   try {
+    const body = {
+      chat_id: chatId,
+      message_id: messageId,
+    };
+    if (state.chat_data !== undefined) body.chat_data = state.chat_data;
+    if (state.public_data !== undefined) body.public_data = state.public_data;
+
     const res = await fetch(`${API_BASE}/bot${token}/editMessageWidgetData`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, message_id: messageId, html, ...data }),
+      body: JSON.stringify(body),
     });
     const json = await res.json();
     return json.ok;
   } catch (err) {
     console.error(`[Widget] editMessageWidgetData exception: ${err.message}`);
-    return false;
-  }
-}
-
-/**
- * Обработать widget_query апдейт (вызывать ДО диспетчера библиотеки)
- * @param {object} update
- * @param {Function} handler — async (widgetQuery, html) => { html, data }
- * @returns {Promise<boolean>} true если обработан
- */
-export async function handleWidgetQuery(update, handler) {
-  if (!update.widget_query) return false;
-
-  const wq = update.widget_query;
-  try {
-    const result = await handler(wq);
-    return true;
-  } catch (err) {
-    console.error(`[Widget] handleWidgetQuery error: ${err.message}`);
     return false;
   }
 }

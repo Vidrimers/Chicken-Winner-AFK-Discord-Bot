@@ -1654,23 +1654,23 @@ async function handleWidgetQueryUpdate(wq) {
     switch (data) {
       case 'menu_voice':
         await handleVoiceActivity(chatId);
-        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
         break;
 
       case 'menu_online':
         await handleOnlineUsers(chatId);
-        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
         break;
 
       case 'menu_checker': {
         const discordId = getLinkedDiscordId(chatId);
         if (!discordId) {
           await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом.');
-          await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+          await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
           return;
         }
         await sendCheckerMenu(chatId);
-        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
         break;
       }
 
@@ -1678,54 +1678,54 @@ async function handleWidgetQueryUpdate(wq) {
         const discordIdSettings = getLinkedDiscordId(chatId);
         if (!discordIdSettings) {
           await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом.');
-          await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+          await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
           return;
         }
         await sendSettingsMenu(chatId);
-        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
         break;
       }
 
       case 'menu_stats':
         await handleStatsRequest(chatId);
-        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
         break;
 
       case 'menu_bugreport': {
         const discordIdBug = getLinkedDiscordId(chatId);
         if (!discordIdBug) {
           await telegramBot.sendMessage(chatId, '❌ Ваш Telegram не связан с Discord аккаунтом.');
-          await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+          await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
           return;
         }
         await sendBugReportMenu(chatId);
-        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
         break;
       }
 
       case 'menu_steam_wall':
         await sendSteamWallMenu(chatId);
-        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
         break;
 
       case 'open_site':
-        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
         await telegramBot.sendMessage(chatId, `🌐 ${SERVER_CONFIG.SITE_URL || 'http://localhost:3000'}`);
         break;
 
       case 'back_to_menu':
         await sendMainMenu(chatId);
-        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
         break;
 
       default:
         // Неизвестный запрос — отвечаем пустым
-        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
     }
   } catch (err) {
     console.error(`[Widget] Ошибка обработки: ${err.message}`);
     try {
-      await answerWidgetQuery(TELEGRAM_TOKEN, wq.id, {});
+      await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
     } catch (e) { /* ignore */ }
   }
 }
