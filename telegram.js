@@ -10,7 +10,8 @@ import { STEAM_CONFIG, SERVER_CONFIG } from './src/config.js';
 import { EmbedBuilder } from 'discord.js';
 import { stripRtl } from './src/utils/rtl.js';
 import { sendWidget, answerWidgetQuery, editMessageWidgetData, checkWidgetSize } from './src/telegram/widget-helper.js';
-import { buildMainMenuWidget } from './src/telegram/widgets/main-menu.js';
+import { sendRichMessage, buildButtonRow, buildInlineKeyboard } from './src/telegram/rich-message.js';
+import { buildMainMenuWidget, buildMainMenuRichHtml, buildMainMenuInlineKeyboard, MENU_ROWS } from './src/telegram/widgets/main-menu.js';
 import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
 /**
@@ -447,46 +448,27 @@ async function isGuildMember(discordId) {
 
 /**
  * Отправка главного меню
- * Пробует HTML Widget, при ошибке — fallback на inline-клавиатуру
+ * Порядок: HTML Widget → Rich Message → inline-клавиатура
  */
 async function sendMainMenu(chatId) {
   const discordId = getLinkedDiscordId(chatId);
   const username = discordId ? getDiscordUsername(discordId) : 'Пользователь';
 
-  // Пробуем HTML Widget (Bot API 10.4)
-  const html = buildMainMenuWidget(username);
-  const sizeCheck = checkWidgetSize(html);
+  // 1. HTML Widget (Bot API 10.4) — когда Telegram разрешит
+  const widgetHtml = buildMainMenuWidget(username);
+  const sizeCheck = checkWidgetSize(widgetHtml);
   if (sizeCheck.valid) {
-    const result = await sendWidget(TELEGRAM_TOKEN, chatId, html, { allow_queries: true });
+    const result = await sendWidget(TELEGRAM_TOKEN, chatId, widgetHtml, { allow_queries: true });
     if (result) return;
-  } else {
-    console.log(`[Widget] MainMenu размер не прошёл: ${sizeCheck.errors.join(', ')}`);
   }
 
-  // Fallback: inline-клавиатура
-  const menuButtons = {
-    inline_keyboard: [
-      [
-        { text: '🎤 Кто в канале', callback_data: 'menu_voice' },
-        { text: '👥 Кто онлайн', callback_data: 'menu_online' }
-      ],
-      [
-        { text: '🔍 Чекер читеров', callback_data: 'menu_checker' },
-        { text: '🤖 Автоответчик', callback_data: 'menu_steam_wall' }
-      ],
-      [
-        { text: '🐛 Багрепорт', callback_data: 'menu_bugreport' },
-        { text: '⚙️ Настройки', callback_data: 'menu_settings' }
-      ],
-      [
-        { text: '📊 Steam/Faceit статистика', callback_data: 'menu_stats' }
-      ],
-      [
-        { text: '🌐 Открыть сайт', url: SERVER_CONFIG.SITE_URL }
-      ]
-    ]
-  };
+  // 2. Rich Message с кнопками внутри текста (Bot API 10.3+)
+  const richHtml = buildMainMenuRichHtml(username);
+  const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+  if (richOk) return;
 
+  // 3. Fallback: inline-клавиатура
+  const menuButtons = buildMainMenuInlineKeyboard(SERVER_CONFIG.SITE_URL);
   const idLine = discordId ? `\n\n🆔 <code>${discordId}</code>` : '';
 
   await telegramBot.sendMessage(chatId, `<b>📱 Главное меню</b>${idLine}\n\nВыберите действие:`, {
