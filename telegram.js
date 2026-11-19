@@ -14,6 +14,7 @@ import { sendRichMessage, buildButtonRow, buildInlineKeyboard } from './src/tele
 import { buildMainMenuWidget, buildMainMenuRichHtml, buildMainMenuInlineKeyboard, MENU_SECTIONS } from './src/telegram/widgets/main-menu.js';
 import { buildSettingsRichHtml, buildSettingsInlineKeyboard, buildSettingsWidget, buildTimeoutRichHtml, buildTimeoutInlineKeyboard, buildCheaterSettingsRichHtml, buildCheaterSettingsInlineKeyboard, buildSteamRichHtml, buildSteamInlineKeyboard } from './src/telegram/widgets/settings-menu.js';
 import { buildCheckerRichHtml, buildCheckerInlineKeyboard } from './src/telegram/widgets/checker-menu.js';
+import { buildSteamWallRichHtml, buildSteamWallInlineKeyboard } from './src/telegram/widgets/steam-wall-menu.js';
 import { buildStatsRichHtml, buildStatsWidget } from './src/telegram/widgets/stats.js';
 import { getRandomFlagMessage } from './src/steam-wall/wall-messages.js';
 
@@ -509,31 +510,26 @@ async function sendSteamWallMenu(chatId) {
     return;
   }
 
-  let statusText = '❌ Неизвестно';
-  let activeText = '❌ Выключен';
+  let isActive = false;
+  let hasToken = false;
 
   if (steamWallDb) {
     const settings = steamWallDb.getSettings(discordId);
     if (settings) {
-      activeText = settings.isActive ? '✅ Включён' : '❌ Выключен';
-      statusText = settings.hasToken ? '✅ Токен есть' : '❌ Нет токена';
+      isActive = settings.isActive;
+      hasToken = settings.hasToken;
     }
   }
 
-  const buttons = {
-    inline_keyboard: [
-      [{ text: `🤖 Бот: ${activeText}`, callback_data: 'sw_toggle' }],
-      [{ text: `🔑 Токен: ${statusText}`, callback_data: 'sw_token_info' }],
-      [
-        { text: '💬 Фразы', callback_data: 'sw_phrases' },
-        { text: '👥 Пользователи', callback_data: 'sw_targets' }
-      ],
-      [{ text: '📋 Последние ответы', callback_data: 'sw_logs' }],
-      [{ text: '🌐 Настроить на сайте', url: `${SERVER_CONFIG.SITE_URL}/steam-wall.html` }],
-      [{ text: '◀️ Назад', callback_data: 'back_to_menu' }]
-    ]
-  };
+  const s = { isActive, hasToken, siteUrl: SERVER_CONFIG.SITE_URL };
 
+  // 1. Rich Message
+  const richHtml = buildSteamWallRichHtml(s);
+  const richOk = await sendRichMessage(TELEGRAM_TOKEN, chatId, richHtml);
+  if (richOk) return;
+
+  // 2. Fallback
+  const buttons = buildSteamWallInlineKeyboard(s);
   await telegramBot.sendMessage(chatId, '<b>🤖 Автоответчик Steam</b>\n\nУправление ботом, который отвечает на комментарии в стене вашего профиля.', {
     parse_mode: 'HTML',
     reply_markup: buttons
