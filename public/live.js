@@ -167,6 +167,22 @@ async function fetchState() {
     document.getElementById('accessSection').style.display = 'none';
     document.getElementById('setupSection').style.display = 'block';
 
+    // Индикатор связи с игрой
+    const gsiEl = document.getElementById('gsiStatus');
+    gsiEl.textContent = data.gsiAlive
+      ? '🟢 GSI: пакеты от игры идут'
+      : '🔴 GSI: пакетов нет — проверь конфиг и перезапуск игры';
+    gsiEl.style.color = data.gsiAlive ? '#a5d6a7' : '#ff8a80';
+
+    // Игра не на привязанном Steam-аккаунте
+    const warn = document.getElementById('accountWarn');
+    if (data.wrongAccount && data.playingSteamId) {
+      warn.style.display = 'block';
+      warn.innerHTML = `⚠️ Сейчас играешь не на привязанном Steam-аккаунте: <code>${esc(data.playingSteamId)}</code>`;
+    } else {
+      warn.style.display = 'none';
+    }
+
     renderToken(data.token);
     renderMatch(data.match);
     renderMe(data.me);

@@ -140,11 +140,13 @@
           Положи скачанный <b>gamestate_integration_live.cfg</b> в папку CS2
           (<code>...\Counter-Strike Global Offensive\game\csgo\cfg\</code>) и полностью перезапусти игру.
         </div>
+        <div class="live-hint" id="gsiStatus" style="margin-top:8px"></div>
       </section>
 
       <!-- Текущий матч -->
       <section class="live-card setting-card" id="matchSection" style="display:none">
         <h2>Текущий матч</h2>
+        <div class="live-hint" id="accountWarn" style="display:none;color:#ffcc80;background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.3);border-radius:8px;padding:8px 12px;margin-bottom:10px"></div>
         <div class="live-grid">
           <div><div class="live-label">Карта</div><div class="live-value" id="mapName">—</div></div>
           <div id="scoreBox"><div class="live-label">Счёт</div><div class="live-value" id="scoreValue">—</div></div>

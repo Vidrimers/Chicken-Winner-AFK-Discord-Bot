@@ -13,7 +13,12 @@ export function createSettingsRouter(db, gamesDb, discordClient, achievements, t
    * POST /api/settings/:userId
    * Сохранить настройки пользователя
    */
-  router.post('/:userId', requireAuth, requireOwnership, async (req, res) => {
+  // :userId — только числовой Discord ID; иначе пропускаем дальше,
+  // чтобы не ловить чужие одно-сегментные роуты вроде /api/gsi от CS2
+  router.post('/:userId', (req, res, next) => {
+    if (/^\d+$/.test(String(req.params.userId))) return next();
+    next('route');
+  }, requireAuth, requireOwnership, async (req, res) => {
     const userId = req.params.userId;
     const {
       dmNotifications,

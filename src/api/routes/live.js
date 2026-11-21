@@ -9,10 +9,14 @@
 import { randomBytes } from 'node:crypto';
 import { requireAuth } from '../middleware/auth.js';
 import { checkProfiles } from '../../steam/steamApi.js';
+import { SERVER_CONFIG } from '../../config.js';
 import { error as logError } from '../../utils/logger.js';
 
 // Состояния матчей в памяти: userId -> MatchState
 const matchStates = new Map();
+
+// Время последнего GSI-пакета и steamid из него (индикатор связи + сверка аккаунта)
+const lastGsiAt = new Map();
 
 // Если пакетов от игры давно нет — считаем матч завершённым
 const STALE_AFTER_SEC = 180;
@@ -86,6 +90,8 @@ function finalizeMatch(db, userId, state) {
 
 function processGsi(db, userId, payload) {
   const now = Math.floor(Date.now() / 1000);
+  const providerSid = payload.provider ? payload.provider.steamid : null;
+  lastGsiAt.set(userId, { at: Date.now(), sid: providerSid });
   let state = matchStates.get(userId);
   const map = payload.map && payload.map.name ? payload.map : null;
 
@@ -111,12 +117,15 @@ function processGsi(db, userId, payload) {
       phase: map.phase || '',
       startedAt: now,
       lastPacketAt: now,
+      playingSteamId: providerSid,
       me: null,
       players: new Map(),
       rosterLive: false,
     };
     matchStates.set(userId, state);
   }
+
+  if (providerSid) state.playingSteamId = providerSid;
 
   state.mode = map.mode || state.mode;
   if (map.team_ct && map.team_ct.score != null) state.scoreCt = map.team_ct.score;
@@ -136,7 +145,6 @@ function processGsi(db, userId, payload) {
   }
 
   // player: я сам (жив/мёртв) или наблюдаемый (тиммейт / зритель)
-  const providerSid = payload.provider ? payload.provider.steamid : null;
   const player = payload.player;
   if (player && player.steamid) {
     if (providerSid && player.steamid === providerSid) {
@@ -216,9 +224,21 @@ export function registerLiveRoutes(app, db) {
       let token = db.getLiveGsiToken(userId);
       if (!token) token = db.insertLiveGsiToken(userId, randomBytes(24).toString('hex'));
 
+      // Индикатор связи с игрой и сверка Steam-аккаунта
+      const seen = lastGsiAt.get(userId) || null;
+      const gsiAlive = !!seen && (Date.now() - seen.at) < 90000;
       const current = matchStates.get(userId);
+      const playingSteamId = (current && current.playingSteamId) || (seen ? seen.sid : null);
+      const linkedSteamId = db.getSteamId(userId);
+      const wrongAccount = !!(
+        playingSteamId && linkedSteamId && String(playingSteamId) !== String(linkedSteamId)
+      );
+
       if (!current) {
-        res.json({ access, granted: true, token, match: null, me: null, players: [] });
+        res.json({
+          access, granted: true, token, gsiAlive, wrongAccount, playingSteamId,
+          match: null, me: null, players: [],
+        });
         return;
       }
 
@@ -229,6 +249,9 @@ export function registerLiveRoutes(app, db) {
         access,
         granted: true,
         token,
+        gsiAlive,
+        wrongAccount,
+        playingSteamId,
         match: {
           map: current.mapName,
           mode: current.mode,
@@ -259,9 +282,10 @@ export function registerLiveRoutes(app, db) {
       let token = db.getLiveGsiToken(userId);
       if (!token) token = db.insertLiveGsiToken(userId, randomBytes(24).toString('hex'));
 
-      // Адрес панели берём из запроса — пользователь качает конфиг со своей страницы
-      const host = req.get('host');
-      const uri = `http://${host}/api/gsi?k=${token}`;
+      // Адрес панели берём из запроса; порт — напрямую мимо nginx,
+      // т.к. GSI шлёт обычный HTTP и не ходит по редиректам на HTTPS
+      const host = String(req.get('host') || '').split(':')[0];
+      const uri = `http://${host}:${SERVER_CONFIG.PORT}/api/gsi?k=${token}`;
       const cfg = `"LiveTracker"
 {
 	"uri"		"${uri}"
