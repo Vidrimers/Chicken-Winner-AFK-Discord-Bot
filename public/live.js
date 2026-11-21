@@ -205,6 +205,7 @@ function openCsstat(steamId) {
 
 // Парсинг профиля без сохранения в базу
 async function openPreview(steamId) {
+  currentPreviewSteamId = String(steamId);
   const modal = document.getElementById('previewModal');
   const body = document.getElementById('previewBody');
   body.innerHTML = '<div class="live-hint">Загрузка профиля...</div>';
@@ -265,6 +266,8 @@ let addQueue = [];
 let queueBusy = false;
 const queueSendTimes = [];
 const playerNames = {};
+// Какой игрок сейчас открыт в модалке профиля (чтобы гасить кнопки после добавления)
+let currentPreviewSteamId = null;
 
 function loadQueue() {
   try {
@@ -415,8 +418,21 @@ async function processQueue() {
   queueBusy = false;
   saveQueue();
   renderQueue();
+  // Обновляем всё, что видно: live-список, открытую историю и кнопки в модалке
   fetchState();
+  if (currentLiveView === 'history') fetchHistory();
+  refreshPreviewAddButtons(next.steamId);
   setTimeout(processQueue, 700);
+}
+
+// Гасим кнопки добавления в открытой модалке, если этот игрок только что попал в базу
+function refreshPreviewAddButtons(steamId) {
+  const modal = document.getElementById('previewModal');
+  if (!modal || modal.style.display === 'none' || currentPreviewSteamId !== String(steamId)) return;
+  modal.querySelectorAll('.confirm-delete-btn, .confirm-cancel-btn').forEach((b) => {
+    b.disabled = true;
+    b.title = 'Уже в базе';
+  });
 }
 
 // ===== Тема пользователя (как в чекере) =====
@@ -439,7 +455,10 @@ async function loadUserTheme() {
 
 // ===== Вкладки: Live / История матчей =====
 
+let currentLiveView = 'live';
+
 function switchLiveView(view) {
+  currentLiveView = view;
   document.getElementById('viewLive').style.display = view === 'live' ? '' : 'none';
   document.getElementById('viewHistory').style.display = view === 'history' ? '' : 'none';
   document.querySelectorAll('.header-tab[data-live-view]').forEach((b) => {
