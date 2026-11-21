@@ -523,15 +523,15 @@ function renderHistory(data) {
     return;
   }
 
-  list.innerHTML = data.matches.map((m) => {
+  list.innerHTML = `<div class="hist-list">${data.matches.map((m) => {
     m.players.forEach((p) => { if (p.name) playerNames[p.steamid] = p.name; });
     const score = TEAM_SCORE_MODES.includes(String(m.mode || '').toLowerCase())
       ? ` • счёт <b>${m.scoreCt}:${m.scoreT}</b>`
       : '';
     const date = m.startedAt ? new Date(m.startedAt * 1000).toLocaleString('ru-RU') : '';
     return `
-      <div class="link-group" style="margin-bottom:10px">
-        <div class="link-group-header" style="cursor:pointer" onclick="toggleHistoryMatch(${m.id}, this)">
+      <div class="link-group hist-match" id="hist-match-${m.id}">
+        <div class="link-group-header" style="cursor:pointer" onclick="toggleHistoryMatch(${m.id})">
           <span class="link-group-name" style="cursor:inherit">🗺 ${esc(m.map || '—')}</span> — ${esc(modeLabel(m.mode))}${score} • ${m.players.length} чел.
           <div class="link-group-meta">${esc(date)} · нажми, чтобы посмотреть состав</div>
         </div>
@@ -545,7 +545,7 @@ function renderHistory(data) {
         </div>
       </div>
     `;
-  }).join('');
+  }).join('')}</div>`;
 
   // Пагинация
   const totalPages = Math.ceil((data.total || 0) / HISTORY_LIMIT);
@@ -558,8 +558,12 @@ function renderHistory(data) {
 
 function toggleHistoryMatch(matchId) {
   const body = document.getElementById(`hist-players-${matchId}`);
+  const row = document.getElementById(`hist-match-${matchId}`);
   if (!body) return;
-  body.style.display = body.style.display === 'none' ? 'block' : 'none';
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  // Раскрытый матч занимает всю ширину сетки — под таблицу состава
+  if (row) row.classList.toggle('hist-open', open);
 }
 
 function switchHistoryMode(mode) {
@@ -571,6 +575,8 @@ function switchHistoryMode(mode) {
 function historyGoPage(page) {
   historyPage = Math.max(1, page);
   fetchHistory();
+  const list = document.getElementById('historyList');
+  if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ===== Инициализация =====

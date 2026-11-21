@@ -10,9 +10,9 @@
   <link rel="stylesheet" href="/theme-m3-light.css" />
   <link rel="stylesheet" href="/theme-m3-dark.css" />
   <link rel="stylesheet" href="/theme-liquid-glass.css" />
-  <link rel="stylesheet" href="/cheater-checker.css" />
+  <link rel="stylesheet" href="/cheater-checker.css?v=2" />
   <link rel="stylesheet" href="/icons/icons.css" />
-  <script src="/live.js" defer></script>
+  <script src="/live.js?v=2" defer></script>
   <style>
     .live-grid { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; }
     .live-label { font-size: 11px; opacity: 0.5; text-transform: uppercase; }
@@ -23,13 +23,16 @@
     .team-CT { color: #5b9bd5; }
     .team-T { color: #e0a33c; }
 
-    /* Карточки: .setting-card — хук для тем, .live-card — раскладка поверх */
+    /* Карточки: .setting-card — хук для тем, .live-card — раскладка поверх.
+       min-height:0 — снимаем 250px из style.css (для плиток настроек),
+       иначе карточки live не схлопываются */
     .live-card {
       display: block;
       text-align: left;
       align-items: initial;
       padding: 16px 18px;
       margin-bottom: 14px;
+      min-height: 0;
     }
     .live-card h2 { font-size: 15px; margin-bottom: 10px; }
 
@@ -94,6 +97,21 @@
 
     .preview-grid { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 10px 0; }
     .preview-grid .live-value { font-size: 14px; }
+
+    /* История матчей: компактные строки, 2 колонки на широких экранах */
+    .hist-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+    @media (min-width: 900px) {
+      .hist-list { grid-template-columns: repeat(2, 1fr); }
+    }
+    .hist-match { padding: 8px 12px; margin-bottom: 0; }
+    .hist-match .link-group-header { margin-bottom: 0; }
+    .hist-match .link-group-meta { margin-top: 2px; }
+    /* Раскрытый матч занимает всю ширину сетки — под таблицу состава */
+    .hist-match.hist-open { grid-column: 1 / -1; }
 
     .toast {
       position: fixed; right: 18px; bottom: 18px; z-index: 100;
