@@ -20,6 +20,7 @@ export function buildCheckerRichHtml(isAdmin) {
 ${buildButtonRow([['📋 Мои добавленные', 'checker_my_added', 'primary']])}
 ${buildButtonRow([['🔎 Проверить читера', 'checker_check', 'primary']])}
 ${buildButtonRow([['🤖 Добавить бота', 'checker_add_bot', 'success']])}
+${buildButtonRow([['🎮 LIVE', 'checker_live', 'success']])}
 ${adminButton}
 ${buildButtonRow([['◀️ Назад', 'back_to_menu', 'link']], 'center')}`;
 }
@@ -33,6 +34,7 @@ export function buildCheckerInlineKeyboard(isAdmin) {
       [{ text: '📋 Мои добавленные', callback_data: 'checker_my_added' }],
       [{ text: '🔎 Проверить читера', callback_data: 'checker_check' }],
       [{ text: '🤖 Добавить бота', callback_data: 'checker_add_bot' }],
+      [{ text: '🎮 LIVE', callback_data: 'checker_live' }],
       ...(isAdmin ? [[{ text: '🔍 CheatWatcher', callback_data: 'cw_qr_start' }]] : []),
       [{ text: '◀️ Назад', callback_data: 'back_to_menu' }]
     ]

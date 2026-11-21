@@ -485,6 +485,29 @@ async function sendMainMenu(chatId) {
 }
 
 /**
+ * Информация о Live-странице: кнопка открыть + копирование ссылки
+ */
+async function sendLiveInfo(chatId) {
+  const liveUrl = 'https://chicken-winner.fun/live.html';
+  const text =
+    '<b>🎮 LIVE — матч CS2 в реальном времени</b>\n\n' +
+    'Состав матча, статистика и проверка игроков прямо из игры.\n\n' +
+    `Ссылка: <code>${liveUrl}</code>\n\n` +
+    '⚠️ Список игроков доступен только в режиме Spectate (ограничение CS2).\n' +
+    '📋 «Скопировать ссылку» положит её в буфер обмена.';
+  await telegramBot.sendMessage(chatId, text, {
+    parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '🚀 Открыть Live', url: liveUrl }],
+        [{ text: '📋 Скопировать ссылку', copy_text: { text: liveUrl } }],
+        [{ text: '◀️ Назад', callback_data: 'menu_checker' }],
+      ],
+    },
+  });
+}
+
+/**
  * Отправка подменю чекера читеров
  */
 async function sendCheckerMenu(chatId) {
@@ -1641,6 +1664,11 @@ async function handleWidgetQueryUpdate(wq) {
         break;
       }
 
+      case 'checker_live':
+        await sendLiveInfo(chatId);
+        await answerWidgetQuery(TELEGRAM_TOKEN, wq.id);
+        break;
+
       case 'menu_settings': {
         const discordIdSettings = getLinkedDiscordId(chatId);
         if (!discordIdSettings) {
@@ -2215,6 +2243,10 @@ export function initTelegramBot(
             await sendCheckerMenu(chatId);
             break;
           }
+
+          case 'checker_live':
+            await sendLiveInfo(chatId);
+            break;
 
           case 'menu_steam_wall': {
             userStates.delete(chatId);
