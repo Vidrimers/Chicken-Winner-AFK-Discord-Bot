@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>🎮 Live — CheatWatchers</title>
+  <link rel="stylesheet" href="/cheater-checker.css">
+  <style>
+    .live-main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+    .live-card {
+      background: #1e1e2e;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+    .live-card h2 { font-size: 15px; margin-bottom: 10px; }
+    .live-label { font-size: 11px; opacity: 0.5; text-transform: uppercase; }
+    .live-hint { font-size: 12px; opacity: 0.55; line-height: 1.5; }
+    .live-row { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; }
+    .live-value { font-size: 15px; font-weight: 600; }
+    .score-ct { color: #5b9bd5; }
+    .score-t { color: #e0a33c; }
+    .team-CT { color: #5b9bd5; }
+    .team-T { color: #e0a33c; }
+
+    .token-box {
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 13px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      user-select: all;
+    }
+
+    .access-item { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 3px 0; }
+
+    .players-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .players-table th {
+      text-align: left; font-size: 11px; opacity: 0.45; text-transform: uppercase;
+      font-weight: 500; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .players-table td { padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .players-table tr.me { background: rgba(102, 126, 234, 0.12); }
+    .players-table tr:hover { background: rgba(255,255,255,0.04); }
+    .player-name { cursor: pointer; font-weight: 600; }
+    .player-name:hover { color: #8fa2ff; }
+    .sid-cell {
+      font-family: Consolas, 'Courier New', monospace; font-size: 11px; opacity: 0.65;
+      cursor: pointer;
+    }
+    .sid-cell:hover { color: #8fa2ff; }
+    .in-db-badge {
+      display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 8px;
+      background: rgba(244, 67, 54, 0.18); color: #ff8a80; border: 1px solid rgba(244,67,54,0.35);
+    }
+    .row-actions { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+    .mini-btn {
+      font-size: 11px; padding: 3px 9px; border-radius: 6px; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: #ddd;
+    }
+    .mini-btn:hover { background: rgba(102,126,234,0.25); border-color: rgba(102,126,234,0.5); }
+
+    .roster-note {
+      display: inline-block; margin-left: 10px; font-size: 11px;
+      background: rgba(255,152,0,0.1); border: 1px solid rgba(255,152,0,0.3);
+      color: #ffcc80; border-radius: 8px; padding: 2px 10px;
+    }
+    .roster-note.on {
+      background: rgba(76,175,80,0.12); border-color: rgba(76,175,80,0.35); color: #a5d6a7;
+    }
+
+    .preview-grid { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 10px 0; }
+    .preview-grid .live-value { font-size: 14px; }
+
+    .toast {
+      position: fixed; right: 18px; bottom: 18px; z-index: 100;
+      background: #2a2a3d; border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px; padding: 10px 16px; font-size: 13px;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+    }
+  </style>
+</head>
+<body>
+
+<header class="checker-header">
+  <a href="/cheater-checker.html" class="back-btn">← Назад</a>
+  <div class="header-tabs">
+    <span class="header-tab active">🎮 Live</span>
+  </div>
+  <div class="header-actions">
+    <button class="header-tab" id="historyBtn">История матчей</button>
+  </div>
+</header>
+
+<main class="live-main">
+
+  <!-- Условия доступа -->
+  <section class="live-card" id="accessSection" style="display:none">
+    <h2>Доступ к Live</h2>
+    <div id="accessList"></div>
+    <div class="live-hint" style="margin-top:8px">
+      Нужны все три условия: привязанный Steam, привязанный Telegram и участие на Discord-сервере.
+    </div>
+  </section>
+
+  <!-- Подключение игры -->
+  <section class="live-card" id="setupSection" style="display:none">
+    <h2>Подключение игры</h2>
+    <div class="live-row" style="margin-bottom:10px">
+      <span class="live-label">Токен</span>
+      <span class="token-box" id="tokenDisplay" title="Нажми, чтобы показать/скрыть">••••••••••••••••</span>
+      <button class="mini-btn" id="tokenToggle">Показать</button>
+      <a class="confirm-delete-btn" style="text-decoration:none;font-size:12px;padding:5px 12px" href="/api/live/config">⬇ Скачать конфиг</a>
+    </div>
+    <div class="live-hint">
+      Положи скачанный <b>gamestate_integration_live.cfg</b> в папку CS2
+      (<code>...\Counter-Strike Global Offensive\game\csgo\cfg\</code>) и полностью перезапусти игру.
+    </div>
+  </section>
+
+  <!-- Текущий матч -->
+  <section class="live-card" id="matchSection" style="display:none">
+    <h2>Текущий матч</h2>
+    <div class="live-row">
+      <div><div class="live-label">Карта</div><div class="live-value" id="mapName">—</div></div>
+      <div id="scoreBox"><div class="live-label">Счёт</div><div class="live-value" id="scoreValue">—</div></div>
+      <div><div class="live-label">Раунд</div><div class="live-value" id="roundInfo">—</div></div>
+      <div><div class="live-label">Режим</div><div class="live-value" id="modeName">—</div></div>
+      <div><div class="live-label">Состояние</div><div class="live-value" id="phaseName">—</div></div>
+    </div>
+    <hr style="border-color:rgba(255,255,255,0.07);margin:12px 0">
+    <div class="live-row" id="meRow"><div class="live-hint">Данные игрока появятся, когда войдёшь в матч.</div></div>
+  </section>
+
+  <!-- Состав -->
+  <section class="live-card" id="playersSection">
+    <h2 style="display:inline-block">Игроки матча</h2>
+    <span class="roster-note" id="rosterNote">Список доступен только в режиме Spectate</span>
+    <table class="players-table" id="playersTable" style="margin-top:10px">
+      <thead>
+        <tr><th>Игрок</th><th>Команда</th><th>SteamID</th><th>K/D/A</th><th>Статус</th><th style="text-align:right">Действия</th></tr>
+      </thead>
+      <tbody id="playersBody"></tbody>
+    </table>
+    <div class="live-hint" id="playersEmpty" style="margin-top:10px">
+      Список пуст. Состав (тиммейты и соперники) собирается, когда ты в режиме Spectate —
+      зайди в зрители, и все игроки появятся здесь. Увиденные игроки сохраняются нарастающим итогом.
+    </div>
+  </section>
+
+  <!-- Модалка профиля игрока -->
+  <div class="modal-overlay" id="previewModal" style="display:none">
+    <div class="modal-box">
+      <div class="modal-box-header">
+        <h2>Профиль игрока</h2>
+        <button class="mini-btn" id="previewClose">✕</button>
+      </div>
+      <div class="modal-box-body" id="previewBody"></div>
+    </div>
+  </div>
+
+  <!-- Модалка истории (заглушка) -->
+  <div class="modal-overlay" id="historyModal" style="display:none">
+    <div class="modal-box">
+      <div class="modal-box-header">
+        <h2>История матчей</h2>
+        <button class="mini-btn" id="historyClose">✕</button>
+      </div>
+      <div class="modal-box-body">
+        <p class="live-hint">История матчей появится позже. Данные уже записываются.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="/live.js"></script>
+</body>
+</html>

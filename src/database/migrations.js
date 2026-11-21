@@ -972,5 +972,55 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: live-трекер GSI — токены доступа
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='live_gsi_tokens'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE live_gsi_tokens (
+          user_id TEXT PRIMARY KEY,
+          token TEXT NOT NULL UNIQUE,
+          created_at INTEGER
+        )
+      `);
+      console.log('✅ Таблица live_gsi_tokens создана');
+    }
+  }
+
+  // Миграция: live-трекер GSI — история матчей и составы
+  {
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='live_matches'").all();
+    if (tables.length === 0) {
+      db.exec(`
+        CREATE TABLE live_matches (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          map_name TEXT,
+          mode TEXT,
+          score_ct INTEGER DEFAULT 0,
+          score_t INTEGER DEFAULT 0,
+          started_at INTEGER,
+          ended_at INTEGER
+        )
+      `);
+      db.exec(`
+        CREATE TABLE live_match_players (
+          match_id INTEGER NOT NULL,
+          steam_id TEXT NOT NULL,
+          name TEXT,
+          team TEXT,
+          kills INTEGER DEFAULT 0,
+          deaths INTEGER DEFAULT 0,
+          assists INTEGER DEFAULT 0,
+          first_seen INTEGER,
+          last_seen INTEGER,
+          PRIMARY KEY (match_id, steam_id)
+        )
+      `);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_live_matches_user ON live_matches(user_id)');
+      console.log('✅ Таблицы live_matches и live_match_players созданы');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

@@ -990,6 +990,53 @@ export class DatabaseManager {
     return result?.steam_id ?? null;
   }
 
+  // ===== LIVE GSI (live-трекер) =====
+
+  getLiveGsiToken(userId) {
+    const row = this.prepare('SELECT token FROM live_gsi_tokens WHERE user_id = ?').get(userId);
+    return row ? row.token : null;
+  }
+
+  insertLiveGsiToken(userId, token) {
+    this.prepare('INSERT OR REPLACE INTO live_gsi_tokens (user_id, token, created_at) VALUES (?, ?, ?)')
+      .run(userId, token, Date.now());
+    return token;
+  }
+
+  getLiveGsiTokenUser(token) {
+    const row = this.prepare('SELECT user_id FROM live_gsi_tokens WHERE token = ?').get(token);
+    return row ? row.user_id : null;
+  }
+
+  hasTelegramLink(userId) {
+    return !!this.prepare('SELECT 1 FROM telegram_users WHERE user_id = ? AND started_bot = 1').get(userId);
+  }
+
+  insertLiveMatch({ userId, mapName, mode, scoreCt, scoreT, startedAt, endedAt }) {
+    const res = this.prepare(
+      'INSERT INTO live_matches (user_id, map_name, mode, score_ct, score_t, started_at, ended_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(userId, mapName, mode, scoreCt, scoreT, startedAt, endedAt);
+    return res.lastInsertRowid;
+  }
+
+  insertLiveMatchPlayer(matchId, p) {
+    this.prepare(
+      'INSERT OR IGNORE INTO live_match_players (match_id, steam_id, name, team, kills, deaths, assists, first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(matchId, p.steamid, p.name || '', p.team || '', p.kills || 0, p.deaths || 0, p.assists || 0, p.firstSeen || 0, p.lastSeen || 0);
+  }
+
+  // Типы уже добавленных профилей: { steam_id: 'cheater' | 'bot' }
+  getCheckerTypesBySteamIds(steamIds) {
+    const map = {};
+    if (!steamIds || steamIds.length === 0) return map;
+    const placeholders = steamIds.map(() => '?').join(',');
+    const rows = this.prepare(
+      `SELECT steam_id, type FROM cheater_checks WHERE steam_id IN (${placeholders})`
+    ).all(...steamIds);
+    for (const r of rows) map[r.steam_id] = r.type || 'cheater';
+    return map;
+  }
+
   updateUserSteamCache(userId, cacheJson, timestamp) {
     this.prepare('UPDATE user_stats SET steam_cache = ?, steam_cache_updated = ? WHERE user_id = ?').run(cacheJson, timestamp, userId);
   }

@@ -15,6 +15,7 @@ import { createSteamRouter } from "./steam.js";
 import { sessionManager } from "../server.js";
 import { createGamePricesRouter } from "./game-prices.js";
 import { createSteamWallRouter } from "./steam-wall.js";
+import { registerLiveRoutes } from "./live.js";
 import { requireAuth, requireAdmin, requireOwnership } from "../middleware/auth.js";
 import { LoginSession, EAuthTokenPlatformType } from 'steam-session';
 
@@ -320,6 +321,9 @@ export function registerRoutes(
     cheatWatcher,
   );
   app.use("/api/cheater-checker", cheaterCheckerRouter);
+
+  // Live-трекер CS2 GSI (страница live.html)
+  registerLiveRoutes(app, db);
 
   // Achievements роуты
   const achievementsRouter = createAchievementsRouter(db, telegram);
