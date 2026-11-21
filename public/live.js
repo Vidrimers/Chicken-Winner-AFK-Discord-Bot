@@ -129,6 +129,7 @@ async function fetchState() {
     }
     const data = await r.json();
     if (data.error) return;
+    lastStateData = data;
 
     renderAccess(data.access || {});
     if (!data.granted) {
@@ -260,6 +261,8 @@ let addQueue = [];
 let queueBusy = false;
 const queueSendTimes = [];
 const playerNames = {};
+// Последние данные с сервера — сортировка работает из кэша, без запросов
+let lastStateData = null;
 // Какой игрок сейчас открыт в модалке профиля (чтобы гасить кнопки после добавления)
 let currentPreviewSteamId = null;
 
@@ -283,9 +286,13 @@ function setPlayerSort(col) {
     playerSort = { col, dir: SORT_DEFAULT_DIR[col] || 'asc' };
   }
   try { localStorage.setItem(SORT_KEY, JSON.stringify(playerSort)); } catch {}
-  // Перерисовываем и live-состав, и открытую историю — сразу, без перезагрузки
-  fetchState();
-  if (currentLiveView === 'history') fetchHistory();
+  // Сортировка — только представление: перерисовываем из кэша, мгновенно и без запросов
+  if (lastStateData) {
+    renderPlayers(lastStateData.match, lastStateData.players, lastStateData.me);
+  }
+  if (currentLiveView === 'history' && lastHistoryData) {
+    renderHistory(lastHistoryData);
+  }
 }
 
 function sortIndicator(col) {
@@ -550,6 +557,8 @@ const MODE_LABELS = {
 const HISTORY_LIMIT = 10;
 let historyMode = 'all';
 let historyPage = 1;
+// Последние данные истории — для пересортировки без запроса
+let lastHistoryData = null;
 // Какие матчи истории раскрыты — переживают перерисовку (сортировка и т.п.)
 const openMatches = new Set();
 
@@ -598,6 +607,7 @@ async function fetchHistory() {
     const modeQ = historyMode === 'all' ? '' : `&mode=${encodeURIComponent(historyMode)}`;
     const r = await fetch(`/api/live/history?page=${historyPage}${modeQ}`);
     const data = await r.json();
+    lastHistoryData = data;
     renderHistory(data);
   } catch {
     list.innerHTML = '<div class="live-hint">Ошибка загрузки истории.</div>';
