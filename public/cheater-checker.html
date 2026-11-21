@@ -44,8 +44,10 @@
     <div class="checker-container">
       <!-- Шапка -->
       <header class="checker-header">
-        <a href="/" class="back-btn">← Назад</a>
-        <a href="/live.html" class="back-btn" style="margin-left:10px">🎮 Live</a>
+        <div style="display:flex;align-items:center;gap:10px">
+          <a href="/" class="back-btn">← Назад</a>
+          <a href="/live.html" class="back-btn">🎮 Live</a>
+        </div>
         <div class="header-tabs">
           <button class="header-tab active" data-view="cheater" onclick="switchView('cheater')">Читеры</button>
           <button class="header-tab" data-view="bot" onclick="switchView('bot')">Боты</button>

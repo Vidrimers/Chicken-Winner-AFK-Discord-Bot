@@ -285,6 +285,34 @@ async function quickAdd(steamId, type) {
   }
 }
 
+// ===== Тема пользователя (как в чекере) =====
+
+async function loadUserTheme() {
+  try {
+    const s = await fetch('/api/session');
+    const sj = await s.json();
+    if (!sj || !sj.userId) return;
+    const r = await fetch(`/api/stats/${sj.userId}`);
+    if (r.ok) {
+      const data = await r.json();
+      const theme = data.settings?.theme || 'standard';
+      document.body.setAttribute('data-theme', theme);
+    }
+  } catch {
+    // тема из localStorage уже применена — молча остаёмся на ней
+  }
+}
+
+// ===== Вкладки: Live / История матчей =====
+
+function switchLiveView(view) {
+  document.getElementById('viewLive').style.display = view === 'live' ? '' : 'none';
+  document.getElementById('viewHistory').style.display = view === 'history' ? '' : 'none';
+  document.querySelectorAll('.header-tab[data-live-view]').forEach((b) => {
+    b.classList.toggle('active', b.dataset.liveView === view);
+  });
+}
+
 // ===== Инициализация =====
 
 document.getElementById('tokenToggle').addEventListener('click', () => {
@@ -296,21 +324,13 @@ document.getElementById('tokenDisplay').addEventListener('click', () => {
   document.getElementById('tokenToggle').click();
 });
 
-document.getElementById('historyBtn').addEventListener('click', () => {
-  document.getElementById('historyModal').style.display = 'flex';
-});
-document.getElementById('historyClose').addEventListener('click', () => {
-  document.getElementById('historyModal').style.display = 'none';
-});
 document.getElementById('previewClose').addEventListener('click', () => {
   document.getElementById('previewModal').style.display = 'none';
 });
 document.getElementById('previewModal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
 });
-document.getElementById('historyModal').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
-});
 
+loadUserTheme();
 fetchState();
 setInterval(fetchState, POLL_MS);
