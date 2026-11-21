@@ -70,8 +70,12 @@ function mergePlayer(state, steamId, p, now, source) {
 // Финализация матча: запись в историю (состав собирается нарастающим итогом)
 function finalizeMatch(db, userId, state) {
   try {
-    // Матчи, где ни одного увиденного игрока, не сохраняем
-    if (state.players.size > 0) {
+    // Сохраняем, если кроме себя был увиден хотя бы один игрок;
+    // себя тоже записываем — строка «(ты)» в истории
+    const others = [...state.players.values()].filter(
+      (p) => !state.playingSteamId || String(p.steamid) !== String(state.playingSteamId)
+    );
+    if (others.length > 0) {
       const matchId = db.insertLiveMatch({
         userId,
         mapName: state.mapName,
@@ -166,6 +170,8 @@ function processGsi(db, userId, payload) {
         assists: ms.assists || 0,
         weapon: activeWeapon(player.weapons),
       };
+      // Себя тоже держим в списке игроков — строка «(ты)» в составе и истории
+      mergePlayer(state, player.steamid, player, now, 'self');
     } else {
       mergePlayer(state, player.steamid, player, now, 'observed');
     }

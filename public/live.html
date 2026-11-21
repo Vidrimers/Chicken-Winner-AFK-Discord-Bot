@@ -65,6 +65,8 @@
       text-align: left; font-size: 11px; opacity: 0.45; text-transform: uppercase;
       font-weight: 500; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.08);
     }
+    .players-table th.sortable { cursor: pointer; user-select: none; }
+    .players-table th.sortable:hover { color: #8fa2ff; opacity: 0.8; }
     .players-table td { padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
     .players-table tr.me { background: rgba(102, 126, 234, 0.12); }
     .players-table tr:hover { background: rgba(255,255,255,0.04); }
@@ -204,9 +206,7 @@
         <h2 style="display:inline-block">Игроки матча</h2>
         <span class="roster-note" id="rosterNote">Список доступен только в режиме Spectate</span>
         <table class="players-table" id="playersTable" style="margin-top:10px">
-          <thead>
-            <tr><th>Игрок</th><th>Команда</th><th>SteamID</th><th>K/D/A</th><th>Статус</th><th style="text-align:right">Действия</th></tr>
-          </thead>
+          <thead id="playersHead"></thead>
           <tbody id="playersBody"></tbody>
         </table>
         <div class="live-hint" id="playersEmpty" style="margin-top:10px">

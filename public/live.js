@@ -110,17 +110,11 @@ function renderPlayers(match, players, me) {
   table.style.display = '';
   empty.style.display = 'none';
 
-  // Свои первыми, потом CT, потом T
   const mySid = me ? me.steamid : null;
-  const order = { CT: 0, T: 1 };
-  const sorted = [...players].sort((a, b) => {
-    if (mySid) {
-      const am = a.steamid === mySid ? 0 : 1;
-      const bm = b.steamid === mySid ? 0 : 1;
-      if (am !== bm) return am - bm;
-    }
-    return (order[a.team] != null ? order[a.team] : 2) - (order[b.team] != null ? order[b.team] : 2);
-  });
+  // Заголовок с сортировкой — общий для live и истории
+  const thead = document.getElementById('playersHead');
+  if (thead) thead.innerHTML = playersHeadInner();
+  const sorted = sortPlayerRows(players, mySid);
 
   sorted.forEach((p) => { if (p.name) playerNames[p.steamid] = p.name; });
   body.innerHTML = sorted.map((p) => playerRowHtml(p, mySid)).join('');
@@ -268,6 +262,80 @@ const queueSendTimes = [];
 const playerNames = {};
 // Какой игрок сейчас открыт в модалке профиля (чтобы гасить кнопки после добавления)
 let currentPreviewSteamId = null;
+
+// ===== Сортировка игроков по колонкам (выбор запоминается в браузере) =====
+
+const SORT_KEY = 'afkBotLiveSort';
+// null — дефолт: сначала я, потом CT, потом T, по имени
+let playerSort = null;
+try {
+  const savedSort = JSON.parse(localStorage.getItem(SORT_KEY));
+  if (savedSort && savedSort.col && savedSort.dir) playerSort = savedSort;
+} catch {}
+
+// Первое нажатие на колонку: направление «с логикой» (K/D/A — сначала больше убийств)
+const SORT_DEFAULT_DIR = { name: 'asc', team: 'asc', kda: 'desc', status: 'asc' };
+
+function setPlayerSort(col) {
+  if (playerSort && playerSort.col === col) {
+    playerSort = { col, dir: playerSort.dir === 'asc' ? 'desc' : 'asc' };
+  } else {
+    playerSort = { col, dir: SORT_DEFAULT_DIR[col] || 'asc' };
+  }
+  try { localStorage.setItem(SORT_KEY, JSON.stringify(playerSort)); } catch {}
+  // Перерисовываем и live-состав, и открытую историю — сразу, без перезагрузки
+  fetchState();
+  if (currentLiveView === 'history') fetchHistory();
+}
+
+function sortIndicator(col) {
+  return playerSort && playerSort.col === col ? (playerSort.dir === 'asc' ? ' ▲' : ' ▼') : '';
+}
+
+// Заголовок таблицы игроков с сортируемыми колонками (общий для live и истории)
+function playersHeadInner() {
+  return `<tr>
+    <th class="sortable" onclick="setPlayerSort('name')">Игрок${sortIndicator('name')}</th>
+    <th class="sortable" onclick="setPlayerSort('team')">Команда${sortIndicator('team')}</th>
+    <th>SteamID</th>
+    <th class="sortable" onclick="setPlayerSort('kda')">K/D/A${sortIndicator('kda')}</th>
+    <th class="sortable" onclick="setPlayerSort('status')">Статус${sortIndicator('status')}</th>
+    <th style="text-align:right">Действия</th>
+  </tr>`;
+}
+
+function sortPlayerRows(players, mySid = null) {
+  const rows = [...(players || [])];
+  if (!playerSort) {
+    // Дефолт без выбранной колонки: сначала я, потом CT, потом T, по имени
+    const order = { CT: 0, T: 1 };
+    return rows.sort((a, b) => {
+      const am = mySid && a.steamid === mySid ? 0 : 1;
+      const bm = mySid && b.steamid === mySid ? 0 : 1;
+      if (am !== bm) return am - bm;
+      const ta = order[a.team] != null ? order[a.team] : 2;
+      const tb = order[b.team] != null ? order[b.team] : 2;
+      if (ta !== tb) return ta - tb;
+      return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+    });
+  }
+  const dir = playerSort.dir === 'desc' ? -1 : 1;
+  return rows.sort((a, b) => {
+    let r = 0;
+    if (playerSort.col === 'name') {
+      r = String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+    } else if (playerSort.col === 'team') {
+      r = String(a.team || '').localeCompare(String(b.team || ''));
+    } else if (playerSort.col === 'kda') {
+      r = (a.kills || 0) - (b.kills || 0)
+        || (b.deaths || 0) - (a.deaths || 0)
+        || (a.assists || 0) - (b.assists || 0);
+    } else if (playerSort.col === 'status') {
+      r = (a.inDb ? 0 : 1) - (b.inDb ? 0 : 1);
+    }
+    return r * dir;
+  });
+}
 
 function loadQueue() {
   try {
@@ -570,10 +638,8 @@ function renderHistory(data) {
         </div>
         <div class="link-group-cards" id="hist-players-${m.id}" style="display:none">
           <table class="players-table">
-            <thead>
-              <tr><th>Игрок</th><th>Команда</th><th>SteamID</th><th>K/D/A</th><th>Статус</th><th style="text-align:right">Действия</th></tr>
-            </thead>
-            <tbody>${m.players.map((p) => playerRowHtml(p, null)).join('')}</tbody>
+            <thead>${playersHeadInner()}</thead>
+            <tbody>${sortPlayerRows(m.players, null).map((p) => playerRowHtml(p, null)).join('')}</tbody>
           </table>
         </div>
       </div>
