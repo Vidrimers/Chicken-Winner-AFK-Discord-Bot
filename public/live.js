@@ -550,6 +550,8 @@ const MODE_LABELS = {
 const HISTORY_LIMIT = 10;
 let historyMode = 'all';
 let historyPage = 1;
+// Какие матчи истории раскрыты — переживают перерисовку (сортировка и т.п.)
+const openMatches = new Set();
 
 function modeLabel(mode) {
   return MODE_LABELS[String(mode || '')] || mode || 'Прочее';
@@ -630,13 +632,14 @@ function renderHistory(data) {
       ? ` • счёт <b>${m.scoreCt}:${m.scoreT}</b>`
       : '';
     const date = m.startedAt ? new Date(m.startedAt * 1000).toLocaleString('ru-RU') : '';
+    const open = openMatches.has(m.id);
     return `
-      <div class="link-group hist-match" id="hist-match-${m.id}">
+      <div class="link-group hist-match${open ? ' hist-open' : ''}" id="hist-match-${m.id}">
         <div class="link-group-header" style="cursor:pointer" onclick="toggleHistoryMatch(${m.id})">
           <span class="link-group-name" style="cursor:inherit">🗺 ${esc(m.map || '—')}</span> — ${esc(modeLabel(m.mode))}${score} • ${m.players.length} чел.${inDbSummary(m.players)}
           <div class="link-group-meta">${esc(date)} · нажми, чтобы посмотреть состав</div>
         </div>
-        <div class="link-group-cards" id="hist-players-${m.id}" style="display:none">
+        <div class="link-group-cards" id="hist-players-${m.id}" style="display:${open ? 'block' : 'none'}">
           <table class="players-table">
             <thead>${playersHeadInner()}</thead>
             <tbody>${sortPlayerRows(m.players, null).map((p) => playerRowHtml(p, null)).join('')}</tbody>
@@ -663,6 +666,8 @@ function toggleHistoryMatch(matchId) {
   body.style.display = open ? 'block' : 'none';
   // Раскрытый матч занимает всю ширину сетки — под таблицу состава
   if (row) row.classList.toggle('hist-open', open);
+  if (open) openMatches.add(matchId);
+  else openMatches.delete(matchId);
 }
 
 function switchHistoryMode(mode) {
