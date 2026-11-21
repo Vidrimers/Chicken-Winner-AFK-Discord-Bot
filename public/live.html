@@ -85,6 +85,12 @@
       border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: #ddd;
     }
     .mini-btn:hover { background: rgba(102,126,234,0.25); border-color: rgba(102,126,234,0.5); }
+    .mini-btn:disabled,
+    .confirm-delete-btn:disabled,
+    .confirm-cancel-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
 
     .roster-note {
       display: inline-block; margin-left: 10px; font-size: 11px;

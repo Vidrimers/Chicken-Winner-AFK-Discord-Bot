@@ -244,8 +244,8 @@ async function openPreview(steamId) {
         <div><div class="live-label">Торговля</div><div class="live-value">${p.economyBan && p.economyBan !== 'none' ? '⚠️ ' + esc(p.economyBan) : '✅ Без ограничений'}</div></div>
       </div>
       <div class="row-actions" style="justify-content:flex-start;margin-top:12px">
-        <button class="confirm-delete-btn" onclick="queueAdd('${esc(p.steamId)}', 'cheater')">➕ В читеры</button>
-        <button class="confirm-cancel-btn" onclick="queueAdd('${esc(p.steamId)}', 'bot')">➕ В боты</button>
+        <button class="confirm-delete-btn" onclick="queueAdd('${esc(p.steamId)}', 'cheater')" ${data.inDb ? 'disabled title="Уже в базе"' : ''}>➕ В читеры</button>
+        <button class="confirm-cancel-btn" onclick="queueAdd('${esc(p.steamId)}', 'bot')" ${data.inDb ? 'disabled title="Уже в базе"' : ''}>➕ В боты</button>
         <button class="mini-btn" onclick="openCsstat('${esc(p.steamId)}')">csstat</button>
         <a class="mini-btn" style="text-decoration:none" href="${esc(p.profileUrl || '#')}" target="_blank" rel="noopener">Steam</a>
       </div>
@@ -494,8 +494,8 @@ function playerRowHtml(p, mySid) {
     <td>
       <div class="row-actions">
         <button class="mini-btn" onclick="openPreview('${esc(p.steamid)}')">🔍 Проверить</button>
-        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'cheater')">➕ Читеры</button>
-        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'bot')">➕ Боты</button>
+        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'cheater')" ${p.inDb ? 'disabled title="Уже в базе"' : ''}>➕ Читеры</button>
+        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'bot')" ${p.inDb ? 'disabled title="Уже в базе"' : ''}>➕ Боты</button>
         <button class="mini-btn" onclick="openCsstat('${esc(p.steamid)}')">csstat</button>
       </div>
     </td>
