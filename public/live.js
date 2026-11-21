@@ -122,6 +122,8 @@ function renderPlayers(match, players, me) {
     return (order[a.team] != null ? order[a.team] : 2) - (order[b.team] != null ? order[b.team] : 2);
   });
 
+  sorted.forEach((p) => { if (p.name) playerNames[p.steamid] = p.name; });
+
   body.innerHTML = sorted.map((p) => {
     const isMe = mySid && p.steamid === mySid;
     const inDb = p.inDb
@@ -136,8 +138,8 @@ function renderPlayers(match, players, me) {
       <td>
         <div class="row-actions">
           <button class="mini-btn" onclick="openPreview('${esc(p.steamid)}')">🔍 Проверить</button>
-          <button class="mini-btn" onclick="quickAdd('${esc(p.steamid)}', 'cheater')">➕ Читеры</button>
-          <button class="mini-btn" onclick="quickAdd('${esc(p.steamid)}', 'bot')">➕ Боты</button>
+          <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'cheater')">➕ Читеры</button>
+          <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'bot')">➕ Боты</button>
           <button class="mini-btn" onclick="openCsstat('${esc(p.steamid)}')">csstat</button>
         </div>
       </td>
@@ -220,6 +222,7 @@ async function openPreview(steamId) {
       return;
     }
     const p = data.profile;
+    if (p.personaName) playerNames[p.steamId] = p.personaName;
     const vac = p.vacBanned
       ? `⚠️ VAC-бан (${p.numberOfVacBans || 0}), последний ${p.daysSinceLastBan || 0} дн. назад`
       : '✅ Без VAC-банов';
@@ -241,8 +244,8 @@ async function openPreview(steamId) {
         <div><div class="live-label">Торговля</div><div class="live-value">${p.economyBan && p.economyBan !== 'none' ? '⚠️ ' + esc(p.economyBan) : '✅ Без ограничений'}</div></div>
       </div>
       <div class="row-actions" style="justify-content:flex-start;margin-top:12px">
-        <button class="confirm-delete-btn" onclick="quickAdd('${esc(p.steamId)}', 'cheater')">➕ В читеры</button>
-        <button class="confirm-cancel-btn" onclick="quickAdd('${esc(p.steamId)}', 'bot')">➕ В боты</button>
+        <button class="confirm-delete-btn" onclick="queueAdd('${esc(p.steamId)}', 'cheater')">➕ В читеры</button>
+        <button class="confirm-cancel-btn" onclick="queueAdd('${esc(p.steamId)}', 'bot')">➕ В боты</button>
         <button class="mini-btn" onclick="openCsstat('${esc(p.steamId)}')">csstat</button>
         <a class="mini-btn" style="text-decoration:none" href="${esc(p.profileUrl || '#')}" target="_blank" rel="noopener">Steam</a>
       </div>
@@ -252,37 +255,168 @@ async function openPreview(steamId) {
   }
 }
 
-// Быстрое добавление в базу: тот же поток, что и обычная проверка в чекере
-async function quickAdd(steamId, type) {
-  const label = type === 'bot' ? 'боты' : 'читеры';
-  toast(`Проверка и добавление в «${label}»...`);
+// ===== Очередь добавления в базу =====
+// «➕» складывает игрока в очередь: добавление идёт постепенно (лимит /check — 5/мин),
+// чтобы не словить rate limit и никого не упустить. Очередь хранится в localStorage
+// и продолжает работу при следующем открытии страницы.
+
+const QUEUE_KEY = 'afkBotLiveAddQueue';
+let addQueue = [];
+let queueBusy = false;
+const queueSendTimes = [];
+const playerNames = {};
+
+function loadQueue() {
+  try {
+    addQueue = JSON.parse(localStorage.getItem(QUEUE_KEY)) || [];
+  } catch {
+    addQueue = [];
+  }
+  // Если страницу закрыли во время отправки — возвращаем в очередь
+  addQueue.forEach((i) => { if (i.status === 'working') i.status = 'pending'; });
+}
+
+function saveQueue() {
+  try { localStorage.setItem(QUEUE_KEY, JSON.stringify(addQueue)); } catch {}
+}
+
+function queueAdd(steamId, type) {
+  const sid = String(steamId);
+  const exists = addQueue.some((i) =>
+    i.steamId === sid && i.type === type && (i.status === 'pending' || i.status === 'working'));
+  if (exists) {
+    toast('Игрок уже в очереди');
+    return;
+  }
+  addQueue.push({
+    id: 'q-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
+    steamId: sid,
+    type,
+    name: playerNames[sid] || '',
+    status: 'pending',
+  });
+  saveQueue();
+  renderQueue();
+  processQueue();
+  toast('Добавлено в очередь');
+}
+
+function retryQueueItem(id) {
+  const item = addQueue.find((i) => i.id === id);
+  if (!item) return;
+  item.status = 'pending';
+  delete item.error;
+  saveQueue();
+  renderQueue();
+  processQueue();
+}
+
+function removeQueueItem(id) {
+  addQueue = addQueue.filter((i) => i.id !== id);
+  saveQueue();
+  renderQueue();
+}
+
+function clearFinishedQueue() {
+  addQueue = addQueue.filter((i) => i.status === 'pending' || i.status === 'working');
+  saveQueue();
+  renderQueue();
+}
+
+function renderQueue() {
+  const section = document.getElementById('queueSection');
+  const list = document.getElementById('queueList');
+  if (!addQueue.length) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  const waiting = addQueue.filter((i) => i.status === 'pending' || i.status === 'working').length;
+  const done = addQueue.filter((i) => i.status === 'done').length;
+  const failed = addQueue.filter((i) => i.status === 'error').length;
+  list.innerHTML = `
+    <div class="live-hint" style="margin-bottom:8px">
+      В очереди: ${waiting} · Добавлено: ${done} · Ошибок: ${failed} ·
+      добавление постепенное (до 5 в минуту), чтобы не получить rate limit
+    </div>
+    ${addQueue.map((i) => `
+      <div class="access-item">
+        <span>${i.status === 'pending' ? '⏳' : i.status === 'working' ? '🔄' : i.status === 'done' ? '✅' : '❌'}</span>
+        <span>${esc(i.name || i.steamId)}</span>
+        <span class="live-hint">→ ${i.type === 'bot' ? 'Боты' : 'Читеры'}${i.error ? ' · ' + esc(i.error) : ''}${i.wasDuplicate ? ' · уже в базе' : ''}</span>
+        ${i.status === 'error' ? `<button class="mini-btn" onclick="retryQueueItem('${i.id}')">Повторить</button>` : ''}
+        <button class="mini-btn" onclick="removeQueueItem('${i.id}')">✕</button>
+      </div>
+    `).join('')}
+    <div style="margin-top:8px">
+      <button class="mini-btn" onclick="clearFinishedQueue()">Очистить завершённые</button>
+    </div>
+  `;
+}
+
+async function processQueue() {
+  if (queueBusy) return;
+  const next = addQueue.find((i) => i.status === 'pending');
+  if (!next) {
+    renderQueue();
+    return;
+  }
+
+  // Плавный темп: не более 5 запросов в минуту (ограничение /check)
+  const now = Date.now();
+  while (queueSendTimes.length && now - queueSendTimes[0] > 60000) queueSendTimes.shift();
+  if (queueSendTimes.length >= 5) {
+    setTimeout(processQueue, 60000 - (now - queueSendTimes[0]) + 500);
+    return;
+  }
+
+  queueBusy = true;
+  next.status = 'working';
+  saveQueue();
+  renderQueue();
+  queueSendTimes.push(Date.now());
+
+  const label = next.type === 'bot' ? 'боты' : 'читеры';
   try {
     const r = await fetch('/api/cheater-checker/check', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        urls: [`https://steamcommunity.com/profiles/${steamId}/`],
-        type,
+        urls: [`https://steamcommunity.com/profiles/${next.steamId}/`],
+        type: next.type,
       }),
     });
     const data = await r.json();
     if (!r.ok) {
-      toast(data.error || 'Ошибка добавления');
-      return;
-    }
-    if (data.duplicates && data.duplicates.length) {
-      toast('Профиль уже есть в базе');
+      next.status = 'error';
+      next.error = data.error || 'Ошибка добавления';
+      toast(`❌ ${next.name || next.steamId}: ${next.error}`);
     } else if (data.typeConflicts && data.typeConflicts.length) {
-      toast('Профиль уже добавлен с другим типом');
+      next.status = 'error';
+      next.error = 'уже добавлен с другим типом';
+      toast(`❌ ${next.name || next.steamId}: ${next.error}`);
+    } else if (data.duplicates && data.duplicates.length) {
+      next.status = 'done';
+      next.wasDuplicate = true;
     } else if (data.results && data.results.length) {
-      toast(`✅ Добавлен в «${label}»`);
+      next.status = 'done';
+      toast(`✅ ${next.name || next.steamId} добавлен в «${label}»`);
     } else {
-      toast((data.errors && data.errors[0]) || 'Не удалось добавить');
+      next.status = 'error';
+      next.error = (data.errors && data.errors[0]) || 'Не удалось добавить';
+      toast(`❌ ${next.name || next.steamId}: ${next.error}`);
     }
-    fetchState();
   } catch {
-    toast('Ошибка добавления');
+    next.status = 'error';
+    next.error = 'Ошибка сети';
+    toast(`❌ ${next.name || next.steamId}: ошибка сети`);
   }
+
+  queueBusy = false;
+  saveQueue();
+  renderQueue();
+  fetchState();
+  setTimeout(processQueue, 700);
 }
 
 // ===== Тема пользователя (как в чекере) =====
@@ -331,6 +465,19 @@ document.getElementById('previewModal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
 });
 
+document.getElementById('infoBtn').addEventListener('click', () => {
+  document.getElementById('infoModal').style.display = 'flex';
+});
+document.getElementById('infoClose').addEventListener('click', () => {
+  document.getElementById('infoModal').style.display = 'none';
+});
+document.getElementById('infoModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+});
+
 loadUserTheme();
+loadQueue();
+renderQueue();
+processQueue();
 fetchState();
 setInterval(fetchState, POLL_MS);

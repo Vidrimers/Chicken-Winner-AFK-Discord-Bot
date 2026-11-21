@@ -110,7 +110,9 @@
         <button class="header-tab active" data-live-view="live" onclick="switchLiveView('live')">🎮 Live</button>
         <button class="header-tab" data-live-view="history" onclick="switchLiveView('history')">📜 История матчей</button>
       </div>
-      <div class="header-actions"></div>
+      <div class="header-actions">
+        <button class="header-tab" id="infoBtn">ℹ️ Как пользоваться</button>
+      </div>
     </header>
 
     <!-- Вкладка: Live -->
@@ -170,6 +172,12 @@
         </div>
       </section>
 
+      <!-- Очередь добавления -->
+      <section class="live-card setting-card" id="queueSection" style="display:none">
+        <h2 style="display:inline-block">Очередь добавления</h2>
+        <div id="queueList" style="margin-top:10px"></div>
+      </section>
+
     </div>
 
     <!-- Вкладка: История матчей -->
@@ -178,6 +186,38 @@
         <h2>История матчей</h2>
         <p class="live-hint">История матчей появится позже. Данные уже записываются.</p>
       </section>
+    </div>
+
+    <!-- Модалка: как пользоваться -->
+    <div class="modal-overlay" id="infoModal" style="display:none">
+      <div class="modal-box">
+        <div class="modal-box-header">
+          <h2>🎮 Live — как пользоваться</h2>
+          <button class="mini-btn" id="infoClose">✕</button>
+        </div>
+        <div class="modal-box-body">
+          <p class="live-hint"><b>1. Подключение (один раз).</b> Нажми «Скачать конфиг» и положи файл
+          <code>gamestate_integration_live.cfg</code> в папку CS2
+          (<code>...\Counter-Strike Global Offensive\game\csgo\cfg\</code>). Полностью перезапусти CS2 —
+          конфиг читается только при старте игры. После этого страница сама подхватит твой матч.</p>
+
+          <p class="live-hint"><b>2. Во время игры.</b> Видны карта, счёт (кроме arms race — там его нет),
+          твои HP, деньги, K/D/A и оружие. <b>Список игроков доступен только в режиме Spectate</b>
+          (ограничение CS2): зайди в зрители — состав (тиммейты и соперники с SteamID) соберётся
+          автоматически. Увиденные игроки сохраняются нарастающим итогом за весь матч, вышедшие
+          остаются в списке.</p>
+
+          <p class="live-hint"><b>3. Проверка и добавление.</b> Клик по имени игрока или «🔍 Проверить» —
+          парсинг профиля (VAC, игровые баны, community, торговля) без сохранения в базу.
+          «➕ Читеры» / «➕ Боты» складывают игрока в <b>очередь</b>: добавление идёт постепенно
+          (не больше 5 в минуту), чтобы не словить rate limit и никого не упустить. Очередь
+          сохраняется — при следующем открытии страницы продолжит работу, просто держи страницу
+          открытой. «csstat» открывает профиль на csst.at, значок «🔴 В базе» — игрок уже добавлен.</p>
+
+          <p class="live-hint"><b>4. История матчей.</b> Составы и счёт записываются автоматически при
+          выходе из матча, раздел истории появится позже.</p>
+        </div>
+      </div>
     </div>
 
     <!-- Модалка профиля игрока -->
