@@ -235,6 +235,7 @@ async function openPreview(steamId) {
         <div>
           <div class="live-value">${esc(p.personaName)}</div>
           <div class="live-hint">${esc(p.steamId)}</div>
+          ${data.inDb ? `<div style="margin-top:4px"><span class="in-db-badge">🔴 В базе: ${data.inDb === 'bot' ? 'бот' : 'читер'}</span></div>` : ''}
         </div>
       </div>
       <div class="preview-grid">

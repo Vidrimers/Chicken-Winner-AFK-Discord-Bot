@@ -309,7 +309,9 @@ export function registerLiveRoutes(app, db) {
       }
       const url = `https://steamcommunity.com/profiles/${steamId}/`;
       const { results, errors } = await checkProfiles([url]);
-      res.json({ profile: results && results[0] ? results[0] : null, errors: errors || [] });
+      // Есть ли профиль уже в базе (читеры/боты)
+      const inDb = db.getCheckerTypesBySteamIds([String(steamId)])[String(steamId)] || null;
+      res.json({ profile: results && results[0] ? results[0] : null, errors: errors || [], inDb });
     } catch (e) {
       logError(`[Live] Ошибка /api/live/preview: ${e.message}`);
       res.status(500).json({ error: 'Внутренняя ошибка сервера' });
