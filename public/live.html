@@ -44,6 +44,17 @@
       user-select: all;
     }
 
+    /* Аккордеон «Подключение игры» */
+    .setup-toggle {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; cursor: pointer; user-select: none;
+      font-size: 14px; font-weight: 600;
+    }
+    .setup-toggle:hover { background: rgba(255,255,255,0.04); border-radius: 10px; }
+    .setup-toggle .chevron { margin-left: auto; opacity: 0.5; transition: transform 0.2s; }
+    .setup-toggle.open .chevron { transform: rotate(90deg); }
+    .setup-body { padding: 4px 16px 14px; }
+
     .access-item { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 3px 0; }
 
     .players-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -127,20 +138,26 @@
         </div>
       </section>
 
-      <!-- Подключение игры -->
-      <section class="live-card setting-card" id="setupSection" style="display:none">
-        <h2>Подключение игры</h2>
-        <div class="live-grid" style="margin-bottom:10px">
-          <span class="live-label">Токен</span>
-          <span class="token-box" id="tokenDisplay" title="Нажми, чтобы показать/скрыть">••••••••••••••••</span>
-          <button class="mini-btn" id="tokenToggle">Показать</button>
-          <a class="confirm-delete-btn" style="text-decoration:none;font-size:12px;padding:5px 12px" href="/api/live/config">⬇ Скачать конфиг</a>
+      <!-- Подключение игры (аккордеон, свёрнут по умолчанию) -->
+      <section class="live-card setting-card" id="setupSection" style="display:none;padding:0">
+        <div class="setup-toggle" id="setupToggle">
+          <span>⚙️ Подключение игры</span>
+          <span class="live-hint" id="gsiMini"></span>
+          <span class="chevron">▸</span>
         </div>
-        <div class="live-hint">
-          Положи скачанный <b>gamestate_integration_live.cfg</b> в папку CS2
-          (<code>...\Counter-Strike Global Offensive\game\csgo\cfg\</code>) и полностью перезапусти игру.
+        <div class="setup-body" id="setupBody" style="display:none">
+          <div class="live-grid" style="margin-bottom:10px">
+            <span class="live-label">Токен</span>
+            <span class="token-box" id="tokenDisplay" title="Нажми, чтобы показать/скрыть">••••••••••••••••</span>
+            <button class="mini-btn" id="tokenToggle">Показать</button>
+            <a class="confirm-delete-btn" style="text-decoration:none;font-size:12px;padding:5px 12px" href="/api/live/config">⬇ Скачать конфиг</a>
+          </div>
+          <div class="live-hint">
+            Положи скачанный <b>gamestate_integration_live.cfg</b> в папку CS2
+            (<code>...\Counter-Strike Global Offensive\game\csgo\cfg\</code>) и полностью перезапусти игру.
+          </div>
+          <div class="live-hint" id="gsiStatus" style="margin-top:8px"></div>
         </div>
-        <div class="live-hint" id="gsiStatus" style="margin-top:8px"></div>
       </section>
 
       <!-- Текущий матч -->

@@ -173,6 +173,10 @@ async function fetchState() {
       ? '🟢 GSI: пакеты от игры идут'
       : '🔴 GSI: пакетов нет — проверь конфиг и перезапуск игры';
     gsiEl.style.color = data.gsiAlive ? '#a5d6a7' : '#ff8a80';
+    // Компактный индикатор в шапке аккордеона — виден и в свёрнутом виде
+    const gsiMini = document.getElementById('gsiMini');
+    gsiMini.textContent = data.gsiAlive ? '🟢' : '🔴';
+    gsiMini.style.opacity = '0.9';
 
     // Игра не на привязанном Steam-аккаунте
     const warn = document.getElementById('accountWarn');
@@ -473,6 +477,15 @@ document.getElementById('tokenToggle').addEventListener('click', () => {
 });
 document.getElementById('tokenDisplay').addEventListener('click', () => {
   document.getElementById('tokenToggle').click();
+});
+
+// Аккордеон «Подключение игры»
+document.getElementById('setupToggle').addEventListener('click', () => {
+  const body = document.getElementById('setupBody');
+  const toggle = document.getElementById('setupToggle');
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  toggle.classList.toggle('open', open);
 });
 
 document.getElementById('previewClose').addEventListener('click', () => {
