@@ -70,17 +70,20 @@ function mergePlayer(state, steamId, p, now, source) {
 // Финализация матча: запись в историю (состав собирается нарастающим итогом)
 function finalizeMatch(db, userId, state) {
   try {
-    const matchId = db.insertLiveMatch({
-      userId,
-      mapName: state.mapName,
-      mode: state.mode,
-      scoreCt: state.scoreCt,
-      scoreT: state.scoreT,
-      startedAt: state.startedAt,
-      endedAt: Math.floor(Date.now() / 1000),
-    });
-    for (const p of state.players.values()) {
-      db.insertLiveMatchPlayer(matchId, p);
+    // Матчи, где ни одного увиденного игрока, не сохраняем
+    if (state.players.size > 0) {
+      const matchId = db.insertLiveMatch({
+        userId,
+        mapName: state.mapName,
+        mode: state.mode,
+        scoreCt: state.scoreCt,
+        scoreT: state.scoreT,
+        startedAt: state.startedAt,
+        endedAt: Math.floor(Date.now() / 1000),
+      });
+      for (const p of state.players.values()) {
+        db.insertLiveMatchPlayer(matchId, p);
+      }
     }
   } catch (e) {
     logError(`[Live] Ошибка записи матча в историю: ${e.message}`);

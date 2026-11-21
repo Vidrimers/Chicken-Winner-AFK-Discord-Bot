@@ -468,6 +468,17 @@ function modeLabel(mode) {
   return MODE_LABELS[String(mode || '')] || mode || 'Прочее';
 }
 
+// Счётчик игроков матча, уже добавленных в базу: «читеры ×2 · боты ×1»
+function inDbSummary(players) {
+  const cheaters = (players || []).filter((p) => p.inDb === 'cheater').length;
+  const bots = (players || []).filter((p) => p.inDb === 'bot').length;
+  if (!cheaters && !bots) return '';
+  const parts = [];
+  if (cheaters) parts.push(`читеры ×${cheaters}`);
+  if (bots) parts.push(`боты ×${bots}`);
+  return ` • <span class="in-db-badge">🔴 в базе: ${parts.join(' · ')}</span>`;
+}
+
 // Общая строка игрока — используется и в live-составе, и в истории
 function playerRowHtml(p, mySid) {
   const isMe = mySid && p.steamid === mySid;
@@ -517,13 +528,16 @@ function renderHistory(data) {
   const list = document.getElementById('historyList');
   const pag = document.getElementById('historyPagination');
 
-  if (!data.matches || !data.matches.length) {
+  // Матчи без игроков («0 чел.») не показываем
+  const matches = (data.matches || []).filter((m) => m.players && m.players.length > 0);
+
+  if (!matches.length) {
     list.innerHTML = '<div class="live-hint">Матчей пока нет.</div>';
     pag.innerHTML = '';
     return;
   }
 
-  list.innerHTML = `<div class="hist-list">${data.matches.map((m) => {
+  list.innerHTML = `<div class="hist-list">${matches.map((m) => {
     m.players.forEach((p) => { if (p.name) playerNames[p.steamid] = p.name; });
     const score = TEAM_SCORE_MODES.includes(String(m.mode || '').toLowerCase())
       ? ` • счёт <b>${m.scoreCt}:${m.scoreT}</b>`
@@ -532,7 +546,7 @@ function renderHistory(data) {
     return `
       <div class="link-group hist-match" id="hist-match-${m.id}">
         <div class="link-group-header" style="cursor:pointer" onclick="toggleHistoryMatch(${m.id})">
-          <span class="link-group-name" style="cursor:inherit">🗺 ${esc(m.map || '—')}</span> — ${esc(modeLabel(m.mode))}${score} • ${m.players.length} чел.
+          <span class="link-group-name" style="cursor:inherit">🗺 ${esc(m.map || '—')}</span> — ${esc(modeLabel(m.mode))}${score} • ${m.players.length} чел.${inDbSummary(m.players)}
           <div class="link-group-meta">${esc(date)} · нажми, чтобы посмотреть состав</div>
         </div>
         <div class="link-group-cards" id="hist-players-${m.id}" style="display:none">

@@ -1022,5 +1022,15 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: удаляем из истории матчи без игроков (пустые «0 чел.»)
+  {
+    const res = db.prepare(
+      'DELETE FROM live_matches WHERE id NOT IN (SELECT match_id FROM live_match_players)'
+    ).run();
+    if (res.changes > 0) {
+      console.log(`✅ Удалено пустых матчей из истории: ${res.changes}`);
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }
