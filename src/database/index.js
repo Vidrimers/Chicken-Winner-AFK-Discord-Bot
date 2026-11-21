@@ -1037,6 +1037,59 @@ export class DatabaseManager {
     return map;
   }
 
+  // ===== LIVE: история матчей =====
+
+  getLiveMatches(userId, { mode = null, limit = 10, offset = 0 } = {}) {
+    const where = ['user_id = ?'];
+    const params = [userId];
+    if (mode) {
+      where.push('mode = ?');
+      params.push(mode);
+    }
+    return this.prepare(
+      `SELECT id, map_name, mode, score_ct, score_t, started_at, ended_at
+       FROM live_matches WHERE ${where.join(' AND ')}
+       ORDER BY started_at DESC LIMIT ? OFFSET ?`
+    ).all(...params, limit, offset);
+  }
+
+  getLiveMatchesCount(userId, mode = null) {
+    const row = mode
+      ? this.prepare('SELECT COUNT(*) AS c FROM live_matches WHERE user_id = ? AND mode = ?').get(userId, mode)
+      : this.prepare('SELECT COUNT(*) AS c FROM live_matches WHERE user_id = ?').get(userId);
+    return row ? row.c : 0;
+  }
+
+  // Режимы матчей пользователя (для табов истории)
+  getLiveMatchModes(userId) {
+    return this.prepare('SELECT DISTINCT mode FROM live_matches WHERE user_id = ?')
+      .all(userId)
+      .map((r) => r.mode || '');
+  }
+
+  // Составы матчей одним запросом: { [matchId]: [игроки] }
+  getLiveMatchPlayersByMatchIds(matchIds) {
+    const map = {};
+    if (!matchIds || matchIds.length === 0) return map;
+    const placeholders = matchIds.map(() => '?').join(',');
+    const rows = this.prepare(
+      `SELECT match_id, steam_id, name, team, kills, deaths, assists
+       FROM live_match_players WHERE match_id IN (${placeholders})`
+    ).all(...matchIds);
+    for (const r of rows) {
+      if (!map[r.match_id]) map[r.match_id] = [];
+      map[r.match_id].push({
+        steamid: r.steam_id,
+        name: r.name,
+        team: r.team,
+        kills: r.kills,
+        deaths: r.deaths,
+        assists: r.assists,
+      });
+    }
+    return map;
+  }
+
   updateUserSteamCache(userId, cacheJson, timestamp) {
     this.prepare('UPDATE user_stats SET steam_cache = ?, steam_cache_updated = ? WHERE user_id = ?').run(cacheJson, timestamp, userId);
   }

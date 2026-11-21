@@ -123,28 +123,7 @@ function renderPlayers(match, players, me) {
   });
 
   sorted.forEach((p) => { if (p.name) playerNames[p.steamid] = p.name; });
-
-  body.innerHTML = sorted.map((p) => {
-    const isMe = mySid && p.steamid === mySid;
-    const inDb = p.inDb
-      ? `<span class="in-db-badge">🔴 В базе: ${p.inDb === 'bot' ? 'бот' : 'читер'}</span>`
-      : '';
-    return `<tr class="${isMe ? 'me' : ''}">
-      <td><span class="player-name" onclick="openPreview('${esc(p.steamid)}')">${esc(p.name || '—')}</span>${isMe ? ' <small style="opacity:0.5">(ты)</small>' : ''}</td>
-      <td class="team-${esc(p.team)}">${esc(p.team || '—')}</td>
-      <td><span class="sid-cell" onclick="copySid('${esc(p.steamid)}', event)" title="Клик — копировать SteamID">${esc(p.steamid)}</span></td>
-      <td>${p.kills || 0}/${p.deaths || 0}/${p.assists || 0}</td>
-      <td>${inDb}</td>
-      <td>
-        <div class="row-actions">
-          <button class="mini-btn" onclick="openPreview('${esc(p.steamid)}')">🔍 Проверить</button>
-          <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'cheater')">➕ Читеры</button>
-          <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'bot')">➕ Боты</button>
-          <button class="mini-btn" onclick="openCsstat('${esc(p.steamid)}')">csstat</button>
-        </div>
-      </td>
-    </tr>`;
-  }).join('');
+  body.innerHTML = sorted.map((p) => playerRowHtml(p, mySid)).join('');
 }
 
 async function fetchState() {
@@ -466,6 +445,132 @@ function switchLiveView(view) {
   document.querySelectorAll('.header-tab[data-live-view]').forEach((b) => {
     b.classList.toggle('active', b.dataset.liveView === view);
   });
+  if (view === 'history') fetchHistory();
+}
+
+// ===== История матчей =====
+
+const MODE_LABELS = {
+  competitive: 'Competitive',
+  casual: 'Casual',
+  gungameprogressive: 'Arms Race',
+  deathmatch: 'Deathmatch',
+  wingman: 'Wingman',
+  cooperative: 'Co-op',
+  custom: 'Кастом',
+  skirmish: 'Skirmish',
+};
+const HISTORY_LIMIT = 10;
+let historyMode = 'all';
+let historyPage = 1;
+
+function modeLabel(mode) {
+  return MODE_LABELS[String(mode || '')] || mode || 'Прочее';
+}
+
+// Общая строка игрока — используется и в live-составе, и в истории
+function playerRowHtml(p, mySid) {
+  const isMe = mySid && p.steamid === mySid;
+  const inDb = p.inDb
+    ? `<span class="in-db-badge">🔴 В базе: ${p.inDb === 'bot' ? 'бот' : 'читер'}</span>`
+    : '';
+  return `<tr class="${isMe ? 'me' : ''}">
+    <td><span class="player-name" onclick="openPreview('${esc(p.steamid)}')">${esc(p.name || '—')}</span>${isMe ? ' <small style="opacity:0.5">(ты)</small>' : ''}</td>
+    <td class="team-${esc(p.team)}">${esc(p.team || '—')}</td>
+    <td><span class="sid-cell" onclick="copySid('${esc(p.steamid)}', event)" title="Клик — копировать SteamID">${esc(p.steamid)}</span></td>
+    <td>${p.kills || 0}/${p.deaths || 0}/${p.assists || 0}</td>
+    <td>${inDb}</td>
+    <td>
+      <div class="row-actions">
+        <button class="mini-btn" onclick="openPreview('${esc(p.steamid)}')">🔍 Проверить</button>
+        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'cheater')">➕ Читеры</button>
+        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'bot')">➕ Боты</button>
+        <button class="mini-btn" onclick="openCsstat('${esc(p.steamid)}')">csstat</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+async function fetchHistory() {
+  const list = document.getElementById('historyList');
+  list.innerHTML = '<div class="live-hint">Загрузка истории...</div>';
+  try {
+    const modeQ = historyMode === 'all' ? '' : `&mode=${encodeURIComponent(historyMode)}`;
+    const r = await fetch(`/api/live/history?page=${historyPage}${modeQ}`);
+    const data = await r.json();
+    renderHistory(data);
+  } catch {
+    list.innerHTML = '<div class="live-hint">Ошибка загрузки истории.</div>';
+  }
+}
+
+function renderHistory(data) {
+  // Табы по режимам: Все + только реально встретившиеся режимы
+  const modesEl = document.getElementById('historyModes');
+  const tabs = ['all', ...(data.modes || [])];
+  modesEl.innerHTML = tabs.map((m) => `
+    <button class="filter-tab${historyMode === m ? ' active' : ''}" onclick="switchHistoryMode('${m}')">
+      ${m === 'all' ? 'Все' : esc(modeLabel(m))}
+    </button>
+  `).join('');
+
+  const list = document.getElementById('historyList');
+  const pag = document.getElementById('historyPagination');
+
+  if (!data.matches || !data.matches.length) {
+    list.innerHTML = '<div class="live-hint">Матчей пока нет.</div>';
+    pag.innerHTML = '';
+    return;
+  }
+
+  list.innerHTML = data.matches.map((m) => {
+    m.players.forEach((p) => { if (p.name) playerNames[p.steamid] = p.name; });
+    const score = TEAM_SCORE_MODES.includes(String(m.mode || '').toLowerCase())
+      ? ` • счёт <b>${m.scoreCt}:${m.scoreT}</b>`
+      : '';
+    const date = m.startedAt ? new Date(m.startedAt * 1000).toLocaleString('ru-RU') : '';
+    return `
+      <div class="link-group" style="margin-bottom:10px">
+        <div class="link-group-header" style="cursor:pointer" onclick="toggleHistoryMatch(${m.id}, this)">
+          <span class="link-group-name" style="cursor:inherit">🗺 ${esc(m.map || '—')}</span> — ${esc(modeLabel(m.mode))}${score} • ${m.players.length} чел.
+          <div class="link-group-meta">${esc(date)} · нажми, чтобы посмотреть состав</div>
+        </div>
+        <div class="link-group-cards" id="hist-players-${m.id}" style="display:none">
+          <table class="players-table">
+            <thead>
+              <tr><th>Игрок</th><th>Команда</th><th>SteamID</th><th>K/D/A</th><th>Статус</th><th style="text-align:right">Действия</th></tr>
+            </thead>
+            <tbody>${m.players.map((p) => playerRowHtml(p, null)).join('')}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Пагинация
+  const totalPages = Math.ceil((data.total || 0) / HISTORY_LIMIT);
+  pag.innerHTML = totalPages > 1 ? `
+    <button class="mini-btn" ${data.page <= 1 ? 'disabled' : ''} onclick="historyGoPage(${data.page - 1})">←</button>
+    <span class="live-hint" style="margin:0 8px">${data.page} / ${totalPages}</span>
+    <button class="mini-btn" ${data.page >= totalPages ? 'disabled' : ''} onclick="historyGoPage(${data.page + 1})">→</button>
+  ` : '';
+}
+
+function toggleHistoryMatch(matchId) {
+  const body = document.getElementById(`hist-players-${matchId}`);
+  if (!body) return;
+  body.style.display = body.style.display === 'none' ? 'block' : 'none';
+}
+
+function switchHistoryMode(mode) {
+  historyMode = mode;
+  historyPage = 1;
+  fetchHistory();
+}
+
+function historyGoPage(page) {
+  historyPage = Math.max(1, page);
+  fetchHistory();
 }
 
 // ===== Инициализация =====

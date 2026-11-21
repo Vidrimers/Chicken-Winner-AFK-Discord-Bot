@@ -324,6 +324,46 @@ export function registerLiveRoutes(app, db) {
     }
   });
 
+  // История матчей пользователя: список + составы + режимы для табов
+  app.get('/api/live/history', requireAuth, (req, res) => {
+    try {
+      const userId = req.authenticatedUserId;
+      const mode = req.query.mode ? String(req.query.mode) : null;
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const limit = 10;
+      const offset = (page - 1) * limit;
+
+      const rows = db.getLiveMatches(userId, { mode, limit, offset });
+      const playersMap = db.getLiveMatchPlayersByMatchIds(rows.map((m) => m.id));
+      const modes = db.getLiveMatchModes(userId);
+
+      const allSids = [];
+      for (const arr of Object.values(playersMap)) {
+        for (const p of arr) allSids.push(p.steamid);
+      }
+      const inDb = db.getCheckerTypesBySteamIds(allSids);
+
+      res.json({
+        matches: rows.map((m) => ({
+          id: m.id,
+          map: m.map_name,
+          mode: m.mode,
+          scoreCt: m.score_ct,
+          scoreT: m.score_t,
+          startedAt: m.started_at,
+          endedAt: m.ended_at,
+          players: (playersMap[m.id] || []).map((p) => ({ ...p, inDb: inDb[p.steamid] || null })),
+        })),
+        modes,
+        total: db.getLiveMatchesCount(userId, mode),
+        page,
+      });
+    } catch (e) {
+      logError(`[Live] Ошибка /api/live/history: ${e.message}`);
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
   // Парсинг Steam-профиля без сохранения в базу (для модалки игрока)
   app.post('/api/live/preview', requireAuth, previewLimiter, async (req, res) => {
     try {
