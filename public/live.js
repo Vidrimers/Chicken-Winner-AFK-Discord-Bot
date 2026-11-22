@@ -199,8 +199,9 @@ function openCsstat(steamId) {
 }
 
 // Парсинг профиля без сохранения в базу
-async function openPreview(steamId) {
+async function openPreview(steamId, isSelf) {
   currentPreviewSteamId = String(steamId);
+  const self = !!isSelf;
   const modal = document.getElementById('previewModal');
   const body = document.getElementById('previewBody');
   body.innerHTML = '<div class="live-hint">Загрузка профиля...</div>';
@@ -240,8 +241,8 @@ async function openPreview(steamId) {
         <div><div class="live-label">Торговля</div><div class="live-value">${p.economyBan && p.economyBan !== 'none' ? '⚠️ ' + esc(p.economyBan) : '✅ Без ограничений'}</div></div>
       </div>
       <div class="row-actions" style="justify-content:flex-start;margin-top:12px">
-        <button class="confirm-delete-btn" onclick="queueAdd('${esc(p.steamId)}', 'cheater')" ${data.inDb ? 'disabled title="Уже в базе"' : isQueued(p.steamId) ? 'disabled title="В очереди"' : ''}>${isQueued(p.steamId) ? '⏳' : '➕'} В читеры</button>
-        <button class="confirm-cancel-btn" onclick="queueAdd('${esc(p.steamId)}', 'bot')" ${data.inDb ? 'disabled title="Уже в базе"' : isQueued(p.steamId) ? 'disabled title="В очереди"' : ''}>${isQueued(p.steamId) ? '⏳' : '➕'} В боты</button>
+        <button class="confirm-delete-btn" onclick="queueAdd('${esc(p.steamId)}', 'cheater')" ${self ? 'disabled title="Нельзя добавить себя"' : data.inDb ? 'disabled title="Уже в базе"' : isQueued(p.steamId) ? 'disabled title="В очереди"' : ''}>${isQueued(p.steamId) ? '⏳' : '➕'} В читеры</button>
+        <button class="confirm-cancel-btn" onclick="queueAdd('${esc(p.steamId)}', 'bot')" ${self ? 'disabled title="Нельзя добавить себя"' : data.inDb ? 'disabled title="Уже в базе"' : isQueued(p.steamId) ? 'disabled title="В очереди"' : ''}>${isQueued(p.steamId) ? '⏳' : '➕'} В боты</button>
         <button class="mini-btn" onclick="openCsstat('${esc(p.steamId)}')">csstat</button>
         <a class="mini-btn" style="text-decoration:none" href="${esc(p.profileUrl || '#')}" target="_blank" rel="noopener">Steam</a>
       </div>
@@ -312,8 +313,8 @@ function sortPlayerRows(players, mySid = null) {
     // Дефолт без выбранной колонки: сначала я, потом CT, потом T, по имени
     const order = { CT: 0, T: 1 };
     return rows.sort((a, b) => {
-      const am = mySid && a.steamid === mySid ? 0 : 1;
-      const bm = mySid && b.steamid === mySid ? 0 : 1;
+      const am = (a.isSelf || (mySid && String(a.steamid) === String(mySid))) ? 0 : 1;
+      const bm = (b.isSelf || (mySid && String(b.steamid) === String(mySid))) ? 0 : 1;
       if (am !== bm) return am - bm;
       const ta = order[a.team] != null ? order[a.team] : 2;
       const tb = order[b.team] != null ? order[b.team] : 2;
@@ -439,18 +440,29 @@ function renderQueue() {
   const failed = addQueue.filter((i) => i.status === 'error').length;
   list.innerHTML = `
     <div class="live-hint" style="margin-bottom:8px">
-      В очереди: ${waiting} · Добавлено: ${done} · Ошибок: ${failed} ·
-      добавление постепенное (до 5 в минуту), чтобы не получить rate limit
+      Игроки в очереди добавляются постепенно (до 5 в минуту), чтобы не словить rate limit.
+      <b>Страница должна быть открыта</b> — только тогда очередь продолжает добавление.
     </div>
-    ${addQueue.map((i) => `
+    <div class="live-hint" style="margin-bottom:8px">
+      В очереди: ${waiting} · Добавлено: ${done} · Ошибок: ${failed}
+    </div>
+    ${addQueue.map((i) => {
+      const status = i.status === 'pending'
+        ? 'в очереди'
+        : i.status === 'working'
+          ? 'добавляется…'
+          : i.status === 'done'
+            ? (i.wasDuplicate ? 'уже в базе' : 'добавлен')
+            : (i.error ? `ошибка: ${i.error}` : 'ошибка');
+      return `
       <div class="access-item">
         <span>${i.status === 'pending' ? '⏳' : i.status === 'working' ? '🔄' : i.status === 'done' ? '✅' : '❌'}</span>
         <span>${esc(i.name || i.steamId)}</span>
-        <span class="live-hint">→ ${i.type === 'bot' ? 'Боты' : 'Читеры'}${i.error ? ' · ' + esc(i.error) : ''}${i.wasDuplicate ? ' · уже в базе' : ''}</span>
+        <span class="live-hint">→ ${i.type === 'bot' ? 'Боты' : 'Читеры'} · ${esc(status)}</span>
         ${i.status === 'error' ? `<button class="mini-btn" onclick="retryQueueItem('${i.id}')">Повторить</button>` : ''}
         <button class="mini-btn" onclick="removeQueueItem('${i.id}')">✕</button>
-      </div>
-    `).join('')}
+      </div>`;
+    }).join('')}
     <div style="margin-top:8px">
       <button class="mini-btn" onclick="clearFinishedQueue()">Очистить завершённые</button>
     </div>
@@ -604,22 +616,22 @@ function inDbSummary(players) {
 
 // Общая строка игрока — используется и в live-составе, и в истории
 function playerRowHtml(p, mySid) {
-  const isMe = mySid && p.steamid === mySid;
+  const isMe = !!p.isSelf || (mySid && String(p.steamid) === String(mySid));
   const queued = isQueued(p.steamid);
   const inDb = p.inDb
     ? `<span class="in-db-badge">🔴 В базе: ${p.inDb === 'bot' ? 'бот' : 'читер'}</span>`
     : '';
   return `<tr class="${isMe ? 'me' : ''}">
-    <td><span class="player-name" onclick="openPreview('${esc(p.steamid)}')">${esc(p.name || '—')}</span>${isMe ? ' <small style="opacity:0.5">(ты)</small>' : ''}</td>
+    <td><span class="player-name" onclick="openPreview('${esc(p.steamid)}', ${isMe ? 'true' : 'false'})">${esc(p.name || '—')}</span>${isMe ? ' <small style="opacity:0.5">(ты)</small>' : ''}</td>
     <td class="team-${esc(p.team)}">${esc(p.team || '—')}</td>
     <td><span class="sid-cell" onclick="copySid('${esc(p.steamid)}', event)" title="Клик — копировать SteamID">${esc(p.steamid)}</span></td>
     <td>${p.kills || 0}/${p.deaths || 0}/${p.assists || 0}</td>
     <td>${inDb}</td>
     <td>
       <div class="row-actions">
-        <button class="mini-btn" onclick="openPreview('${esc(p.steamid)}')">🔍 Проверить</button>
-        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'cheater')" ${p.inDb ? 'disabled title="Уже в базе"' : queued ? 'disabled title="В очереди"' : ''}>${queued ? '⏳' : '➕'} Читеры</button>
-        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'bot')" ${p.inDb ? 'disabled title="Уже в базе"' : queued ? 'disabled title="В очереди"' : ''}>${queued ? '⏳' : '➕'} Боты</button>
+        <button class="mini-btn" onclick="openPreview('${esc(p.steamid)}', ${isMe ? 'true' : 'false'})">🔍 Проверить</button>
+        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'cheater')" ${isMe ? 'disabled title="Нельзя добавить себя"' : p.inDb ? 'disabled title="Уже в базе"' : queued ? 'disabled title="В очереди"' : ''}>${queued ? '⏳' : '➕'} Читеры</button>
+        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'bot')" ${isMe ? 'disabled title="Нельзя добавить себя"' : p.inDb ? 'disabled title="Уже в базе"' : queued ? 'disabled title="В очереди"' : ''}>${queued ? '⏳' : '➕'} Боты</button>
         <button class="mini-btn" onclick="openCsstat('${esc(p.steamid)}')">csstat</button>
       </div>
     </td>

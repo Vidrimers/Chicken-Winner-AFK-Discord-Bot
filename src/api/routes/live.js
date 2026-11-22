@@ -63,6 +63,7 @@ function mergePlayer(state, steamId, p, now, source) {
     weapon: activeWeapon(p.weapons) || (prev ? prev.weapon : null),
     firstSeen: prev ? prev.firstSeen : now,
     lastSeen: now,
+    isSelf: source === 'self' || (prev ? !!prev.isSelf : false),
     source: prev && prev.source === 'roster' ? 'roster' : source,
   });
 }

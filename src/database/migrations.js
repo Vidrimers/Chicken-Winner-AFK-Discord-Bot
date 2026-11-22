@@ -1032,5 +1032,25 @@ export function runMigrations(db) {
     }
   }
 
+  // Миграция: live_match_players.is_self — метка «(ты)» для владельца матча
+  {
+    const columns = db.prepare('PRAGMA table_info(live_match_players)').all();
+    const hasIsSelf = columns.some((c) => c.name === 'is_self');
+    if (!hasIsSelf) {
+      db.exec('ALTER TABLE live_match_players ADD COLUMN is_self INTEGER DEFAULT 0');
+      // Проставляем метку в старых матчах: игрок совпадает с привязанным Steam владельца
+      db.exec(`
+        UPDATE live_match_players SET is_self = 1
+        WHERE EXISTS (
+          SELECT 1 FROM live_matches m
+          JOIN user_stats u ON u.user_id = m.user_id
+          WHERE m.id = live_match_players.match_id
+            AND u.steam_id = live_match_players.steam_id
+        )
+      `);
+      console.log('✅ Колонка is_self добавлена в live_match_players');
+    }
+  }
+
   console.log('✅ Миграции завершены');
 }

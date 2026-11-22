@@ -1021,8 +1021,8 @@ export class DatabaseManager {
 
   insertLiveMatchPlayer(matchId, p) {
     this.prepare(
-      'INSERT OR IGNORE INTO live_match_players (match_id, steam_id, name, team, kills, deaths, assists, first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(matchId, p.steamid, p.name || '', p.team || '', p.kills || 0, p.deaths || 0, p.assists || 0, p.firstSeen || 0, p.lastSeen || 0);
+      'INSERT OR IGNORE INTO live_match_players (match_id, steam_id, name, team, kills, deaths, assists, first_seen, last_seen, is_self) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(matchId, p.steamid, p.name || '', p.team || '', p.kills || 0, p.deaths || 0, p.assists || 0, p.firstSeen || 0, p.lastSeen || 0, p.isSelf ? 1 : 0);
   }
 
   // Типы уже добавленных профилей: { steam_id: 'cheater' | 'bot' }
@@ -1073,7 +1073,7 @@ export class DatabaseManager {
     if (!matchIds || matchIds.length === 0) return map;
     const placeholders = matchIds.map(() => '?').join(',');
     const rows = this.prepare(
-      `SELECT match_id, steam_id, name, team, kills, deaths, assists
+      `SELECT match_id, steam_id, name, team, kills, deaths, assists, is_self
        FROM live_match_players WHERE match_id IN (${placeholders})`
     ).all(...matchIds);
     for (const r of rows) {
@@ -1085,6 +1085,7 @@ export class DatabaseManager {
         kills: r.kills,
         deaths: r.deaths,
         assists: r.assists,
+        isSelf: !!r.is_self,
       });
     }
     return map;
