@@ -374,6 +374,25 @@ export function registerLiveRoutes(app, db) {
     }
   });
 
+  // Удаление матча из истории (читеры/боты в базе остаются)
+  app.delete('/api/live/history/:id', requireAuth, (req, res) => {
+    try {
+      const userId = req.authenticatedUserId;
+      const id = parseInt(req.params.id, 10);
+      if (!id) {
+        return res.status(400).json({ error: 'Невалидный id матча' });
+      }
+      const result = db.deleteLiveMatch(id, userId);
+      if (!result.changes) {
+        return res.status(404).json({ error: 'Матч не найден' });
+      }
+      res.json({ success: true });
+    } catch (e) {
+      logError(`[Live] Ошибка удаления матча: ${e.message}`);
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+  });
+
   // Парсинг Steam-профиля без сохранения в базу (для модалки игрока)
   app.post('/api/live/preview', requireAuth, previewLimiter, async (req, res) => {
     try {

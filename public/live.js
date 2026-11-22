@@ -684,6 +684,7 @@ function renderHistory(data) {
     return `
       <div class="link-group hist-match${open ? ' hist-open' : ''}" id="hist-match-${m.id}">
         <div class="link-group-header" style="cursor:pointer" onclick="toggleHistoryMatch(${m.id})">
+          <button class="mini-btn hist-del" onclick="deleteHistoryMatch(${m.id}, event)" title="Удалить матч из истории">🗑</button>
           <span class="link-group-name" style="cursor:inherit">🗺 ${esc(m.map || '—')}</span> — ${esc(modeLabel(m.mode))}${score} • ${m.players.length} чел.${inDbSummary(m.players)}
           <div class="link-group-meta">${esc(date)} · нажми, чтобы посмотреть состав</div>
         </div>
@@ -727,6 +728,47 @@ function toggleHistoryMatch(matchId) {
   body.style.display = open ? 'block' : 'none';
   // Раскрытый матч занимает всю ширину сетки — под таблицу состава
   if (row) row.classList.toggle('hist-open', open);
+}
+
+// Кастомный confirm (нативный confirm() не используем)
+function showConfirm(message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('confirmModal');
+    const ok = document.getElementById('confirmOkBtn');
+    const cancel = document.getElementById('confirmCancelBtn');
+    document.getElementById('confirmText').textContent = message;
+    modal.style.display = 'flex';
+    const done = (value) => {
+      modal.style.display = 'none';
+      ok.onclick = null;
+      cancel.onclick = null;
+      modal.onclick = null;
+      resolve(value);
+    };
+    ok.onclick = () => done(true);
+    cancel.onclick = () => done(false);
+    modal.onclick = (e) => { if (e.target === modal) done(false); };
+  });
+}
+
+// Удаление матча из истории (добавленные читеры/боты в базе остаются)
+async function deleteHistoryMatch(matchId, event) {
+  if (event) { event.stopPropagation(); event.preventDefault(); }
+  const ok = await showConfirm('Удалить матч из истории? Добавленные читеры и боты останутся в базе.');
+  if (!ok) return;
+  try {
+    const r = await fetch(`/api/live/history/${matchId}`, { method: 'DELETE' });
+    const data = await r.json();
+    if (!r.ok) {
+      toast(data.error || 'Ошибка удаления');
+      return;
+    }
+    openMatches.delete(matchId);
+    toast('Матч удалён из истории');
+    fetchHistory();
+  } catch {
+    toast('Ошибка удаления');
+  }
 }
 
 function switchHistoryMode(mode) {

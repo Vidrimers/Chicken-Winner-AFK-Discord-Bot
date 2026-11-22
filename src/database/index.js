@@ -1060,6 +1060,16 @@ export class DatabaseManager {
     return row ? row.c : 0;
   }
 
+  // Удаление матча из истории: состав уходит вместе с матчем,
+  // добавленные читеры/боты в базе при этом не трогаются
+  deleteLiveMatch(matchId, userId) {
+    const res = this.prepare('DELETE FROM live_matches WHERE id = ? AND user_id = ?').run(matchId, userId);
+    if (res.changes > 0) {
+      this.prepare('DELETE FROM live_match_players WHERE match_id = ?').run(matchId);
+    }
+    return res;
+  }
+
   // Режимы матчей пользователя (для табов истории)
   getLiveMatchModes(userId) {
     return this.prepare('SELECT DISTINCT mode FROM live_matches WHERE user_id = ?')

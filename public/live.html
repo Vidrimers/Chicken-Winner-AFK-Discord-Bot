@@ -115,11 +115,12 @@
     @media (min-width: 900px) {
       .hist-list { grid-template-columns: repeat(2, 1fr); }
     }
-    .hist-match { padding: 8px 12px; margin-bottom: 0; }
+    .hist-match { padding: 8px 12px; margin-bottom: 0; position: relative; }
     .hist-match .link-group-header { margin-bottom: 0; }
     .hist-match .link-group-meta { margin-top: 2px; }
     /* Раскрытый матч занимает всю ширину сетки — под таблицу состава */
     .hist-match.hist-open { grid-column: 1 / -1; }
+    .hist-del { position: absolute; top: 8px; right: 8px; z-index: 1; }
 
     .toast {
       position: fixed; right: 18px; bottom: 18px; z-index: 100;
@@ -273,6 +274,22 @@
           <button class="mini-btn" id="previewClose">✕</button>
         </div>
         <div class="modal-box-body" id="previewBody"></div>
+      </div>
+    </div>
+
+    <!-- Модалка подтверждения -->
+    <div class="modal-overlay" id="confirmModal" style="display:none">
+      <div class="modal-box">
+        <div class="modal-box-header">
+          <h2>Подтверждение</h2>
+        </div>
+        <div class="modal-box-body">
+          <p id="confirmText"></p>
+          <div class="row-actions" style="justify-content:flex-end;margin-top:12px">
+            <button class="confirm-cancel-btn" id="confirmCancelBtn">Отмена</button>
+            <button class="confirm-delete-btn" id="confirmOkBtn">Удалить</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
