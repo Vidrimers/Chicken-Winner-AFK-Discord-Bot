@@ -240,8 +240,8 @@ async function openPreview(steamId) {
         <div><div class="live-label">Торговля</div><div class="live-value">${p.economyBan && p.economyBan !== 'none' ? '⚠️ ' + esc(p.economyBan) : '✅ Без ограничений'}</div></div>
       </div>
       <div class="row-actions" style="justify-content:flex-start;margin-top:12px">
-        <button class="confirm-delete-btn" onclick="queueAdd('${esc(p.steamId)}', 'cheater')" ${data.inDb ? 'disabled title="Уже в базе"' : ''}>➕ В читеры</button>
-        <button class="confirm-cancel-btn" onclick="queueAdd('${esc(p.steamId)}', 'bot')" ${data.inDb ? 'disabled title="Уже в базе"' : ''}>➕ В боты</button>
+        <button class="confirm-delete-btn" onclick="queueAdd('${esc(p.steamId)}', 'cheater')" ${data.inDb ? 'disabled title="Уже в базе"' : isQueued(p.steamId) ? 'disabled title="В очереди"' : ''}>${isQueued(p.steamId) ? '⏳' : '➕'} В читеры</button>
+        <button class="confirm-cancel-btn" onclick="queueAdd('${esc(p.steamId)}', 'bot')" ${data.inDb ? 'disabled title="Уже в базе"' : isQueued(p.steamId) ? 'disabled title="В очереди"' : ''}>${isQueued(p.steamId) ? '⏳' : '➕'} В боты</button>
         <button class="mini-btn" onclick="openCsstat('${esc(p.steamId)}')">csstat</button>
         <a class="mini-btn" style="text-decoration:none" href="${esc(p.profileUrl || '#')}" target="_blank" rel="noopener">Steam</a>
       </div>
@@ -287,12 +287,7 @@ function setPlayerSort(col) {
   }
   try { localStorage.setItem(SORT_KEY, JSON.stringify(playerSort)); } catch {}
   // Сортировка — только представление: перерисовываем из кэша, мгновенно и без запросов
-  if (lastStateData) {
-    renderPlayers(lastStateData.match, lastStateData.players, lastStateData.me);
-  }
-  if (currentLiveView === 'history' && lastHistoryData) {
-    renderHistory(lastHistoryData);
-  }
+  rerenderLists();
 }
 
 function sortIndicator(col) {
@@ -375,8 +370,38 @@ function queueAdd(steamId, type) {
   });
   saveQueue();
   renderQueue();
+  // Сразу гасим кнопки этого игрока (⏳) — локально, без запросов
+  rerenderLists();
+  markPreviewQueued(sid);
   processQueue();
   toast('Добавлено в очередь');
+}
+
+// Есть ли игрок в очереди (ожидает или обрабатывается)
+function isQueued(steamId) {
+  const sid = String(steamId);
+  return addQueue.some((i) => i.steamId === sid && (i.status === 'pending' || i.status === 'working'));
+}
+
+// Мгновенная перерисовка списков из кэша (сортировка, состояние очереди)
+function rerenderLists() {
+  if (lastStateData) {
+    renderPlayers(lastStateData.match, lastStateData.players, lastStateData.me);
+  }
+  if (currentLiveView === 'history' && lastHistoryData) {
+    renderHistory(lastHistoryData);
+  }
+}
+
+// В открытой модалке гасим кнопки добавления и показываем ⏳
+function markPreviewQueued(steamId) {
+  const modal = document.getElementById('previewModal');
+  if (!modal || modal.style.display === 'none' || currentPreviewSteamId !== String(steamId)) return;
+  modal.querySelectorAll('.confirm-delete-btn, .confirm-cancel-btn').forEach((b) => {
+    b.disabled = true;
+    b.title = 'В очереди';
+    b.innerHTML = b.innerHTML.replace('➕', '⏳');
+  });
 }
 
 function retryQueueItem(id) {
@@ -580,6 +605,7 @@ function inDbSummary(players) {
 // Общая строка игрока — используется и в live-составе, и в истории
 function playerRowHtml(p, mySid) {
   const isMe = mySid && p.steamid === mySid;
+  const queued = isQueued(p.steamid);
   const inDb = p.inDb
     ? `<span class="in-db-badge">🔴 В базе: ${p.inDb === 'bot' ? 'бот' : 'читер'}</span>`
     : '';
@@ -592,8 +618,8 @@ function playerRowHtml(p, mySid) {
     <td>
       <div class="row-actions">
         <button class="mini-btn" onclick="openPreview('${esc(p.steamid)}')">🔍 Проверить</button>
-        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'cheater')" ${p.inDb ? 'disabled title="Уже в базе"' : ''}>➕ Читеры</button>
-        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'bot')" ${p.inDb ? 'disabled title="Уже в базе"' : ''}>➕ Боты</button>
+        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'cheater')" ${p.inDb ? 'disabled title="Уже в базе"' : queued ? 'disabled title="В очереди"' : ''}>${queued ? '⏳' : '➕'} Читеры</button>
+        <button class="mini-btn" onclick="queueAdd('${esc(p.steamid)}', 'bot')" ${p.inDb ? 'disabled title="Уже в базе"' : queued ? 'disabled title="В очереди"' : ''}>${queued ? '⏳' : '➕'} Боты</button>
         <button class="mini-btn" onclick="openCsstat('${esc(p.steamid)}')">csstat</button>
       </div>
     </td>
