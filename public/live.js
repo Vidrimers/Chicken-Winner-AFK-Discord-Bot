@@ -711,11 +711,22 @@ function toggleHistoryMatch(matchId) {
   const row = document.getElementById(`hist-match-${matchId}`);
   if (!body) return;
   const open = body.style.display === 'none';
+  // Эксклюзивный аккордеон: раскрытым может быть только один матч
+  if (open) {
+    for (const id of openMatches) {
+      const b = document.getElementById(`hist-players-${id}`);
+      const r = document.getElementById(`hist-match-${id}`);
+      if (b) b.style.display = 'none';
+      if (r) r.classList.remove('hist-open');
+    }
+    openMatches.clear();
+    openMatches.add(matchId);
+  } else {
+    openMatches.delete(matchId);
+  }
   body.style.display = open ? 'block' : 'none';
   // Раскрытый матч занимает всю ширину сетки — под таблицу состава
   if (row) row.classList.toggle('hist-open', open);
-  if (open) openMatches.add(matchId);
-  else openMatches.delete(matchId);
 }
 
 function switchHistoryMode(mode) {
